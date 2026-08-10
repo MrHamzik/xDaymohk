@@ -2,7 +2,7 @@
 
 import { createPortal } from 'react-dom';
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Compass, Navigation, X } from 'lucide-react';
+import { ArrowUp, Compass, X } from 'lucide-react';
 import { calculateQiblaAzimuth, DEFAULT_LAT, DEFAULT_LNG } from '@/lib/islamic';
 import { useI18n } from '@/lib/i18n';
 
@@ -171,20 +171,24 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
   }, []);
 
   // Apply heading to the DOM via rAF. Layout:
-  //   * DIAL (the ring with N/S/E/W + tick marks) is STATIC. North
-  //     stays at the top of the screen.
-  //   * NEEDLE (the green Navigation icon) rotates by
-  //     (qiblaAngle - heading) every frame, so the user can see
-  //     how far they are from facing the Kaaba and which way to
-  //     turn. When the needle points straight up, the user is
-  //     facing the Qibla.
+  //   * DIAL (the ring with N/S/E/W + tick marks) rotates by
+  //     -heading so that N always points to the local North
+  //     direction the sensor reports.
+  //   * NEEDLE (the green Navigation icon) is STATIC at qiblaAngle
+  //     relative to the dial. Because the dial moves underneath
+  //     it, the needle visually swings to the correct Kaaba
+  //     direction on the screen.
+  // Without a working sensor, heading === 0, the dial doesn't
+  // rotate, and the needle stays at qiblaAngle (pointing to the
+  // Kaaba from the static N).
   useEffect(() => {
     if (!isOpen) return;
     let raf = 0;
     const tick = () => {
+      const dial = dialRef.current;
       const needle = needleRef.current;
-      const needleAngle = (qiblaAngle - heading + 360) % 360;
-      if (needle) needle.style.transform = `rotate(${needleAngle}deg)`;
+      if (dial) dial.style.transform = `rotate(${-heading}deg)`;
+      if (needle) needle.style.transform = `rotate(${qiblaAngle}deg)`;
 
       if (headingLabelRef.current) {
         headingLabelRef.current.textContent = mode === 'ready' ? `${Math.round(heading)}°` : '—';
@@ -272,7 +276,7 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
               style={{ willChange: 'transform', transform: `rotate(${qiblaAngle}deg)` }}
             >
               <div className="absolute left-1/2 top-1/2 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-emerald-600 text-white shadow-lg ring-4 ring-emerald-500/30">
-                <Navigation className="h-9 w-9" fill="currentColor" />
+                <ArrowUp className="h-10 w-10" strokeWidth={3} fill="currentColor" />
               </div>
             </div>
           </div>
