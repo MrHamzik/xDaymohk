@@ -3,7 +3,7 @@
 import { createPortal } from 'react-dom';
 import { useEffect, useState, useCallback } from 'react';
 import { Compass, Navigation, X } from 'lucide-react';
-import { SAMASHKI_QIBLA_ANGLE, calculateQiblaAzimuth, DEFAULT_LAT, DEFAULT_LNG } from '@/lib/islamic';
+import { calculateQiblaAzimuth, DEFAULT_LAT, DEFAULT_LNG } from '@/lib/islamic';
 import { useI18n } from '@/lib/i18n';
 
 const DEFAULT_QIBLA_AZIMUTH = calculateQiblaAzimuth(DEFAULT_LAT, DEFAULT_LNG);
