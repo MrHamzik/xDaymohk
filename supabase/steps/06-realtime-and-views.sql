@@ -9,11 +9,18 @@
 -- ---------------------------------------------------------------------------
 -- Without this, the postgres_changes channels in the client
 -- (ProfilesProvider, NotificationsProvider) are silent.
-alter publication supabase_realtime add table public.profiles;
-alter publication supabase_realtime add table public.user_profiles;
-alter publication supabase_realtime add table public.complaints;
-alter publication supabase_realtime add table public.notifications;
-alter publication supabase_realtime add table public.house_addresses;
+--
+-- DO block makes each ALTER idempotent: if the table is already a
+-- member, the EXCEPTION block swallows the duplicate error so re-running
+-- this file (or running the bundled all-in-one.sql twice) is safe.
+do $$
+begin
+  begin alter publication supabase_realtime add table public.profiles; exception when duplicate_object then null; end;
+  begin alter publication supabase_realtime add table public.user_profiles; exception when duplicate_object then null; end;
+  begin alter publication supabase_realtime add table public.complaints; exception when duplicate_object then null; end;
+  begin alter publication supabase_realtime add table public.notifications; exception when duplicate_object then null; end;
+  begin alter publication supabase_realtime add table public.house_addresses; exception when duplicate_object then null; end;
+end $$;
 
 -- ---------------------------------------------------------------------------
 -- 2. Convenience views
@@ -27,7 +34,7 @@ select
   u.email        as owner_email,
   u.is_blocked   as owner_is_blocked
 from public.profiles p
-left join public.user_profiles u on u.id = p.owner_id
+left join public.user_profiles u on u.id = p.owner_id::uuid
 where not (p.is_hidden or p.is_banned);
 
 -- Admin dashboard view: same as above but includes hidden/banned.
@@ -37,7 +44,7 @@ select
   u.email        as owner_email,
   u.is_blocked   as owner_is_blocked
 from public.profiles p
-left join public.user_profiles u on u.id = p.owner_id;
+left join public.user_profiles u on u.id = p.owner_id::uuid;
 
 -- Public users list for /admin → users tab.
 create or replace view public.v_user_directory as
@@ -59,7 +66,7 @@ left join (
     count(*) filter (where is_hidden) as hidden_total
   from public.profiles
   group by owner_id
-) c on c.owner_id = u.id;
+) c on c.owner_id::uuid = u.id;
 
 -- Aggregate donation progress for the current month (Europe/Moscow).
 create or replace view public.v_current_donations as

@@ -1,19 +1,22 @@
 -- =============================================================================
--- 20260101000300_counters_and_triggers.sql
--- Maintains profile.rating / profile.review_count / user_profiles.profile_count
--- in sync with the public.reviews table so the client never has to recompute
--- aggregates. Each INSERT/UPDATE/DELETE on reviews triggers an UPDATE on
--- profiles that recomputes the average rating and the row count.
---
--- For user_profiles.profile_count we recompute on every change in profiles.
+-- Step 07 / 07 — Counter triggers
+-- (rating / review_count on profiles, profile_count on user_profiles)
+-- =============================================================================
+-- Paste into SQL Editor and Run LAST, after all tables exist.
+-- If this step is the one that errors with "uuid = text", please share
+-- the exact error message + line number.
 -- =============================================================================
 
+-- ---------------------------------------------------------------------------
+-- reviews -> profiles.rating / profiles.review_count
+-- ---------------------------------------------------------------------------
 create or replace function public.recompute_profile_rating(target_id text)
 returns void
 language sql
 security definer
 set search_path = public
 as $$
+  -- profiles.id is text (e.g. 'personal-<uuid>'), so this works as-is.
   update public.profiles
      set rating = coalesce((select round(avg(rating)::numeric, 1)
                             from public.reviews where profile_id = target_id), 0),
@@ -25,22 +28,6 @@ $$;
 revoke all on function public.recompute_profile_rating(text) from public;
 grant execute on function public.recompute_profile_rating(text) to authenticated, service_role;
 
-drop trigger if exists trg_reviews_after_insert on public.reviews;
-create trigger trg_reviews_after_insert
-  after insert on public.reviews
-  for each row execute function public.trg_recompute_rating();
-
-drop trigger if exists trg_reviews_after_update on public.reviews;
-create trigger trg_reviews_after_update
-  after update on public.reviews
-  for each row execute function public.trg_recompute_rating();
-
-drop trigger if exists trg_reviews_after_delete on public.reviews;
-create trigger trg_reviews_after_delete
-  after delete on public.reviews
-  for each row execute function public.trg_recompute_rating();
-
--- Wrapper trigger functions since we can't reference target_id inline.
 create or replace function public.trg_recompute_rating()
 returns trigger
 language plpgsql
@@ -59,16 +46,36 @@ begin
 end;
 $$;
 
--- profile_count on user_profiles
+drop trigger if exists trg_reviews_after_insert on public.reviews;
+create trigger trg_reviews_after_insert
+  after insert on public.reviews
+  for each row execute function public.trg_recompute_rating();
+
+drop trigger if exists trg_reviews_after_update on public.reviews;
+create trigger trg_reviews_after_update
+  after update on public.reviews
+  for each row execute function public.trg_recompute_rating();
+
+drop trigger if exists trg_reviews_after_delete on public.reviews;
+create trigger trg_reviews_after_delete
+  after delete on public.reviews
+  for each row execute function public.trg_recompute_rating();
+
+-- ---------------------------------------------------------------------------
+-- profiles -> user_profiles.profile_count
+-- ---------------------------------------------------------------------------
 create or replace function public.recompute_user_profile_count(target_user uuid)
 returns void
 language sql
 security definer
 set search_path = public
 as $$
+  -- Explicit casts on both sides: user_profiles.id may end up as text
+  -- in some Supabase setups (column added later, auto-conversion, etc).
+  -- Casting to uuid is a no-op when the column is already uuid.
   update public.user_profiles
-     set profile_count = (select count(*) from public.profiles where owner_id = target_user)
-   where id = target_user;
+     set profile_count = (select count(*) from public.profiles where owner_id::uuid = target_user)
+   where id::uuid = target_user;
 $$;
 
 revoke all on function public.recompute_user_profile_count(uuid) from public;

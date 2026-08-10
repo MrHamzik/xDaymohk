@@ -1,9 +1,30 @@
 -- =============================================================================
--- 20260101000400_views.sql
--- Convenience views for the catalog page and admin dashboard.
--- These wrap the live tables with the same RLS policies (views inherit RLS
--- from underlying tables), so the client can SELECT * with a single query.
+-- Step 06 / 07 — Realtime publication + convenience views
 -- =============================================================================
+-- Paste into SQL Editor and Run.
+-- =============================================================================
+
+-- ---------------------------------------------------------------------------
+-- 1. Realtime: attach tables to supabase_realtime publication
+-- ---------------------------------------------------------------------------
+-- Without this, the postgres_changes channels in the client
+-- (ProfilesProvider, NotificationsProvider) are silent.
+--
+-- DO block makes each ALTER idempotent: if the table is already a
+-- member, the EXCEPTION block swallows the duplicate error so re-running
+-- this file (or running the bundled all-in-one.sql twice) is safe.
+do $$
+begin
+  begin alter publication supabase_realtime add table public.profiles; exception when duplicate_object then null; end;
+  begin alter publication supabase_realtime add table public.user_profiles; exception when duplicate_object then null; end;
+  begin alter publication supabase_realtime add table public.complaints; exception when duplicate_object then null; end;
+  begin alter publication supabase_realtime add table public.notifications; exception when duplicate_object then null; end;
+  begin alter publication supabase_realtime add table public.house_addresses; exception when duplicate_object then null; end;
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- 2. Convenience views
+-- ---------------------------------------------------------------------------
 
 -- Public catalog view: only visible profiles (not hidden / not banned),
 -- augmented with the owner's email and block status for admin filtering.
@@ -13,7 +34,7 @@ select
   u.email        as owner_email,
   u.is_blocked   as owner_is_blocked
 from public.profiles p
-left join public.user_profiles u on u.id = p.owner_id
+left join public.user_profiles u on u.id = p.owner_id::uuid
 where not (p.is_hidden or p.is_banned);
 
 -- Admin dashboard view: same as above but includes hidden/banned.
@@ -23,7 +44,7 @@ select
   u.email        as owner_email,
   u.is_blocked   as owner_is_blocked
 from public.profiles p
-left join public.user_profiles u on u.id = p.owner_id;
+left join public.user_profiles u on u.id = p.owner_id::uuid;
 
 -- Public users list for /admin → users tab.
 create or replace view public.v_user_directory as
@@ -45,7 +66,7 @@ left join (
     count(*) filter (where is_hidden) as hidden_total
   from public.profiles
   group by owner_id
-) c on c.owner_id = u.id;
+) c on c.owner_id::uuid = u.id;
 
 -- Aggregate donation progress for the current month (Europe/Moscow).
 create or replace view public.v_current_donations as
@@ -56,11 +77,12 @@ from public.donations
 where received_at >= date_trunc('month', now() at time zone 'Europe/Moscow')
   and received_at <  date_trunc('month', now() at time zone 'Europe/Moscow') + interval '1 month';
 
--- Convenience GIN index on profile photos array (jsonb) for membership tests.
+-- ---------------------------------------------------------------------------
+-- 3. Extra indexes
+-- ---------------------------------------------------------------------------
 create index if not exists idx_profiles_photos_gin
   on public.profiles using gin (photos jsonb_path_ops);
 
--- Partial index: only verified-and-public profiles for the catalog query path.
 create index if not exists idx_profiles_public_specialist
   on public.profiles (created_at desc)
   where not is_hidden and not is_banned and is_specialist;

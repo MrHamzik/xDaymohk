@@ -522,7 +522,7 @@ create policy "profile-media owner delete"
   );
 -- <<<<<< 05-rls-policies.sql <<<<<<
 
--- >>>>>> 06-realtime-and-views.sql (3.2 kB) >>>>>>
+-- >>>>>> 06-realtime-and-views.sql (3.7 kB) >>>>>>
 -- =============================================================================
 -- Step 06 / 07 — Realtime publication + convenience views
 -- =============================================================================
@@ -534,11 +534,18 @@ create policy "profile-media owner delete"
 -- ---------------------------------------------------------------------------
 -- Without this, the postgres_changes channels in the client
 -- (ProfilesProvider, NotificationsProvider) are silent.
-alter publication supabase_realtime add table public.profiles;
-alter publication supabase_realtime add table public.user_profiles;
-alter publication supabase_realtime add table public.complaints;
-alter publication supabase_realtime add table public.notifications;
-alter publication supabase_realtime add table public.house_addresses;
+--
+-- DO block makes each ALTER idempotent: if the table is already a
+-- member, the EXCEPTION block swallows the duplicate error so re-running
+-- this file (or running the bundled all-in-one.sql twice) is safe.
+do $$
+begin
+  begin alter publication supabase_realtime add table public.profiles; exception when duplicate_object then null; end;
+  begin alter publication supabase_realtime add table public.user_profiles; exception when duplicate_object then null; end;
+  begin alter publication supabase_realtime add table public.complaints; exception when duplicate_object then null; end;
+  begin alter publication supabase_realtime add table public.notifications; exception when duplicate_object then null; end;
+  begin alter publication supabase_realtime add table public.house_addresses; exception when duplicate_object then null; end;
+end $$;
 
 -- ---------------------------------------------------------------------------
 -- 2. Convenience views
@@ -552,7 +559,7 @@ select
   u.email        as owner_email,
   u.is_blocked   as owner_is_blocked
 from public.profiles p
-left join public.user_profiles u on u.id = p.owner_id
+left join public.user_profiles u on u.id = p.owner_id::uuid
 where not (p.is_hidden or p.is_banned);
 
 -- Admin dashboard view: same as above but includes hidden/banned.
@@ -562,7 +569,7 @@ select
   u.email        as owner_email,
   u.is_blocked   as owner_is_blocked
 from public.profiles p
-left join public.user_profiles u on u.id = p.owner_id;
+left join public.user_profiles u on u.id = p.owner_id::uuid;
 
 -- Public users list for /admin → users tab.
 create or replace view public.v_user_directory as
@@ -584,7 +591,7 @@ left join (
     count(*) filter (where is_hidden) as hidden_total
   from public.profiles
   group by owner_id
-) c on c.owner_id = u.id;
+) c on c.owner_id::uuid = u.id;
 
 -- Aggregate donation progress for the current month (Europe/Moscow).
 create or replace view public.v_current_donations as
@@ -606,7 +613,7 @@ create index if not exists idx_profiles_public_specialist
   where not is_hidden and not is_banned and is_specialist;
 -- <<<<<< 06-realtime-and-views.sql <<<<<<
 
--- >>>>>> 07-triggers.sql (4.3 kB) >>>>>>
+-- >>>>>> 07-triggers.sql (4.6 kB) >>>>>>
 -- =============================================================================
 -- Step 07 / 07 — Counter triggers
 -- (rating / review_count on profiles, profile_count on user_profiles)
@@ -625,6 +632,7 @@ language sql
 security definer
 set search_path = public
 as $$
+  -- profiles.id is text (e.g. 'personal-<uuid>'), so this works as-is.
   update public.profiles
      set rating = coalesce((select round(avg(rating)::numeric, 1)
                             from public.reviews where profile_id = target_id), 0),
@@ -678,9 +686,12 @@ language sql
 security definer
 set search_path = public
 as $$
+  -- Explicit casts on both sides: user_profiles.id may end up as text
+  -- in some Supabase setups (column added later, auto-conversion, etc).
+  -- Casting to uuid is a no-op when the column is already uuid.
   update public.user_profiles
-     set profile_count = (select count(*) from public.profiles where owner_id = target_user)
-   where id = target_user;
+     set profile_count = (select count(*) from public.profiles where owner_id::uuid = target_user)
+   where id::uuid = target_user;
 $$;
 
 revoke all on function public.recompute_user_profile_count(uuid) from public;

@@ -16,6 +16,7 @@ language sql
 security definer
 set search_path = public
 as $$
+  -- profiles.id is text (e.g. 'personal-<uuid>'), so this works as-is.
   update public.profiles
      set rating = coalesce((select round(avg(rating)::numeric, 1)
                             from public.reviews where profile_id = target_id), 0),
@@ -69,9 +70,12 @@ language sql
 security definer
 set search_path = public
 as $$
+  -- Explicit casts on both sides: user_profiles.id may end up as text
+  -- in some Supabase setups (column added later, auto-conversion, etc).
+  -- Casting to uuid is a no-op when the column is already uuid.
   update public.user_profiles
-     set profile_count = (select count(*) from public.profiles where owner_id = target_user)
-   where id = target_user;
+     set profile_count = (select count(*) from public.profiles where owner_id::uuid = target_user)
+   where id::uuid = target_user;
 $$;
 
 revoke all on function public.recompute_user_profile_count(uuid) from public;

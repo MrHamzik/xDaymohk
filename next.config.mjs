@@ -10,6 +10,12 @@ const ALLOWED_IMAGE_HOSTNAMES = [
   'b.basemaps.cartocdn.com',
   'c.basemaps.cartocdn.com',
   'd.basemaps.cartocdn.com',
+  // Google user avatar CDN (returned by Supabase Auth for Google OAuth).
+  // Multiple subdomains are used in rotation; allow them all.
+  'lh3.googleusercontent.com',
+  'lh4.googleusercontent.com',
+  'lh5.googleusercontent.com',
+  'lh6.googleusercontent.com',
 ];
 
 const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
