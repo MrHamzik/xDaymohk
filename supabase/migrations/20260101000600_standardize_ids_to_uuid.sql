@@ -33,92 +33,55 @@ drop view if exists public.v_all_profiles;
 drop view if exists public.v_user_directory;
 drop view if exists public.v_current_donations;
 
+-- 0c) Drop every FK that points at user_profiles.id or at any of the
+--     columns we are about to convert.
+alter table public.profiles      drop constraint if exists profiles_owner_id_fkey;
+alter table public.reviews       drop constraint if exists reviews_author_id_fkey;
+alter table public.complaints    drop constraint if exists complaints_author_id_fkey;
+alter table public.complaints    drop constraint if exists complaints_target_user_id_fkey;
+alter table public.notifications drop constraint if exists notifications_recipient_id_fkey;
+
 -- 1) user_profiles.id
-do $$
-begin
-  if (select data_type from information_schema.columns
-      where table_schema = 'public' and table_name = 'user_profiles' and column_name = 'id')
-      = 'text'
-  then
-    alter table public.user_profiles
-      alter column id type uuid using id::uuid;
-  end if;
-end $$;
+alter table public.user_profiles
+  alter column id type uuid using id::uuid;
 
 -- 2) profiles.owner_id
-do $$
-begin
-  if (select data_type from information_schema.columns
-      where table_schema = 'public' and table_name = 'profiles' and column_name = 'owner_id')
-      = 'text'
-  then
-    alter table public.profiles drop constraint if exists profiles_owner_id_fkey;
-    alter table public.profiles
-      alter column owner_id type uuid using owner_id::uuid;
-    alter table public.profiles
-      add constraint profiles_owner_id_fkey
-      foreign key (owner_id) references public.user_profiles(id) on delete cascade
-      not valid;
-  end if;
-end $$;
+alter table public.profiles
+  alter column owner_id type uuid using owner_id::uuid;
+alter table public.profiles
+  add constraint profiles_owner_id_fkey
+  foreign key (owner_id) references public.user_profiles(id) on delete cascade
+  not valid;
 
 -- 3) reviews.author_id
-do $$
-begin
-  if (select data_type from information_schema.columns
-      where table_schema = 'public' and table_name = 'reviews' and column_name = 'author_id')
-      = 'text'
-  then
-    alter table public.reviews drop constraint if exists reviews_author_id_fkey;
-    alter table public.reviews
-      alter column author_id type uuid using author_id::uuid;
-    alter table public.reviews
-      add constraint reviews_author_id_fkey
-      foreign key (author_id) references public.user_profiles(id) on delete set null
-      not valid;
-  end if;
-end $$;
+alter table public.reviews
+  alter column author_id type uuid using author_id::uuid;
+alter table public.reviews
+  add constraint reviews_author_id_fkey
+  foreign key (author_id) references public.user_profiles(id) on delete set null
+  not valid;
 
 -- 4) complaints.author_id + target_user_id
-do $$
-begin
-  if (select data_type from information_schema.columns
-      where table_schema = 'public' and table_name = 'complaints' and column_name = 'author_id')
-      = 'text'
-  then
-    alter table public.complaints drop constraint if exists complaints_author_id_fkey;
-    alter table public.complaints drop constraint if exists complaints_target_user_id_fkey;
-    alter table public.complaints
-      alter column author_id     type uuid using author_id::uuid;
-    alter table public.complaints
-      alter column target_user_id type uuid using target_user_id::uuid;
-    alter table public.complaints
-      add constraint complaints_author_id_fkey
-      foreign key (author_id) references public.user_profiles(id) on delete cascade
-      not valid;
-    alter table public.complaints
-      add constraint complaints_target_user_id_fkey
-      foreign key (target_user_id) references public.user_profiles(id) on delete set null
-      not valid;
-  end if;
-end $$;
+alter table public.complaints
+  alter column author_id     type uuid using author_id::uuid;
+alter table public.complaints
+  alter column target_user_id type uuid using target_user_id::uuid;
+alter table public.complaints
+  add constraint complaints_author_id_fkey
+  foreign key (author_id) references public.user_profiles(id) on delete cascade
+  not valid;
+alter table public.complaints
+  add constraint complaints_target_user_id_fkey
+  foreign key (target_user_id) references public.user_profiles(id) on delete set null
+  not valid;
 
 -- 5) notifications.recipient_id
-do $$
-begin
-  if (select data_type from information_schema.columns
-      where table_schema = 'public' and table_name = 'notifications' and column_name = 'recipient_id')
-      = 'text'
-  then
-    alter table public.notifications drop constraint if exists notifications_recipient_id_fkey;
-    alter table public.notifications
-      alter column recipient_id type uuid using recipient_id::uuid;
-    alter table public.notifications
-      add constraint notifications_recipient_id_fkey
-      foreign key (recipient_id) references public.user_profiles(id) on delete cascade
-      not valid;
-  end if;
-end $$;
+alter table public.notifications
+  alter column recipient_id type uuid using recipient_id::uuid;
+alter table public.notifications
+  add constraint notifications_recipient_id_fkey
+  foreign key (recipient_id) references public.user_profiles(id) on delete cascade
+  not valid;
 
 -- 6) Validate the new FKs
 alter table public.profiles      validate constraint profiles_owner_id_fkey;
