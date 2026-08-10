@@ -15,6 +15,7 @@ export default function PrayerTimesModal({ isOpen, onClose }: PrayerTimesModalPr
   const { language } = useI18n();
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
+  const [isYearPickerOpen, setIsYearPickerOpen] = useState(false);
   const todayDate = new Date().getDate();
   const isCurrentMonth = currentMonth === new Date().getMonth() && currentYear === new Date().getFullYear();
 
@@ -22,7 +23,10 @@ export default function PrayerTimesModal({ isOpen, onClose }: PrayerTimesModalPr
     if (isOpen) {
       document.body.style.overflow = 'hidden';
       const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') onClose();
+        if (e.key === 'Escape') {
+          if (isYearPickerOpen) setIsYearPickerOpen(false);
+          else onClose();
+        }
       };
       window.addEventListener('keydown', handleKeyDown);
       return () => {
@@ -30,7 +34,7 @@ export default function PrayerTimesModal({ isOpen, onClose }: PrayerTimesModalPr
         window.removeEventListener('keydown', handleKeyDown);
       };
     }
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, isYearPickerOpen]);
 
   if (!isOpen) return null;
 
@@ -56,6 +60,9 @@ export default function PrayerTimesModal({ isOpen, onClose }: PrayerTimesModalPr
       return m + 1;
     });
   };
+
+  // Year picker range: 10 years before, current year in the middle, 10 after
+  const yearPickerYears = Array.from({ length: 21 }, (_, i) => currentYear - 10 + i);
 
   if (typeof document === "undefined") return null;
 
@@ -106,19 +113,16 @@ export default function PrayerTimesModal({ isOpen, onClose }: PrayerTimesModalPr
             <ChevronLeft className="h-4 w-4" />
           </button>
 
-          <div className="flex items-center gap-1 text-xs font-extrabold text-slate-900 dark:text-white">
+          <button
+            type="button"
+            onClick={() => setIsYearPickerOpen((v) => !v)}
+            className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-extrabold text-slate-900 hover:bg-white dark:text-white dark:hover:bg-zinc-700"
+            aria-label="Выбрать год"
+            aria-expanded={isYearPickerOpen}
+          >
             <span>{monthName}</span>
-            <select
-              value={currentYear}
-              onChange={(e) => setCurrentYear(Number(e.target.value))}
-              className="appearance-none bg-transparent font-extrabold focus:outline-none cursor-pointer hover:text-emerald-600 transition text-center"
-              style={{ backgroundImage: 'none' }}
-            >
-              {[currentYear - 2, currentYear - 1, currentYear, currentYear + 1, currentYear + 2].sort().map(y => (
-                <option key={y} value={y} className="text-slate-900 dark:text-white dark:bg-zinc-800">{y}</option>
-              ))}
-            </select>
-          </div>
+            <span className="rounded-md bg-emerald-600 px-1.5 py-0.5 text-[10px] font-black text-white">{currentYear}</span>
+          </button>
 
           <button
             type="button"
@@ -129,6 +133,52 @@ export default function PrayerTimesModal({ isOpen, onClose }: PrayerTimesModalPr
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
+
+        {/* Year picker popover */}
+        {isYearPickerOpen && (
+          <div className="border-b border-slate-100 bg-white px-4 py-3 dark:border-zinc-800/60 dark:bg-zinc-800">
+            <div className="mb-2 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setCurrentYear(y => y - 21)}
+                className="rounded-lg bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-200 dark:bg-zinc-700 dark:text-zinc-300"
+              >
+                ◀ −21
+              </button>
+              <span className="text-[11px] font-bold text-slate-500 dark:text-zinc-500">
+                {currentYear - 10} — {currentYear + 10}
+              </span>
+              <button
+                type="button"
+                onClick={() => setCurrentYear(y => y + 21)}
+                className="rounded-lg bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-200 dark:bg-zinc-700 dark:text-zinc-300"
+              >
+                +21 ▶
+              </button>
+            </div>
+            <div className="grid grid-cols-5 gap-1.5 sm:grid-cols-7">
+              {yearPickerYears.map((y) => (
+                <button
+                  key={y}
+                  type="button"
+                  onClick={() => {
+                    setCurrentYear(y);
+                    setIsYearPickerOpen(false);
+                  }}
+                  className={`rounded-lg px-2 py-1.5 text-xs font-bold transition ${
+                    y === currentYear
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : y === new Date().getFullYear()
+                        ? 'bg-amber-100 text-amber-800 hover:bg-amber-200 dark:bg-amber-950/40 dark:text-amber-300'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-zinc-700 dark:text-zinc-300'
+                  }`}
+                >
+                  {y}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Timetable Table with fixed width and auto fitting */}
         <div className="flex-1 overflow-y-auto p-2 sm:p-4">

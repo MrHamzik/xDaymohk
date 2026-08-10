@@ -200,7 +200,13 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
               ? undefined
               : profile.whatsapp,
           isAdmin: Boolean(targetAccount.isAdmin || profile.isAdmin),
-          statusOverride: targetAccount.statusOverride,
+          // NOTE: do NOT copy targetAccount.statusOverride onto every
+          // profile here. Each profile keeps its own statusOverride
+          // (set when the owner overrides it on that specific profile)
+          // and otherwise falls back to the automatic schedule. The
+          // master "working status" switch in the side menu is applied
+          // per-viewer in the components that read it (e.g. the map),
+          // NOT by mutating every profile of the owner.
         };
       });
 

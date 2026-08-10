@@ -63,6 +63,19 @@ create trigger trg_reviews_after_delete
 
 -- ---------------------------------------------------------------------------
 -- profiles -> user_profiles.profile_count
+--
+-- The user_profiles table on this project does NOT have a profile_count
+-- column — the count is derived in the Next.js client (ProfilesProvider
+-- sets user.profileCount = profiles.filter(p => p.ownerId === user.id).length
+-- on every load, merge and update). Trying to UPDATE a missing column
+-- here raised "column \"profile_count\" of relation \"user_profiles\" does
+-- not exist" on every profile insert / update / delete, which also
+-- blocked delete operations on specialist profiles.
+--
+-- We keep the function and triggers so any downstream code that calls
+-- recompute_user_profile_count() still resolves, but the body is a
+-- no-op (a NOTICE in the server log lets you confirm the trigger is
+-- actually firing).
 -- ---------------------------------------------------------------------------
 create or replace function public.recompute_user_profile_count(target_user uuid)
 returns void
@@ -70,14 +83,8 @@ language plpgsql
 security definer
 set search_path = public
 as $$
-declare
-  target_text text := target_user::text;
 begin
-  update public.user_profiles
-     set profile_count = (
-       select count(*) from public.profiles where owner_id::text = target_text
-     )
-   where id::text = target_text;
+  raise notice 'recompute_user_profile_count called for % — counter is maintained client-side, skipping', target_user;
 end;
 $$;
 

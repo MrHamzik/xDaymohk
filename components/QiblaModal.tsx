@@ -209,35 +209,49 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
         </div>
 
         <div className="my-5 flex flex-col items-center justify-center">
-          <div className="relative flex h-56 w-56 items-center justify-center rounded-full border-[6px] border-slate-100 bg-white shadow-inner dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="relative flex h-72 w-72 items-center justify-center rounded-full border-[6px] border-slate-100 bg-white shadow-inner dark:border-zinc-800 dark:bg-zinc-900">
             {/* Rotating compass background with cardinal points */}
             <div
               ref={dialRef}
-              className="absolute inset-0 transition-transform duration-100 ease-out"
+              className="absolute inset-0"
               style={{ willChange: 'transform' }}
             >
-              <span className="absolute left-1/2 top-1 -translate-x-1/2 text-[11px] font-black text-red-600">N</span>
-              <span className="absolute bottom-1 left-1/2 -translate-x-1/2 text-[10px] font-bold text-slate-400">S</span>
-              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">E</span>
-              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">W</span>
+              <span className="absolute left-1/2 top-1 -translate-x-1/2 text-[12px] font-black text-red-600">N</span>
+              <span className="absolute bottom-1 left-1/2 -translate-x-1/2 text-[11px] font-bold text-slate-400">S</span>
+              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] font-bold text-slate-400">E</span>
+              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] font-bold text-slate-400">W</span>
               <div className="absolute inset-2 rounded-full border border-dashed border-slate-200 dark:border-zinc-700" />
+              {/* Ticks every 30° for visual reference */}
+              {Array.from({ length: 12 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="absolute left-1/2 top-0 h-2 w-0.5 -translate-x-1/2 bg-slate-300 dark:bg-zinc-700"
+                  style={{ transform: `rotate(${i * 30}deg)`, transformOrigin: '50% 144px' }}
+                />
+              ))}
             </div>
 
-            {/* Static needle: stays at Qibla angle relative to the rotating dial */}
+            {/* Static needle: stays at Qibla angle relative to the rotating dial.
+                The needle is a long bar pointing from centre to edge so the
+                user can clearly see the direction even from a distance. */}
             <div
               ref={needleRef}
-              className="absolute inset-0 flex items-center justify-center"
+              className="absolute inset-0 pointer-events-none"
               style={{ willChange: 'transform', transform: `rotate(${qiblaAngle}deg)` }}
             >
-              <div className="-translate-y-16 flex h-10 w-10 items-center justify-center rounded-full bg-emerald-600 text-white shadow-lg">
-                <Navigation className="h-5 w-5" />
+              {/* Tail (opposite side, dimmer) */}
+              <div className="absolute left-1/2 top-1/2 h-24 w-2 -translate-x-1/2 translate-y-2 rounded-full bg-slate-300/70 dark:bg-zinc-600/70" />
+              {/* Head — long bright pointer to Qibla */}
+              <div className="absolute left-1/2 top-1/2 h-28 w-3 -translate-x-1/2 -translate-y-28 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/40" />
+              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-32 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-600 text-white shadow-lg ring-4 ring-emerald-500/30">
+                <Navigation className="h-6 w-6" fill="currentColor" />
               </div>
             </div>
 
             {/* Center dot — colour updates via rAF tick */}
             <div
               ref={centerDotRef}
-              className="absolute h-3 w-3 rounded-full shadow-md border-2 border-white dark:border-zinc-900 bg-slate-800 dark:bg-white"
+              className="absolute h-4 w-4 rounded-full shadow-md border-2 border-white dark:border-zinc-900 bg-slate-800 dark:bg-white"
             />
           </div>
 

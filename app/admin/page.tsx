@@ -121,12 +121,11 @@ export default function AdminPage() {
   const { account, signInWithGoogle } = useAuth();
   const { profiles, users, complaints, isCurrentUserAdmin, isProfileAdmin, updateProfile, updateComplaint, updateUserBlocked, addReview } = useProfiles();
   const { t } = useI18n();
-  const [activeSection, setActiveSection] = useState<AdminSection>('pending');
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
   const [viewProfile, setViewProfile] = useState<Profile | null>(null);
   const [isMenuDrawerOpen, setIsMenuDrawerOpen] = useState(false);
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
-  
+
   // Addresses
   const [addresses, setAddresses] = useState<SamashkiHouseAddress[]>(() => {
     if (typeof window !== 'undefined') {
@@ -149,6 +148,23 @@ export default function AdminPage() {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [addressFilter, setAddressFilter] = useState<string>('all');
   const [selectedAddressCategory, setSelectedAddressCategory] = useState<string>('Другое');
+  // Remember the active section across page reloads so the user does
+  // not lose their place every time they refresh / re-open the admin
+  // panel. Persisted in localStorage; falls back to 'pending'.
+  const [activeSection, setActiveSection] = useState<AdminSection>(() => {
+    if (typeof window === 'undefined') return 'pending';
+    try {
+      const stored = window.localStorage.getItem('samashki-admin-section');
+      if (stored && ['pending', 'hidden', 'complaints', 'users', 'addresses'].includes(stored)) {
+        return stored as AdminSection;
+      }
+    } catch {}
+    return 'pending';
+  });
+
+  useEffect(() => {
+    try { window.localStorage.setItem('samashki-admin-section', activeSection); } catch {}
+  }, [activeSection]);
 
   // street suggestions
   const [streetQuery, setStreetQuery] = useState('');
@@ -167,8 +183,12 @@ export default function AdminPage() {
 
   // soft-delete queue: addresses removed in this session that the user
   // can still restore. They are committed to the database only when the
-  // user explicitly presses "Сохранить изменения".
+  // user explicitly presses "Сохранить".
   const [pendingDeletes, setPendingDeletes] = useState<Set<string>>(new Set());
+  // Brand-new addresses added in this session but not yet committed.
+  // Tracked separately so the "Сохранить" button can show the right
+  // count and so a page refresh doesn't lose the form's input.
+  const [pendingAdds, setPendingAdds] = useState<SamashkiHouseAddress[]>([]);
 
   useEffect(() => {
     try {
@@ -274,9 +294,10 @@ export default function AdminPage() {
       category: isNotHouse ? (selectedAddressCategory || 'Другое') : undefined,
     };
     setAddresses((cur) => [house, ...cur]);
+    setPendingAdds((cur) => [house, ...cur]);
     setHouseNumber('');
 
-    setSaveMsg('Адрес добавлен. Нажмите «Сохранить изменения», чтобы записать.');
+    setSaveMsg('Адрес добавлен. Нажмите «Сохранить», чтобы записать.');
     setTimeout(()=>setSaveMsg(null),2500);
   };
 
@@ -304,7 +325,7 @@ export default function AdminPage() {
   };
 
   const handleCommitAddresses = () => {
-    if (pendingDeletes.size === 0) {
+    if (pendingDeletes.size === 0 && pendingAdds.length === 0) {
       setSaveMsg('Нет изменений для сохранения.');
       setTimeout(()=>setSaveMsg(null),2000);
       return;
@@ -312,8 +333,14 @@ export default function AdminPage() {
     const next = addresses.filter((a) => !pendingDeletes.has(a.id));
     persistAddresses(next);
     setPendingDeletes(new Set());
+    setPendingAdds([]);
 
-    setSaveMsg(`Удалено ${next.length === addresses.length ? 'адресов' : `${addresses.length - next.length} адресов`} и сохранено в БД.`);
+    const removed = addresses.length - next.length;
+    const added = pendingAdds.length;
+    const parts: string[] = [];
+    if (added > 0) parts.push(`добавлено ${added}`);
+    if (removed > 0) parts.push(`удалено ${removed}`);
+    setSaveMsg(`${parts.join(', ')} и сохранено в БД.`);
     setTimeout(()=>setSaveMsg(null),2500);
   };
 
@@ -347,7 +374,7 @@ export default function AdminPage() {
     setAddresses(next);
     setEditingId(null);
 
-    setSaveMsg('Изменения внесены. Нажмите «Сохранить изменения» для записи в БД.');
+    setSaveMsg('Изменения внесены. Нажмите «Сохранить» для записи в БД.');
     setTimeout(()=>setSaveMsg(null),2500);
   };
 
@@ -466,29 +493,37 @@ export default function AdminPage() {
                     )}
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-400">Номер дома / объект</label>
+                    <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-400">
+                      {isNotHouse ? 'Название объекта / категория' : 'Номер дома'}
+                    </label>
                     <div className="flex items-center gap-2">
-                      <input value={houseNumber} onChange={(e)=>setHouseNumber(e.target.value)} placeholder={isNotHouse ? "Магазин, мечеть..." : "28"} className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white" required={!isNotHouse} />
+                      {isNotHouse ? (
+                        <select
+                          value={selectedAddressCategory}
+                          onChange={(e) => setSelectedAddressCategory(e.target.value)}
+                          className="min-w-0 flex-1 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-amber-900 dark:bg-amber-950/30 dark:text-white"
+                        >
+                          {allAddressCategories.filter((c) => c !== 'Дома').map((cat) => (
+                            <option key={cat} value={cat}>{cat}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          value={houseNumber}
+                          onChange={(e) => setHouseNumber(e.target.value)}
+                          placeholder="28"
+                          className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white"
+                          required
+                        />
+                      )}
                       <label className="flex shrink-0 cursor-pointer select-none items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5 text-xs font-bold text-amber-800 transition hover:bg-amber-100 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300 dark:hover:bg-amber-950/50">
-                        <input type="checkbox" checked={isNotHouse} onChange={(e)=>setIsNotHouse(e.target.checked)} className="h-4 w-4 rounded border-amber-300 text-emerald-600 focus:ring-emerald-500" />
+                        <input type="checkbox" checked={isNotHouse} onChange={(e) => setIsNotHouse(e.target.checked)} className="h-4 w-4 rounded border-amber-300 text-emerald-600 focus:ring-emerald-500" />
                         Не дом
                       </label>
                     </div>
-                    <p className="mt-1 text-[10px] text-slate-400">{isNotHouse ? `Будет в категории ${selectedAddressCategory} на карте` : 'Обычный дом'}</p>
+                    <p className="mt-1 text-[10px] text-slate-400">{isNotHouse ? `Будет в категории «${selectedAddressCategory}» на карте` : 'Обычный дом'}</p>
                   </div>
                 </div>
-                {isNotHouse && (
-                  <div>
-                    <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-400">Категория (для фильтра)</label>
-                    <div className="flex gap-2">
-                      <select value={selectedAddressCategory} onChange={(e)=>setSelectedAddressCategory(e.target.value)} className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs dark:border-zinc-800 dark:bg-zinc-800 dark:text-white">
-                        {allAddressCategories.filter(c=>c!=='Дома').map((cat)=>(
-                          <option key={cat} value={cat}>{cat}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                )}
 
                 <div>
                   <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-400">Координаты — широта и долгота в один ряд</label>
@@ -529,12 +564,6 @@ export default function AdminPage() {
                 {allAddressCategories.map((cat)=>(
                   <button key={cat} type="button" onClick={()=>setAddressFilter(cat)} className={`rounded-full px-2.5 py-1 text-[11px] font-bold transition ${addressFilter===cat ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400'}`}>{cat}</button>
                 ))}
-                {deletedAddresses.length > 0 && (
-                  <button key="__deleted__" type="button" onClick={()=>setAddressFilter('__deleted__')} className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold transition ${addressFilter==='__deleted__' ? 'border-red-600 bg-red-600 text-white' : 'border-red-300 bg-red-50 text-red-700 hover:bg-red-100 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300 dark:hover:bg-red-950/60'}`}>
-                    <Trash2 className="h-3 w-3" />
-                    Удалённые ({deletedAddresses.length})
-                  </button>
-                )}
               </div>
             </div>
 
@@ -544,16 +573,32 @@ export default function AdminPage() {
                   {addressFilter === '__deleted__' ? 'Удалённые' : 'Сохранённые'} ({filteredAddresses.length}
                   {addressFilter !== '__deleted__' && addressFilter === 'all' ? ` из ${addresses.length}` : ''})
                 </h4>
-                {pendingDeletes.size > 0 && (
-                  <button
-                    type="button"
-                    onClick={handleCommitAddresses}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-700"
-                  >
-                    <SaveIcon className="h-3.5 w-3.5" />
-                    Сохранить изменения ({pendingDeletes.size})
-                  </button>
-                )}
+                <div className="flex items-center gap-2">
+                  {deletedAddresses.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setAddressFilter('__deleted__')}
+                      className={`inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-[11px] font-bold transition ${
+                        addressFilter === '__deleted__'
+                          ? 'border-red-600 bg-red-600 text-white'
+                          : 'border-red-300 bg-red-50 text-red-700 hover:bg-red-100 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300 dark:hover:bg-red-950/60'
+                      }`}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                      Удалённые ({deletedAddresses.length})
+                    </button>
+                  )}
+                  {(pendingDeletes.size > 0 || pendingAdds.length > 0) && (
+                    <button
+                      type="button"
+                      onClick={handleCommitAddresses}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-700"
+                    >
+                      <SaveIcon className="h-3.5 w-3.5" />
+                      Сохранить ({pendingDeletes.size + pendingAdds.length})
+                    </button>
+                  )}
+                </div>
               </div>
               {filteredAddresses.length === 0 && (
                 <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center text-xs text-slate-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-500">

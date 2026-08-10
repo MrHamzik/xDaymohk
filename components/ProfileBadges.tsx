@@ -1,5 +1,6 @@
 'use client';
 
+import { useAuth } from '@/components/AuthProvider';
 import { CheckCircle2, Clock3, ShieldAlert } from 'lucide-react';
 import { Profile } from '@/lib/types';
 import { calculateWorkingStatus } from '@/lib/schedule';
@@ -12,10 +13,18 @@ export interface WorkingStatusBadgeProps {
 
 export function WorkingStatusBadge({ profile, onDarkBackground = false }: WorkingStatusBadgeProps) {
   const { t } = useI18n();
+  const { account } = useAuth();
   // Only specialists have working hours and real-time open/break/closed status
   if (!profile.isSpecialist) return null;
 
-  const statusInfo = calculateWorkingStatus(profile, profile.statusOverride);
+  // The owner's master "working status" switch in the side menu
+  // only applies when the viewer is the owner of this profile. For
+  // every other viewer we use the profile's own statusOverride
+  // (set on the profile directly) and otherwise fall back to the
+  // automatic schedule.
+  const isOwner = Boolean(account && account.id === profile.ownerId);
+  const effectiveOverride = isOwner ? account?.statusOverride : profile.statusOverride;
+  const statusInfo = calculateWorkingStatus(profile, effectiveOverride);
 
   const statusBg = statusInfo.status === 'flexible'
     ? (onDarkBackground ? 'border-sky-300/60 bg-sky-500/40 text-sky-50' : 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-800 dark:bg-sky-950/60 dark:text-sky-300')

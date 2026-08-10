@@ -184,7 +184,9 @@ export default function ProfileModal({
 
         <div className="flex-1 space-y-4 overflow-y-auto p-4 text-xs text-slate-800 dark:text-zinc-300 sm:p-5">
           {(() => {
-            const statusInfo = calculateWorkingStatus(profile, profile.statusOverride);
+            const isOwner = Boolean(account && account.id === profile.ownerId);
+            const effectiveOverride = isOwner ? account?.statusOverride : profile.statusOverride;
+            const statusInfo = calculateWorkingStatus(profile, effectiveOverride);
             return (
               <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-100 bg-slate-50/70 p-3 text-xs dark:border-zinc-800 dark:bg-zinc-800">
                 <div className="flex items-center gap-2">
