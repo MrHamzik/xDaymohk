@@ -15,18 +15,18 @@
 drop policy if exists "user_profiles self select" on public.user_profiles;
 create policy "user_profiles self select"
   on public.user_profiles for select
-  using (auth.uid()::text = id or is_admin_email());
+  using (auth.uid()::text = id::text or is_admin_email());
 
 drop policy if exists "user_profiles self insert" on public.user_profiles;
 create policy "user_profiles self insert"
   on public.user_profiles for insert
-  with check (auth.uid()::text = id);
+  with check (auth.uid()::text = id::text);
 
 drop policy if exists "user_profiles self update" on public.user_profiles;
 create policy "user_profiles self update"
   on public.user_profiles for update
-  using (auth.uid()::text = id)
-  with check (auth.uid()::text = id);
+  using (auth.uid()::text = id::text)
+  with check (auth.uid()::text = id::text);
 
 drop policy if exists "user_profiles admin update" on public.user_profiles;
 create policy "user_profiles admin update"
@@ -191,7 +191,7 @@ create policy "profile-media owner write"
     bucket_id = 'profile-media'
     and auth.role() = 'authenticated'
     and (storage.foldername(name))[1] in ('avatars', 'documents')
-    and (storage.foldername(name))[2] like (public.uid()::text || '-%')
+    and (storage.foldername(name))[2] like (auth.uid()::text || '-%')
   );
 
 drop policy if exists "profile-media owner delete" on storage.objects;
@@ -200,5 +200,5 @@ create policy "profile-media owner delete"
   for delete
   using (
     bucket_id = 'profile-media'
-    and (storage.foldername(name))[2] like (public.uid()::text || '-%')
+    and (storage.foldername(name))[2] like (auth.uid()::text || '-%')
   );
