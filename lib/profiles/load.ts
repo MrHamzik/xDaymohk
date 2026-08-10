@@ -1,0 +1,79 @@
+import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { isAdminEmail } from '@/lib/admin';
+import { profileFromDb } from '@/lib/profile-db';
+import { isDemoProfile } from '@/lib/profiles/admin';
+import { Complaint, Profile, UserSummary } from '@/lib/types';
+
+type DbRow = Record<string, any>;
+
+export async function loadProfilesFromSupabase(): Promise<Profile[] | null> {
+  if (!isSupabaseConfigured || !supabase) return null;
+
+  const { data: profileRows, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error || !profileRows) {
+    console.warn('Supabase profiles are unavailable:', error?.message);
+    return null;
+  }
+
+  // Empty remote table is a valid state; do not seed demo rows.
+  if (profileRows.length === 0) return [];
+
+  const profileIds = profileRows.map((row) => row.id);
+  const [{ data: certificateRows }, { data: reviewRows }] = await Promise.all([
+    supabase.from('certificates').select('*').in('profile_id', profileIds),
+    supabase.from('reviews').select('*').in('profile_id', profileIds).order('created_at', { ascending: false }),
+  ]);
+
+  return profileRows
+    .map((row) =>
+      profileFromDb(
+        row as DbRow,
+        ((certificateRows ?? []).filter((certificate) => certificate.profile_id === row.id) as DbRow[]) ?? [],
+        ((reviewRows ?? []).filter((review) => review.profile_id === row.id) as DbRow[]) ?? []
+      )
+    )
+    .filter((profile) => !isDemoProfile(profile));
+}
+
+export async function loadUsersFromSupabase(): Promise<UserSummary[]> {
+  if (!isSupabaseConfigured || !supabase) return [];
+  const { data, error } = await supabase
+    .from('user_profiles')
+    .select('id, email, full_name, avatar_url, is_admin, is_blocked')
+    .order('created_at', { ascending: false });
+  if (error || !data) return [];
+  return data
+    .filter((row) => row.email && typeof row.email === 'string' && row.email.trim().length > 0 && row.email.includes('@'))
+    .map((row) => ({
+      id: String(row.id),
+      email: row.email.trim(),
+      fullName: row.full_name ?? 'Пользователь',
+      avatarUrl: row.avatar_url ?? '',
+      isAdmin: isAdminEmail(row.email),
+      isBlocked: Boolean(row.is_blocked),
+      profileCount: 0,
+    }));
+}
+
+export async function loadComplaintsFromSupabase(): Promise<Complaint[]> {
+  if (!isSupabaseConfigured || !supabase) return [];
+  const { data, error } = await supabase
+    .from('complaints')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error || !data) return [];
+  return data.map((row) => ({
+    id: String(row.id),
+    profileId: String(row.profile_id),
+    targetUserId: row.target_user_id ?? undefined,
+    authorId: String(row.author_id),
+    authorName: row.author_name ?? 'Пользователь',
+    reason: row.reason ?? '',
+    status: row.status ?? 'open',
+    createdAt: row.created_at ?? '',
+  }));
+}
