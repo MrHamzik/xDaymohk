@@ -70,11 +70,10 @@ language sql
 security definer
 set search_path = public
 as $$
-  -- Explicit casts on both sides: user_profiles.id may end up as text
-  -- in some Supabase setups (column added later, auto-conversion, etc).
-  -- Casting to uuid is a no-op when the column is already uuid.
+  -- user_profiles.id may be text on this Supabase project. profiles.owner_id
+  -- is uuid, so we cast user_profiles.id to uuid for the comparison.
   update public.user_profiles
-     set profile_count = (select count(*) from public.profiles where owner_id::uuid = target_user)
+     set profile_count = (select count(*) from public.profiles where owner_id = target_user)
    where id::uuid = target_user;
 $$;
 

@@ -34,7 +34,7 @@ select
   u.email        as owner_email,
   u.is_blocked   as owner_is_blocked
 from public.profiles p
-left join public.user_profiles u on u.id = p.owner_id::uuid
+left join public.user_profiles u on u.id::uuid = p.owner_id
 where not (p.is_hidden or p.is_banned);
 
 -- Admin dashboard view: same as above but includes hidden/banned.
@@ -44,7 +44,7 @@ select
   u.email        as owner_email,
   u.is_blocked   as owner_is_blocked
 from public.profiles p
-left join public.user_profiles u on u.id = p.owner_id::uuid;
+left join public.user_profiles u on u.id::uuid = p.owner_id;
 
 -- Public users list for /admin → users tab.
 create or replace view public.v_user_directory as
@@ -66,7 +66,7 @@ left join (
     count(*) filter (where is_hidden) as hidden_total
   from public.profiles
   group by owner_id
-) c on c.owner_id::uuid = u.id;
+) c on c.owner_id = u.id::uuid;
 
 -- Aggregate donation progress for the current month (Europe/Moscow).
 create or replace view public.v_current_donations as
