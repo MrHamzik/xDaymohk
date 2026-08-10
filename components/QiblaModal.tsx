@@ -188,7 +188,12 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
       const dial = dialRef.current;
       const needle = needleRef.current;
       if (dial) dial.style.transform = `rotate(${-heading}deg)`;
-      if (needle) needle.style.transform = `rotate(${qiblaAngle}deg)`;
+      // Needle rotates by (qiblaAngle - heading) so it visually
+      // swings to where the Kaaba is from the user's current
+      // perspective. When the needle points straight up, the
+      // user is facing the Qibla.
+      const needleAngle = (qiblaAngle - heading + 360) % 360;
+      if (needle) needle.style.transform = `rotate(${needleAngle}deg)`;
 
       if (headingLabelRef.current) {
         headingLabelRef.current.textContent = mode === 'ready' ? `${Math.round(heading)}°` : '—';
