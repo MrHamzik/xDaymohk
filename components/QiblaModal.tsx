@@ -13,7 +13,7 @@ interface QiblaModalProps {
   onClose: () => void;
 }
 
-type CompassMode = 'idle' | 'no-support' | 'no-permission' | 'ready';
+type CompassMode = 'idle' | 'no-support' | 'no-permission' | 'needs-calibration' | 'ready';
 
 export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
   const { language } = useI18n();
@@ -26,6 +26,15 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
   const [mode, setMode] = useState<CompassMode>('idle');
   const [heading, setHeading] = useState<number>(0);
   const [permissionNeeded, setPermissionNeeded] = useState(false);
+  // Calibration: the e.alpha value the user had when they pointed
+  // the phone screen-up along the local North direction. Subtracted
+  // from every future e.alpha reading to derive a compass-like
+  // heading. Needed on Android devices where e.absolute is true
+  // but e.alpha is the device's rotation around its z-axis rather
+  // than a true compass heading.
+  const [calibration, setCalibration] = useState<number | null>(null);
+  const calibrationRef = useRef<number | null>(null);
+  const lastAlphaRef = useRef<number | null>(null);
 
   // Lock body scroll while open
   useEffect(() => {
@@ -54,20 +63,22 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
 
   // Normalize any device heading to a 0..360 number, with 0 = North.
   // iOS: e.webkitCompassHeading already in 0..360.
-  // Android: e.absolute === true means e.alpha is the true compass
-  // heading. e.absolute === false means e.alpha is the rotation
-  // around the device's z-axis (NOT a compass heading), so we
-  // cannot reliably derive a heading from it. We return null in
-  // that case so the needle parks at qiblaAngle (the static
-  // Qibla direction) instead of showing a misleading value.
+  // Android: e.absolute === true means e.alpha is supposedly a true
+  // compass heading, but in practice on many devices e.alpha is the
+  // device's rotation around its z-axis (NOT a compass heading).
+  // The calibration step lets the user mark the current e.alpha as
+  // the local North so we can derive a usable heading from any
+  // future e.alpha reading on that device.
   const extractHeading = useCallback((e: DeviceOrientationEvent): number | null => {
     const anyEvent = e as DeviceOrientationEvent & { webkitCompassHeading?: number };
     if (typeof anyEvent.webkitCompassHeading === 'number' && !Number.isNaN(anyEvent.webkitCompassHeading)) {
       return anyEvent.webkitCompassHeading;
     }
     if (typeof e.alpha === 'number' && !Number.isNaN(e.alpha)) {
-      if (e.absolute) return e.alpha;
-      return null;
+      lastAlphaRef.current = e.alpha;
+      const cal = calibrationRef.current;
+      if (cal === null) return null; // not calibrated yet
+      return ((e.alpha - cal) % 360 + 360) % 360;
     }
     return null;
   }, []);
@@ -93,7 +104,14 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
 
     const handle = (e: DeviceOrientationEvent) => {
       const h = extractHeading(e);
-      if (h === null) return;
+      if (h === null) {
+        // Sensor is firing but we have no calibration yet — show
+        // the calibration prompt instead of a misleading heading.
+        if (lastAlphaRef.current !== null && mode === 'no-permission') {
+          // not used; covered below
+        }
+        return;
+      }
       setMode('ready');
       setHeading(h);
     };
@@ -104,14 +122,20 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
       window.dispatchEvent(new Event('deviceorientation'));
     }, true);
 
-    const id = window.setTimeout(() => setMode((m) => (m === 'ready' ? m : 'no-support')), 3000);
+    const id = window.setTimeout(() => {
+      setMode((m) => {
+        if (m === 'ready') return m;
+        if (lastAlphaRef.current !== null) return 'needs-calibration';
+        return 'no-support';
+      });
+    }, 3000);
 
     return () => {
       window.clearTimeout(id);
       window.removeEventListener('deviceorientationabsolute', handle, true);
       window.removeEventListener('deviceorientation', handle, true);
     };
-  }, [isOpen, extractHeading]);
+  }, [isOpen, extractHeading, mode]);
 
   const requestPermission = useCallback(async () => {
     const anyWindow = window as unknown as {
@@ -122,6 +146,8 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
       const response = await anyWindow.DeviceOrientationEvent.requestPermission();
       if (response === 'granted') {
         setPermissionNeeded(false);
+        // iOS doesn't need calibration — webkitCompassHeading is
+        // already a true compass heading.
         setMode('ready');
         const handle = (e: DeviceOrientationEvent) => {
           const h = extractHeading(e);
@@ -137,6 +163,29 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
       setMode('no-permission');
     }
   }, [extractHeading]);
+
+  const handleCalibrate = useCallback(() => {
+    // User has put the phone flat, screen up, and is pointing along
+    // their local North direction. Mark the current e.alpha as 0.
+    if (lastAlphaRef.current !== null) {
+      calibrationRef.current = lastAlphaRef.current;
+      setCalibration(lastAlphaRef.current);
+      setMode('ready');
+    } else {
+      // No alpha yet — wait for one
+      const handler = (e: DeviceOrientationEvent) => {
+        if (typeof e.alpha === 'number' && !Number.isNaN(e.alpha)) {
+          calibrationRef.current = e.alpha;
+          setCalibration(e.alpha);
+          setMode('ready');
+          window.removeEventListener('deviceorientation', handler, true);
+          window.removeEventListener('deviceorientationabsolute', handler, true);
+        }
+      };
+      window.addEventListener('deviceorientation', handler, true);
+      window.addEventListener('deviceorientationabsolute', handler, true);
+    }
+  }, []);
 
   // Apply heading directly to the DOM via rAF for 60fps updates.
   // The needle ALWAYS renders — even when no sensor is available,
@@ -251,7 +300,7 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
                 —
               </p>
               <p className="text-[10px] text-slate-500">
-                {mode === 'ready' ? 'компас' : mode === 'no-permission' ? 'нужно разрешение' : 'нет датчика'}
+                {mode === 'ready' ? 'компас' : mode === 'needs-calibration' ? 'калибровка' : mode === 'no-permission' ? 'нужно разрешение' : 'нет датчика'}
               </p>
             </div>
             <div
@@ -285,6 +334,26 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
               className="mt-3 w-full rounded-xl bg-amber-500 px-4 py-2.5 text-xs font-bold text-white hover:bg-amber-600"
             >
               Разрешить доступ к компасу (iOS)
+            </button>
+          )}
+
+          {mode === 'needs-calibration' && (
+            <button
+              type="button"
+              onClick={handleCalibrate}
+              className="mt-3 w-full rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-700"
+            >
+              {language === 'ce' ? 'Калибровкха — хьан кIоштта Норд тIехула' : 'Откалибровать — направьте телефон на север'}
+            </button>
+          )}
+
+          {calibration !== null && mode === 'ready' && (
+            <button
+              type="button"
+              onClick={handleCalibrate}
+              className="mt-3 w-full rounded-xl bg-slate-100 px-4 py-2 text-[11px] font-bold text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+            >
+              {language === 'ce' ? 'Цакалибровкха' : 'Перекалибровать'}
             </button>
           )}
 
