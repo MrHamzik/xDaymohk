@@ -33,7 +33,12 @@ end $$;
 -- user_profiles.id is text while profiles.owner_id is uuid. The text
 -- side stays text; the uuid side is text-cast so the comparison
 -- succeeds regardless of which side is which type.
-create or replace view public.v_public_profiles as
+--
+-- security_invoker = true so the view respects RLS of the underlying
+-- tables (otherwise SECURITY DEFINER would run as the view owner and
+-- bypass policies — flagged by Supabase Security Advisor).
+create or replace view public.v_public_profiles
+  with (security_invoker = true) as
 select
   p.*,
   u.email        as owner_email,
@@ -43,7 +48,8 @@ left join public.user_profiles u on u.id::text = p.owner_id::text
 where not (p.is_hidden or p.is_banned);
 
 -- Admin dashboard view: same as above but includes hidden/banned.
-create or replace view public.v_all_profiles as
+create or replace view public.v_all_profiles
+  with (security_invoker = true) as
 select
   p.*,
   u.email        as owner_email,
@@ -52,7 +58,8 @@ from public.profiles p
 left join public.user_profiles u on u.id::text = p.owner_id::text;
 
 -- Public users list for /admin → users tab.
-create or replace view public.v_user_directory as
+create or replace view public.v_user_directory
+  with (security_invoker = true) as
 select
   u.id,
   u.email,
@@ -74,7 +81,8 @@ left join (
 ) c on c.owner_id::text = u.id::text;
 
 -- Aggregate donation progress for the current month (Europe/Moscow).
-create or replace view public.v_current_donations as
+create or replace view public.v_current_donations
+  with (security_invoker = true) as
 select
   coalesce(sum(amount), 0)::numeric(12,2) as total_rub,
   count(*)                                as donations_count

@@ -384,18 +384,38 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
 
   const deleteProfile = useCallback(async (profileId: string) => {
     const target = profiles.find((p) => p.id === profileId);
-    if (target?.isPersonal) return;
-    if (supabase) {
-      const { data, error } = await supabase
+    if (target?.isPersonal) {
+      throw new Error('Личная анкета не может быть удалена.');
+    }
+
+    // Build a follow-up verification: if Supabase reports 0 affected rows,
+    // check whether the row even exists; if it does, RLS is the problem.
+    if (supabase && account) {
+      // Pre-check ownership so we can give a precise error.
+      const { data: ownershipCheck, error: ownershipError } = await supabase
         .from('profiles')
-        .delete()
+        .select('id, owner_id')
         .eq('id', profileId)
-        .select('id');
-      if (error) throw new Error(error.message);
-      if (!data || data.length === 0) {
-        throw new Error('Анкета не удалена. Примените политики DELETE из supabase/upgrade_existing.sql и повторите попытку.');
+        .maybeSingle();
+      if (ownershipError) throw new Error(ownershipError.message);
+      if (!ownershipCheck) {
+        throw new Error('Анкета уже удалена.');
+      }
+      const ownerIdText = String(ownershipCheck.owner_id ?? '');
+      if (ownerIdText !== account.id) {
+        throw new Error('Удалять можно только свои анкеты.');
+      }
+
+      const { error: deleteError, count } = await supabase
+        .from('profiles')
+        .delete({ count: 'exact' })
+        .eq('id', profileId);
+      if (deleteError) throw new Error(deleteError.message);
+      if (count === 0) {
+        throw new Error('Не удалось удалить анкету — проверьте RLS политики (см. supabase/upgrade_existing.sql).');
       }
     }
+
     const deletedProfile = profiles.find((profile) => profile.id === profileId);
     setProfiles((currentProfiles) => currentProfiles.filter((profile) => profile.id !== profileId));
     if (deletedProfile?.ownerId) {
@@ -403,7 +423,7 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
         user.id === deletedProfile.ownerId ? { ...user, profileCount: Math.max(0, user.profileCount - 1) } : user
       )));
     }
-  }, [profiles]);
+  }, [profiles, account]);
 
   const addComplaint = useCallback(async (profileId: string, reason: string) => {
     if (!account || account.isBlocked) return;

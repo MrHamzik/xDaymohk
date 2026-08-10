@@ -327,7 +327,7 @@ alter table public.donations        enable row level security;
 alter table public.project_support  enable row level security;
 -- <<<<<< 04-storage-and-rls-enable.sql <<<<<<
 
--- >>>>>> 05-rls-policies.sql (7.8 kB) >>>>>>
+-- >>>>>> 05-rls-policies.sql (7.9 kB) >>>>>>
 -- =============================================================================
 -- Step 05 / 07 — Row Level Security policies
 -- =============================================================================
@@ -345,18 +345,18 @@ alter table public.project_support  enable row level security;
 drop policy if exists "user_profiles self select" on public.user_profiles;
 create policy "user_profiles self select"
   on public.user_profiles for select
-  using (public.uid() = id or is_admin_email());
+  using (auth.uid()::text = id or is_admin_email());
 
 drop policy if exists "user_profiles self insert" on public.user_profiles;
 create policy "user_profiles self insert"
   on public.user_profiles for insert
-  with check (public.uid() = id);
+  with check (auth.uid()::text = id);
 
 drop policy if exists "user_profiles self update" on public.user_profiles;
 create policy "user_profiles self update"
   on public.user_profiles for update
-  using (public.uid() = id)
-  with check (public.uid() = id);
+  using (auth.uid()::text = id)
+  with check (auth.uid()::text = id);
 
 drop policy if exists "user_profiles admin update" on public.user_profiles;
 create policy "user_profiles admin update"
@@ -372,20 +372,20 @@ create policy "profiles public read"
   on public.profiles for select
   using (
     not (is_hidden or is_banned)
-    or public.uid() = owner_id
+    or auth.uid()::text = owner_id
     or is_admin_email()
   );
 
 drop policy if exists "profiles owner insert" on public.profiles;
 create policy "profiles owner insert"
   on public.profiles for insert
-  with check (public.uid() = owner_id or owner_id is null);
+  with check (auth.uid()::text = owner_id or owner_id is null);
 
 drop policy if exists "profiles owner update" on public.profiles;
 create policy "profiles owner update"
   on public.profiles for update
-  using (public.uid() = owner_id)
-  with check (public.uid() = owner_id);
+  using (auth.uid()::text = owner_id)
+  with check (auth.uid()::text = owner_id);
 
 drop policy if exists "profiles admin update" on public.profiles;
 create policy "profiles admin update"
@@ -397,7 +397,7 @@ drop policy if exists "profiles owner delete" on public.profiles;
 create policy "profiles owner delete"
   on public.profiles for delete
   using (
-    (public.uid() = owner_id and not is_personal)
+    (auth.uid()::text = owner_id::text and not is_personal)
     or is_admin_email()
   );
 
@@ -432,12 +432,12 @@ create policy "reviews public read"
 drop policy if exists "reviews author write" on public.reviews;
 create policy "reviews author write"
   on public.reviews for insert
-  with check (public.uid() = author_id);
+  with check (auth.uid()::text = author_id);
 
 drop policy if exists "reviews author delete" on public.reviews;
 create policy "reviews author delete"
   on public.reviews for delete
-  using (public.uid() = author_id or is_admin_email());
+  using (auth.uid()::text = author_id or is_admin_email());
 
 -- ---------------------------------------------------------------------------
 -- complaints
@@ -445,12 +445,12 @@ create policy "reviews author delete"
 drop policy if exists "complaints author read" on public.complaints;
 create policy "complaints author read"
   on public.complaints for select
-  using (public.uid() = author_id or is_admin_email());
+  using (auth.uid()::text = author_id or is_admin_email());
 
 drop policy if exists "complaints author insert" on public.complaints;
 create policy "complaints author insert"
   on public.complaints for insert
-  with check (public.uid() = author_id);
+  with check (auth.uid()::text = author_id);
 
 drop policy if exists "complaints admin update" on public.complaints;
 create policy "complaints admin update"
@@ -478,18 +478,18 @@ create policy "house_addresses admin write"
 drop policy if exists "notifications self read" on public.notifications;
 create policy "notifications self read"
   on public.notifications for select
-  using (public.uid() = recipient_id);
+  using (auth.uid()::text = recipient_id);
 
 drop policy if exists "notifications self update" on public.notifications;
 create policy "notifications self update"
   on public.notifications for update
-  using (public.uid() = recipient_id)
-  with check (public.uid() = recipient_id);
+  using (auth.uid()::text = recipient_id)
+  with check (auth.uid()::text = recipient_id);
 
 drop policy if exists "notifications admin insert" on public.notifications;
 create policy "notifications admin insert"
   on public.notifications for insert
-  with check (is_admin_email() or public.uid() = recipient_id);
+  with check (is_admin_email() or auth.uid()::text = recipient_id);
 
 -- ---------------------------------------------------------------------------
 -- donations + project_support — public read, service-role writes
@@ -534,7 +534,7 @@ create policy "profile-media owner delete"
   );
 -- <<<<<< 05-rls-policies.sql <<<<<<
 
--- >>>>>> 06-realtime-and-views.sql (4.0 kB) >>>>>>
+-- >>>>>> 06-realtime-and-views.sql (4.3 kB) >>>>>>
 -- =============================================================================
 -- Step 06 / 07 — Realtime publication + convenience views
 -- =============================================================================
@@ -570,7 +570,12 @@ end $$;
 -- user_profiles.id is text while profiles.owner_id is uuid. The text
 -- side stays text; the uuid side is text-cast so the comparison
 -- succeeds regardless of which side is which type.
-create or replace view public.v_public_profiles as
+--
+-- security_invoker = true so the view respects RLS of the underlying
+-- tables (otherwise SECURITY DEFINER would run as the view owner and
+-- bypass policies — flagged by Supabase Security Advisor).
+create or replace view public.v_public_profiles
+  with (security_invoker = true) as
 select
   p.*,
   u.email        as owner_email,
@@ -580,7 +585,8 @@ left join public.user_profiles u on u.id::text = p.owner_id::text
 where not (p.is_hidden or p.is_banned);
 
 -- Admin dashboard view: same as above but includes hidden/banned.
-create or replace view public.v_all_profiles as
+create or replace view public.v_all_profiles
+  with (security_invoker = true) as
 select
   p.*,
   u.email        as owner_email,
@@ -589,7 +595,8 @@ from public.profiles p
 left join public.user_profiles u on u.id::text = p.owner_id::text;
 
 -- Public users list for /admin → users tab.
-create or replace view public.v_user_directory as
+create or replace view public.v_user_directory
+  with (security_invoker = true) as
 select
   u.id,
   u.email,
@@ -611,7 +618,8 @@ left join (
 ) c on c.owner_id::text = u.id::text;
 
 -- Aggregate donation progress for the current month (Europe/Moscow).
-create or replace view public.v_current_donations as
+create or replace view public.v_current_donations
+  with (security_invoker = true) as
 select
   coalesce(sum(amount), 0)::numeric(12,2) as total_rub,
   count(*)                                as donations_count
