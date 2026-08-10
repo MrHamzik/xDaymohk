@@ -18,11 +18,43 @@
 -- "invalid input syntax for type uuid" and no data will be lost
 -- (Postgres wraps the statement in an implicit transaction).
 --
--- Order matters: user_profiles must convert first because the others
--- have FK constraints pointing at it. We drop and re-add the FK
--- constraints as plain (no validation) to avoid full-table scans
--- during the conversion.
+-- Order matters:
+--   1. Drop every RLS policy that references any of the columns we are
+--      about to convert. Postgres refuses to ALTER a column that is
+--      referenced by a policy (ERROR 0A000), so we must drop them first.
+--      step 05 will recreate them with the new (uuid) types.
+--   2. Convert user_profiles.id first because the others have FK
+--      constraints pointing at it. We drop and re-add the FK
+--      constraints as NOT VALID to avoid full-table scans during the
+--      conversion; we VALIDATE them all at the end.
 -- =============================================================================
+
+-- ---------------------------------------------------------------------------
+-- 0) Drop every RLS policy on the 5 tables we're about to convert.
+--    This includes both the names we use in step 05 ('user_profiles
+--    self insert', etc.) AND any old name from a previous version of
+--    step 05 (e.g. 'user_profiles_insert_own' was the name in an older
+--    draft). step 05 will recreate them with the correct names.
+-- ---------------------------------------------------------------------------
+do $$
+declare
+  pol record;
+begin
+  for pol in
+    select schemaname, tablename, policyname
+    from pg_policies
+    where schemaname = 'public'
+      and tablename in (
+        'user_profiles',
+        'profiles',
+        'reviews',
+        'complaints',
+        'notifications'
+      )
+  loop
+    execute format('drop policy if exists %I on public.%I', pol.policyname, pol.tablename);
+  end loop;
+end $$;
 
 -- ---------------------------------------------------------------------------
 -- 1) user_profiles.id → uuid

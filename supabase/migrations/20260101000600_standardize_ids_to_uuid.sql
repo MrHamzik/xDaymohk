@@ -6,6 +6,29 @@
 -- for use with `supabase db push` (fresh installs).
 -- =============================================================================
 
+-- 0) Drop every RLS policy on the 5 tables we're about to convert.
+--    step 05 will recreate them with the correct names after this
+--    migration runs.
+do $$
+declare
+  pol record;
+begin
+  for pol in
+    select schemaname, tablename, policyname
+    from pg_policies
+    where schemaname = 'public'
+      and tablename in (
+        'user_profiles',
+        'profiles',
+        'reviews',
+        'complaints',
+        'notifications'
+      )
+  loop
+    execute format('drop policy if exists %I on public.%I', pol.policyname, pol.tablename);
+  end loop;
+end $$;
+
 -- 1) user_profiles.id
 alter table public.user_profiles
   alter column id type uuid using id::uuid;
