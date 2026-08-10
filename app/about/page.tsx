@@ -8,7 +8,6 @@ import SidebarNav from '@/components/SidebarNav';
 import BottomNav from '@/components/BottomNav';
 import EditProfileModal from '@/components/EditProfileModal';
 import AccountModal from '@/components/AccountModal';
-import AdminPanel from '@/components/AdminPanel';
 import ProfileModal from '@/components/ProfileModal';
 import SupportBudget from '@/components/SupportBudget';
 import CreateActionModal from '@/components/CreateActionModal';
@@ -21,12 +20,11 @@ import { Profile } from '@/lib/types';
 
 export default function AboutPage() {
   const { account } = useAuth();
-  const { profiles, complaints, isCurrentUserAdmin, isProfileAdmin, addProfile, updateProfile, addReview, updateComplaint } = useProfiles();
+  const { profiles, isCurrentUserAdmin, isProfileAdmin, addProfile, updateProfile, addReview } = useProfiles();
   const { t } = useI18n();
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
   const [isMenuDrawerOpen, setIsMenuDrawerOpen] = useState(false);
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
   const [activeProfileId, setActiveProfileId] = useState<string | null>(null);
@@ -227,18 +225,6 @@ export default function AboutPage() {
         onClose={() => { setEditingProfile(null); setIsAddModalOpen(false); }}
         onSave={handleSaveProfile}
       />
-      {isCurrentUserAdmin && (
-        <AdminPanel
-          isOpen={isAdminPanelOpen}
-          onClose={() => setIsAdminPanelOpen(false)}
-          profiles={profiles}
-          complaints={complaints}
-          onUpdateProfile={handleUpdateProfile}
-          onUpdateComplaint={updateComplaint}
-          onOpenProfile={(profile) => { setIsAdminPanelOpen(false); setActiveProfileId(profile.id); }}
-        />
-      )}
-
       <BottomNav
         onOpenMenu={() => setIsMenuDrawerOpen(true)}
         onOpenCreate={() => setIsCreateSheetOpen(true)}

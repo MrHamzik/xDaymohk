@@ -342,7 +342,7 @@ export default function AdminPage() {
             <ShieldAlert className="h-8 w-8" />
           </div>
           <h2 className="text-xl font-bold text-slate-900 dark:text-white">Панель администратора</h2>
-          <p className="mt-2 text-sm text-slate-600 dark:text-zinc-500">Доступ только для mr.hamzik1026@gmail.com, kaneki990099@gmail.com, nabis95@gmail.com</p>
+          <p className="mt-2 text-sm text-slate-600 dark:text-zinc-500">Доступ только для mr.hamzik1026@gmail.com, nabis95@gmail.com</p>
           {!account && <button onClick={() => void signInWithGoogle()} className="mt-6 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white">Войти через Google</button>}
           <Link href="/" className="mt-4 text-xs font-semibold text-slate-500 hover:underline">Вернуться в каталог</Link>
         </main>

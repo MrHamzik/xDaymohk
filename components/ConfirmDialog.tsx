@@ -40,7 +40,7 @@ export default function ConfirmDialog({ isOpen, title, message, confirmLabel, on
           <button type="button" onClick={onCancel} aria-label="Закрыть" className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-zinc-800"><X className="h-4 w-4" /></button>
         </div>
         <div className="mt-5 grid grid-cols-2 gap-2">
-          <button type="button" onClick={onCancel} disabled={isBusy} className="rounded-xl border border-slate-200 px-3 py-2.5.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800">Отмена</button>
+          <button type="button" onClick={onCancel} disabled={isBusy} className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800">Отмена</button>
           <button type="button" onClick={onConfirm} disabled={isBusy} className={`rounded-xl px-3 py-2.5 text-sm font-bold text-white transition disabled:cursor-not-allowed disabled:opacity-50 ${danger ? 'bg-red-600 hover:bg-red-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}>{isBusy ? 'Выполняем…' : confirmLabel}</button>
         </div>
       </div>

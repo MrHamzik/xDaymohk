@@ -9,7 +9,6 @@ import EditProfileModal from '@/components/EditProfileModal';
 import Navbar from '@/components/Navbar';
 import SidebarNav from '@/components/SidebarNav';
 import BottomNav from '@/components/BottomNav';
-import AdminPanel from '@/components/AdminPanel';
 import ProfileModal from '@/components/ProfileModal';
 import ReportDialog from '@/components/ReportDialog';
 import ConfirmDialog from '@/components/ConfirmDialog';
@@ -26,13 +25,12 @@ import { useI18n } from '@/lib/i18n';
 import { AudienceFilter, Profile } from '@/lib/types';
 
 export default function MapPage() {
-  const { profiles, users, complaints, isCurrentUserAdmin, isProfileAdmin, addProfile, updateProfile, addReview, addComplaint, updateComplaint } = useProfiles();
+  const { profiles, users, isCurrentUserAdmin, isProfileAdmin, addProfile, updateProfile, addReview, addComplaint } = useProfiles();
   const { account } = useAuth();
   const { t } = useI18n();
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
   const [activeProfileId, setActiveProfileId] = useState<string | null>(null);
   const [reportProfile, setReportProfile] = useState<Profile | null>(null);
   const [blockProfile, setBlockProfile] = useState<Profile | null>(null);
@@ -353,17 +351,6 @@ export default function MapPage() {
         onClose={() => { setEditingProfile(null); setIsAddModalOpen(false); }}
         onSave={handleSaveProfile}
       />
-      {isCurrentUserAdmin && (
-        <AdminPanel
-          isOpen={isAdminPanelOpen}
-          onClose={() => setIsAdminPanelOpen(false)}
-          profiles={profiles}
-          complaints={complaints}
-          onUpdateProfile={updateProfile}
-          onUpdateComplaint={updateComplaint}
-          onOpenProfile={(profile) => { setIsAdminPanelOpen(false); setActiveProfileId(profile.id); }}
-        />
-      )}
       <BottomNav
         onOpenMenu={() => setIsMenuDrawerOpen(true)}
         onOpenCreate={() => setIsCreateSheetOpen(true)}

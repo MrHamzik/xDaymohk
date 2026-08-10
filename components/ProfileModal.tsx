@@ -302,7 +302,7 @@ export default function ProfileModal({
                       value={reviewText}
                       onChange={(event) => setReviewText(event.target.value)}
                       placeholder="Расскажите о своём опыте"
-                      className="w-full resize-y break-words rounded-xl border border-slate-200 bg-white px-3 py-2.5.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white"
+                      className="w-full resize-y break-words rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white"
                     />
                   </div>
                   <button type="submit" className="rounded-xl bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white transition hover:bg-emerald-700">

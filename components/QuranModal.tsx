@@ -74,7 +74,7 @@ export default function QuranModal({ isOpen, onClose }: QuranModalProps) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={language === 'ce' ? 'Сурат лаха (масала: Йа Син, Фатихьа)...' : 'Поиск суры (например: Аль-Фатиха, Йа Син)...'}
-              className="w-full rounded-xl border border-slate-200 bg-white py-2.5.5 pl-9 pr-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-white"
+              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-white"
             />
           </div>
         </div>

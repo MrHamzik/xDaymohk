@@ -9,7 +9,7 @@ import AddressAutocomplete from '@/components/AddressAutocomplete';
 import InteractiveMap, { type MapLayerMode } from '@/components/InteractiveMap';
 import { compressImageFile, uploadImageIfStorageConfigured } from '@/lib/media';
 import { WEEKDAYS } from '@/lib/schedule';
-import { findClosestSamashkiHouse } from '@/lib/samashki-addresses';
+import { findClosestSamashkiHouse, getEffectiveHouseAddresses } from '@/lib/samashki-addresses';
 import { Certificate, MapPosition, PROFESSION_CATEGORIES, Profile } from '@/lib/types';
 
 interface EditProfileModalProps {
@@ -166,21 +166,21 @@ const [isSpecialist, setIsSpecialist] = useState(false);
     }
     // Используем эффективную базу адресов (включая кастомные из админки) для поиска ближайшего
     try {
-      // @ts-ignore dynamic import of effective list
-      const { getEffectiveHouseAddresses } = require('@/lib/samashki-addresses');
       const all = getEffectiveHouseAddresses();
-      let closest = all[0];
-      let min = Infinity;
-      for (const h of all) {
-        const dLat = h.lat - position.lat;
-        const dLng = h.lng - position.lng;
-        const d = dLat*dLat + dLng*dLng;
-        if (d < min) { min = d; closest = h; }
-      }
-      if (closest) {
-        setWorkplaceCoords({ lat: closest.lat, lng: closest.lng });
-        setWorkplaceAddress(closest.fullAddress);
-        return;
+      if (all && all.length > 0) {
+        let closest = all[0];
+        let min = Infinity;
+        for (const h of all) {
+          const dLat = h.lat - position.lat;
+          const dLng = h.lng - position.lng;
+          const d = dLat*dLat + dLng*dLng;
+          if (d < min) { min = d; closest = h; }
+        }
+        if (closest) {
+          setWorkplaceCoords({ lat: closest.lat, lng: closest.lng });
+          setWorkplaceAddress(closest.fullAddress);
+          return;
+        }
       }
     } catch {}
     const closest = findClosestSamashkiHouse(position);

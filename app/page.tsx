@@ -13,7 +13,6 @@ import ReportDialog from '@/components/ReportDialog';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import EditProfileModal from '@/components/EditProfileModal';
 import AccountModal from '@/components/AccountModal';
-import AdminPanel from '@/components/AdminPanel';
 import CreateActionModal from '@/components/CreateActionModal';
 import MobileMenuDrawer from '@/components/MobileMenuDrawer';
 import { useAuth } from '@/components/AuthProvider';
@@ -25,7 +24,7 @@ import { AudienceFilter, Profile } from '@/lib/types';
 
 export default function Home() {
   const { account } = useAuth();
-  const { profiles, users, complaints, isCurrentUserAdmin, isProfileAdmin, addProfile, updateProfile, addReview, addComplaint, updateComplaint } = useProfiles();
+  const { profiles, users, isCurrentUserAdmin, isProfileAdmin, addProfile, updateProfile, addReview, addComplaint } = useProfiles();
   const { t } = useI18n();
   const [searchQuery, setSearchQuery] = useState('');
   const [audienceFilters, setAudienceFilters] = useState<AudienceFilter[]>([]);
@@ -34,7 +33,6 @@ export default function Home() {
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
   const [isMenuDrawerOpen, setIsMenuDrawerOpen] = useState(false);
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
   const [reportProfile, setReportProfile] = useState<Profile | null>(null);
@@ -208,17 +206,7 @@ export default function Home() {
         onClose={() => { setEditingProfile(null); setIsAddModalOpen(false); }}
         onSave={handleSaveProfile}
       />
-      {isCurrentUserAdmin && (
-        <AdminPanel
-          isOpen={isAdminPanelOpen}
-          onClose={() => setIsAdminPanelOpen(false)}
-          profiles={profiles}
-          complaints={complaints}
-          onUpdateProfile={handleUpdateProfile}
-          onUpdateComplaint={updateComplaint}
-          onOpenProfile={(profile) => { setIsAdminPanelOpen(false); setActiveProfileId(profile.id); }}
-        />
-      )}
+      {isCurrentUserAdmin && null}
 
       <ReportDialog
         profile={reportProfile}
