@@ -182,9 +182,10 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
     if (!isOpen) return;
     let raf = 0;
     const tick = () => {
+      const dial = dialRef.current;
       const needle = needleRef.current;
-      const needleAngle = (qiblaAngle - heading + 360) % 360;
-      if (needle) needle.style.transform = `rotate(${needleAngle}deg)`;
+      if (dial) dial.style.transform = `rotate(${-heading}deg)`;
+      if (needle) needle.style.transform = `rotate(${qiblaAngle - 45 + 360}deg)`;
 
       if (headingLabelRef.current) {
         headingLabelRef.current.textContent = mode === 'ready' ? `${Math.round(heading)}°` : '—';
@@ -279,19 +280,19 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
 
           <div className="mt-4 grid w-full grid-cols-3 gap-2 text-center">
             <div className="rounded-xl bg-slate-50 p-2.5 dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Кибла</p>
-              <p className="text-sm font-black text-slate-900 dark:text-white">{qiblaAngle.toFixed(1)}°</p>
-              <p className="text-[10px] text-slate-500">от севера</p>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Кибла</p>
+              <p className="text-[13px] font-black text-slate-900 dark:text-white">{qiblaAngle.toFixed(1)}°</p>
+              <p className="text-[9px] text-slate-500">от севера</p>
             </div>
             <div className="rounded-xl bg-slate-50 p-2.5 dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Вы</p>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Вы</p>
               <p
                 ref={headingLabelRef}
-                className="text-sm font-black text-slate-900 dark:text-white"
+                className="text-[13px] font-black text-slate-900 dark:text-white"
               >
                 —
               </p>
-              <p className="text-[10px] text-slate-500">
+              <p className="text-[9px] text-slate-500">
                 {mode === 'ready' ? 'компас' : mode === 'needs-calibration' ? 'калибровка' : mode === 'no-permission' ? 'нужно разрешение' : 'нет датчика'}
               </p>
             </div>
@@ -302,10 +303,10 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
                   : 'bg-slate-50 border-slate-100 dark:bg-zinc-900 dark:border-zinc-800'
               }`}
             >
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Поворот</p>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Поворот</p>
               <p
                 ref={turnLabelRef}
-                className={`text-sm font-black ${
+                className={`text-[13px] font-black ${
                   mode === 'ready'
                     ? 'text-amber-700 dark:text-amber-300'
                     : 'text-slate-500 dark:text-zinc-500'
@@ -313,7 +314,7 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
               >
                 —
               </p>
-              <p className="text-[10px] text-slate-500">
+              <p className="text-[9px] text-slate-500">
                 {mode === 'ready' ? 'повернитесь' : '—'}
               </p>
             </div>
