@@ -15,30 +15,8 @@ import { useAuth } from '@/components/AuthProvider';
 import { useProfiles } from '@/components/ProfilesProvider';
 import { useI18n } from '@/lib/i18n';
 import { compressImageFile } from '@/lib/media';
+import { extractPhoneDigits, formatPhone, isValidCyrillicName } from '@/lib/phone';
 import { Profile } from '@/lib/types';
-
-function extractPhoneDigits(value: string) {
-  let digits = value.replace(/\D/g, '');
-  if (digits.length > 10 && (digits.startsWith('7') || digits.startsWith('8'))) digits = digits.slice(1);
-  return digits.slice(0, 10);
-}
-
-function formatPhone(value: string) {
-  const digits = extractPhoneDigits(value);
-  if (!digits) return '';
-  let formatted = `+7 (${digits.slice(0, 3)}`;
-  if (digits.length >= 3) formatted += `) ${digits.slice(3, 6)}`;
-  if (digits.length >= 6) formatted += `-${digits.slice(6, 8)}`;
-  if (digits.length >= 8) formatted += `-${digits.slice(8, 10)}`;
-  return formatted;
-}
-
-function isValidCyrillicName(name: string): boolean {
-  if (!name.trim()) return false;
-  // Только кириллица, Ёё, дефис, пробел не допускается внутри одного поля (фамилия/имя отдельно)
-  // Разрешаем дефис для двойных фамилий типа Магомед-Гири
-  return /^[А-ЯЁа-яё\-]+$/u.test(name.trim()) && name.trim().length >= 2 && name.trim().length <= 30;
-}
 
 export default function ProfilePage() {
   const { account, isLoading, signInWithGoogle, updateAccount, deleteAccount, signOut } = useAuth();

@@ -7,6 +7,7 @@ import { useProfiles } from '@/components/ProfilesProvider';
 import PhoneField from '@/components/PhoneField';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { compressImageFile } from '@/lib/media';
+import { extractPhoneDigits, formatPhone, isValidCyrillicName } from '@/lib/phone';
 import { Profile } from '@/lib/types';
 
 interface AccountModalProps {
@@ -14,27 +15,6 @@ interface AccountModalProps {
   onClose: () => void;
   onOpenAddModal: () => void;
   onEditProfile: (profile: Profile) => void;
-}
-
-function extractPhoneDigits(value: string) {
-  let digits = value.replace(/\D/g, '');
-  if (digits.length > 10 && (digits.startsWith('7') || digits.startsWith('8'))) digits = digits.slice(1);
-  return digits.slice(0, 10);
-}
-
-function isValidCyrillicName(name: string): boolean {
-  if (!name.trim()) return false;
-  return /^[А-ЯЁа-яё\-]+$/u.test(name.trim()) && name.trim().length >= 2 && name.trim().length <= 30;
-}
-
-function formatPhone(value: string) {
-  const digits = extractPhoneDigits(value);
-  if (!digits) return '';
-  let formatted = `+7 (${digits.slice(0, 3)}`;
-  if (digits.length >= 3) formatted += `) ${digits.slice(3, 6)}`;
-  if (digits.length >= 6) formatted += `-${digits.slice(6, 8)}`;
-  if (digits.length >= 8) formatted += `-${digits.slice(8, 10)}`;
-  return formatted;
 }
 
 export default function AccountModal({ isOpen, onClose, onOpenAddModal, onEditProfile }: AccountModalProps) {
