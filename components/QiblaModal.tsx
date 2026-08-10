@@ -19,10 +19,6 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
   const { language } = useI18n();
   const dialRef = useRef<HTMLDivElement | null>(null);
   const needleRef = useRef<HTMLDivElement | null>(null);
-  const northLabelRef = useRef<HTMLSpanElement | null>(null);
-  const eastLabelRef = useRef<HTMLSpanElement | null>(null);
-  const southLabelRef = useRef<HTMLSpanElement | null>(null);
-  const westLabelRef = useRef<HTMLSpanElement | null>(null);
   const headingLabelRef = useRef<HTMLDivElement | null>(null);
   const turnLabelRef = useRef<HTMLDivElement | null>(null);
 
@@ -193,14 +189,6 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
       const needle = needleRef.current;
       if (dial) dial.style.transform = `rotate(${-heading}deg)`;
       if (needle) needle.style.transform = `rotate(${qiblaAngle}deg)`;
-      // Counter-rotate each cardinal label by +heading so the text
-      // stays upright. The labels are NOT children of the dial so
-      // they don't inherit its -heading rotation.
-      const labelTransform = `rotate(${heading}deg)`;
-      if (northLabelRef.current) northLabelRef.current.style.transform = labelTransform;
-      if (eastLabelRef.current) eastLabelRef.current.style.transform = labelTransform;
-      if (southLabelRef.current) southLabelRef.current.style.transform = labelTransform;
-      if (westLabelRef.current) westLabelRef.current.style.transform = labelTransform;
 
       if (headingLabelRef.current) {
         headingLabelRef.current.textContent = mode === 'ready' ? `${Math.round(heading)}°` : '—';
@@ -255,15 +243,19 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
           <div className="relative flex h-72 w-72 items-center justify-center rounded-full border-[6px] border-slate-100 bg-white shadow-inner dark:border-zinc-800 dark:bg-zinc-900">
             {/* ROTATING dial — the ring with N/S/E/W and tick marks.
                 The whole ring rotates by -heading so N always points
-                to local North. The N/S/E/W letters sit OUTSIDE the
-                dial so they can counter-rotate (+heading) every
-                frame and always read upright to the user (N never
-                appears upside down). */}
+                to local North. The N/S/E/W letters are CHILDREN of
+                the dial and rotate with it — that's how a real
+                compass face works (S is at the bottom and reads
+                upside-down when the phone is held upright). */}
             <div
               ref={dialRef}
               className="absolute inset-0"
               style={{ willChange: 'transform' }}
             >
+              <span className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1 text-base font-black text-red-600">С</span>
+              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1 text-base font-black text-slate-700 dark:text-slate-200">Ю</span>
+              <span className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1 text-base font-black text-slate-700 dark:text-slate-200">В</span>
+              <span className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 text-base font-black text-slate-700 dark:text-slate-200">З</span>
               <div className="absolute inset-2 rounded-full border border-dashed border-slate-200 dark:border-zinc-700" />
               {Array.from({ length: 12 }).map((_, i) => (
                 <div
@@ -273,40 +265,6 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
                 />
               ))}
             </div>
-
-            {/* Static cardinal labels — positioned at top/right/bottom/left
-                of the ring and counter-rotated to stay upright. The
-                rAF tick below sets `transform: rotate(${heading}deg)`
-                on each, so when the user turns the phone the labels
-                stay readable instead of flipping upside down. */}
-            <span
-              ref={northLabelRef}
-              className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1 text-base font-black text-red-600 drop-shadow-sm"
-              style={{ willChange: 'transform', transform: 'rotate(0deg)' }}
-            >
-              С
-            </span>
-            <span
-              ref={eastLabelRef}
-              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1 text-base font-black text-slate-700 dark:text-slate-200 drop-shadow-sm"
-              style={{ willChange: 'transform', transform: 'rotate(0deg)' }}
-            >
-              В
-            </span>
-            <span
-              ref={southLabelRef}
-              className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1 text-base font-black text-slate-700 dark:text-slate-200 drop-shadow-sm"
-              style={{ willChange: 'transform', transform: 'rotate(0deg)' }}
-            >
-              Ю
-            </span>
-            <span
-              ref={westLabelRef}
-              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 text-base font-black text-slate-700 dark:text-slate-200 drop-shadow-sm"
-              style={{ willChange: 'transform', transform: 'rotate(0deg)' }}
-            >
-              З
-            </span>
 
             {/* STATIC needle — stays at qiblaAngle relative to the
                 rotating dial, so it ALWAYS points to the Kaaba from
