@@ -1,0 +1,428 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+
+/* Tailwind v4 dark variant binding */
+@custom-variant dark (&:where(.dark, .dark *));
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+@layer base {
+  :root {
+    --background: #f8fafc;
+    --surface: #ffffff;
+    --surface-card: #ffffff;
+    --surface-subtle: #f1f5f9;
+    --foreground: #0f172a;
+    --primary: #059669;
+    --primary-hover: #047857;
+    --status-active: #059669;
+    --status-break: #f59e0b;
+    --status-offline: #52525b;
+    --theme-sun: #f59e0b;
+    --theme-moon: #0284c7;
+    --notify-orange: #f97316;
+    --border-subtle: rgba(226, 232, 240, 0.75);
+    --radius-xl: 0.75rem;
+    --radius-2xl: 1rem;
+    --radius-3xl: 1.5rem;
+    color-scheme: light;
+  }
+
+  /* 25% Darker, disciplined dark theme: #0e1015 canvas, #14161d cards/surfaces, #1e212b borders */
+  html.dark {
+    --background: var(--color-zinc-950);
+    --surface: var(--color-zinc-800);
+    --surface-card: var(--color-zinc-800);
+    --surface-subtle: var(--color-zinc-900);
+    --foreground: #fafafa;
+    --border-subtle: var(--color-zinc-700);
+    --border-dark-soft: rgb(28 28 31 / 90%);
+    --border-dark-card: rgb(28 28 31 / 90%);
+    --border-green-dark: #2b7a64;
+    --status-offline: #52525b;
+    color-scheme: dark;
+  }
+
+  html,
+  body {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+    background-color: var(--background);
+  }
+
+  body {
+    color: var(--foreground);
+    font-family: 'Manrope', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 13px; /* 20% reduced font size */
+    line-height: 1.4;
+    -webkit-tap-highlight-color: transparent;
+    text-rendering: optimizeLegibility;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+
+  button,
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Focus rings exclusively for fillable inputs (search, name, phone, inputs, textarea), NEVER for article cards */
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: 2px solid rgb(16 185 129 / 0.6);
+    outline-offset: 1px;
+  }
+
+  article,
+  article:focus,
+  article:focus-visible {
+    outline: none !important;
+  }
+
+  img,
+  svg,
+  video,
+  iframe {
+    max-width: 100%;
+  }
+
+  main,
+  section,
+  article,
+  form,
+  fieldset {
+    min-width: 0;
+  }
+
+  .site-header,
+  .site-bottom-nav {
+    position: fixed !important;
+    isolation: isolate;
+  }
+
+  .site-header {
+    top: 0 !important;
+    right: 0 !important;
+    left: 0 !important;
+    z-index: 50;
+  }
+
+  .site-bottom-nav {
+    right: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    z-index: 40;
+  }
+}
+
+
+/* Custom scrollbar for mobile smoothness */
+::-webkit-scrollbar {
+  display: none;
+  width: 0px;
+  height: 0px;
+}
+
+* {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.leaflet-control-attribution {
+  font-size: 8.5px;
+  line-height: 1.2;
+  opacity: 0.55;
+  padding: 1px 3px;
+  transition: opacity 0.2s ease;
+}
+
+.leaflet-control-attribution:hover,
+.leaflet-control-attribution:focus-within {
+  opacity: 0.95;
+}
+
+/* High-contrast crisp labels for maps and hybrid satellite */
+.leaflet-container {
+  font-family: inherit;
+}
+
+.leaflet-tile-pane .leaflet-layer:nth-child(n+2) {
+  filter: contrast(1.25) brightness(1.1);
+}
+
+.samashki-marker-wrapper {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  position: absolute;
+  left: -50px;
+  top: -50px;
+  width: 100px;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.samashki-house-badge,
+.samashki-place-badge {
+  pointer-events: auto;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  cursor: pointer;
+  user-select: none;
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,255,255,0.2);
+}
+
+.samashki-house-badge {
+  padding: 1px 4px;
+  min-width: 18px;
+  text-align: center;
+}
+
+.samashki-place-badge {
+  padding: 2px 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.samashki-place-badge .dot {
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+}
+
+.samashki-house-badge.light,
+.samashki-place-badge.light {
+  background-color: #ffffff;
+  color: #1e293b;
+  border-color: #e2e8f0;
+}
+.samashki-place-badge.light .dot {
+  background-color: #0284c7;
+}
+
+.samashki-house-badge.hybrid,
+.samashki-place-badge.hybrid {
+  background-color: #0f172a;
+  color: #fde047;
+  border-color: #334155;
+}
+.samashki-place-badge.hybrid .dot {
+  background-color: #38bdf8;
+}
+
+.samashki-house-badge:hover,
+.samashki-place-badge:hover,
+.samashki-house-badge:active,
+.samashki-place-badge:active {
+  transform: scale(1.05);
+  z-index: 9999 !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+
+.samashki-profile-badge {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  pointer-events: auto;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+}
+.samashki-profile-badge.selected {
+  width: 22px;
+  height: 22px;
+  border-width: 3px;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.95);
+}
+.samashki-profile-badge:hover,
+.samashki-profile-badge:active {
+  transform: scale(1.15);
+  z-index: 9999 !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+
+
+/* Gradients for heroes, surfaces and ambient glows */
+.bg-hero-gradient {
+  background: linear-gradient(135deg, #064e3b 0%, #047857 35%, #0d9488 75%, #0f766e 100%);
+}
+
+.bg-card-gradient {
+  background-image: linear-gradient(145deg, #ffffff 0%, #f8fafc 60%, #f1f5f9 100%);
+}
+
+html.dark .bg-card-gradient {
+  background-image: linear-gradient(145deg, #1C1D1F 0%, #141516 100%);
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Card glow & professional drop shadows - unified soft style */
+.card-gradient-glow {
+  background: #ffffff;
+  box-shadow: 0 4px 16px -2px rgba(16, 185, 129, 0.06), 0 1px 3px 0 rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+html.dark .card-gradient-glow {
+  background: #1e1e22;
+  border: 1px solid rgba(40, 40, 45, 0.9);
+  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.35), 0 1px 3px 0 rgba(0, 0, 0, 0.25);
+}
+
+@keyframes bounceSlow {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.animate-bounce-slow {
+  animation: bounceSlow 1.5s ease-in-out infinite;
+}
+
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  14% { transform: scale(1.15); }
+  28% { transform: scale(1); }
+  42% { transform: scale(1.08); }
+  70% { transform: scale(1); }
+}
+
+.animate-heartbeat {
+  animation: heartbeat 1.4s ease-in-out infinite;
+  transform-origin: center;
+}
+
+
+
+
+html.dark .bg-radial-gradient {
+  background: var(--color-zinc-950);
+}
+
+
+
+
+
+@theme {
+  --color-zinc-950: rgb(19, 19, 19);
+  --color-zinc-900: #202123;
+  --color-zinc-800: rgba(23, 23, 26, 1);
+  --color-zinc-700: rgba(31, 31, 35, 1);
+}
+
+
+@layer utilities {
+  .dark\:bg-zinc-900:where(.dark, .dark *) {
+    background-color: var(--color-zinc-800);
+  }
+}
+.zoomed-out .samashki-marker-wrapper {
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.5);
+}
+
+/* Bottom bar buttons should have no border/outline */
+.site-bottom-nav button,
+.site-bottom-nav a {
+  border: none;
+  outline: none;
+}
+.site-bottom-nav button:focus,
+.site-bottom-nav a:focus,
+.site-bottom-nav button:focus-visible,
+.site-bottom-nav a:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Dark theme soft borders as requested */
+html.dark .bg-white,
+html.dark .bg-slate-50,
+html.dark .bg-slate-50\/90,
+html.dark .bg-slate-50\/70,
+html.dark .bg-slate-50\/60 {
+  border-color: var(--border-dark-soft);
+}
+
+html.dark .border-slate-200,
+html.dark .border-slate-100,
+html.dark .border-slate-200\/60,
+html.dark .border-slate-200\/80,
+html.dark .border-zinc-800,
+html.dark .border-zinc-700 {
+  border-color: var(--border-dark-soft);
+}
+
+html.dark .shadow-sm {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.28), 0 1px 3px rgba(0,0,0,0.22);
+}
+
+html.dark .rounded-3xl:not(.site-bottom-nav):not(.site-bottom-nav *),
+html.dark .rounded-2xl:not(.site-bottom-nav):not(.site-bottom-nav *) {
+  border-width: 1px;
+  border-style: solid;
+  border-color: var(--border-dark-soft);
+}
+
+/* Ensure inputs in dark have soft border not harsh */
+html.dark input,
+html.dark select,
+html.dark textarea {
+  border-color: rgb(50 50 55 / 90%);
+  background-color: rgba(30, 30, 35, 0.8);
+}
+
+/* Fix house badge in dark to be visible but soft */
+html.dark .samashki-house-badge.light,
+html.dark .samashki-place-badge.light {
+  background-color: #232327;
+  color: #e2e8f0;
+  border-color: var(--border-dark-soft);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+}
+
+/* Green buttons fat white border fix -> use #2b7a64 in dark */
+html.dark .bg-emerald-600 {
+  border-color: var(--border-green-dark);
+}
+html.dark .samashki-profile-badge.selected {
+  box-shadow: 0 0 0 3px var(--border-green-dark);
+}
+
+html.dark .bg-emerald-600.border-white,
+html.dark .bg-emerald-600.border-slate-200 {
+  border-color: var(--border-green-dark);
+}
