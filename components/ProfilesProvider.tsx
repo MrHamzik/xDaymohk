@@ -424,48 +424,50 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
         .eq('id', profileId)
         .maybeSingle();
       if (ownershipError) throw new Error(ownershipError.message);
-      if (!ownershipCheck) {
-        throw new Error('Анкета уже удалена.');
-      }
-      const ownerIdText = String(ownershipCheck.owner_id ?? '');
-      if (ownerIdText !== account.id) {
-        throw new Error('Удалять можно только свои анкеты.');
-      }
 
-      // For duplicate personal rows the RLS policy 'profiles owner
-      // delete' is gated on `not is_personal`, so we bypass it via
-      // the service-role-aware delete from the API. Falling back
-      // to the regular client delete works for non-personal rows.
-      const dbIsPersonal = Boolean(ownershipCheck.is_personal);
-      if (dbIsPersonal) {
-        // The row exists, is owned by the current user, but the RLS
-        // policy refuses to delete it because is_personal=true. We
-        // delegate to the service-role endpoint that knows to drop
-        // the row regardless of the flag.
-        const { data: sessionData } = await supabase.auth.getSession();
-        const accessToken = sessionData.session?.access_token;
-        if (!accessToken) {
-          throw new Error('Сессия истекла — войдите снова.');
+      if (ownershipCheck) {
+        const ownerIdText = String(ownershipCheck.owner_id ?? '');
+        if (ownerIdText !== account.id) {
+          throw new Error('Удалять можно только свои анкеты.');
         }
-        const response = await fetch('/api/account/delete-personal-duplicate', {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-          body: JSON.stringify({ profileId }),
-        });
-        if (!response.ok) {
-          const result = await response.json().catch(() => null);
-          throw new Error(result?.error ?? 'Не удалось удалить дубликат личной анкеты.');
-        }
-      } else {
-        const { error: deleteError, count } = await supabase
-          .from('profiles')
-          .delete({ count: 'exact' })
-          .eq('id', profileId);
-        if (deleteError) throw new Error(deleteError.message);
-        if (count === 0) {
-          throw new Error('Не удалось удалить анкету — проверьте RLS политики (см. supabase/upgrade_existing.sql).');
+
+        // For duplicate personal rows the RLS policy 'profiles owner
+        // delete' is gated on `not is_personal`, so we bypass it via
+        // the service-role-aware delete from the API. Falling back
+        // to the regular client delete works for non-personal rows.
+        const dbIsPersonal = Boolean(ownershipCheck.is_personal);
+        if (dbIsPersonal) {
+          const { data: sessionData } = await supabase.auth.getSession();
+          const accessToken = sessionData.session?.access_token;
+          if (!accessToken) {
+            throw new Error('Сессия истекла — войдите снова.');
+          }
+          const response = await fetch('/api/account/delete-personal-duplicate', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+            body: JSON.stringify({ profileId }),
+          });
+          if (!response.ok) {
+            const result = await response.json().catch(() => null);
+            throw new Error(result?.error ?? 'Не удалось удалить дубликат личной анкеты.');
+          }
+        } else {
+          const { error: deleteError, count } = await supabase
+            .from('profiles')
+            .delete({ count: 'exact' })
+            .eq('id', profileId);
+          if (deleteError) throw new Error(deleteError.message);
+          if (count === 0) {
+            throw new Error('Не удалось удалить анкету — проверьте RLS политики (см. supabase/upgrade_existing.sql).');
+          }
         }
       }
+      // If !ownershipCheck, the row is a LOCAL-ONLY phantom (it lives
+      // in the user's localStorage but never reached Supabase, e.g.
+      // because of an interrupted sync, a deleted localStorage entry,
+      // or an old bug that created the profile client-side only).
+      // Fall through to the local delete below — that's exactly the
+      // behaviour the user expects when they click "Удалить".
     }
 
     const deletedProfile = profiles.find((profile) => profile.id === profileId);
