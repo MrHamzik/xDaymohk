@@ -66,16 +66,19 @@ create trigger trg_reviews_after_delete
 -- ---------------------------------------------------------------------------
 create or replace function public.recompute_user_profile_count(target_user uuid)
 returns void
-language sql
+language plpgsql
 security definer
 set search_path = public
 as $$
-  -- Cast user_profiles.id to text on both sides to handle the case
-  -- where user_profiles.id is text but profiles.owner_id is uuid.
-  -- The ::text casts are no-ops on already-text columns.
+declare
+  target_text text := target_user::text;
+begin
   update public.user_profiles
-     set profile_count = (select count(*) from public.profiles where owner_id::text = target_user::text)
-   where id::text = target_user::text;
+     set profile_count = (
+       select count(*) from public.profiles where owner_id::text = target_text
+     )
+   where id::text = target_text;
+end;
 $$;
 
 revoke all on function public.recompute_user_profile_count(uuid) from public;

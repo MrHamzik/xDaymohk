@@ -630,7 +630,7 @@ create index if not exists idx_profiles_public_specialist
   where not is_hidden and not is_banned and is_specialist;
 -- <<<<<< 06-realtime-and-views.sql <<<<<<
 
--- >>>>>> 07-triggers.sql (4.6 kB) >>>>>>
+-- >>>>>> 07-triggers.sql (4.5 kB) >>>>>>
 -- =============================================================================
 -- Step 07 / 07 — Counter triggers
 -- (rating / review_count on profiles, profile_count on user_profiles)
@@ -699,16 +699,19 @@ create trigger trg_reviews_after_delete
 -- ---------------------------------------------------------------------------
 create or replace function public.recompute_user_profile_count(target_user uuid)
 returns void
-language sql
+language plpgsql
 security definer
 set search_path = public
 as $$
-  -- Cast user_profiles.id to text on both sides to handle the case
-  -- where user_profiles.id is text but profiles.owner_id is uuid.
-  -- The ::text casts are no-ops on already-text columns.
+declare
+  target_text text := target_user::text;
+begin
   update public.user_profiles
-     set profile_count = (select count(*) from public.profiles where owner_id::text = target_user::text)
-   where id::text = target_user::text;
+     set profile_count = (
+       select count(*) from public.profiles where owner_id::text = target_text
+     )
+   where id::text = target_text;
+end;
 $$;
 
 revoke all on function public.recompute_user_profile_count(uuid) from public;
