@@ -6,7 +6,7 @@
 -- for use with `supabase db push` (fresh installs).
 -- =============================================================================
 
--- 0) Drop every RLS policy on the 5 tables we're about to convert.
+-- 0a) Drop every RLS policy on the 5 tables we're about to convert.
 --    step 05 will recreate them with the correct names after this
 --    migration runs.
 do $$
@@ -28,6 +28,13 @@ begin
     execute format('drop policy if exists %I on public.%I', pol.policyname, pol.tablename);
   end loop;
 end $$;
+
+-- 0b) Drop the convenience views defined in step 06. Postgres blocks
+--     ALTER COLUMN on columns that appear in a view's SELECT list.
+drop view if exists public.v_public_profiles;
+drop view if exists public.v_all_profiles;
+drop view if exists public.v_user_directory;
+drop view if exists public.v_current_donations;
 
 -- 1) user_profiles.id
 alter table public.user_profiles
@@ -87,3 +94,55 @@ alter table public.reviews       validate constraint reviews_author_id_fkey;
 alter table public.complaints    validate constraint complaints_author_id_fkey;
 alter table public.complaints    validate constraint complaints_target_user_id_fkey;
 alter table public.notifications validate constraint notifications_recipient_id_fkey;
+
+-- 7) Recreate the convenience views (same definitions as step 06, but
+--    with the ::text casts removed now that the join keys are uuid).
+create or replace view public.v_public_profiles
+  with (security_invoker = true) as
+select
+  p.*,
+  u.email        as owner_email,
+  u.is_blocked   as owner_is_blocked
+from public.profiles p
+left join public.user_profiles u on u.id = p.owner_id
+where not (p.is_hidden or p.is_banned);
+
+create or replace view public.v_all_profiles
+  with (security_invoker = true) as
+select
+  p.*,
+  u.email        as owner_email,
+  u.is_blocked   as owner_is_blocked
+from public.profiles p
+left join public.user_profiles u on u.id = p.owner_id;
+
+create or replace view public.v_user_directory
+  with (security_invoker = true) as
+select
+  u.id,
+  u.email,
+  u.full_name,
+  u.avatar_url,
+  u.is_admin,
+  u.is_blocked,
+  u.created_at,
+  coalesce(c.profiles_total, 0) as profile_count,
+  coalesce(c.hidden_total, 0)   as hidden_count
+from public.user_profiles u
+left join (
+  select
+    owner_id,
+    count(*)                          as profiles_total,
+    count(*) filter (where is_hidden) as hidden_total
+  from public.profiles
+  group by owner_id
+) c on c.owner_id = u.id;
+
+create or replace view public.v_current_donations
+  with (security_invoker = true) as
+select
+  coalesce(sum(amount), 0)::numeric(12,2) as total_rub,
+  count(*)                                as donations_count
+from public.donations
+where received_at >= date_trunc('month', now() at time zone 'Europe/Moscow')
+  and received_at <  date_trunc('month', now() at time zone 'Europe/Moscow') + interval '1 month';
