@@ -1,0 +1,773 @@
+-- =============================================================================
+-- 20260101000000_init.sql
+-- Initial schema for Даймохк (Samashki community platform).
+--
+-- Tables created in this migration:
+--   * user_profiles        — one row per authenticated user
+--   * profiles             — public questionnaires (anonymised personal +
+--                            specialist entries with work schedule)
+--   * certificates         — uploaded docs/scans attached to a profile
+--   * reviews              — public reviews on a profile
+--   * complaints           — user reports about a profile / owner
+--   * house_addresses      — admin-managed Samashki address book
+--   * notifications        — per-user system notifications
+--   * donations            — CloudTips webhook ledger
+--   * project_support      — aggregated monthly donation progress
+--   * profile_media bucket — Supabase Storage bucket for avatars + docs
+--
+-- All tables enable RLS. Policies are written assuming:
+--   * Authentication via Supabase Auth (auth.uid() is the user's id).
+--   * Administrators are looked up by email in `lib/admin.ts` (client-side)
+--     AND matched by a SECURITY DEFINER function `is_admin_email()` (DB-side)
+--     so RLS can authorise admin writes without leaking the allowlist.
+--   * Service-role key bypasses RLS (used in webhook / account-delete routes).
+-- =============================================================================
+
+-- ---------------------------------------------------------------------------
+-- 0. Extensions
+-- ---------------------------------------------------------------------------
+create extension if not exists "pgcrypto";
+
+-- ---------------------------------------------------------------------------
+-- 1. Helper: admin lookup by email
+-- ---------------------------------------------------------------------------
+-- Two admin emails are hard-coded to match lib/admin.ts on the client.
+-- Update both in lockstep when the allowlist changes.
+create or replace function public.is_admin_email()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select lower(coalesce(
+    (select email from auth.users where id = auth.uid()),
+    ''
+  )) in ('mr.hamzik1026@gmail.com', 'nabis95@gmail.com');
+$$;
+
+revoke all on function public.is_admin_email() from public;
+grant execute on function public.is_admin_email() to authenticated, anon;
+
+-- ---------------------------------------------------------------------------
+-- 2. user_profiles — per-user account metadata
+-- ---------------------------------------------------------------------------
+create table if not exists public.user_profiles (
+  id              uuid primary key references auth.users(id) on delete cascade,
+  email           text not null,
+  full_name       text not null default '',
+  avatar_url      text not null default '',
+  phone           text not null default '',
+  is_admin        boolean not null default false,
+  is_blocked      boolean not null default false,
+  status_override text,
+  gender          text check (gender in ('male', 'female')),
+  birth_date      date,
+  birth_year      integer,
+  settlement      text default 'Самашки',
+  created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now()
+);
+
+create index if not exists idx_user_profiles_email on public.user_profiles (lower(email));
+
+-- updated_at trigger
+create or replace function public.touch_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_user_profiles_updated on public.user_profiles;
+create trigger trg_user_profiles_updated
+  before update on public.user_profiles
+  for each row execute function public.touch_updated_at();
+
+-- ---------------------------------------------------------------------------
+-- 3. profiles — public catalogues (specialist + personal entries)
+-- ---------------------------------------------------------------------------
+create table if not exists public.profiles (
+  id                       text primary key,
+  owner_id                 uuid references public.user_profiles(id) on delete cascade,
+  full_name                text not null default '',
+  avatar_url               text not null default '',
+  photos                   jsonb not null default '[]'::jsonb,
+  is_specialist            boolean not null default false,
+  is_personal              boolean not null default false,
+  profession_category      text,
+  profession_title         text,
+  experience               text,
+  experience_start         date,
+  experience_end           date,
+  experience_current       boolean not null default false,
+  bio                      text not null default '',
+  workplace_address        text not null default '',
+  workplace_coords         jsonb not null default '{"lat":43.288024,"lng":45.298989}'::jsonb,
+  rating                   numeric(3,1) not null default 0,
+  review_count             integer not null default 0,
+  phone                    text not null default '',
+  hide_phone               boolean not null default false,
+  same_as_phone_whatsapp   boolean not null default true,
+  whatsapp                 text,
+  telegram                 text,
+  video_url                text,
+  is_verified              boolean not null default false,
+  verification_status      text not null default 'none'
+    check (verification_status in ('none', 'pending', 'verified', 'rejected')),
+  is_admin                 boolean not null default false,
+  is_hidden                boolean not null default false,
+  is_banned                boolean not null default false,
+  work_days                jsonb,
+  work_hours_start         text,
+  work_hours_end           text,
+  break_start              text,
+  break_end                text,
+  is_flexible_schedule     boolean not null default false,
+  gender                   text check (gender in ('male', 'female')),
+  birth_date               date,
+  settlement               text default 'Самашки',
+  created_at               timestamptz not null default now(),
+  updated_at               timestamptz not null default now()
+);
+
+create index if not exists idx_profiles_owner_id        on public.profiles (owner_id);
+create index if not exists idx_profiles_is_hidden       on public.profiles (is_hidden) where not is_hidden;
+create index if not exists idx_profiles_specialist      on public.profiles (is_specialist);
+create index if not exists idx_profiles_verif_status    on public.profiles (verification_status);
+create index if not exists idx_profiles_profession_cat  on public.profiles (profession_category);
+create index if not exists idx_profiles_created_at      on public.profiles (created_at desc);
+
+drop trigger if exists trg_profiles_updated on public.profiles;
+create trigger trg_profiles_updated
+  before update on public.profiles
+  for each row execute function public.touch_updated_at();
+
+-- ---------------------------------------------------------------------------
+-- 4. certificates — uploaded documents per profile
+-- ---------------------------------------------------------------------------
+create table if not exists public.certificates (
+  id          text primary key,
+  profile_id  text not null references public.profiles(id) on delete cascade,
+  title       text not null default '',
+  issuer      text not null default '',
+  year        text not null default '',
+  image_url   text not null default '',
+  created_at  timestamptz not null default now()
+);
+
+create index if not exists idx_certificates_profile_id on public.certificates (profile_id);
+
+-- ---------------------------------------------------------------------------
+-- 5. reviews
+-- ---------------------------------------------------------------------------
+create table if not exists public.reviews (
+  id                  text primary key,
+  profile_id          text not null references public.profiles(id) on delete cascade,
+  author              text not null default 'Житель Самашек',
+  author_id           uuid references public.user_profiles(id) on delete set null,
+  author_avatar_url   text,
+  rating              numeric(2,1) not null check (rating between 0 and 5),
+  text                text not null default '',
+  created_at          date not null default current_date
+);
+
+create index if not exists idx_reviews_profile_id on public.reviews (profile_id, created_at desc);
+
+-- ---------------------------------------------------------------------------
+-- 6. complaints
+-- ---------------------------------------------------------------------------
+create table if not exists public.complaints (
+  id            text primary key,
+  profile_id    text not null references public.profiles(id) on delete cascade,
+  target_user_id uuid references public.user_profiles(id) on delete set null,
+  author_id     uuid not null references public.user_profiles(id) on delete cascade,
+  author_name   text not null default '',
+  reason        text not null check (char_length(reason) between 1 and 500),
+  status        text not null default 'open'
+    check (status in ('open', 'dismissed', 'resolved')),
+  created_at    date not null default current_date
+);
+
+create index if not exists idx_complaints_status on public.complaints (status, created_at desc);
+create index if not exists idx_complaints_profile on public.complaints (profile_id);
+
+-- ---------------------------------------------------------------------------
+-- 7. house_addresses — admin-managed Samashki address book
+-- ---------------------------------------------------------------------------
+create table if not exists public.house_addresses (
+  id             text primary key,
+  street         text not null,
+  house_number   text not null default '',
+  full_address   text not null,
+  lat            numeric(10,7) not null,
+  lng            numeric(10,7) not null,
+  postal_code    text not null default '366602',
+  is_not_house   boolean not null default false,
+  category       text,
+  created_at     timestamptz not null default now()
+);
+
+create index if not exists idx_house_addresses_street on public.house_addresses (street);
+create index if not exists idx_house_addresses_category on public.house_addresses (category);
+
+-- ---------------------------------------------------------------------------
+-- 8. notifications
+-- ---------------------------------------------------------------------------
+create table if not exists public.notifications (
+  id            text primary key,
+  recipient_id  uuid not null references public.user_profiles(id) on delete cascade,
+  type          text not null default 'system'
+    check (type in ('system', 'profile_hidden', 'profile_visible', 'user_blocked', 'user_unblocked')),
+  title         text not null default 'Уведомление',
+  message       text not null default '',
+  is_read       boolean not null default false,
+  created_at    timestamptz not null default now()
+);
+
+create index if not exists idx_notifications_recipient on public.notifications (recipient_id, created_at desc);
+create index if not exists idx_notifications_unread on public.notifications (recipient_id) where not is_read;
+
+-- ---------------------------------------------------------------------------
+-- 9. donations — CloudTips ledger (idempotent by operation_id)
+-- ---------------------------------------------------------------------------
+create table if not exists public.donations (
+  operation_id  text primary key,
+  amount        numeric(12,2) not null check (amount > 0),
+  currency      text not null default 'RUB',
+  sender        text,
+  label         text,
+  received_at   timestamptz not null,
+  raw_payload   jsonb not null default '{}'::jsonb,
+  created_at    timestamptz not null default now()
+);
+
+create index if not exists idx_donations_received_at on public.donations (received_at);
+
+-- ---------------------------------------------------------------------------
+-- 10. project_support — aggregated monthly donation progress
+-- ---------------------------------------------------------------------------
+create table if not exists public.project_support (
+  month_key        text primary key, -- e.g. '2026-08'
+  collected_rub    numeric(12,2) not null default 0,
+  other_costs_rub  numeric(12,2) not null default 500,
+  updated_at       timestamptz not null default now()
+);
+
+drop trigger if exists trg_project_support_updated on public.project_support;
+create trigger trg_project_support_updated
+  before update on public.project_support
+  for each row execute function public.touch_updated_at();
+
+-- ---------------------------------------------------------------------------
+-- 11. Storage: profile-media bucket
+-- ---------------------------------------------------------------------------
+insert into storage.buckets (id, name, public)
+values ('profile-media', 'profile-media', true)
+on conflict (id) do nothing;
+
+-- Storage RLS: anyone can read public bucket; only the owner can write.
+drop policy if exists "profile-media read" on storage.objects;
+create policy "profile-media read"
+  on storage.objects
+  for select
+  using (bucket_id = 'profile-media');
+
+drop policy if exists "profile-media owner write" on storage.objects;
+create policy "profile-media owner write"
+  on storage.objects
+  for insert
+  with check (
+    bucket_id = 'profile-media'
+    and auth.role() = 'authenticated'
+    and (storage.foldername(name))[1] in ('avatars', 'documents')
+    and (storage.foldername(name))[2] like (auth.uid()::text || '-%')
+  );
+
+drop policy if exists "profile-media owner delete" on storage.objects;
+create policy "profile-media owner delete"
+  on storage.objects
+  for delete
+  using (
+    bucket_id = 'profile-media'
+    and (storage.foldername(name))[2] like (auth.uid()::text || '-%')
+  );
+
+-- ---------------------------------------------------------------------------
+-- 12. RLS — enable on all tables
+-- ---------------------------------------------------------------------------
+alter table public.user_profiles   enable row level security;
+alter table public.profiles         enable row level security;
+alter table public.certificates     enable row level security;
+alter table public.reviews          enable row level security;
+alter table public.complaints       enable row level security;
+alter table public.house_addresses  enable row level security;
+alter table public.notifications    enable row level security;
+alter table public.donations        enable row level security;
+alter table public.project_support  enable row level security;
+-- =============================================================================
+-- 20260101000100_rls_policies.sql
+-- Row Level Security policies for all tables created in 0000_init.sql.
+--
+-- Pattern:
+--   * Public SELECT on non-sensitive tables (house_addresses, profiles that are
+--     not hidden/banned, certificates, reviews, project_support).
+--   * Owner full access on user-owned tables (profiles, certificates, reviews,
+--     complaints, notifications).
+--   * Admin (via is_admin_email()) full access on moderation tables.
+--   * Service-role bypass via Supabase service_role key (not enforced here).
+-- =============================================================================
+
+-- ---------------------------------------------------------------------------
+-- user_profiles
+-- ---------------------------------------------------------------------------
+drop policy if exists "user_profiles self select" on public.user_profiles;
+create policy "user_profiles self select"
+  on public.user_profiles for select
+  using (auth.uid() = id or is_admin_email());
+
+drop policy if exists "user_profiles self insert" on public.user_profiles;
+create policy "user_profiles self insert"
+  on public.user_profiles for insert
+  with check (auth.uid() = id);
+
+drop policy if exists "user_profiles self update" on public.user_profiles;
+create policy "user_profiles self update"
+  on public.user_profiles for update
+  using (auth.uid() = id)
+  with check (auth.uid() = id);
+
+drop policy if exists "user_profiles admin update" on public.user_profiles;
+create policy "user_profiles admin update"
+  on public.user_profiles for update
+  using (is_admin_email())
+  with check (is_admin_email());
+
+-- ---------------------------------------------------------------------------
+-- profiles — public catalogue
+-- ---------------------------------------------------------------------------
+drop policy if exists "profiles public read" on public.profiles;
+create policy "profiles public read"
+  on public.profiles for select
+  using (
+    -- Hidden/banned profiles are visible only to their owner or admins.
+    not (is_hidden or is_banned)
+    or auth.uid() = owner_id
+    or is_admin_email()
+  );
+
+drop policy if exists "profiles owner insert" on public.profiles;
+create policy "profiles owner insert"
+  on public.profiles for insert
+  with check (auth.uid() = owner_id or owner_id is null);
+
+drop policy if exists "profiles owner update" on public.profiles;
+create policy "profiles owner update"
+  on public.profiles for update
+  using (auth.uid() = owner_id)
+  with check (auth.uid() = owner_id);
+
+drop policy if exists "profiles admin update" on public.profiles;
+create policy "profiles admin update"
+  on public.profiles for update
+  using (is_admin_email())
+  with check (is_admin_email());
+
+drop policy if exists "profiles owner delete" on public.profiles;
+create policy "profiles owner delete"
+  on public.profiles for delete
+  using (
+    (auth.uid() = owner_id and not is_personal)
+    or is_admin_email()
+  );
+
+-- ---------------------------------------------------------------------------
+-- certificates — owned by profile owner, readable by everyone
+-- ---------------------------------------------------------------------------
+drop policy if exists "certificates public read" on public.certificates;
+create policy "certificates public read"
+  on public.certificates for select
+  using (true);
+
+drop policy if exists "certificates owner write" on public.certificates;
+create policy "certificates owner write"
+  on public.certificates for all
+  using (
+    exists (select 1 from public.profiles p where p.id = certificates.profile_id and p.owner_id = auth.uid())
+    or is_admin_email()
+  )
+  with check (
+    exists (select 1 from public.profiles p where p.id = certificates.profile_id and p.owner_id = auth.uid())
+    or is_admin_email()
+  );
+
+-- ---------------------------------------------------------------------------
+-- reviews
+-- ---------------------------------------------------------------------------
+drop policy if exists "reviews public read" on public.reviews;
+create policy "reviews public read"
+  on public.reviews for select
+  using (true);
+
+drop policy if exists "reviews author write" on public.reviews;
+create policy "reviews author write"
+  on public.reviews for insert
+  with check (auth.uid() = author_id);
+
+drop policy if exists "reviews author delete" on public.reviews;
+create policy "reviews author delete"
+  on public.reviews for delete
+  using (auth.uid() = author_id or is_admin_email());
+
+-- ---------------------------------------------------------------------------
+-- complaints
+-- ---------------------------------------------------------------------------
+drop policy if exists "complaints author read" on public.complaints;
+create policy "complaints author read"
+  on public.complaints for select
+  using (auth.uid() = author_id or is_admin_email());
+
+drop policy if exists "complaints author insert" on public.complaints;
+create policy "complaints author insert"
+  on public.complaints for insert
+  with check (auth.uid() = author_id);
+
+drop policy if exists "complaints admin update" on public.complaints;
+create policy "complaints admin update"
+  on public.complaints for update
+  using (is_admin_email())
+  with check (is_admin_email());
+
+-- ---------------------------------------------------------------------------
+-- house_addresses — admin write, public read
+-- ---------------------------------------------------------------------------
+drop policy if exists "house_addresses public read" on public.house_addresses;
+create policy "house_addresses public read"
+  on public.house_addresses for select
+  using (true);
+
+drop policy if exists "house_addresses admin write" on public.house_addresses;
+create policy "house_addresses admin write"
+  on public.house_addresses for all
+  using (is_admin_email())
+  with check (is_admin_email());
+
+-- ---------------------------------------------------------------------------
+-- notifications
+-- ---------------------------------------------------------------------------
+drop policy if exists "notifications self read" on public.notifications;
+create policy "notifications self read"
+  on public.notifications for select
+  using (auth.uid() = recipient_id);
+
+drop policy if exists "notifications self update" on public.notifications;
+create policy "notifications self update"
+  on public.notifications for update
+  using (auth.uid() = recipient_id)
+  with check (auth.uid() = recipient_id);
+
+drop policy if exists "notifications admin insert" on public.notifications;
+create policy "notifications admin insert"
+  on public.notifications for insert
+  with check (is_admin_email() or auth.uid() = recipient_id);
+
+-- ---------------------------------------------------------------------------
+-- donations + project_support — service-role only via webhook route
+-- ---------------------------------------------------------------------------
+drop policy if exists "donations public read" on public.donations;
+create policy "donations public read"
+  on public.donations for select
+  using (true); -- aggregate totals are intentionally public
+
+drop policy if exists "project_support public read" on public.project_support;
+create policy "project_support public read"
+  on public.project_support for select
+  using (true);
+
+-- Writes only via service_role (webhook / cloud function). No client policies.
+-- The service role bypasses RLS so we intentionally do NOT add INSERT/UPDATE
+-- policies for anon/authenticated.
+-- =============================================================================
+-- 20260101000200_realtime.sql
+-- Enable Supabase Realtime (logical replication) for the tables the client
+-- subscribes to in components/ProfilesProvider.tsx and NotificationsProvider.
+--
+-- Without these the `postgres_changes` channels in the client are silent.
+-- =============================================================================
+
+-- Required for Supabase Realtime: add the table to the publication used
+-- by the realtime WebSocket. Supabase creates `supabase_realtime` on every
+-- project; we attach the public tables to it.
+alter publication supabase_realtime add table public.profiles;
+alter publication supabase_realtime add table public.user_profiles;
+alter publication supabase_realtime add table public.complaints;
+alter publication supabase_realtime add table public.notifications;
+alter publication supabase_realtime add table public.house_addresses;
+-- =============================================================================
+-- 20260101000300_counters_and_triggers.sql
+-- Maintains profile.rating / profile.review_count / user_profiles.profile_count
+-- in sync with the public.reviews table so the client never has to recompute
+-- aggregates. Each INSERT/UPDATE/DELETE on reviews triggers an UPDATE on
+-- profiles that recomputes the average rating and the row count.
+--
+-- For user_profiles.profile_count we recompute on every change in profiles.
+-- =============================================================================
+
+create or replace function public.recompute_profile_rating(target_id text)
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  update public.profiles
+     set rating = coalesce((select round(avg(rating)::numeric, 1)
+                            from public.reviews where profile_id = target_id), 0),
+         review_count = (select count(*) from public.reviews where profile_id = target_id),
+         updated_at = now()
+   where id = target_id;
+$$;
+
+revoke all on function public.recompute_profile_rating(text) from public;
+grant execute on function public.recompute_profile_rating(text) to authenticated, service_role;
+
+drop trigger if exists trg_reviews_after_insert on public.reviews;
+create trigger trg_reviews_after_insert
+  after insert on public.reviews
+  for each row execute function public.trg_recompute_rating();
+
+drop trigger if exists trg_reviews_after_update on public.reviews;
+create trigger trg_reviews_after_update
+  after update on public.reviews
+  for each row execute function public.trg_recompute_rating();
+
+drop trigger if exists trg_reviews_after_delete on public.reviews;
+create trigger trg_reviews_after_delete
+  after delete on public.reviews
+  for each row execute function public.trg_recompute_rating();
+
+-- Wrapper trigger functions since we can't reference target_id inline.
+create or replace function public.trg_recompute_rating()
+returns trigger
+language plpgsql
+as $$
+begin
+  if (tg_op = 'DELETE') then
+    perform public.recompute_profile_rating(old.profile_id);
+    return old;
+  else
+    perform public.recompute_profile_rating(new.profile_id);
+    if (tg_op = 'UPDATE' and old.profile_id is distinct from new.profile_id) then
+      perform public.recompute_profile_rating(old.profile_id);
+    end if;
+    return new;
+  end if;
+end;
+$$;
+
+-- profile_count on user_profiles
+create or replace function public.recompute_user_profile_count(target_user uuid)
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  update public.user_profiles
+     set profile_count = (select count(*) from public.profiles where owner_id = target_user)
+   where id = target_user;
+$$;
+
+revoke all on function public.recompute_user_profile_count(uuid) from public;
+grant execute on function public.recompute_user_profile_count(uuid) to authenticated, service_role;
+
+create or replace function public.trg_recompute_user_count()
+returns trigger
+language plpgsql
+as $$
+begin
+  if (tg_op = 'DELETE') then
+    if (old.owner_id is not null) then
+      perform public.recompute_user_profile_count(old.owner_id);
+    end if;
+    return old;
+  else
+    if (new.owner_id is not null) then
+      perform public.recompute_user_profile_count(new.owner_id);
+    end if;
+    if (tg_op = 'UPDATE' and old.owner_id is distinct from new.owner_id and old.owner_id is not null) then
+      perform public.recompute_user_profile_count(old.owner_id);
+    end if;
+    return new;
+  end if;
+end;
+$$;
+
+drop trigger if exists trg_profiles_after_insert on public.profiles;
+create trigger trg_profiles_after_insert
+  after insert on public.profiles
+  for each row execute function public.trg_recompute_user_count();
+
+drop trigger if exists trg_profiles_after_update on public.profiles;
+create trigger trg_profiles_after_update
+  after update on public.profiles
+  for each row execute function public.trg_recompute_user_count();
+
+drop trigger if exists trg_profiles_after_delete on public.profiles;
+create trigger trg_profiles_after_delete
+  after delete on public.profiles
+  for each row execute function public.trg_recompute_user_count();
+-- =============================================================================
+-- 20260101000400_views.sql
+-- Convenience views for the catalog page and admin dashboard.
+-- These wrap the live tables with the same RLS policies (views inherit RLS
+-- from underlying tables), so the client can SELECT * with a single query.
+-- =============================================================================
+
+-- Public catalog view: only visible profiles (not hidden / not banned),
+-- augmented with the owner's email and block status for admin filtering.
+create or replace view public.v_public_profiles as
+select
+  p.*,
+  u.email        as owner_email,
+  u.is_blocked   as owner_is_blocked
+from public.profiles p
+left join public.user_profiles u on u.id = p.owner_id
+where not (p.is_hidden or p.is_banned);
+
+-- Admin dashboard view: same as above but includes hidden/banned.
+create or replace view public.v_all_profiles as
+select
+  p.*,
+  u.email        as owner_email,
+  u.is_blocked   as owner_is_blocked
+from public.profiles p
+left join public.user_profiles u on u.id = p.owner_id;
+
+-- Public users list for /admin → users tab.
+create or replace view public.v_user_directory as
+select
+  u.id,
+  u.email,
+  u.full_name,
+  u.avatar_url,
+  u.is_admin,
+  u.is_blocked,
+  u.created_at,
+  coalesce(c.profiles_total, 0) as profile_count,
+  coalesce(c.hidden_total, 0)   as hidden_count
+from public.user_profiles u
+left join (
+  select
+    owner_id,
+    count(*)                       as profiles_total,
+    count(*) filter (where is_hidden) as hidden_total
+  from public.profiles
+  group by owner_id
+) c on c.owner_id = u.id;
+
+-- Aggregate donation progress for the current month (Europe/Moscow).
+create or replace view public.v_current_donations as
+select
+  coalesce(sum(amount), 0)::numeric(12,2) as total_rub,
+  count(*)                                as donations_count
+from public.donations
+where received_at >= date_trunc('month', now() at time zone 'Europe/Moscow')
+  and received_at <  date_trunc('month', now() at time zone 'Europe/Moscow') + interval '1 month';
+
+-- Convenience GIN index on profile photos array (jsonb) for membership tests.
+create index if not exists idx_profiles_photos_gin
+  on public.profiles using gin (photos jsonb_path_ops);
+
+-- Partial index: only verified-and-public profiles for the catalog query path.
+create index if not exists idx_profiles_public_specialist
+  on public.profiles (created_at desc)
+  where not is_hidden and not is_banned and is_specialist;
+-- =============================================================================
+-- seed.sql
+-- Initial Samashki address book (~70 houses) loaded from the JSON data file
+-- so a fresh deployment has a working map without manual admin setup.
+--
+-- Idempotent: uses ON CONFLICT (id) DO NOTHING so re-running is safe.
+-- Run AFTER both init and rls_policies migrations.
+-- =============================================================================
+
+insert into public.house_addresses (id, street, house_number, full_address, lat, lng, postal_code)
+values
+  ('zav-1',  'ул. Заводская', '1',  'ул. Заводская, 1',  43.28710, 45.29480, '366602'),
+  ('zav-5',  'ул. Заводская', '5',  'ул. Заводская, 5',  43.28722, 45.29580, '366602'),
+  ('zav-10', 'ул. Заводская', '10', 'ул. Заводская, 10', 43.28735, 45.29690, '366602'),
+  ('zav-15', 'ул. Заводская', '15', 'ул. Заводская, 15', 43.28750, 45.29780, '366602'),
+  ('zav-20', 'ул. Заводская', '20', 'ул. Заводская, 20', 43.28768, 45.29850, '366602'),
+  ('zav-28', 'ул. Заводская', '28', 'ул. Заводская, 28', 43.28802, 45.29898, '366602'),
+  ('zav-35', 'ул. Заводская', '35', 'ул. Заводская, 35', 43.28820, 45.29980, '366602'),
+  ('zav-42', 'ул. Заводская', '42', 'ул. Заводская, 42', 43.28840, 45.30090, '366602'),
+  ('zav-50', 'ул. Заводская', '50', 'ул. Заводская, 50', 43.28860, 45.30210, '366602'),
+
+  ('shk-1',  'ул. Школьная', '1',  'ул. Школьная, 1',  43.28620, 45.30060, '366602'),
+  ('shk-7',  'ул. Школьная', '7',  'ул. Школьная, 7',  43.28780, 45.30080, '366602'),
+  ('shk-14', 'ул. Школьная', '14', 'ул. Школьная, 14', 43.28940, 45.30110, '366602'),
+  ('shk-20', 'ул. Школьная', '20', 'ул. Школьная, 20', 43.29050, 45.30130, '366602'),
+  ('shk-32', 'ул. Школьная', '32', 'ул. Школьная, 32', 43.29180, 45.30160, '366602'),
+
+  ('cnt-1',   'ул. Центральная', '1',   'ул. Центральная, 1',   43.28800, 45.29250, '366602'),
+  ('cnt-12',  'ул. Центральная', '12',  'ул. Центральная, 12',  43.28830, 45.29420, '366602'),
+  ('cnt-25',  'ул. Центральная', '25',  'ул. Центральная, 25',  43.28860, 45.29600, '366602'),
+  ('cnt-45',  'ул. Центральная', '45',  'ул. Центральная, 45',  43.28900, 45.29850, '366602'),
+  ('cnt-60',  'ул. Центральная', '60',  'ул. Центральная, 60',  43.28980, 45.30080, '366602'),
+  ('cnt-75',  'ул. Центральная', '75',  'ул. Центральная, 75',  43.29040, 45.30220, '366602'),
+  ('cnt-88',  'ул. Центральная', '88',  'ул. Центральная, 88',  43.29100, 45.30370, '366602'),
+  ('cnt-105', 'ул. Центральная', '105', 'ул. Центральная, 105', 43.29180, 45.30600, '366602'),
+
+  ('chp-1',  'ул. В. Чапаева', '1',  'ул. В. Чапаева, 1',  43.28380, 45.29320, '366602'),
+  ('chp-8',  'ул. В. Чапаева', '8',  'ул. В. Чапаева, 8',  43.28420, 45.29510, '366602'),
+  ('chp-15', 'ул. В. Чапаева', '15', 'ул. В. Чапаева, 15', 43.28470, 45.29710, '366602'),
+  ('chp-24', 'ул. В. Чапаева', '24', 'ул. В. Чапаева, 24', 43.28510, 45.29900, '366602'),
+  ('chp-35', 'ул. В. Чапаева', '35', 'ул. В. Чапаева, 35', 43.28560, 45.30120, '366602'),
+  ('chp-51', 'ул. В. Чапаева', '51', 'ул. В. Чапаева, 51', 43.28610, 45.30320, '366602'),
+
+  ('ayd-1',  'ул. А. Айдамирова', '1',  'ул. А. Айдамирова, 1',  43.28580, 45.29390, '366602'),
+  ('ayd-15', 'ул. А. Айдамирова', '15', 'ул. А. Айдамирова, 15', 43.28610, 45.29520, '366602'),
+  ('ayd-30', 'ул. А. Айдамирова', '30', 'ул. А. Айдамирова, 30', 43.28640, 45.29640, '366602'),
+  ('ayd-45', 'ул. А. Айдамирова', '45', 'ул. А. Айдамирова, 45', 43.28680, 45.29720, '366602'),
+  ('ayd-60', 'ул. А. Айдамирова', '60', 'ул. А. Айдамирова, 60', 43.28720, 45.29950, '366602'),
+
+  ('sov-1',  'ул. Советская', '1',  'ул. Советская, 1',  43.28910, 45.29650, '366602'),
+  ('sov-6',  'ул. Советская', '6',  'ул. Советская, 6',  43.28950, 45.29820, '366602'),
+  ('sov-12', 'ул. Советская', '12', 'ул. Советская, 12', 43.28990, 45.30040, '366602'),
+  ('sov-24', 'ул. Советская', '24', 'ул. Советская, 24', 43.29030, 45.30250, '366602'),
+  ('sov-38', 'ул. Советская', '38', 'ул. Советская, 38', 43.29080, 45.30460, '366602'),
+
+  ('vyg-1',  'ул. Выгонная', '1',  'ул. Выгонная, 1',  43.28280, 45.29150, '366602'),
+  ('vyg-8',  'ул. Выгонная', '8',  'ул. Выгонная, 8',  43.28310, 45.29380, '366602'),
+  ('vyg-16', 'ул. Выгонная', '16', 'ул. Выгонная, 16', 43.28350, 45.29620, '366602'),
+  ('vyg-28', 'ул. Выгонная', '28', 'ул. Выгонная, 28', 43.28400, 45.29910, '366602'),
+
+  ('aku-1',  'ул. М. Акуева', '1',  'ул. М. Акуева, 1',  43.28740, 45.29380, '366602'),
+  ('aku-12', 'ул. М. Акуева', '12', 'ул. М. Акуева, 12', 43.28780, 45.29590, '366602'),
+  ('aku-26', 'ул. М. Акуева', '26', 'ул. М. Акуева, 26', 43.28820, 45.29820, '366602'),
+  ('aku-40', 'ул. М. Акуева', '40', 'ул. М. Акуева, 40', 43.28870, 45.30080, '366602'),
+
+  ('len-1',  'ул. Ленина', '1',  'ул. Ленина, 1',  43.29010, 45.29480, '366602'),
+  ('len-10', 'ул. Ленина', '10', 'ул. Ленина, 10', 43.29050, 45.29700, '366602'),
+  ('len-20', 'ул. Ленина', '20', 'ул. Ленина, 20', 43.29090, 45.29940, '366602'),
+  ('len-35', 'ул. Ленина', '35', 'ул. Ленина, 35', 43.29140, 45.30210, '366602'),
+  ('len-50', 'ул. Ленина', '50', 'ул. Ленина, 50', 43.29190, 45.30450, '366602'),
+
+  ('kad-1',  'ул. А. Кадырова', '1',  'ул. А. Кадырова, 1',  43.29150, 45.29520, '366602'),
+  ('kad-10', 'ул. А. Кадырова', '10', 'ул. А. Кадырова, 10', 43.29190, 45.29750, '366602'),
+  ('kad-25', 'ул. А. Кадырова', '25', 'ул. А. Кадырова, 25', 43.29240, 45.30020, '366602'),
+  ('kad-45', 'ул. А. Кадырова', '45', 'ул. А. Кадырова, 45', 43.29290, 45.30310, '366602'),
+
+  ('rec-1',  'ул. Речная', '1',  'ул. Речная, 1',  43.29250, 45.30450, '366602'),
+  ('rec-5',  'ул. Речная', '5',  'ул. Речная, 5',  43.29300, 45.30700, '366602'),
+  ('rec-12', 'ул. Речная', '12', 'ул. Речная, 12', 43.29360, 45.30920, '366602'),
+
+  ('gag-1',  'ул. Гагарина', '1',  'ул. Гагарина, 1',  43.29110, 45.29680, '366602'),
+  ('gag-8',  'ул. Гагарина', '8',  'ул. Гагарина, 8',  43.29150, 45.29910, '366602'),
+  ('gag-16', 'ул. Гагарина', '16', 'ул. Гагарина, 16', 43.29200, 45.30150, '366602'),
+
+  ('mar-14', 'ул. 8 Марта', '14', 'ул. 8 Марта, 14', 43.28900, 45.29550, '366602'),
+  ('may-16', 'ул. 9 Мая',   '16', 'ул. 9 Мая, 16',   43.28960, 45.29740, '366602')
+on conflict (id) do nothing;

@@ -2,20 +2,40 @@
 
 ## One-time local setup
 
+### Option A: Supabase CLI (recommended for developers)
+
 ```bash
 # 1. Install the Supabase CLI
 brew install supabase/tap/supabase   # macOS
-# or: https://supabase.com/docs/guides/cli
+# Linux: see https://supabase.com/docs/guides/cli
+# Windows (scoop): scoop install supabase
 
-# 2. Link to your project
+# 2. Generate a Personal Access Token at
+#    https://supabase.com/dashboard/account/tokens
+#    Then expose it to the CLI:
+export SUPABASE_ACCESS_TOKEN=<paste-token-here>
+
+# 3. Link to your project
 supabase link --project-ref <your-project-ref>
 
-# 3. Apply all migrations in order
+# 4. Apply all migrations in order
 supabase db push
 
-# 4. (Optional) Seed initial data
+# 5. (Optional) Seed initial data
 psql "$DATABASE_URL" -f supabase/seed.sql
 ```
+
+### Option B: Browser SQL Editor (no CLI, no tokens)
+
+If you cannot install the CLI or the project is on a restricted network:
+
+1. Open <https://supabase.com/dashboard/project/_/sql/new>
+2. Copy the entire contents of `supabase/all-in-one.sql`
+3. Paste into the editor and click **Run**
+4. (Optional) Repeat for `supabase/seed.sql`
+
+`all-in-one.sql` concatenates all 5 migrations + seed in order. The whole
+script is ~36 KB and takes 2-5 seconds to execute on a free-tier project.
 
 ## Migration order
 
