@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Ban, Check, Clock3, Eye, EyeOff, FolderOpen, MapPin, Plus, ShieldAlert, Trash2, UserCheck, UserRound, UserX, X, Pencil, Save as SaveIcon } from 'lucide-react';
+import { ArrowLeft, Ban, Check, Clock3, Eye, EyeOff, FolderOpen, MapPin, Plus, RotateCcw, Save as SaveIcon, ShieldAlert, Trash2, UserCheck, UserRound, UserX, X, Pencil } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import BottomNav from '@/components/BottomNav';
 import ProfileModal from '@/components/ProfileModal';
@@ -165,6 +165,11 @@ export default function AdminPage() {
   const [editLat, setEditLat] = useState('');
   const [editLng, setEditLng] = useState('');
 
+  // soft-delete queue: addresses removed in this session that the user
+  // can still restore. They are committed to the database only when the
+  // user explicitly presses "Сохранить изменения".
+  const [pendingDeletes, setPendingDeletes] = useState<Set<string>>(new Set());
+
   useEffect(() => {
     try {
       const stored = localStorage.getItem(CUSTOM_ADDRESSES_KEY);
@@ -190,12 +195,17 @@ export default function AdminPage() {
 
   const allAddressCategories = Array.from(new Set([...DEFAULT_ADDRESS_CATEGORIES, ...customCategories, ...addresses.map(a=>a.category).filter(Boolean) as string[]]));
 
-  const filteredAddresses = addresses.filter((a) => {
-    if (addressFilter === 'all') return true;
-    if (addressFilter === 'Дома') return !a.isNotHouse;
-    if (addressFilter === 'Другое') return !!a.isNotHouse;
-    return a.category === addressFilter;
-  });
+  const visibleAddresses = addresses.filter((a) => !pendingDeletes.has(a.id));
+  const deletedAddresses = addresses.filter((a) => pendingDeletes.has(a.id));
+
+  const filteredAddresses = addressFilter === '__deleted__'
+    ? deletedAddresses
+    : visibleAddresses.filter((a) => {
+        if (addressFilter === 'all') return true;
+        if (addressFilter === 'Дома') return !a.isNotHouse;
+        if (addressFilter === 'Другое') return !!a.isNotHouse;
+        return a.category === addressFilter;
+      });
 
   const handleAddCategory = () => {
     const name = newCategoryName.trim();
@@ -263,18 +273,48 @@ export default function AdminPage() {
       isNotHouse: isNotHouse || undefined,
       category: isNotHouse ? (selectedAddressCategory || 'Другое') : undefined,
     };
-    const next = [house, ...addresses];
-    persistAddresses(next);
+    setAddresses((cur) => [house, ...cur]);
     setHouseNumber('');
-    setSaveMsg('Адрес добавлен и сохранён');
+
+    setSaveMsg('Адрес добавлен. Нажмите «Сохранить изменения», чтобы записать.');
     setTimeout(()=>setSaveMsg(null),2500);
   };
 
   const handleDeleteAddress = (id: string) => {
-    const next = addresses.filter((a) => a.id !== id);
+    // Soft delete: the row stays in `addresses` until the user saves, but
+    // it is hidden from the active list. A separate filter "Удалённые"
+    // exposes them with a single restore button.
+    setPendingDeletes((cur) => {
+      const next = new Set(cur);
+      next.add(id);
+      return next;
+    });
+
+    setSaveMsg('Адрес перенесён в «Удалённые». Сохраните изменения или восстановите его.');
+    setTimeout(()=>setSaveMsg(null),2500);
+  };
+
+  const handleRestoreAddress = (id: string) => {
+    setPendingDeletes((cur) => {
+      const next = new Set(cur);
+      next.delete(id);
+      return next;
+    });
+
+  };
+
+  const handleCommitAddresses = () => {
+    if (pendingDeletes.size === 0) {
+      setSaveMsg('Нет изменений для сохранения.');
+      setTimeout(()=>setSaveMsg(null),2000);
+      return;
+    }
+    const next = addresses.filter((a) => !pendingDeletes.has(a.id));
     persistAddresses(next);
-    setSaveMsg('Удалено и сохранено');
-    setTimeout(()=>setSaveMsg(null),2000);
+    setPendingDeletes(new Set());
+
+    setSaveMsg(`Удалено ${next.length === addresses.length ? 'адресов' : `${addresses.length - next.length} адресов`} и сохранено в БД.`);
+    setTimeout(()=>setSaveMsg(null),2500);
   };
 
   const startEdit = (addr: SamashkiHouseAddress) => {
@@ -304,10 +344,11 @@ export default function AdminPage() {
       isNotHouse: editIsNotHouse || undefined,
       category: editIsNotHouse ? 'Другое' : undefined,
     } : a);
-    persistAddresses(next);
+    setAddresses(next);
     setEditingId(null);
-    setSaveMsg('Изменения сохранены');
-    setTimeout(()=>setSaveMsg(null),2000);
+
+    setSaveMsg('Изменения внесены. Нажмите «Сохранить изменения» для записи в БД.');
+    setTimeout(()=>setSaveMsg(null),2500);
   };
 
   const handleLatChange = (value: string) => {
@@ -428,7 +469,10 @@ export default function AdminPage() {
                     <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-400">Номер дома / объект</label>
                     <div className="flex items-center gap-2">
                       <input value={houseNumber} onChange={(e)=>setHouseNumber(e.target.value)} placeholder={isNotHouse ? "Магазин, мечеть..." : "28"} className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white" required={!isNotHouse} />
-                      <label className="flex shrink-0 cursor-pointer items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5 text-[10px] font-bold text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300"><input type="checkbox" checked={isNotHouse} onChange={(e)=>setIsNotHouse(e.target.checked)} className="h-3 w-3 rounded" />Не дом</label>
+                      <label className="flex shrink-0 cursor-pointer select-none items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5 text-xs font-bold text-amber-800 transition hover:bg-amber-100 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300 dark:hover:bg-amber-950/50">
+                        <input type="checkbox" checked={isNotHouse} onChange={(e)=>setIsNotHouse(e.target.checked)} className="h-4 w-4 rounded border-amber-300 text-emerald-600 focus:ring-emerald-500" />
+                        Не дом
+                      </label>
                     </div>
                     <p className="mt-1 text-[10px] text-slate-400">{isNotHouse ? `Будет в категории ${selectedAddressCategory} на карте` : 'Обычный дом'}</p>
                   </div>
@@ -461,14 +505,14 @@ export default function AdminPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <button type="submit" className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700"><Plus className="h-3.5 w-3.5" />Добавить и сохранить</button>
+                  <button type="submit" className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700"><Plus className="h-3.5 w-3.5" />Добавить</button>
                   {saveMsg && <span className="text-xs font-semibold text-emerald-600">{saveMsg}</span>}
                 </div>
               </div>
             </form>
 
             <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
-              <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">Управление категориями (фильтры как в каталоге)</h4>
+              <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">Управление категориями</h4>
               <div className="flex gap-2">
                 <input value={newCategoryName} onChange={(e)=>setNewCategoryName(e.target.value)} placeholder="Новая категория: Магазины, Школа..." className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs dark:border-zinc-800 dark:bg-zinc-800 dark:text-white" />
                 <button type="button" onClick={handleAddCategory} className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-bold text-white dark:bg-white dark:text-black">Добавить</button>
@@ -481,53 +525,107 @@ export default function AdminPage() {
                 </div>
               )}
               <div className="mt-3 flex flex-wrap gap-1.5">
-                {['all', ...allAddressCategories].map((cat)=>(
-                  <button key={cat} type="button" onClick={()=>setAddressFilter(cat)} className={`rounded-full px-2.5 py-1 text-[11px] font-bold transition ${addressFilter===cat ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400'}`}>{cat==='all'?'Все':cat}</button>
+                <button key="all" type="button" onClick={()=>setAddressFilter('all')} className={`rounded-full px-2.5 py-1 text-[11px] font-bold transition ${addressFilter==='all' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400'}`}>Все</button>
+                {allAddressCategories.map((cat)=>(
+                  <button key={cat} type="button" onClick={()=>setAddressFilter(cat)} className={`rounded-full px-2.5 py-1 text-[11px] font-bold transition ${addressFilter===cat ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400'}`}>{cat}</button>
                 ))}
+                {deletedAddresses.length > 0 && (
+                  <button key="__deleted__" type="button" onClick={()=>setAddressFilter('__deleted__')} className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold transition ${addressFilter==='__deleted__' ? 'border-red-600 bg-red-600 text-white' : 'border-red-300 bg-red-50 text-red-700 hover:bg-red-100 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300 dark:hover:bg-red-950/60'}`}>
+                    <Trash2 className="h-3 w-3" />
+                    Удалённые ({deletedAddresses.length})
+                  </button>
+                )}
               </div>
             </div>
 
             <div className="space-y-2">
-              <h4 className="text-sm font-bold text-slate-800 dark:text-white">Сохранённые ({filteredAddresses.length} из {addresses.length}) {addressFilter!=='all' && `(фильтр: ${addressFilter})`}</h4>
-              {filteredAddresses.map((address) => (
-                <div key={address.id} className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
-                  {editingId === address.id ? (
-                    <div className="space-y-2">
-                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                        <div className="sm:col-span-2">
-                          <div className="flex items-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-zinc-800 dark:bg-zinc-800">
-                            <span className="px-3 py-2 text-xs font-bold text-slate-400">ул.</span>
-                            <input value={editStreetName} onChange={(e)=>setEditStreetName(e.target.value)} className="flex-1 bg-transparent px-2 py-2 text-xs outline-none dark:text-white" />
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h4 className="text-sm font-bold text-slate-800 dark:text-white">
+                  {addressFilter === '__deleted__' ? 'Удалённые' : 'Сохранённые'} ({filteredAddresses.length}
+                  {addressFilter !== '__deleted__' && addressFilter === 'all' ? ` из ${addresses.length}` : ''})
+                </h4>
+                {pendingDeletes.size > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleCommitAddresses}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-700"
+                  >
+                    <SaveIcon className="h-3.5 w-3.5" />
+                    Сохранить изменения ({pendingDeletes.size})
+                  </button>
+                )}
+              </div>
+              {filteredAddresses.length === 0 && (
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center text-xs text-slate-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-500">
+                  {addressFilter === '__deleted__' ? 'Удалённых адресов нет.' : 'Нет адресов для этого фильтра.'}
+                </div>
+              )}
+              {filteredAddresses.map((address) => {
+                const isDeleted = pendingDeletes.has(address.id);
+                return (
+                  <div key={address.id} className={`rounded-2xl border p-3 shadow-sm ${isDeleted ? 'border-red-200 bg-red-50/60 dark:border-red-900 dark:bg-red-950/20' : 'border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-950'}`}>
+                    {editingId === address.id ? (
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                          <div className="sm:col-span-2">
+                            <div className="flex items-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-zinc-800 dark:bg-zinc-800">
+                              <span className="px-3 py-2 text-xs font-bold text-slate-400">ул.</span>
+                              <input value={editStreetName} onChange={(e)=>setEditStreetName(e.target.value)} className="flex-1 bg-transparent px-2 py-2 text-xs outline-none dark:text-white" />
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input value={editHouseNumber} onChange={(e)=>setEditHouseNumber(e.target.value)} className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs dark:border-zinc-800 dark:bg-zinc-800 dark:text-white" />
+                            <label className="flex shrink-0 cursor-pointer select-none items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800 transition hover:bg-amber-100 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300 dark:hover:bg-amber-950/50">
+                              <input type="checkbox" checked={editIsNotHouse} onChange={(e)=>setEditIsNotHouse(e.target.checked)} className="h-4 w-4 rounded border-amber-300 text-emerald-600 focus:ring-emerald-500" />
+                              Не дом
+                            </label>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <input value={editHouseNumber} onChange={(e)=>setEditHouseNumber(e.target.value)} className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs dark:border-zinc-800 dark:bg-zinc-800 dark:text-white" />
-                          <label className="flex items-center gap-1 text-[10px] font-bold"><input type="checkbox" checked={editIsNotHouse} onChange={(e)=>setEditIsNotHouse(e.target.checked)} className="h-3 w-3" />Не дом</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <input value={editLat} onChange={(e)=>setEditLat(e.target.value)} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs dark:border-zinc-800 dark:bg-zinc-800 dark:text-white" />
+                          <input value={editLng} onChange={(e)=>setEditLng(e.target.value)} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs dark:border-zinc-800 dark:bg-zinc-800 dark:text-white" />
+                        </div>
+                        <div className="flex gap-2">
+                          <button type="button" onClick={saveEdit} className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white"><SaveIcon className="h-3 w-3" />Сохранить</button>
+                          <button type="button" onClick={cancelEdit} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300"><X className="h-3 w-3" />Отмена</button>
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <input value={editLat} onChange={(e)=>setEditLat(e.target.value)} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs dark:border-zinc-800 dark:bg-zinc-800 dark:text-white" />
-                        <input value={editLng} onChange={(e)=>setEditLng(e.target.value)} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs dark:border-zinc-800 dark:bg-zinc-800 dark:text-white" />
+                    ) : (
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${address.isNotHouse ? 'bg-amber-50 text-amber-600 dark:bg-amber-950/30 dark:text-amber-400' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400'}`}><MapPin className="h-4 w-4" /></div>
+                          <div className="min-w-0">
+                            <p className="truncate text-xs font-bold text-slate-900 dark:text-white">
+                              {address.fullAddress}
+                              {address.isNotHouse && <span className="ml-1 rounded bg-amber-100 px-1 py-0.5 text-[9px] text-amber-800">Другое</span>}
+                              {isDeleted && <span className="ml-1 rounded bg-red-600 px-1 py-0.5 text-[9px] font-bold text-white">Удалён</span>}
+                            </p>
+                            <p className="truncate text-[11px] text-slate-500">Координаты: {address.lat.toFixed(5)}, {address.lng.toFixed(5)} · {decimalToDMSString(address.lat, address.lng)}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {isDeleted ? (
+                            <button
+                              type="button"
+                              onClick={()=>handleRestoreAddress(address.id)}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-white px-2.5 py-1.5 text-[11px] font-bold text-emerald-700 hover:bg-emerald-50 dark:border-emerald-900 dark:bg-zinc-900 dark:text-emerald-300 dark:hover:bg-emerald-950/40"
+                              title="Восстановить"
+                            >
+                              <RotateCcw className="h-3.5 w-3.5" />
+                              Восстановить
+                            </button>
+                          ) : (
+                            <>
+                              <button type="button" onClick={()=>startEdit(address)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"><Pencil className="h-4 w-4" /></button>
+                              <button type="button" onClick={()=>handleDeleteAddress(address.id)} className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30"><Trash2 className="h-4 w-4" /></button>
+                            </>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex gap-2">
-                        <button type="button" onClick={saveEdit} className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white"><SaveIcon className="h-3 w-3" />Сохранить</button>
-                        <button type="button" onClick={cancelEdit} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300"><X className="h-3 w-3" />Отмена</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${address.isNotHouse ? 'bg-amber-50 text-amber-600 dark:bg-amber-950/30 dark:text-amber-400' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400'}`}><MapPin className="h-4 w-4" /></div>
-                        <div className="min-w-0"><p className="truncate text-xs font-bold text-slate-900 dark:text-white">{address.fullAddress} {address.isNotHouse && <span className="ml-1 rounded bg-amber-100 px-1 py-0.5 text-[9px] text-amber-800">Другое</span>}</p><p className="truncate text-[11px] text-slate-500">Координаты: {address.lat.toFixed(5)}, {address.lng.toFixed(5)} · {decimalToDMSString(address.lat, address.lng)}</p></div>
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <button type="button" onClick={()=>startEdit(address)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"><Pencil className="h-4 w-4" /></button>
-                        <button type="button" onClick={()=>handleDeleteAddress(address.id)} className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30"><Trash2 className="h-4 w-4" /></button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </section>
         )}
