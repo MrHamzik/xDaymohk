@@ -27,15 +27,34 @@ psql "$DATABASE_URL" -f supabase/seed.sql
 
 ### Option B: Browser SQL Editor (no CLI, no tokens)
 
-If you cannot install the CLI or the project is on a restricted network:
+If you cannot install the CLI or the project is on a restricted network,
+use the **step-by-step files** in `supabase/steps/`. Each is small enough
+to paste into the SQL Editor without overwhelming it, and you can run
+them one at a time to isolate any error.
+
+| Step | File | What it does | Result |
+|---|---|---|---|
+| 1 | `steps/01-extensions-and-helpers.sql` | pgcrypto + `is_admin_email()` | Functions exist |
+| 2 | `steps/02-tables.sql` | user_profiles, profiles, certificates, reviews, complaints | 5 tables |
+| 3 | `steps/03-aux-tables.sql` | house_addresses, notifications, donations, project_support | 9 tables |
+| 4 | `steps/04-storage-and-rls-enable.sql` | profile-media bucket + enable RLS | Storage bucket visible |
+| 5 | `steps/05-rls-policies.sql` | All RLS policies | Policies active |
+| 6 | `steps/06-realtime-and-views.sql` | `supabase_realtime` + 4 views | Realtime enabled |
+| 7 | `steps/07-triggers.sql` | rating / review_count / profile_count triggers | Counters live |
+| 8 | `steps/08-seed.sql` | 58 Samashki houses | house_addresses populated |
+
+**For each step:**
 
 1. Open <https://supabase.com/dashboard/project/_/sql/new>
-2. Copy the entire contents of `supabase/all-in-one.sql`
-3. Paste into the editor and click **Run**
-4. (Optional) Repeat for `supabase/seed.sql`
+2. Open the corresponding `steps/0N-*.sql` from this repo
+3. Copy the entire file contents (`Ctrl+A` → `Ctrl+C` on raw view)
+4. Paste into the editor and click **Run**
+5. Verify the expected "Result" column above before moving to the next step
+6. If a step errors, **stop** and report the error message + step number
 
-`all-in-one.sql` concatenates all 5 migrations + seed in order. The whole
-script is ~36 KB and takes 2-5 seconds to execute on a free-tier project.
+**Bundled option:** if you prefer one paste instead of 8,
+run `npm run db:build-all` (or use the existing `supabase/all-in-one.sql`)
+to regenerate the bundled file, then paste it once.
 
 ## Migration order
 

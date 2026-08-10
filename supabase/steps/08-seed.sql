@@ -1,10 +1,9 @@
 -- =============================================================================
--- seed.sql
--- Initial Samashki address book (~70 houses) loaded from the JSON data file
--- so a fresh deployment has a working map without manual admin setup.
---
--- Idempotent: uses ON CONFLICT (id) DO NOTHING so re-running is safe.
--- Run AFTER both init and rls_policies migrations.
+-- Step 08 / 08 — Seed initial data (Samashki address book)
+-- =============================================================================
+-- Run AFTER steps 01-07. Idempotent (uses ON CONFLICT DO NOTHING).
+-- After this succeeds, the /map page will show ~58 house numbers as
+-- clickable markers in addition to the 6 address categories.
 -- =============================================================================
 
 insert into public.house_addresses (id, street, house_number, full_address, lat, lng, postal_code)
