@@ -1,3 +1,5 @@
+import housesData from '@/data/samashki-houses.json';
+
 export interface SamashkiHouseAddress {
   id: string;
   street: string;
@@ -6,11 +8,18 @@ export interface SamashkiHouseAddress {
   lat: number;
   lng: number;
   postalCode: string;
-  isNotHouse?: boolean; // если true, то это не дом, а объект категории "Другое"
-  category?: string; // для не-дома
+  isNotHouse?: boolean;
+  category?: string;
 }
 
 const CUSTOM_KEY = 'samashki-custom-addresses';
+
+/**
+ * Comprehensive database of Samashki streets and house numbers with
+ * geocoded coordinates. Loaded from data/samashki-houses.json so the
+ * bundle stays small and the dataset can be updated without rebuild.
+ */
+export const SAMASHKI_HOUSE_ADDRESSES: SamashkiHouseAddress[] = housesData as SamashkiHouseAddress[];
 
 export function getEffectiveHouseAddresses(): SamashkiHouseAddress[] {
   if (typeof window !== 'undefined') {
@@ -31,7 +40,6 @@ export async function fetchEffectiveHouseAddresses(): Promise<SamashkiHouseAddre
     if (res.ok) {
       const data = await res.json();
       if (data.addresses && Array.isArray(data.addresses)) {
-        // Синхронизируем с localStorage для офлайна
         try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(data.addresses)); } catch {}
         return data.addresses as SamashkiHouseAddress[];
       }
@@ -39,99 +47,6 @@ export async function fetchEffectiveHouseAddresses(): Promise<SamashkiHouseAddre
   } catch {}
   return getEffectiveHouseAddresses();
 }
-
-// Comprehensive database of Samashki streets and house numbers with geocoded coordinates.
-// Stored in application database for instant local lookups without third-party rate limits.
-export const SAMASHKI_HOUSE_ADDRESSES: SamashkiHouseAddress[] = [
-  // ул. Заводская
-  { id: 'zav-1', street: 'ул. Заводская', houseNumber: '1', fullAddress: 'ул. Заводская, 1', lat: 43.28710, lng: 45.29480, postalCode: '366602' },
-  { id: 'zav-5', street: 'ул. Заводская', houseNumber: '5', fullAddress: 'ул. Заводская, 5', lat: 43.28722, lng: 45.29580, postalCode: '366602' },
-  { id: 'zav-10', street: 'ул. Заводская', houseNumber: '10', fullAddress: 'ул. Заводская, 10', lat: 43.28735, lng: 45.29690, postalCode: '366602' },
-  { id: 'zav-15', street: 'ул. Заводская', houseNumber: '15', fullAddress: 'ул. Заводская, 15', lat: 43.28750, lng: 45.29780, postalCode: '366602' },
-  { id: 'zav-20', street: 'ул. Заводская', houseNumber: '20', fullAddress: 'ул. Заводская, 20', lat: 43.28768, lng: 45.29850, postalCode: '366602' },
-  { id: 'zav-28', street: 'ул. Заводская', houseNumber: '28', fullAddress: 'ул. Заводская, 28', lat: 43.28802, lng: 45.29898, postalCode: '366602' },
-  { id: 'zav-35', street: 'ул. Заводская', houseNumber: '35', fullAddress: 'ул. Заводская, 35', lat: 43.28820, lng: 45.29980, postalCode: '366602' },
-  { id: 'zav-42', street: 'ул. Заводская', houseNumber: '42', fullAddress: 'ул. Заводская, 42', lat: 43.28840, lng: 45.30090, postalCode: '366602' },
-  { id: 'zav-50', street: 'ул. Заводская', houseNumber: '50', fullAddress: 'ул. Заводская, 50', lat: 43.28860, lng: 45.30210, postalCode: '366602' },
-
-  // ул. Школьная
-  { id: 'shk-1', street: 'ул. Школьная', houseNumber: '1', fullAddress: 'ул. Школьная, 1', lat: 43.28620, lng: 45.30060, postalCode: '366602' },
-  { id: 'shk-7', street: 'ул. Школьная', houseNumber: '7', fullAddress: 'ул. Школьная, 7', lat: 43.28780, lng: 45.30080, postalCode: '366602' },
-  { id: 'shk-14', street: 'ул. Школьная', houseNumber: '14', fullAddress: 'ул. Школьная, 14', lat: 43.28940, lng: 45.30110, postalCode: '366602' },
-  { id: 'shk-20', street: 'ул. Школьная', houseNumber: '20', fullAddress: 'ул. Школьная, 20', lat: 43.29050, lng: 45.30130, postalCode: '366602' },
-  { id: 'shk-32', street: 'ул. Школьная', houseNumber: '32', fullAddress: 'ул. Школьная, 32', lat: 43.29180, lng: 45.30160, postalCode: '366602' },
-
-  // ул. Центральная
-  { id: 'cnt-1', street: 'ул. Центральная', houseNumber: '1', fullAddress: 'ул. Центральная, 1', lat: 43.28800, lng: 45.29250, postalCode: '366602' },
-  { id: 'cnt-12', street: 'ул. Центральная', houseNumber: '12', fullAddress: 'ул. Центральная, 12', lat: 43.28830, lng: 45.29420, postalCode: '366602' },
-  { id: 'cnt-25', street: 'ул. Центральная', houseNumber: '25', fullAddress: 'ул. Центральная, 25', lat: 43.28860, lng: 45.29600, postalCode: '366602' },
-  { id: 'cnt-45', street: 'ул. Центральная', houseNumber: '45', fullAddress: 'ул. Центральная, 45', lat: 43.28900, lng: 45.29850, postalCode: '366602' },
-  { id: 'cnt-60', street: 'ул. Центральная', houseNumber: '60', fullAddress: 'ул. Центральная, 60', lat: 43.28980, lng: 45.30080, postalCode: '366602' },
-  { id: 'cnt-75', street: 'ул. Центральная', houseNumber: '75', fullAddress: 'ул. Центральная, 75', lat: 43.29040, lng: 45.30220, postalCode: '366602' },
-  { id: 'cnt-88', street: 'ул. Центральная', houseNumber: '88', fullAddress: 'ул. Центральная, 88', lat: 43.29100, lng: 45.30370, postalCode: '366602' },
-  { id: 'cnt-105', street: 'ул. Центральная', houseNumber: '105', fullAddress: 'ул. Центральная, 105', lat: 43.29180, lng: 45.30600, postalCode: '366602' },
-
-  // ул. В. Чапаева
-  { id: 'chp-1', street: 'ул. В. Чапаева', houseNumber: '1', fullAddress: 'ул. В. Чапаева, 1', lat: 43.28380, lng: 45.29320, postalCode: '366602' },
-  { id: 'chp-8', street: 'ул. В. Чапаева', houseNumber: '8', fullAddress: 'ул. В. Чапаева, 8', lat: 43.28420, lng: 45.29510, postalCode: '366602' },
-  { id: 'chp-15', street: 'ул. В. Чапаева', houseNumber: '15', fullAddress: 'ул. В. Чапаева, 15', lat: 43.28470, lng: 45.29710, postalCode: '366602' },
-  { id: 'chp-24', street: 'ул. В. Чапаева', houseNumber: '24', fullAddress: 'ул. В. Чапаева, 24', lat: 43.28510, lng: 45.29900, postalCode: '366602' },
-  { id: 'chp-35', street: 'ул. В. Чапаева', houseNumber: '35', fullAddress: 'ул. В. Чапаева, 35', lat: 43.28560, lng: 45.30120, postalCode: '366602' },
-  { id: 'chp-51', street: 'ул. В. Чапаева', houseNumber: '51', fullAddress: 'ул. В. Чапаева, 51', lat: 43.28610, lng: 45.30320, postalCode: '366602' },
-
-  // ул. А. Айдамирова
-  { id: 'ayd-1', street: 'ул. А. Айдамирова', houseNumber: '1', fullAddress: 'ул. А. Айдамирова, 1', lat: 43.28580, lng: 45.29390, postalCode: '366602' },
-  { id: 'ayd-15', street: 'ул. А. Айдамирова', houseNumber: '15', fullAddress: 'ул. А. Айдамирова, 15', lat: 43.28610, lng: 45.29520, postalCode: '366602' },
-  { id: 'ayd-30', street: 'ул. А. Айдамирова', houseNumber: '30', fullAddress: 'ул. А. Айдамирова, 30', lat: 43.28640, lng: 45.29640, postalCode: '366602' },
-  { id: 'ayd-45', street: 'ул. А. Айдамирова', houseNumber: '45', fullAddress: 'ул. А. Айдамирова, 45', lat: 43.28680, lng: 45.29720, postalCode: '366602' },
-  { id: 'ayd-60', street: 'ул. А. Айдамирова', houseNumber: '60', fullAddress: 'ул. А. Айдамирова, 60', lat: 43.28720, lng: 45.29950, postalCode: '366602' },
-
-  // ул. Советская
-  { id: 'sov-1', street: 'ул. Советская', houseNumber: '1', fullAddress: 'ул. Советская, 1', lat: 43.28910, lng: 45.29650, postalCode: '366602' },
-  { id: 'sov-6', street: 'ул. Советская', houseNumber: '6', fullAddress: 'ул. Советская, 6', lat: 43.28950, lng: 45.29820, postalCode: '366602' },
-  { id: 'sov-12', street: 'ул. Советская', houseNumber: '12', fullAddress: 'ул. Советская, 12', lat: 43.28990, lng: 45.30040, postalCode: '366602' },
-  { id: 'sov-24', street: 'ул. Советская', houseNumber: '24', fullAddress: 'ул. Советская, 24', lat: 43.29030, lng: 45.30250, postalCode: '366602' },
-  { id: 'sov-38', street: 'ул. Советская', houseNumber: '38', fullAddress: 'ул. Советская, 38', lat: 43.29080, lng: 45.30460, postalCode: '366602' },
-
-  // ул. Выгонная
-  { id: 'vyg-1', street: 'ул. Выгонная', houseNumber: '1', fullAddress: 'ул. Выгонная, 1', lat: 43.28280, lng: 45.29150, postalCode: '366602' },
-  { id: 'vyg-8', street: 'ул. Выгонная', houseNumber: '8', fullAddress: 'ул. Выгонная, 8', lat: 43.28310, lng: 45.29380, postalCode: '366602' },
-  { id: 'vyg-16', street: 'ул. Выгонная', houseNumber: '16', fullAddress: 'ул. Выгонная, 16', lat: 43.28350, lng: 45.29620, postalCode: '366602' },
-  { id: 'vyg-28', street: 'ул. Выгонная', houseNumber: '28', fullAddress: 'ул. Выгонная, 28', lat: 43.28400, lng: 45.29910, postalCode: '366602' },
-
-  // ул. М. Акуева
-  { id: 'aku-1', street: 'ул. М. Акуева', houseNumber: '1', fullAddress: 'ул. М. Акуева, 1', lat: 43.28740, lng: 45.29380, postalCode: '366602' },
-  { id: 'aku-12', street: 'ул. М. Акуева', houseNumber: '12', fullAddress: 'ул. М. Акуева, 12', lat: 43.28780, lng: 45.29590, postalCode: '366602' },
-  { id: 'aku-26', street: 'ул. М. Акуева', houseNumber: '26', fullAddress: 'ул. М. Акуева, 26', lat: 43.28820, lng: 45.29820, postalCode: '366602' },
-  { id: 'aku-40', street: 'ул. М. Акуева', houseNumber: '40', fullAddress: 'ул. М. Акуева, 40', lat: 43.28870, lng: 45.30080, postalCode: '366602' },
-
-  // ул. Ленина
-  { id: 'len-1', street: 'ул. Ленина', houseNumber: '1', fullAddress: 'ул. Ленина, 1', lat: 43.29010, lng: 45.29480, postalCode: '366602' },
-  { id: 'len-10', street: 'ул. Ленина', houseNumber: '10', fullAddress: 'ул. Ленина, 10', lat: 43.29050, lng: 45.29700, postalCode: '366602' },
-  { id: 'len-20', street: 'ул. Ленина', houseNumber: '20', fullAddress: 'ул. Ленина, 20', lat: 43.29090, lng: 45.29940, postalCode: '366602' },
-  { id: 'len-35', street: 'ул. Ленина', houseNumber: '35', fullAddress: 'ул. Ленина, 35', lat: 43.29140, lng: 45.30210, postalCode: '366602' },
-  { id: 'len-50', street: 'ул. Ленина', houseNumber: '50', fullAddress: 'ул. Ленина, 50', lat: 43.29190, lng: 45.30450, postalCode: '366602' },
-
-  // ул. А. Кадырова
-  { id: 'kad-1', street: 'ул. А. Кадырова', houseNumber: '1', fullAddress: 'ул. А. Кадырова, 1', lat: 43.29150, lng: 45.29520, postalCode: '366602' },
-  { id: 'kad-10', street: 'ул. А. Кадырова', houseNumber: '10', fullAddress: 'ул. А. Кадырова, 10', lat: 43.29190, lng: 45.29750, postalCode: '366602' },
-  { id: 'kad-25', street: 'ул. А. Кадырова', houseNumber: '25', fullAddress: 'ул. А. Кадырова, 25', lat: 43.29240, lng: 45.30020, postalCode: '366602' },
-  { id: 'kad-45', street: 'ул. А. Кадырова', houseNumber: '45', fullAddress: 'ул. А. Кадырова, 45', lat: 43.29290, lng: 45.30310, postalCode: '366602' },
-
-  // ул. Речная
-  { id: 'rec-1', street: 'ул. Речная', houseNumber: '1', fullAddress: 'ул. Речная, 1', lat: 43.29250, lng: 45.30450, postalCode: '366602' },
-  { id: 'rec-5', street: 'ул. Речная', houseNumber: '5', fullAddress: 'ул. Речная, 5', lat: 43.29300, lng: 45.30700, postalCode: '366602' },
-  { id: 'rec-12', street: 'ул. Речная', houseNumber: '12', fullAddress: 'ул. Речная, 12', lat: 43.29360, lng: 45.30920, postalCode: '366602' },
-
-  // ул. Гагарина
-  { id: 'gag-1', street: 'ул. Гагарина', houseNumber: '1', fullAddress: 'ул. Гагарина, 1', lat: 43.29110, lng: 45.29680, postalCode: '366602' },
-  { id: 'gag-8', street: 'ул. Гагарина', houseNumber: '8', fullAddress: 'ул. Гагарина, 8', lat: 43.29150, lng: 45.29910, postalCode: '366602' },
-  { id: 'gag-16', street: 'ул. Гагарина', houseNumber: '16', fullAddress: 'ул. Гагарина, 16', lat: 43.29200, lng: 45.30150, postalCode: '366602' },
-
-  // ул. 8 Марта и 9 Мая
-  { id: 'mar-14', street: 'ул. 8 Марта', houseNumber: '14', fullAddress: 'ул. 8 Марта, 14', lat: 43.28900, lng: 45.29550, postalCode: '366602' },
-  { id: 'may-16', street: 'ул. 9 Мая', houseNumber: '16', fullAddress: 'ул. 9 Мая, 16', lat: 43.28960, lng: 45.29740, postalCode: '366602' },
-];
 
 export interface SamashkiPlaceObject {
   id: string;

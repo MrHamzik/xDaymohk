@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, FileText, LocateFixed, MapPinned, Phone, Users, Star } from 'lucide-react';
-import InteractiveMap, { type MapLayerMode } from '@/components/InteractiveMap';
+import InteractiveMap from '@/components/InteractiveMapLazy';
+import { type MapLayerMode } from '@/components/InteractiveMap';
 import AccountModal from '@/components/AccountModal';
 import EditProfileModal from '@/components/EditProfileModal';
 import Navbar from '@/components/Navbar';
@@ -18,7 +19,7 @@ import CreateActionModal from '@/components/CreateActionModal';
 import MobileMenuDrawer from '@/components/MobileMenuDrawer';
 import { useAuth } from '@/components/AuthProvider';
 import { useProfiles } from '@/components/ProfilesProvider';
-import { filterProfiles, isAdminProfile } from '@/lib/profile-filters';
+import { filterProfiles } from '@/lib/profile-filters';
 import { calculateWorkingStatus } from '@/lib/schedule';
 import { formatReviews } from '@/lib/text';
 import { useI18n } from '@/lib/i18n';

@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { ExternalLink, MapPin } from 'lucide-react';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
-import InteractiveMap, { type MapLayerMode } from '@/components/InteractiveMap';
+import InteractiveMap from '@/components/InteractiveMapLazy';
+import { type MapLayerMode } from '@/components/InteractiveMap';
 import { findClosestSamashkiHouse, getEffectiveHouseAddresses } from '@/lib/samashki-addresses';
 import { MapPosition } from '@/lib/types';
 

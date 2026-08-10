@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { rateLimit, withRateLimitHeaders } from '@/lib/rate-limit';
+import { parseLatLngPair } from '@/lib/validation';
 
 // Loose bbox around Samashki and Chechen Republic; tighter than a hemisphere
 // but generous enough to allow valid inter-village queries.
@@ -47,8 +48,8 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const from = parsePoint(searchParams.get('from'));
-  const to = parsePoint(searchParams.get('to'));
+  const from = parsePoint(searchParams.get('from')) ?? parseLatLngPair(searchParams.get('from'));
+  const to = parsePoint(searchParams.get('to')) ?? parseLatLngPair(searchParams.get('to'));
   if (!from || !to) {
     return NextResponse.json({ error: 'Use from=lat,lng and to=lat,lng within Chechen Republic bbox' }, { status: 400 });
   }

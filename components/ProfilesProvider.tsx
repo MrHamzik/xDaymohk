@@ -15,6 +15,7 @@ import {
 } from '@/lib/profiles/load';
 import { mergeProfilesWithLocal, normalizeProfiles } from '@/lib/profiles/merge';
 import { persistProfileToSupabase } from '@/lib/profiles/persist';
+import { sanitizeReason } from '@/lib/validation';
 import { extractPhoneDigits } from '@/lib/phone';
 import { Complaint, ComplaintStatus, Profile, Review, UserSummary } from '@/lib/types';
 
@@ -405,7 +406,9 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
   }, [profiles]);
 
   const addComplaint = useCallback(async (profileId: string, reason: string) => {
-    if (!account || account.isBlocked || !reason.trim()) return;
+    if (!account || account.isBlocked) return;
+    const sanitizedReason = sanitizeReason(reason);
+    if (!sanitizedReason) return;
     const reportedProfile = profiles.find((profile) => profile.id === profileId);
     const complaint: Complaint = {
       id: `complaint-${Date.now()}`,
@@ -413,7 +416,7 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
       targetUserId: reportedProfile?.ownerId,
       authorId: account.id,
       authorName: account.fullName,
-      reason: reason.trim().slice(0, 500),
+      reason: sanitizedReason,
       status: 'open',
       createdAt: new Date().toISOString().split('T')[0],
     };
