@@ -1,24 +1,34 @@
 import { NextResponse } from 'next/server';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { SAMASHKI_HOUSE_ADDRESSES } from '@/lib/samashki-addresses';
-
-const ADMIN_EMAILS = ['mr.hamzik1026@gmail.com', 'nabis95@gmail.com'].map(e => e.toLowerCase());
+import { isAdminEmail } from '@/lib/admin';
+import { rateLimit, withRateLimitHeaders } from '@/lib/rate-limit';
 
 async function isAdminRequest(request: Request): Promise<boolean> {
-  if (!isSupabaseConfigured || !supabase) return true; // allow in dev without supabase
+  // Only allow anonymous access in development. Production MUST have Supabase configured.
+  if (!isSupabaseConfigured || !supabase) {
+    return process.env.NODE_ENV === 'development';
+  }
   try {
     const auth = request.headers.get('authorization');
     const token = auth?.replace('Bearer ', '').trim();
     if (!token) return false;
     const { data, error } = await supabase.auth.getUser(token);
     if (error || !data?.user?.email) return false;
-    return ADMIN_EMAILS.includes(data.user.email.toLowerCase());
+    return isAdminEmail(data.user.email);
   } catch {
     return false;
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const limit = rateLimit(request, { limit: 60, windowMs: 60_000 });
+  if (!limit.allowed) {
+    return withRateLimitHeaders(
+      NextResponse.json({ error: 'Too many requests' }, { status: 429 }),
+      { ...limit, limit: 60 }
+    );
+  }
   try {
     if (isSupabaseConfigured && supabase) {
       const { data, error } = await supabase.from('house_addresses').select('*').order('created_at', { ascending: false });
@@ -44,6 +54,13 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const limit = rateLimit(request, { limit: 30, windowMs: 60_000 });
+  if (!limit.allowed) {
+    return withRateLimitHeaders(
+      NextResponse.json({ error: 'Too many requests' }, { status: 429 }),
+      { ...limit, limit: 30 }
+    );
+  }
   try {
     // Проверка админа
     if (!(await isAdminRequest(request))) {

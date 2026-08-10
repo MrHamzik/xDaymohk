@@ -3,15 +3,10 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { uploadImageIfStorageConfigured } from '@/lib/media';
+import { isAdminEmail } from '@/lib/admin';
 import { AVATAR_PRESETS, UserMasterStatus } from '@/lib/types';
 
 const ACCOUNT_STORAGE_KEY = 'samashki-account';
-const ADMIN_EMAILS = ['mr.hamzik1026@gmail.com', 'nabis95@gmail.com'].map((e) => e.toLowerCase());
-
-function isAdminEmail(email: string | undefined | null) {
-  if (!email) return false;
-  return ADMIN_EMAILS.includes(email.trim().toLowerCase());
-}
 
 export interface Account {
   gender?: 'male' | 'female';

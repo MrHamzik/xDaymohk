@@ -1,13 +1,8 @@
 import { AudienceFilter, Profile, UserSummary } from './types';
 import { calculateWorkingStatus } from './schedule';
+import { isAdminEmail, ADMIN_EMAILS } from './admin';
 
-export const ADMIN_EMAIL = 'mr.hamzik1026@gmail.com';
-export const ADMIN_EMAILS = ['mr.hamzik1026@gmail.com', 'nabis95@gmail.com'].map((e) => e.toLowerCase());
-
-function isAdminEmail(email: string | undefined | null) {
-  if (!email) return false;
-  return ADMIN_EMAILS.includes(email.trim().toLowerCase());
-}
+export { ADMIN_EMAILS, isAdminEmail };
 
 export interface ProfileFilterOptions {
   query?: string;
@@ -41,8 +36,6 @@ export function isAdminProfile(profile: Profile, adminOwnerId?: string, users?: 
   }
   return false;
 }
-
-export { isAdminEmail };
 
 export function filterProfiles(profiles: Profile[], options: ProfileFilterOptions = {}) {
   const query = options.query?.trim().toLowerCase() ?? '';

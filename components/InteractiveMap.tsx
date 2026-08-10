@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import type * as Leaflet from 'leaflet';
 import type { MapMarker, MapPosition } from '@/lib/types';
 import { SAMASHKI_HOUSE_ADDRESSES, SAMASHKI_PLACE_OBJECTS, getEffectiveHouseAddresses, fetchEffectiveHouseAddresses } from '@/lib/samashki-addresses';
+import { escapeHtml } from '@/lib/sanitize';
 
 export type MapLayerMode = 'streets' | 'satellite' | 'hybrid';
 
@@ -232,7 +233,7 @@ export function LeafletMap({
         html: `
           <div class="samashki-marker-wrapper">
             <div class="samashki-house-badge light">
-              ${house.houseNumber}
+              ${escapeHtml(house.houseNumber)}
             </div>
           </div>
         `,
@@ -241,7 +242,7 @@ export function LeafletMap({
       });
 
       const houseMarker = leaflet.marker([house.lat, house.lng], { icon: houseIcon });
-      houseMarker.bindTooltip(`${house.street}, д. ${house.houseNumber}`, {
+      houseMarker.bindTooltip(`${escapeHtml(house.street)}, д. ${escapeHtml(house.houseNumber)}`, {
         direction: 'top',
         offset: [0, -8],
       });
@@ -269,7 +270,7 @@ export function LeafletMap({
           <div class="samashki-marker-wrapper">
             <div class="samashki-place-badge light">
               <span class="dot"></span>
-              <span>${place.category}</span>
+              <span>${escapeHtml(place.category)}</span>
             </div>
           </div>
         `,
@@ -278,7 +279,7 @@ export function LeafletMap({
       });
 
       const placeMarker = leaflet.marker([place.lat, place.lng], { icon: placeIcon });
-      placeMarker.bindTooltip(`<strong>${place.title}</strong><br><span style="font-size: 11px;">${place.address}</span>`, {
+      placeMarker.bindTooltip(`<strong>${escapeHtml(place.title)}</strong><br><span style="font-size: 11px;">${escapeHtml(place.address)}</span>`, {
         direction: 'top',
         offset: [0, -8],
       });
@@ -290,13 +291,14 @@ export function LeafletMap({
     });
 
     effectiveHouses.filter((h) => h.isNotHouse).forEach((house) => {
+      const categoryLabel = house.category || 'Другое';
       const otherIcon = leaflet.divIcon({
         className: 'bg-transparent border-none',
         html: `
           <div class="samashki-marker-wrapper">
             <div class="samashki-place-badge light">
               <span class="dot" style="background:#f59e0b"></span>
-              <span>${house.category || 'Другое'}</span>
+              <span>${escapeHtml(categoryLabel)}</span>
             </div>
           </div>
         `,
@@ -304,7 +306,7 @@ export function LeafletMap({
         iconAnchor: [0, 0],
       });
       const m = leaflet.marker([house.lat, house.lng], { icon: otherIcon });
-      m.bindTooltip(`${house.fullAddress} (${house.category || 'Другое'})`, { direction: 'top', offset: [0,-8] });
+      m.bindTooltip(`${escapeHtml(house.fullAddress)} (${escapeHtml(categoryLabel)})`, { direction: 'top', offset: [0,-8] });
       m.on('click', (e) => {
         leaflet.DomEvent.stopPropagation(e);
         onSelectRef.current?.({ lat: house.lat, lng: house.lng });

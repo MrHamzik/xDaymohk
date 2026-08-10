@@ -6,6 +6,8 @@ import { Compass, Navigation, X } from 'lucide-react';
 import { SAMASHKI_QIBLA_ANGLE, calculateQiblaAzimuth, DEFAULT_LAT, DEFAULT_LNG } from '@/lib/islamic';
 import { useI18n } from '@/lib/i18n';
 
+const DEFAULT_QIBLA_AZIMUTH = calculateQiblaAzimuth(DEFAULT_LAT, DEFAULT_LNG);
+
 interface QiblaModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -16,7 +18,7 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
   const [deviceHeading, setDeviceHeading] = useState<number>(0);
   const [hasCompassSupport, setHasCompassSupport] = useState(false);
   const [permissionNeeded, setPermissionNeeded] = useState(false);
-  const [qiblaAngle, setQiblaAngle] = useState<number>(SAMASHKI_QIBLA_ANGLE);
+  const [qiblaAngle, setQiblaAngle] = useState<number>(DEFAULT_QIBLA_AZIMUTH);
   const [userCoords, setUserCoords] = useState<{lat:number,lng:number}|null>(null);
 
   useEffect(() => {
@@ -38,7 +40,7 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
         setQiblaAngle(calculateQiblaAzimuth(lat, lng));
       },
       () => {
-        setQiblaAngle(SAMASHKI_QIBLA_ANGLE);
+        setQiblaAngle(DEFAULT_QIBLA_AZIMUTH);
       },
       { enableHighAccuracy: true, timeout: 8000 }
     );

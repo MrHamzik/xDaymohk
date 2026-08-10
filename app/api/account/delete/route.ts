@@ -1,7 +1,17 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { rateLimit, withRateLimitHeaders } from '@/lib/rate-limit';
 
 export async function DELETE(request: Request) {
+  // Rate limit: 5 destructive ops / hour per IP
+  const limit = rateLimit(request, { limit: 5, windowMs: 60 * 60_000 });
+  if (!limit.allowed) {
+    return withRateLimitHeaders(
+      NextResponse.json({ error: 'Too many requests' }, { status: 429 }),
+      { ...limit, limit: 5 }
+    );
+  }
+
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const authorization = request.headers.get('authorization');

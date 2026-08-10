@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
+import { isAdminEmail } from '@/lib/admin';
 import { INITIAL_PROFILES } from '@/lib/mock-data';
 import { certificateToDbRow, profileFromDb, profileToDbRow, profileUpdatesToDbRow, reviewToDbRow } from '@/lib/profile-db';
 import { isAdminProfile } from '@/lib/profile-filters';
@@ -181,8 +182,6 @@ async function loadFromSupabase(): Promise<Profile[] | null> {
   return allProfiles.filter((p) => !isDemoProfile(p));
 }
 
-const ADMIN_EMAILS_LIST = ['mr.hamzik1026@gmail.com', 'nabis95@gmail.com'];
-
 const DEMO_PROFILE_NAMES = ['Лёма Сатуев', 'Хеди Межидова', 'Ризван Эдильсултанов', 'Зарема Дадаева', 'Асланбек Хатуев', 'Магомед Ибрагимов'];
 const DEMO_PROFILE_IDS = ['sam-1','sam-2','sam-3','sam-4','sam-5','sam-6'];
 
@@ -206,7 +205,7 @@ async function loadUsersFromSupabase(): Promise<UserSummary[]> {
       fullName: row.full_name ?? 'Пользователь',
       avatarUrl: row.avatar_url ?? '',
       // Админы только по email списку, флаг is_admin в БД игнорируется для остальных
-      isAdmin: ADMIN_EMAILS_LIST.includes(String(row.email ?? '').trim().toLowerCase()),
+      isAdmin: isAdminEmail(row.email),
       isBlocked: Boolean(row.is_blocked),
       profileCount: 0,
     }));
@@ -546,7 +545,7 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
   const updateUserBlocked = useCallback(async (userId: string, isBlocked: boolean) => {
     const target = users.find((user) => user.id === userId);
     const targetEmail = target?.email?.trim().toLowerCase();
-    if (target?.isAdmin || (targetEmail && ADMIN_EMAILS_LIST.includes(targetEmail)) || userId === account?.id) return;
+    if (target?.isAdmin || (targetEmail && isAdminEmail(targetEmail)) || userId === account?.id) return;
 
     if (supabase) {
       const { error: userError } = await supabase

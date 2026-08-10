@@ -54,7 +54,6 @@ export interface QuranSurahSummary {
 // Координаты по умолчанию: Самашки / Чеченская Республика
 export const DEFAULT_LAT = 43.288024;
 export const DEFAULT_LNG = 45.298989;
-export const SAMASHKI_QIBLA_ANGLE = 194.5;
 export const MECCA_LAT = 21.4225;
 export const MECCA_LNG = 39.8262;
 
@@ -165,6 +164,50 @@ export const MONTH_NAMES_CE = [
   'Гезгамашин бутт', 'Эсаран бутт', 'Лахьанан бутт', 'Орцан бутт'
 ];
 
+const HIJRI_MONTHS_RU = [
+  'Мухаррам', 'Сафар', 'Раби аль-Авваль', 'Раби ас-сани',
+  'Джумада аль-уля', 'Джумада ас-сания', 'Раджаб', 'Шаабан',
+  'Рамадан', 'Шавваль', 'Зуль-Каада', 'Зуль-Хиджа',
+];
+
+/**
+ * Format a Gregorian date as a Hijri date string.
+ * Uses `Intl.DateTimeFormat` with the `islamic-umalqura` calendar (locale-independent).
+ * Falls back to "—" if the runtime does not support the islamic-umalqura calendar.
+ */
+export function formatHijriDate(year: number, monthIndex: number, day: number): string {
+  try {
+    const date = new Date(Date.UTC(year, monthIndex, day, 12));
+    const formatter = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura-nu-latn', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'UTC',
+    });
+    return formatter.format(date);
+  } catch {
+    return '—';
+  }
+}
+
+/**
+ * Return the Hijri month name in Russian for a given Gregorian date.
+ */
+export function getHijriMonthRu(year: number, monthIndex: number, day: number): string {
+  try {
+    const date = new Date(Date.UTC(year, monthIndex, day, 12));
+    const formatter = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura-nu-latn', {
+      month: 'long',
+      timeZone: 'UTC',
+    });
+    const raw = formatter.format(date);
+    const match = HIJRI_MONTHS_RU.find((name) => name.toLowerCase().startsWith(raw.split(' ')[0]?.toLowerCase() ?? ''));
+    return match ?? raw;
+  } catch {
+    return 'Хиджра';
+  }
+}
+
 // Расчёт точного азимута Киблы от текущих координат пользователя к Каабе (Мекка)
 export function calculateQiblaAzimuth(lat: number = DEFAULT_LAT, lng: number = DEFAULT_LNG): number {
   const phi1 = (lat * Math.PI) / 180.0;
@@ -240,7 +283,7 @@ export function getMonthlyPrayerSchedule(
     schedule.push({
       day,
       month: monthIndex,
-      hijriDate: `${day} ${monthIndex === 7 ? 'Сафар' : monthIndex === 1 ? 'Рамадан' : 'Хиджра'} 1448`,
+      hijriDate: formatHijriDate(year, monthIndex, day),
       fajr: times.fajr,
       sunrise: times.sunrise,
       dhuhr: times.dhuhr,

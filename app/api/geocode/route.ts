@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { rateLimit, withRateLimitHeaders } from '@/lib/rate-limit';
 
 interface DadataSuggestion {
   value?: string;
@@ -14,6 +15,12 @@ interface DadataSuggestion {
     qc_geo?: string;
   };
 }
+
+const ALLOWED_ORIGINS = new Set(
+  [process.env.NEXT_PUBLIC_SITE_URL, 'http://localhost:3000', 'https://daymohk.vercel.app'].filter(
+    (value): value is string => typeof value === 'string' && value.length > 0
+  )
+);
 
 function compactDadataAddress(suggestion: DadataSuggestion) {
   const data = suggestion.data ?? {};
@@ -36,6 +43,21 @@ function parseDadataSuggestion(suggestion: DadataSuggestion) {
 }
 
 export async function GET(request: Request) {
+  // Rate limit: 30 req / minute per IP
+  const limit = rateLimit(request, { limit: 30, windowMs: 60_000 });
+  if (!limit.allowed) {
+    return withRateLimitHeaders(
+      NextResponse.json({ error: 'Too many requests' }, { status: 429 }),
+      { ...limit, limit: 30 }
+    );
+  }
+
+  // Origin / Referer gate
+  const origin = request.headers.get('origin');
+  if (origin && !ALLOWED_ORIGINS.has(origin)) {
+    return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+  }
+
   const { searchParams } = new URL(request.url);
   const query = searchParams.get('q')?.trim() ?? '';
   const token = process.env.DADATA_API_TOKEN;
@@ -65,9 +87,12 @@ export async function GET(request: Request) {
       return NextResponse.json({ results: [], fallback: true });
     }
 
-    const payload = await response.json() as { suggestions?: DadataSuggestion[] };
+    const payload = (await response.json()) as { suggestions?: DadataSuggestion[] };
     const results = (payload.suggestions ?? []).map(parseDadataSuggestion).filter(Boolean);
-    return NextResponse.json({ results });
+    return withRateLimitHeaders(
+      NextResponse.json({ results }),
+      { ...limit, limit: 30 }
+    );
   } catch (error) {
     if (error instanceof Error && error.name !== 'AbortError') {
       console.warn('DaData suggestions are unavailable:', error.message);

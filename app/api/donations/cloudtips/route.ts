@@ -1,5 +1,8 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
+import { rateLimit, withRateLimitHeaders } from '@/lib/rate-limit';
+
+const MAX_BODY_BYTES = 64 * 1024; // 64 KB upper bound for CloudTips payload
 
 function getMonthKey(value: string) {
   const date = new Date(value);
@@ -15,6 +18,15 @@ function isValidSignature(body: string, provided: string, secret: string) {
 }
 
 export async function POST(request: Request) {
+  // Rate limit: 120 req / minute per IP (CloudTips may burst during incidents)
+  const limit = rateLimit(request, { limit: 120, windowMs: 60_000 });
+  if (!limit.allowed) {
+    return withRateLimitHeaders(
+      Response.json({ code: 1, error: 'Too many requests' }, { status: 429 }),
+      { ...limit, limit: 120 }
+    );
+  }
+
   const secret = process.env.CLOUDTIPS_WEBHOOK_SECRET;
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -24,6 +36,9 @@ export async function POST(request: Request) {
   }
 
   const body = await request.text();
+  if (body.length > MAX_BODY_BYTES) {
+    return Response.json({ code: 1, error: 'Payload too large' }, { status: 413 });
+  }
   const signature = request.headers.get('x-content-hmac') ?? '';
   if (!signature || !isValidSignature(body, signature, secret)) {
     return Response.json({ code: 1, error: 'Invalid signature' }, { status: 403 });
