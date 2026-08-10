@@ -874,7 +874,7 @@ alter table public.reviews
 create index if not exists idx_reviews_author_id on public.reviews (author_id);
 -- <<<<<< 09-fix-reviews-author-id.sql <<<<<<
 
--- >>>>>> 10-standardize-ids-to-uuid.sql (9.3 kB) >>>>>>
+-- >>>>>> 10-standardize-ids-to-uuid.sql (9.5 kB) >>>>>>
 -- =============================================================================
 -- Step 10 — Standardize all id columns to uuid
 -- =============================================================================
@@ -920,7 +920,14 @@ create index if not exists idx_reviews_author_id on public.reviews (author_id);
 -- =============================================================================
 
 -- ---------------------------------------------------------------------------
--- 0a) Drop every RLS policy on the 5 tables we're about to convert.
+-- 0a) Drop every RLS policy in the public schema. We don't try to
+--     limit this to specific tables because policies can reference
+--     columns from other tables via sub-queries (e.g.
+--     'certificates owner write' depends on profiles.owner_id through
+--     'exists (select … p.owner_id = auth.uid())'), and Postgres
+--     blocks ALTER on any column that appears in any policy on any
+--     table in the schema. step 05 will recreate them at the end of
+--     the migration.
 -- ---------------------------------------------------------------------------
 do $$
 declare
@@ -930,13 +937,6 @@ begin
     select schemaname, tablename, policyname
     from pg_policies
     where schemaname = 'public'
-      and tablename in (
-        'user_profiles',
-        'profiles',
-        'reviews',
-        'complaints',
-        'notifications'
-      )
   loop
     execute format('drop policy if exists %I on public.%I', pol.policyname, pol.tablename);
   end loop;

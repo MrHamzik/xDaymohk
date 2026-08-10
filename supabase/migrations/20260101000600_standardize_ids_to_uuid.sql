@@ -6,7 +6,8 @@
 -- for use with `supabase db push` (fresh installs).
 -- =============================================================================
 
--- 0a) Drop every RLS policy on the 5 tables we're about to convert.
+-- 0a) Drop every RLS policy in the public schema. step 05 will
+--    recreate them after the type change.
 do $$
 declare
   pol record;
@@ -15,13 +16,6 @@ begin
     select schemaname, tablename, policyname
     from pg_policies
     where schemaname = 'public'
-      and tablename in (
-        'user_profiles',
-        'profiles',
-        'reviews',
-        'complaints',
-        'notifications'
-      )
   loop
     execute format('drop policy if exists %I on public.%I', pol.policyname, pol.tablename);
   end loop;
