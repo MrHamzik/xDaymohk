@@ -72,9 +72,10 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
   useEffect(() => {
     if (!isOpen) return;
 
-    // Default to specialist (true) for new profiles; for the personal
-    // profile (or any existing non-specialist) keep its current value.
-    setIsSpecialist(profile?.isSpecialist ?? true);
+    // New profiles are always specialist (the personal one already exists
+    // and cannot be removed). Editing an existing profile keeps its
+    // current isSpecialist value (including the personal=false one).
+    setIsSpecialist(profile?.id ? Boolean(profile.isSpecialist) : true);
     setProfessionCategory(profile?.professionCategory ?? 'doctor');
     setProfessionTitle(profile?.professionTitle ?? '');
     setExperienceStart(profile?.experienceStart ?? '');
@@ -246,13 +247,12 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
               <p className="rounded-xl bg-amber-50 p-3 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">Для создания анкеты нужно войти в профиль.</p>
             )}
 
-            {!profile?.isPersonal && (
-              <div className="flex items-center justify-between gap-4 rounded-xl border border-slate-100 bg-slate-50/60 p-3 dark:border-zinc-800 dark:bg-zinc-800">
-                <div>
-                  <h3 className="text-xs font-bold text-slate-900 dark:text-white">Показывать себя как специалиста</h3>
-                  <p className="mt-0.5 text-[11px] text-slate-500 dark:text-zinc-500">Профиль появится в поиске по услугам и получит график работы.</p>
-                </div>
-                <input type="checkbox" checked={isSpecialist} onChange={(event) => setIsSpecialist(event.target.checked)} className="h-4 w-4 shrink-0 rounded text-emerald-600 focus:ring-emerald-500" />
+            {!profile?.isPersonal && !profile?.id && (
+              <div className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 dark:border-emerald-900 dark:bg-emerald-950/30">
+                <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-700 dark:text-emerald-300" />
+                <p className="text-[11px] leading-relaxed text-emerald-800 dark:text-emerald-200">
+                  Личная анкета у вас уже есть — она не удаляется. Эта анкета будет опубликована как анкета специалиста и появится в каталоге по выбранной сфере.
+                </p>
               </div>
             )}
 
