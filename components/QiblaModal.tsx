@@ -257,18 +257,8 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
               className="absolute inset-0"
               style={{ willChange: 'transform' }}
             >
-              {/* Cardinal letters — С/В/Ю/З. Each letter is rotated
-                  by +180° from its natural position so the BOTTOM
-                  of the glyph always points toward the centre of
-                  the dial (e.g. С is at the top but upside-down so
-                  its bottom edge faces the middle, Ю is at the
-                  bottom upright so its bottom edge also faces the
-                  middle, В is on the right rotated 90° CCW, З is
-                  on the left rotated 90° CW). This is the 'ray
-                  pattern' the user asked for. */}
               <span
                 className="absolute left-1/2 top-3 -translate-x-1/2 text-base font-black text-red-600"
-                style={{ transform: 'rotate(180deg)' }}
               >
                 С
               </span>
@@ -279,13 +269,11 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
               </span>
               <span
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-base font-black text-slate-700 dark:text-slate-200"
-                style={{ transform: 'rotate(-90deg)' }}
               >
                 В
               </span>
               <span
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-base font-black text-slate-700 dark:text-slate-200"
-                style={{ transform: 'rotate(90deg)' }}
               >
                 З
               </span>
