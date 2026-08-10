@@ -141,10 +141,15 @@ export function LeafletMap({
       map.on('zoomend', updateZoomClass);
       updateZoomClass();
       try {
+        // Render the seed data first so the user sees something
+        // immediately, then fetch the server-managed list. Even if
+        // the server returns an empty array (the admin deleted all
+        // houses), use it — that's the source of truth, not the
+        // local seed.
         const eff = getEffectiveHouseAddresses();
         setEffectiveHouses(eff);
         fetchEffectiveHouseAddresses().then((server) => {
-          if (server && server.length > 0) setEffectiveHouses(server);
+          if (server && Array.isArray(server)) setEffectiveHouses(server);
         }).catch(()=>{});
       } catch {}
 

@@ -191,11 +191,15 @@ export default function AdminPage() {
   const [pendingAdds, setPendingAdds] = useState<SamashkiHouseAddress[]>([]);
 
   useEffect(() => {
+    // Read what the admin previously committed (including an empty
+    // array — that's the "I deleted everything" state and must win
+    // over the default seed data, otherwise the admin would see the
+    // same houses again after a full delete).
     try {
       const stored = localStorage.getItem(CUSTOM_ADDRESSES_KEY);
-      if (stored) {
+      if (stored !== null) {
         const parsed = JSON.parse(stored) as SamashkiHouseAddress[];
-        if (Array.isArray(parsed) && parsed.length > 0) setAddresses(parsed);
+        if (Array.isArray(parsed)) setAddresses(parsed);
       }
     } catch {}
     try {

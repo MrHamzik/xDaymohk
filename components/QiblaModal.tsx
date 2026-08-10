@@ -17,7 +17,6 @@ type CompassMode = 'idle' | 'no-support' | 'no-permission' | 'ready';
 
 export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
   const { language } = useI18n();
-  const dialRef = useRef<HTMLDivElement | null>(null);
   const needleRef = useRef<HTMLDivElement | null>(null);
   const centerDotRef = useRef<HTMLDivElement | null>(null);
   const headingLabelRef = useRef<HTMLDivElement | null>(null);
@@ -149,20 +148,31 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
   // Apply heading directly to the DOM via rAF for 60fps updates.
   // This bypasses React re-render overhead and keeps the needle
   // buttery-smooth on slow devices.
+  //
+  // Compass layout:
+  //   * The outer dial with N/S/E/W stays STATIC — North is always
+  //     at the top of the screen, just like a real compass face.
+  //   * The needle rotates by (qiblaAngle - heading) so that it
+  //     ALWAYS points to the Qibla from the user's current
+  //     perspective. When the user faces North, the needle points
+  //     at qiblaAngle from N. When they turn East, the needle
+  //     swings left by 90° because Qibla is now 90° to their right
+  //     (which is the top of the screen if North just rotated off).
   useEffect(() => {
     if (!isOpen || mode !== 'ready') return;
     let raf = 0;
     const tick = () => {
-      const dial = dialRef.current;
       const needle = needleRef.current;
-      if (dial) dial.style.transform = `rotate(${-heading}deg)`;
-      if (needle) needle.style.transform = `rotate(${qiblaAngle}deg)`;
+      // Needle angle: how far from "up on the screen" the Qibla
+      // direction is, given the current phone heading.
+      const needleAngle = (qiblaAngle - heading + 360) % 360;
+      if (needle) needle.style.transform = `rotate(${needleAngle}deg)`;
       if (headingLabelRef.current) headingLabelRef.current.textContent = `${Math.round(heading)}°`;
       if (centerDotRef.current) {
         // Highlight when aligned (within 8 degrees)
         const diff = ((qiblaAngle - heading + 540) % 360) - 180;
         const aligned = Math.abs(diff) < 8;
-        centerDotRef.current.className = `absolute h-3 w-3 rounded-full shadow-md border-2 border-white dark:border-zinc-900 ${
+        centerDotRef.current.className = `absolute h-4 w-4 rounded-full shadow-md border-2 border-white dark:border-zinc-900 ${
           aligned ? 'bg-emerald-500' : 'bg-slate-800 dark:bg-white'
         }`;
       }
@@ -210,18 +220,16 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
 
         <div className="my-5 flex flex-col items-center justify-center">
           <div className="relative flex h-72 w-72 items-center justify-center rounded-full border-[6px] border-slate-100 bg-white shadow-inner dark:border-zinc-800 dark:bg-zinc-900">
-            {/* Rotating compass background with cardinal points */}
-            <div
-              ref={dialRef}
-              className="absolute inset-0"
-              style={{ willChange: 'transform' }}
-            >
+            {/* STATIC compass background with cardinal points. North is
+                always at the top of the screen, just like a real compass
+                face. The needle rotates on top of this. */}
+            <div className="absolute inset-0">
               <span className="absolute left-1/2 top-1 -translate-x-1/2 text-[12px] font-black text-red-600">N</span>
               <span className="absolute bottom-1 left-1/2 -translate-x-1/2 text-[11px] font-bold text-slate-400">S</span>
               <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] font-bold text-slate-400">E</span>
               <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] font-bold text-slate-400">W</span>
               <div className="absolute inset-2 rounded-full border border-dashed border-slate-200 dark:border-zinc-700" />
-              {/* Ticks every 30° for visual reference */}
+              {/* Ticks every 30° for visual reference (static) */}
               {Array.from({ length: 12 }).map((_, i) => (
                 <div
                   key={i}
@@ -231,9 +239,11 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
               ))}
             </div>
 
-            {/* Static needle: stays at Qibla angle relative to the rotating dial.
-                The needle is a long bar pointing from centre to edge so the
-                user can clearly see the direction even from a distance. */}
+            {/* ROTATING needle. The rAF tick below sets
+                `transform: rotate(<qiblaAngle - heading>deg)` on this
+                element on every frame, so the needle visibly rotates
+                when the user turns the phone and ALWAYS points to
+                the Qibla from the user's current perspective. */}
             <div
               ref={needleRef}
               className="absolute inset-0 pointer-events-none"

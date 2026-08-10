@@ -25,9 +25,13 @@ export function getEffectiveHouseAddresses(): SamashkiHouseAddress[] {
   if (typeof window !== 'undefined') {
     try {
       const raw = window.localStorage.getItem(CUSTOM_KEY);
+      // If the admin ever wrote anything to localStorage (even an
+      // empty array meaning "I deleted everything"), respect that
+      // and don't fall back to the seed dataset. Otherwise the
+      // admin's full delete would reappear after every page load.
       if (raw !== null) {
         const parsed = JSON.parse(raw) as SamashkiHouseAddress[];
-        if (Array.isArray(parsed)) return parsed; // даже если пустой — уважаем выбор админа
+        if (Array.isArray(parsed)) return parsed;
       }
     } catch {}
   }

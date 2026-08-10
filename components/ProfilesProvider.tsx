@@ -402,17 +402,25 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
 
   const deleteProfile = useCallback(async (profileId: string) => {
     const target = profiles.find((p) => p.id === profileId);
-    if (target?.isPersonal) {
+    if (!target) {
+      throw new Error('Анкета не найдена.');
+    }
+    // The canonical personal profile (`personal-<userId>`) is the
+    // single protected row and cannot be deleted. Any OTHER personal
+    // profile that ends up in the database (e.g. duplicates created
+    // by an earlier bug) IS deletable — otherwise the user is stuck
+    // with a phantom row they can neither edit nor remove.
+    const isCanonicalPersonal = target.isPersonal
+      && target.id === `personal-${target.ownerId}`;
+    if (isCanonicalPersonal) {
       throw new Error('Личная анкета не может быть удалена.');
     }
 
-    // Build a follow-up verification: if Supabase reports 0 affected rows,
-    // check whether the row even exists; if it does, RLS is the problem.
     if (supabase && account) {
       // Pre-check ownership so we can give a precise error.
       const { data: ownershipCheck, error: ownershipError } = await supabase
         .from('profiles')
-        .select('id, owner_id')
+        .select('id, owner_id, is_personal')
         .eq('id', profileId)
         .maybeSingle();
       if (ownershipError) throw new Error(ownershipError.message);
@@ -424,13 +432,39 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
         throw new Error('Удалять можно только свои анкеты.');
       }
 
-      const { error: deleteError, count } = await supabase
-        .from('profiles')
-        .delete({ count: 'exact' })
-        .eq('id', profileId);
-      if (deleteError) throw new Error(deleteError.message);
-      if (count === 0) {
-        throw new Error('Не удалось удалить анкету — проверьте RLS политики (см. supabase/upgrade_existing.sql).');
+      // For duplicate personal rows the RLS policy 'profiles owner
+      // delete' is gated on `not is_personal`, so we bypass it via
+      // the service-role-aware delete from the API. Falling back
+      // to the regular client delete works for non-personal rows.
+      const dbIsPersonal = Boolean(ownershipCheck.is_personal);
+      if (dbIsPersonal) {
+        // The row exists, is owned by the current user, but the RLS
+        // policy refuses to delete it because is_personal=true. We
+        // delegate to the service-role endpoint that knows to drop
+        // the row regardless of the flag.
+        const { data: sessionData } = await supabase.auth.getSession();
+        const accessToken = sessionData.session?.access_token;
+        if (!accessToken) {
+          throw new Error('Сессия истекла — войдите снова.');
+        }
+        const response = await fetch('/api/account/delete-personal-duplicate', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+          body: JSON.stringify({ profileId }),
+        });
+        if (!response.ok) {
+          const result = await response.json().catch(() => null);
+          throw new Error(result?.error ?? 'Не удалось удалить дубликат личной анкеты.');
+        }
+      } else {
+        const { error: deleteError, count } = await supabase
+          .from('profiles')
+          .delete({ count: 'exact' })
+          .eq('id', profileId);
+        if (deleteError) throw new Error(deleteError.message);
+        if (count === 0) {
+          throw new Error('Не удалось удалить анкету — проверьте RLS политики (см. supabase/upgrade_existing.sql).');
+        }
       }
     }
 
