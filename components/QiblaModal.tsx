@@ -17,6 +17,7 @@ type CompassMode = 'idle' | 'no-support' | 'no-permission' | 'needs-calibration'
 
 export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
   const { language } = useI18n();
+  const dialRef = useRef<HTMLDivElement | null>(null);
   const needleRef = useRef<HTMLDivElement | null>(null);
   const headingLabelRef = useRef<HTMLDivElement | null>(null);
   const turnLabelRef = useRef<HTMLDivElement | null>(null);
@@ -26,17 +27,14 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
   const [mode, setMode] = useState<CompassMode>('idle');
   const [heading, setHeading] = useState<number>(0);
   const [permissionNeeded, setPermissionNeeded] = useState(false);
-  // Calibration: the e.alpha value the user had when they pointed
-  // the phone screen-up along the local North direction. Subtracted
-  // from every future e.alpha reading to derive a compass-like
-  // heading. Needed on Android devices where e.absolute is true
-  // but e.alpha is the device's rotation around its z-axis rather
-  // than a true compass heading.
+  // On devices where e.absolute is true but e.alpha is the
+  // device's z-axis rotation rather than a true compass heading,
+  // the user must mark the current e.alpha as "this is local
+  // North" so future readings can be turned into a real heading.
   const [calibration, setCalibration] = useState<number | null>(null);
   const calibrationRef = useRef<number | null>(null);
   const lastAlphaRef = useRef<number | null>(null);
 
-  // Lock body scroll while open
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -44,7 +42,6 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
     }
   }, [isOpen]);
 
-  // Fetch geolocation for accurate Qibla angle
   useEffect(() => {
     if (!isOpen) return;
     if (!navigator.geolocation) {
@@ -61,14 +58,14 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
     );
   }, [isOpen]);
 
-  // Normalize any device heading to a 0..360 number, with 0 = North.
-  // iOS: e.webkitCompassHeading already in 0..360.
-  // Android: e.absolute === true means e.alpha is supposedly a true
-  // compass heading, but in practice on many devices e.alpha is the
-  // device's rotation around its z-axis (NOT a compass heading).
-  // The calibration step lets the user mark the current e.alpha as
-  // the local North so we can derive a usable heading from any
-  // future e.alpha reading on that device.
+  // Convert a DeviceOrientationEvent into a 0..360 compass heading
+  // where 0 = North, 90 = East, 180 = South, 270 = West.
+  //   * iOS: e.webkitCompassHeading is already a true compass heading.
+  //   * Android w/ e.absolute === true: e.alpha is technically a
+  //     compass heading, but on many devices it's actually a
+  //     rotation around the z-axis. We only trust it after the
+  //     user calibrates (marks the current e.alpha as 0).
+  //   * Everything else: return null and park the dial.
   const extractHeading = useCallback((e: DeviceOrientationEvent): number | null => {
     const anyEvent = e as DeviceOrientationEvent & { webkitCompassHeading?: number };
     if (typeof anyEvent.webkitCompassHeading === 'number' && !Number.isNaN(anyEvent.webkitCompassHeading)) {
@@ -77,14 +74,12 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
     if (typeof e.alpha === 'number' && !Number.isNaN(e.alpha)) {
       lastAlphaRef.current = e.alpha;
       const cal = calibrationRef.current;
-      if (cal === null) return null; // not calibrated yet
+      if (cal === null) return null;
       return ((e.alpha - cal) % 360 + 360) % 360;
     }
     return null;
   }, []);
 
-  // Subscribe to device orientation; on iOS we need a user gesture
-  // to grant the permission.
   useEffect(() => {
     if (!isOpen) return;
 
@@ -104,14 +99,7 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
 
     const handle = (e: DeviceOrientationEvent) => {
       const h = extractHeading(e);
-      if (h === null) {
-        // Sensor is firing but we have no calibration yet — show
-        // the calibration prompt instead of a misleading heading.
-        if (lastAlphaRef.current !== null && mode === 'no-permission') {
-          // not used; covered below
-        }
-        return;
-      }
+      if (h === null) return;
       setMode('ready');
       setHeading(h);
     };
@@ -135,7 +123,7 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
       window.removeEventListener('deviceorientationabsolute', handle, true);
       window.removeEventListener('deviceorientation', handle, true);
     };
-  }, [isOpen, extractHeading, mode]);
+  }, [isOpen, extractHeading]);
 
   const requestPermission = useCallback(async () => {
     const anyWindow = window as unknown as {
@@ -146,8 +134,6 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
       const response = await anyWindow.DeviceOrientationEvent.requestPermission();
       if (response === 'granted') {
         setPermissionNeeded(false);
-        // iOS doesn't need calibration — webkitCompassHeading is
-        // already a true compass heading.
         setMode('ready');
         const handle = (e: DeviceOrientationEvent) => {
           const h = extractHeading(e);
@@ -165,14 +151,11 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
   }, [extractHeading]);
 
   const handleCalibrate = useCallback(() => {
-    // User has put the phone flat, screen up, and is pointing along
-    // their local North direction. Mark the current e.alpha as 0.
     if (lastAlphaRef.current !== null) {
       calibrationRef.current = lastAlphaRef.current;
       setCalibration(lastAlphaRef.current);
       setMode('ready');
     } else {
-      // No alpha yet — wait for one
       const handler = (e: DeviceOrientationEvent) => {
         if (typeof e.alpha === 'number' && !Number.isNaN(e.alpha)) {
           calibrationRef.current = e.alpha;
@@ -187,18 +170,25 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
     }
   }, []);
 
-  // Apply heading directly to the DOM via rAF for 60fps updates.
-  // The needle ALWAYS renders — even when no sensor is available,
-  // it points to qiblaAngle (the static Qibla direction). When the
-  // sensor IS available, it rotates by (qiblaAngle - heading) so
-  // the needle points to Qibla from the user's current perspective.
+  // Apply heading to the DOM via rAF. Layout:
+  //   * DIAL (the ring with N/S/E/W + tick marks) rotates by
+  //     -heading so that N always points to the local North
+  //     direction the sensor reports.
+  //   * NEEDLE (the green Navigation icon) is STATIC at qiblaAngle
+  //     relative to the dial. Because the dial moves underneath
+  //     it, the needle visually swings to the correct Kaaba
+  //     direction on the screen.
+  // Without a working sensor, heading === 0, the dial doesn't
+  // rotate, and the needle stays at qiblaAngle (pointing to the
+  // Kaaba from the static N).
   useEffect(() => {
     if (!isOpen) return;
     let raf = 0;
     const tick = () => {
+      const dial = dialRef.current;
       const needle = needleRef.current;
-      const needleAngle = (qiblaAngle - heading + 360) % 360;
-      if (needle) needle.style.transform = `rotate(${needleAngle}deg)`;
+      if (dial) dial.style.transform = `rotate(${-heading}deg)`;
+      if (needle) needle.style.transform = `rotate(${qiblaAngle}deg)`;
 
       if (headingLabelRef.current) {
         headingLabelRef.current.textContent = mode === 'ready' ? `${Math.round(heading)}°` : '—';
@@ -251,9 +241,14 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
 
         <div className="my-5 flex flex-col items-center justify-center">
           <div className="relative flex h-72 w-72 items-center justify-center rounded-full border-[6px] border-slate-100 bg-white shadow-inner dark:border-zinc-800 dark:bg-zinc-900">
-            {/* STATIC compass face with cardinal points + tick marks.
-                North is always at the top of the screen. */}
-            <div className="absolute inset-0">
+            {/* ROTATING dial — the ring with N/S/E/W and tick marks.
+                rAF rotates it by -heading so N always points to the
+                local North that the compass sensor reports. */}
+            <div
+              ref={dialRef}
+              className="absolute inset-0"
+              style={{ willChange: 'transform' }}
+            >
               <span className="absolute left-1/2 top-1 -translate-x-1/2 text-[12px] font-black text-red-600">N</span>
               <span className="absolute bottom-1 left-1/2 -translate-x-1/2 text-[11px] font-bold text-slate-400">S</span>
               <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] font-bold text-slate-400">E</span>
@@ -268,12 +263,13 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
               ))}
             </div>
 
-            {/* ROTATING needle. The rAF tick sets
-                `transform: rotate(<qiblaAngle - heading>deg)` on every
-                frame, so the needle visibly rotates when the user
-                turns the phone. Without a sensor, heading stays at 0
-                and the needle is parked at qiblaAngle (the static
-                direction to the Kaaba). */}
+            {/* STATIC needle — stays at qiblaAngle relative to the
+                rotating dial, so it ALWAYS points to the Kaaba from
+                the user's current perspective. The arrow tip is
+                aimed "up" (toward the top of the dial) at angle
+                qiblaAngle; because the dial is rotated to North,
+                the arrow tip therefore points to North + qiblaAngle,
+                which is the actual Kaaba bearing. */}
             <div
               ref={needleRef}
               className="absolute inset-0 pointer-events-none"
