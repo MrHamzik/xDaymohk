@@ -285,7 +285,7 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
             >
               <svg
                 viewBox="0 0 64 64"
-                className="absolute left-1/2 top-1/2 h-20 w-20 -translate-x-1/2 -translate-y-1/2 drop-shadow-[0_4px_12px_rgba(16,185,129,0.6)]"
+                className="absolute left-1/2 top-1/2 h-28 w-28 -translate-x-1/2 -translate-y-1/2 drop-shadow-[0_4px_12px_rgba(16,185,129,0.6)]"
                 aria-hidden="true"
               >
                 <defs>
