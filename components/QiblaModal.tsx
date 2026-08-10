@@ -2,7 +2,7 @@
 
 import { createPortal } from 'react-dom';
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { ArrowUp, Compass, X } from 'lucide-react';
+import { Compass, X } from 'lucide-react';
 import { calculateQiblaAzimuth, DEFAULT_LAT, DEFAULT_LNG } from '@/lib/islamic';
 import { useI18n } from '@/lib/i18n';
 
@@ -204,7 +204,7 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
         const turn = diff > 0
           ? (language === 'ce' ? 'аьттухьа' : 'вправо')
           : (language === 'ce' ? 'аьррухьа' : 'влево');
-        const aligned = absDiff < 8;
+        const aligned = absDiff < 1;
         if (mode === 'ready') {
           turnLabelRef.current.textContent = aligned
             ? (language === 'ce' ? 'ТОЧНО!' : 'Точно!')
@@ -283,9 +283,25 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
               className="absolute inset-0 pointer-events-none"
               style={{ willChange: 'transform', transform: `rotate(${qiblaAngle}deg)` }}
             >
-              <div className="absolute left-1/2 top-1/2 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-emerald-600 text-white shadow-lg ring-4 ring-emerald-500/30">
-                <ArrowUp className="h-10 w-10" strokeWidth={3} fill="currentColor" />
-              </div>
+              <svg
+                viewBox="0 0 64 64"
+                className="absolute left-1/2 top-1/2 h-20 w-20 -translate-x-1/2 -translate-y-1/2 drop-shadow-[0_4px_12px_rgba(16,185,129,0.6)]"
+                aria-hidden="true"
+              >
+                <defs>
+                  <linearGradient id="qibla-needle" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#34d399" />
+                    <stop offset="100%" stopColor="#059669" />
+                  </linearGradient>
+                  <linearGradient id="qibla-tail" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#94a3b8" />
+                    <stop offset="100%" stopColor="#475569" />
+                  </linearGradient>
+                </defs>
+                <path d="M 32 56 L 26 36 L 38 36 Z" fill="url(#qibla-tail)" />
+                <path d="M 32 6 L 24 36 L 40 36 Z" fill="url(#qibla-needle)" stroke="#10b981" strokeWidth="0.5" />
+                <circle cx="32" cy="36" r="3.5" fill="#065f46" />
+              </svg>
             </div>
           </div>
 
