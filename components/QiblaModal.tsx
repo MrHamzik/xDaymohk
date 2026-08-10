@@ -2,7 +2,7 @@
 
 import { createPortal } from 'react-dom';
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Compass, Navigation, X } from 'lucide-react';
+import { ArrowUp, Compass, X } from 'lucide-react';
 import { calculateQiblaAzimuth, DEFAULT_LAT, DEFAULT_LNG } from '@/lib/islamic';
 import { useI18n } from '@/lib/i18n';
 
@@ -257,10 +257,10 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
               className="absolute inset-0"
               style={{ willChange: 'transform' }}
             >
-              <span className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1 text-base font-black text-red-600">С</span>
-              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1 text-base font-black text-slate-700 dark:text-slate-200">Ю</span>
-              <span className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1 text-base font-black text-slate-700 dark:text-slate-200">В</span>
-              <span className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 text-base font-black text-slate-700 dark:text-slate-200">З</span>
+              <span className="absolute left-1/2 top-3 -translate-x-1/2 text-base font-black text-red-600">С</span>
+              <span className="absolute bottom-3 left-1/2 -translate-x-1/2 text-base font-black text-slate-700 dark:text-slate-200">Ю</span>
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-base font-black text-slate-700 dark:text-slate-200">В</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-base font-black text-slate-700 dark:text-slate-200">З</span>
               <div className="absolute inset-2 rounded-full border border-dashed border-slate-200 dark:border-zinc-700" />
               {Array.from({ length: 12 }).map((_, i) => (
                 <div
@@ -284,7 +284,7 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
               style={{ willChange: 'transform', transform: `rotate(${qiblaAngle}deg)` }}
             >
               <div className="absolute left-1/2 top-1/2 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-emerald-600 text-white shadow-lg ring-4 ring-emerald-500/30">
-                <Navigation className="h-9 w-9" fill="currentColor" />
+                <ArrowUp className="h-10 w-10" strokeWidth={3} fill="currentColor" />
               </div>
             </div>
           </div>
