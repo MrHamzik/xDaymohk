@@ -53,13 +53,21 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
   }, [isOpen]);
 
   // Normalize any device heading to a 0..360 number, with 0 = North.
+  // iOS: e.webkitCompassHeading already in 0..360.
+  // Android: e.absolute === true means e.alpha is the true compass
+  // heading. e.absolute === false means e.alpha is the rotation
+  // around the device's z-axis (NOT a compass heading), so we
+  // cannot reliably derive a heading from it. We return null in
+  // that case so the needle parks at qiblaAngle (the static
+  // Qibla direction) instead of showing a misleading value.
   const extractHeading = useCallback((e: DeviceOrientationEvent): number | null => {
     const anyEvent = e as DeviceOrientationEvent & { webkitCompassHeading?: number };
     if (typeof anyEvent.webkitCompassHeading === 'number' && !Number.isNaN(anyEvent.webkitCompassHeading)) {
       return anyEvent.webkitCompassHeading;
     }
     if (typeof e.alpha === 'number' && !Number.isNaN(e.alpha)) {
-      return e.absolute ? e.alpha : 360 - e.alpha;
+      if (e.absolute) return e.alpha;
+      return null;
     }
     return null;
   }, []);
