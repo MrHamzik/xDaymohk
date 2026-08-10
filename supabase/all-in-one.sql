@@ -5,7 +5,7 @@
 -- and paste the regenerated file into Supabase SQL Editor.
 -- =============================================================================
 
--- >>>>>> 01-extensions-and-helpers.sql (1.9 kB) >>>>>>
+-- >>>>>> 01-extensions-and-helpers.sql (2.3 kB) >>>>>>
 -- =============================================================================
 -- Step 01 / 07 — Extensions + helper functions
 -- =============================================================================
@@ -31,7 +31,7 @@ security definer
 set search_path = public
 as $$
   select lower(coalesce(
-    (select email from auth.users where id = auth.uid()::uuid),
+    (select email from auth.users where id::text = auth.uid()::text),
     ''
   )) in ('mr.hamzik1026@gmail.com', 'nabis95@gmail.com');
 $$;
@@ -44,11 +44,23 @@ grant execute on function public.is_admin_email() to authenticated, anon;
 -- ---------------------------------------------------------------------------
 -- In some Supabase setups auth.uid() returns text; the wrapper below
 -- guarantees a uuid return type and is used by all RLS policies in step 05.
+-- plpgsql + exception handler so an invalid/null auth.uid() returns
+-- the all-zeros UUID (matches the behaviour of the literal cast).
 create or replace function public.uid() returns uuid
-language sql
+language plpgsql
 stable
 as $$
-  select auth.uid()::uuid
+declare
+  raw text;
+begin
+  raw := auth.uid();
+  if raw is null or raw = '' then
+    return '00000000-0000-0000-0000-000000000000'::uuid;
+  end if;
+  return raw::uuid;
+exception when invalid_text_representation then
+  return '00000000-0000-0000-0000-000000000000'::uuid;
+end;
 $$;
 
 grant execute on function public.uid() to authenticated, anon;
@@ -522,7 +534,7 @@ create policy "profile-media owner delete"
   );
 -- <<<<<< 05-rls-policies.sql <<<<<<
 
--- >>>>>> 06-realtime-and-views.sql (3.7 kB) >>>>>>
+-- >>>>>> 06-realtime-and-views.sql (4.0 kB) >>>>>>
 -- =============================================================================
 -- Step 06 / 07 — Realtime publication + convenience views
 -- =============================================================================
@@ -553,13 +565,18 @@ end $$;
 
 -- Public catalog view: only visible profiles (not hidden / not banned),
 -- augmented with the owner's email and block status for admin filtering.
+--
+-- Cast BOTH sides to text for the join. On this Supabase project
+-- user_profiles.id is text while profiles.owner_id is uuid. The text
+-- side stays text; the uuid side is text-cast so the comparison
+-- succeeds regardless of which side is which type.
 create or replace view public.v_public_profiles as
 select
   p.*,
   u.email        as owner_email,
   u.is_blocked   as owner_is_blocked
 from public.profiles p
-left join public.user_profiles u on u.id::uuid = p.owner_id
+left join public.user_profiles u on u.id::text = p.owner_id::text
 where not (p.is_hidden or p.is_banned);
 
 -- Admin dashboard view: same as above but includes hidden/banned.
@@ -569,7 +586,7 @@ select
   u.email        as owner_email,
   u.is_blocked   as owner_is_blocked
 from public.profiles p
-left join public.user_profiles u on u.id::uuid = p.owner_id;
+left join public.user_profiles u on u.id::text = p.owner_id::text;
 
 -- Public users list for /admin → users tab.
 create or replace view public.v_user_directory as
@@ -591,7 +608,7 @@ left join (
     count(*) filter (where is_hidden) as hidden_total
   from public.profiles
   group by owner_id
-) c on c.owner_id = u.id::uuid;
+) c on c.owner_id::text = u.id::text;
 
 -- Aggregate donation progress for the current month (Europe/Moscow).
 create or replace view public.v_current_donations as
@@ -613,7 +630,7 @@ create index if not exists idx_profiles_public_specialist
   where not is_hidden and not is_banned and is_specialist;
 -- <<<<<< 06-realtime-and-views.sql <<<<<<
 
--- >>>>>> 07-triggers.sql (4.5 kB) >>>>>>
+-- >>>>>> 07-triggers.sql (4.6 kB) >>>>>>
 -- =============================================================================
 -- Step 07 / 07 — Counter triggers
 -- (rating / review_count on profiles, profile_count on user_profiles)
@@ -686,11 +703,12 @@ language sql
 security definer
 set search_path = public
 as $$
-  -- user_profiles.id may be text on this Supabase project. profiles.owner_id
-  -- is uuid, so we cast user_profiles.id to uuid for the comparison.
+  -- Cast user_profiles.id to text on both sides to handle the case
+  -- where user_profiles.id is text but profiles.owner_id is uuid.
+  -- The ::text casts are no-ops on already-text columns.
   update public.user_profiles
-     set profile_count = (select count(*) from public.profiles where owner_id = target_user)
-   where id::uuid = target_user;
+     set profile_count = (select count(*) from public.profiles where owner_id::text = target_user::text)
+   where id::text = target_user::text;
 $$;
 
 revoke all on function public.recompute_user_profile_count(uuid) from public;

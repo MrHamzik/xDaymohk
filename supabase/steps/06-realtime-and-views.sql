@@ -28,13 +28,18 @@ end $$;
 
 -- Public catalog view: only visible profiles (not hidden / not banned),
 -- augmented with the owner's email and block status for admin filtering.
+--
+-- Cast BOTH sides to text for the join. On this Supabase project
+-- user_profiles.id is text while profiles.owner_id is uuid. The text
+-- side stays text; the uuid side is text-cast so the comparison
+-- succeeds regardless of which side is which type.
 create or replace view public.v_public_profiles as
 select
   p.*,
   u.email        as owner_email,
   u.is_blocked   as owner_is_blocked
 from public.profiles p
-left join public.user_profiles u on u.id::uuid = p.owner_id
+left join public.user_profiles u on u.id::text = p.owner_id::text
 where not (p.is_hidden or p.is_banned);
 
 -- Admin dashboard view: same as above but includes hidden/banned.
@@ -44,7 +49,7 @@ select
   u.email        as owner_email,
   u.is_blocked   as owner_is_blocked
 from public.profiles p
-left join public.user_profiles u on u.id::uuid = p.owner_id;
+left join public.user_profiles u on u.id::text = p.owner_id::text;
 
 -- Public users list for /admin → users tab.
 create or replace view public.v_user_directory as
@@ -66,7 +71,7 @@ left join (
     count(*) filter (where is_hidden) as hidden_total
   from public.profiles
   group by owner_id
-) c on c.owner_id = u.id::uuid;
+) c on c.owner_id::text = u.id::text;
 
 -- Aggregate donation progress for the current month (Europe/Moscow).
 create or replace view public.v_current_donations as

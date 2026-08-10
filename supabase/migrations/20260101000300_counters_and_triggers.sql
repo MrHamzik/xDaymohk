@@ -70,11 +70,12 @@ language sql
 security definer
 set search_path = public
 as $$
-  -- user_profiles.id may be text on this Supabase project. profiles.owner_id
-  -- is uuid, so we cast user_profiles.id to uuid for the comparison.
+  -- Cast user_profiles.id to text on both sides to handle the case
+  -- where user_profiles.id is text but profiles.owner_id is uuid.
+  -- The ::text casts are no-ops on already-text columns.
   update public.user_profiles
-     set profile_count = (select count(*) from public.profiles where owner_id = target_user)
-   where id::uuid = target_user;
+     set profile_count = (select count(*) from public.profiles where owner_id::text = target_user::text)
+   where id::text = target_user::text;
 $$;
 
 revoke all on function public.recompute_user_profile_count(uuid) from public;

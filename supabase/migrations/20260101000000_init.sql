@@ -41,7 +41,7 @@ security definer
 set search_path = public
 as $$
   select lower(coalesce(
-    (select email from auth.users where id = auth.uid()::uuid),
+    (select email from auth.users where id::text = auth.uid()::text),
     ''
   )) in ('mr.hamzik1026@gmail.com', 'nabis95@gmail.com');
 $$;
@@ -52,10 +52,20 @@ grant execute on function public.is_admin_email() to authenticated, anon;
 -- Convenience: cast auth.uid() to uuid explicitly (some Supabase setups
 -- declare auth.uid() as text; the wrapper guarantees uuid for RLS policies).
 create or replace function public.uid() returns uuid
-language sql
+language plpgsql
 stable
 as $$
-  select auth.uid()::uuid
+declare
+  raw text;
+begin
+  raw := auth.uid();
+  if raw is null or raw = '' then
+    return '00000000-0000-0000-0000-000000000000'::uuid;
+  end if;
+  return raw::uuid;
+exception when invalid_text_representation then
+  return '00000000-0000-0000-0000-000000000000'::uuid;
+end;
 $$;
 
 grant execute on function public.uid() to authenticated, anon;
