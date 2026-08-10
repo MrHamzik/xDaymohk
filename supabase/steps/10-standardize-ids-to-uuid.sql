@@ -6,6 +6,12 @@
 -- We're migrating everything to uuid to match the standard Supabase
 -- schema and remove the need for ::text casts in RLS.
 --
+-- This step is fully idempotent: every ALTER COLUMN is wrapped in a
+-- DO block that checks information_schema.columns first and skips the
+-- conversion if the column is already uuid. This means it is safe to
+-- re-run on a partially-migrated project (where some columns are
+-- already uuid because of an earlier interrupted run).
+--
 -- Pre-conditions (verified before this step is shipped):
 --   * Every row in public.user_profiles.id is a valid UUID string
 --   * The same is true for profiles.owner_id, complaints.author_id,
@@ -35,10 +41,6 @@
 
 -- ---------------------------------------------------------------------------
 -- 0a) Drop every RLS policy on the 5 tables we're about to convert.
---     This includes both the names we use in step 05 ('user_profiles
---     self insert', etc.) AND any old name from a previous version of
---     step 05 (e.g. 'user_profiles_insert_own' was the name in an older
---     draft). step 05 will recreate them with the correct names.
 -- ---------------------------------------------------------------------------
 do $$
 declare
@@ -61,11 +63,7 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------------
--- 0b) Drop the convenience views defined in step 06. Postgres blocks
---     ALTER COLUMN on columns that appear in a view's SELECT list
---     (ERROR 0A000 'cannot alter type of a column used by a view or
---     rule'). We drop them here; step 06 will recreate them once the
---     underlying columns are uuid.
+-- 0b) Drop the convenience views defined in step 06.
 -- ---------------------------------------------------------------------------
 drop view if exists public.v_public_profiles;
 drop view if exists public.v_all_profiles;
@@ -73,70 +71,106 @@ drop view if exists public.v_user_directory;
 drop view if exists public.v_current_donations;
 
 -- ---------------------------------------------------------------------------
--- 1) user_profiles.id → uuid
+-- 1) user_profiles.id → uuid  (skip if already uuid)
 -- ---------------------------------------------------------------------------
-alter table public.user_profiles
-  alter column id type uuid using id::uuid;
+do $$
+begin
+  if (select data_type from information_schema.columns
+      where table_schema = 'public' and table_name = 'user_profiles' and column_name = 'id')
+      = 'text'
+  then
+    alter table public.user_profiles
+      alter column id type uuid using id::uuid;
+  end if;
+end $$;
 
 -- ---------------------------------------------------------------------------
 -- 2) profiles.owner_id → uuid  (FK → user_profiles.id)
 -- ---------------------------------------------------------------------------
-alter table public.profiles
-  drop constraint if exists profiles_owner_id_fkey;
-alter table public.profiles
-  alter column owner_id type uuid using owner_id::uuid;
-alter table public.profiles
-  add constraint profiles_owner_id_fkey
-  foreign key (owner_id) references public.user_profiles(id) on delete cascade
-  not valid;
+do $$
+begin
+  if (select data_type from information_schema.columns
+      where table_schema = 'public' and table_name = 'profiles' and column_name = 'owner_id')
+      = 'text'
+  then
+    alter table public.profiles drop constraint if exists profiles_owner_id_fkey;
+    alter table public.profiles
+      alter column owner_id type uuid using owner_id::uuid;
+    alter table public.profiles
+      add constraint profiles_owner_id_fkey
+      foreign key (owner_id) references public.user_profiles(id) on delete cascade
+      not valid;
+  end if;
+end $$;
 
 -- ---------------------------------------------------------------------------
 -- 3) reviews.author_id → uuid  (FK → user_profiles.id)
 -- ---------------------------------------------------------------------------
-alter table public.reviews
-  drop constraint if exists reviews_author_id_fkey;
-alter table public.reviews
-  alter column author_id type uuid using author_id::uuid;
-alter table public.reviews
-  add constraint reviews_author_id_fkey
-  foreign key (author_id) references public.user_profiles(id) on delete set null
-  not valid;
+do $$
+begin
+  if (select data_type from information_schema.columns
+      where table_schema = 'public' and table_name = 'reviews' and column_name = 'author_id')
+      = 'text'
+  then
+    alter table public.reviews drop constraint if exists reviews_author_id_fkey;
+    alter table public.reviews
+      alter column author_id type uuid using author_id::uuid;
+    alter table public.reviews
+      add constraint reviews_author_id_fkey
+      foreign key (author_id) references public.user_profiles(id) on delete set null
+      not valid;
+  end if;
+end $$;
 
 -- ---------------------------------------------------------------------------
--- 4) complaints.author_id + target_user_id → uuid  (FK → user_profiles.id)
+-- 4) complaints.author_id + target_user_id → uuid
 -- ---------------------------------------------------------------------------
-alter table public.complaints
-  drop constraint if exists complaints_author_id_fkey;
-alter table public.complaints
-  drop constraint if exists complaints_target_user_id_fkey;
-alter table public.complaints
-  alter column author_id     type uuid using author_id::uuid;
-alter table public.complaints
-  alter column target_user_id type uuid using target_user_id::uuid;
-alter table public.complaints
-  add constraint complaints_author_id_fkey
-  foreign key (author_id) references public.user_profiles(id) on delete cascade
-  not valid;
-alter table public.complaints
-  add constraint complaints_target_user_id_fkey
-  foreign key (target_user_id) references public.user_profiles(id) on delete set null
-  not valid;
+do $$
+begin
+  if (select data_type from information_schema.columns
+      where table_schema = 'public' and table_name = 'complaints' and column_name = 'author_id')
+      = 'text'
+  then
+    alter table public.complaints drop constraint if exists complaints_author_id_fkey;
+    alter table public.complaints drop constraint if exists complaints_target_user_id_fkey;
+    alter table public.complaints
+      alter column author_id     type uuid using author_id::uuid;
+    alter table public.complaints
+      alter column target_user_id type uuid using target_user_id::uuid;
+    alter table public.complaints
+      add constraint complaints_author_id_fkey
+      foreign key (author_id) references public.user_profiles(id) on delete cascade
+      not valid;
+    alter table public.complaints
+      add constraint complaints_target_user_id_fkey
+      foreign key (target_user_id) references public.user_profiles(id) on delete set null
+      not valid;
+  end if;
+end $$;
 
 -- ---------------------------------------------------------------------------
--- 5) notifications.recipient_id → uuid  (FK → user_profiles.id)
+-- 5) notifications.recipient_id → uuid
 -- ---------------------------------------------------------------------------
-alter table public.notifications
-  drop constraint if exists notifications_recipient_id_fkey;
-alter table public.notifications
-  alter column recipient_id type uuid using recipient_id::uuid;
-alter table public.notifications
-  add constraint notifications_recipient_id_fkey
-  foreign key (recipient_id) references public.user_profiles(id) on delete cascade
-  not valid;
+do $$
+begin
+  if (select data_type from information_schema.columns
+      where table_schema = 'public' and table_name = 'notifications' and column_name = 'recipient_id')
+      = 'text'
+  then
+    alter table public.notifications drop constraint if exists notifications_recipient_id_fkey;
+    alter table public.notifications
+      alter column recipient_id type uuid using recipient_id::uuid;
+    alter table public.notifications
+      add constraint notifications_recipient_id_fkey
+      foreign key (recipient_id) references public.user_profiles(id) on delete cascade
+      not valid;
+  end if;
+end $$;
 
 -- ---------------------------------------------------------------------------
--- 6) Validate the FKs we just re-added (this is the only step that does
---    a full-table scan; run it once at the end so the conversion is fast).
+-- 6) Validate the FKs we just re-added. VALIDATE CONSTRAINT is a no-op
+--    if the constraint is already validated, so this is safe to run on
+--    a project that already has these FKs from a prior run.
 -- ---------------------------------------------------------------------------
 alter table public.profiles      validate constraint profiles_owner_id_fkey;
 alter table public.reviews       validate constraint reviews_author_id_fkey;
@@ -145,14 +179,8 @@ alter table public.complaints    validate constraint complaints_target_user_id_f
 alter table public.notifications validate constraint notifications_recipient_id_fkey;
 
 -- ---------------------------------------------------------------------------
--- 7) Recreate the convenience views that step 06 normally creates. We
---    inline the definitions here so step 10 is self-contained on
---    projects where step 06 hasn't been run yet. If you already have
---    these views from a prior run of step 06, the CREATE OR REPLACE
---    will just refresh them with the new (uuid-typed) join keys.
---
---    The join on user_profiles.id no longer needs the ::text cast (both
---    sides are uuid now), so the views become simpler.
+-- 7) Recreate the convenience views (same definitions as step 06, but
+--    with the ::text casts removed now that the join keys are uuid).
 -- ---------------------------------------------------------------------------
 create or replace view public.v_public_profiles
   with (security_invoker = true) as
