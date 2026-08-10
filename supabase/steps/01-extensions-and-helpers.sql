@@ -23,10 +23,24 @@ security definer
 set search_path = public
 as $$
   select lower(coalesce(
-    (select email from auth.users where id = auth.uid()),
+    (select email from auth.users where id = auth.uid()::uuid),
     ''
   )) in ('mr.hamzik1026@gmail.com', 'nabis95@gmail.com');
 $$;
 
 revoke all on function public.is_admin_email() from public;
 grant execute on function public.is_admin_email() to authenticated, anon;
+
+-- ---------------------------------------------------------------------------
+-- 2. Convenience: cast auth.uid() to uuid explicitly
+-- ---------------------------------------------------------------------------
+-- In some Supabase setups auth.uid() returns text; the wrapper below
+-- guarantees a uuid return type and is used by all RLS policies in step 05.
+create or replace function public.uid() returns uuid
+language sql
+stable
+as $$
+  select auth.uid()::uuid
+$$;
+
+grant execute on function public.uid() to authenticated, anon;

@@ -2,9 +2,11 @@
 -- Step 05 / 07 — Row Level Security policies
 -- =============================================================================
 -- Paste into SQL Editor and Run.
--- If this step fails with "operator does not exist: uuid = text",
--- please share the exact line number reported by Supabase so we can
--- pinpoint the comparison.
+--
+-- IMPORTANT: auth.uid() in Supabase returns uuid but in older setups it
+-- may be text. All comparisons in this file cast auth.uid() to uuid
+-- explicitly so policies work regardless of the project's auth.uid()
+-- declaration.
 -- =============================================================================
 
 -- ---------------------------------------------------------------------------
@@ -13,18 +15,18 @@
 drop policy if exists "user_profiles self select" on public.user_profiles;
 create policy "user_profiles self select"
   on public.user_profiles for select
-  using (auth.uid() = id or is_admin_email());
+  using (public.uid() = id or is_admin_email());
 
 drop policy if exists "user_profiles self insert" on public.user_profiles;
 create policy "user_profiles self insert"
   on public.user_profiles for insert
-  with check (auth.uid() = id);
+  with check (public.uid() = id);
 
 drop policy if exists "user_profiles self update" on public.user_profiles;
 create policy "user_profiles self update"
   on public.user_profiles for update
-  using (auth.uid() = id)
-  with check (auth.uid() = id);
+  using (public.uid() = id)
+  with check (public.uid() = id);
 
 drop policy if exists "user_profiles admin update" on public.user_profiles;
 create policy "user_profiles admin update"
@@ -40,20 +42,20 @@ create policy "profiles public read"
   on public.profiles for select
   using (
     not (is_hidden or is_banned)
-    or auth.uid() = owner_id
+    or public.uid() = owner_id
     or is_admin_email()
   );
 
 drop policy if exists "profiles owner insert" on public.profiles;
 create policy "profiles owner insert"
   on public.profiles for insert
-  with check (auth.uid() = owner_id or owner_id is null);
+  with check (public.uid() = owner_id or owner_id is null);
 
 drop policy if exists "profiles owner update" on public.profiles;
 create policy "profiles owner update"
   on public.profiles for update
-  using (auth.uid() = owner_id)
-  with check (auth.uid() = owner_id);
+  using (public.uid() = owner_id)
+  with check (public.uid() = owner_id);
 
 drop policy if exists "profiles admin update" on public.profiles;
 create policy "profiles admin update"
@@ -65,7 +67,7 @@ drop policy if exists "profiles owner delete" on public.profiles;
 create policy "profiles owner delete"
   on public.profiles for delete
   using (
-    (auth.uid() = owner_id and not is_personal)
+    (public.uid() = owner_id and not is_personal)
     or is_admin_email()
   );
 
@@ -81,11 +83,11 @@ drop policy if exists "certificates owner write" on public.certificates;
 create policy "certificates owner write"
   on public.certificates for all
   using (
-    exists (select 1 from public.profiles p where p.id = certificates.profile_id and p.owner_id = auth.uid())
+    exists (select 1 from public.profiles p where p.id = certificates.profile_id and p.owner_id = public.uid())
     or is_admin_email()
   )
   with check (
-    exists (select 1 from public.profiles p where p.id = certificates.profile_id and p.owner_id = auth.uid())
+    exists (select 1 from public.profiles p where p.id = certificates.profile_id and p.owner_id = public.uid())
     or is_admin_email()
   );
 
@@ -100,12 +102,12 @@ create policy "reviews public read"
 drop policy if exists "reviews author write" on public.reviews;
 create policy "reviews author write"
   on public.reviews for insert
-  with check (auth.uid() = author_id);
+  with check (public.uid() = author_id);
 
 drop policy if exists "reviews author delete" on public.reviews;
 create policy "reviews author delete"
   on public.reviews for delete
-  using (auth.uid() = author_id or is_admin_email());
+  using (public.uid() = author_id or is_admin_email());
 
 -- ---------------------------------------------------------------------------
 -- complaints
@@ -113,12 +115,12 @@ create policy "reviews author delete"
 drop policy if exists "complaints author read" on public.complaints;
 create policy "complaints author read"
   on public.complaints for select
-  using (auth.uid() = author_id or is_admin_email());
+  using (public.uid() = author_id or is_admin_email());
 
 drop policy if exists "complaints author insert" on public.complaints;
 create policy "complaints author insert"
   on public.complaints for insert
-  with check (auth.uid() = author_id);
+  with check (public.uid() = author_id);
 
 drop policy if exists "complaints admin update" on public.complaints;
 create policy "complaints admin update"
@@ -146,18 +148,18 @@ create policy "house_addresses admin write"
 drop policy if exists "notifications self read" on public.notifications;
 create policy "notifications self read"
   on public.notifications for select
-  using (auth.uid() = recipient_id);
+  using (public.uid() = recipient_id);
 
 drop policy if exists "notifications self update" on public.notifications;
 create policy "notifications self update"
   on public.notifications for update
-  using (auth.uid() = recipient_id)
-  with check (auth.uid() = recipient_id);
+  using (public.uid() = recipient_id)
+  with check (public.uid() = recipient_id);
 
 drop policy if exists "notifications admin insert" on public.notifications;
 create policy "notifications admin insert"
   on public.notifications for insert
-  with check (is_admin_email() or auth.uid() = recipient_id);
+  with check (is_admin_email() or public.uid() = recipient_id);
 
 -- ---------------------------------------------------------------------------
 -- donations + project_support — public read, service-role writes
@@ -189,7 +191,7 @@ create policy "profile-media owner write"
     bucket_id = 'profile-media'
     and auth.role() = 'authenticated'
     and (storage.foldername(name))[1] in ('avatars', 'documents')
-    and (storage.foldername(name))[2] like (auth.uid()::text || '-%')
+    and (storage.foldername(name))[2] like (public.uid()::text || '-%')
   );
 
 drop policy if exists "profile-media owner delete" on storage.objects;
@@ -198,5 +200,5 @@ create policy "profile-media owner delete"
   for delete
   using (
     bucket_id = 'profile-media'
-    and (storage.foldername(name))[2] like (auth.uid()::text || '-%')
+    and (storage.foldername(name))[2] like (public.uid()::text || '-%')
   );
