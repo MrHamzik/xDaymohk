@@ -2,7 +2,7 @@
 
 import { createPortal } from 'react-dom';
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { ArrowUp, Compass, X } from 'lucide-react';
+import { Compass, Navigation, X } from 'lucide-react';
 import { calculateQiblaAzimuth, DEFAULT_LAT, DEFAULT_LNG } from '@/lib/islamic';
 import { useI18n } from '@/lib/i18n';
 
@@ -276,7 +276,7 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
               style={{ willChange: 'transform', transform: `rotate(${qiblaAngle}deg)` }}
             >
               <div className="absolute left-1/2 top-1/2 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-emerald-600 text-white shadow-lg ring-4 ring-emerald-500/30">
-                <ArrowUp className="h-10 w-10" strokeWidth={3} fill="currentColor" />
+                <Navigation className="h-9 w-9" fill="currentColor" />
               </div>
             </div>
           </div>
