@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
 import { isAdminEmail } from '@/lib/admin';
@@ -268,14 +268,26 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
   }, [account?.id, account?.fullName, account?.avatarUrl, account?.phone, account?.isAdmin, isHydrated, syncAccountToQuestionnaires]);
 
   // Auto-create the personal profile for the signed-in user (once per account)
+  //
+  // Uses a ref-based guard so the effect can run on every profile change
+  // (it has to, since it depends on `profiles`) without re-creating the
+  // personal profile each time. The previous version used a synchronous
+  // check inside setProfiles, which raced with React's async state
+  // batching and could spawn duplicate personal profiles.
+  const personalCreatedRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     if (!isHydrated || !account) return;
+    if (personalCreatedRef.current.has(account.id)) return;
     const hasPersonal = profiles.some(
       (p) => p.ownerId === account.id && (p.isPersonal || p.id === `personal-${account.id}` || p.id.startsWith('personal-'))
     );
-    if (hasPersonal) return;
+    if (hasPersonal) {
+      personalCreatedRef.current.add(account.id);
+      return;
+    }
 
     const personalProfile = buildPersonalProfile(account);
+    personalCreatedRef.current.add(account.id);
     setProfiles((cur) => [personalProfile, ...cur]);
     if (supabase) void persistProfileToSupabase(personalProfile);
   }, [isHydrated, account?.id, profiles]);

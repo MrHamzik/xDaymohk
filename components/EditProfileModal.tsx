@@ -44,7 +44,7 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
   const [gender, setGender] = useState<'male' | 'female' | ''>('');
   const [birthYear, setBirthYear] = useState('');
   const [settlement, setSettlement] = useState('Самашки');
-  const [isSpecialist, setIsSpecialist] = useState(false);
+  const [isSpecialist, setIsSpecialist] = useState(true);
   const [professionCategory, setProfessionCategory] = useState('doctor');
   const [professionTitle, setProfessionTitle] = useState('');
   const [experienceStart, setExperienceStart] = useState('');
@@ -72,7 +72,9 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
   useEffect(() => {
     if (!isOpen) return;
 
-    setIsSpecialist(profile?.isSpecialist ?? false);
+    // Default to specialist (true) for new profiles; for the personal
+    // profile (or any existing non-specialist) keep its current value.
+    setIsSpecialist(profile?.isSpecialist ?? true);
     setProfessionCategory(profile?.professionCategory ?? 'doctor');
     setProfessionTitle(profile?.professionTitle ?? '');
     setExperienceStart(profile?.experienceStart ?? '');
