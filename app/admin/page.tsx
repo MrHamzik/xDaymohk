@@ -11,6 +11,7 @@ import MobileMenuDrawer from '@/components/MobileMenuDrawer';
 import { useAuth } from '@/components/AuthProvider';
 import { useProfiles } from '@/components/ProfilesProvider';
 import { useI18n } from '@/lib/i18n';
+import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { SAMASHKI_HOUSE_ADDRESSES, SamashkiHouseAddress, getEffectiveHouseAddresses } from '@/lib/samashki-addresses';
 import { SAMASHKI_STREETS } from '@/lib/types';
 import { searchAddresses } from '@/lib/geocoding';
@@ -211,10 +212,32 @@ export default function AdminPage() {
     } catch {}
   }, []);
 
-  const persistAddresses = (next: SamashkiHouseAddress[]) => {
+  const persistAddresses = async (next: SamashkiHouseAddress[]) => {
     setAddresses(next);
     try { localStorage.setItem(CUSTOM_ADDRESSES_KEY, JSON.stringify(next)); } catch {}
-    fetch('/api/admin/addresses', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ addresses: next }) }).catch(()=>{});
+    // The POST handler enforces admin auth, so we have to attach the
+    // user's access token — otherwise the request comes back 403 and
+    // the database is never updated. The /map page would then re-fetch
+    // the unchanged rows on the next visit and the addresses would
+    // appear to "come back" even though the admin saw "Сохранено".
+    try {
+      let accessToken: string | undefined;
+      if (isSupabaseConfigured && supabase) {
+        const session = await supabase.auth.getSession();
+        accessToken = session.data.session?.access_token;
+      }
+      await fetch('/api/admin/addresses', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
+        body: JSON.stringify({ addresses: next }),
+      });
+    } catch {
+      // Network errors are non-fatal; local state is already updated
+      // and will be re-tried the next time the admin saves.
+    }
   };
 
   const allAddressCategories = Array.from(new Set([...DEFAULT_ADDRESS_CATEGORIES, ...customCategories, ...addresses.map(a=>a.category).filter(Boolean) as string[]]));
@@ -328,14 +351,13 @@ export default function AdminPage() {
 
   };
 
-  const handleCommitAddresses = () => {
+  const handleCommitAddresses = async () => {
     if (pendingDeletes.size === 0 && pendingAdds.length === 0) {
       setSaveMsg('Нет изменений для сохранения.');
       setTimeout(()=>setSaveMsg(null),2000);
       return;
     }
     const next = addresses.filter((a) => !pendingDeletes.has(a.id));
-    persistAddresses(next);
     setPendingDeletes(new Set());
     setPendingAdds([]);
 
@@ -344,7 +366,13 @@ export default function AdminPage() {
     const parts: string[] = [];
     if (added > 0) parts.push(`добавлено ${added}`);
     if (removed > 0) parts.push(`удалено ${removed}`);
-    setSaveMsg(`${parts.join(', ')} и сохранено в БД.`);
+    setSaveMsg('Сохраняем…');
+    try {
+      await persistAddresses(next);
+      setSaveMsg(`${parts.join(', ')} и сохранено в БД.`);
+    } catch (error) {
+      setSaveMsg(`Не удалось сохранить: ${error instanceof Error ? error.message : 'ошибка сети'}`);
+    }
     setTimeout(()=>setSaveMsg(null),2500);
   };
 

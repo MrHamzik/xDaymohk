@@ -502,22 +502,68 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
     };
 
     if (supabase) {
-      // Make sure the profile being reported actually exists in the
-      // database before we try to insert the complaint. The catalog
-      // mixes remote (Supabase) and local-only rows; if a row lives
-      // only in this browser's localStorage (e.g. it was created
-      // client-side but the upload failed, or it was edited without
-      // reaching the server), the FK `complaints_profile_id_fkey`
-      // would reject the insert with the cryptic "violates foreign
-      // key constraint" error. We bridge that gap by upserting the
-      // local copy first — persistProfileToSupabase is a no-op when
-      // the row already matches what's in the DB, so the cost is
-      // one extra round-trip in the rare "phantom profile" case.
-      try {
-        await persistProfileToSupabase(reportedProfile);
-      } catch (persistError) {
-        console.warn('Не удалось синхронизировать анкету жертвы перед жалобой:', persistError);
+      // Two failure modes we have to defend against:
+      //
+      // 1) The reported profile lives ONLY in this browser's
+      //    localStorage (it was authored client-side but the upsert
+      //    was rejected by RLS — e.g. the user is reporting someone
+      //    else's profile, or the original sync was interrupted).
+      //    The FK `complaints_profile_id_fkey` rejects the insert.
+      //
+      // 2) Same as (1) but with a slight twist: the user is on a
+      //    stale page where the profile has since been deleted from
+      //    the database, but they can still see it locally.
+      //
+      // In both cases we don't want to leak the cryptic FK error to
+      // the user. We do a quick existence check first; if the row is
+      // missing, we route the complaint through a server endpoint
+      // that runs with the service role and bridges the FK gap.
+      const { data: targetRow, error: targetError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', profileId)
+        .maybeSingle();
+
+      if (targetError) {
+        throw new Error(targetError.message);
       }
+
+      if (!targetRow) {
+        // Profile is not in the database — bridge the FK gap on the server.
+        if (!supabase) {
+          throw new Error('Supabase не настроен — жалобу нельзя отправить.');
+        }
+        const { data: sessionData } = await supabase.auth.getSession();
+        const accessToken = sessionData.session?.access_token;
+        if (!accessToken) {
+          throw new Error('Сессия истекла — войдите снова.');
+        }
+        const response = await fetch('/api/complaints/attach-target', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            profileId,
+            reason: sanitizedReason,
+            target: {
+              ownerId: reportedProfile.ownerId,
+              fullName: reportedProfile.fullName,
+              isSpecialist: reportedProfile.isSpecialist,
+              isPersonal: reportedProfile.isPersonal,
+            },
+          }),
+        });
+        if (!response.ok) {
+          const result = await response.json().catch(() => null);
+          throw new Error(result?.error ?? 'Не удалось отправить жалобу.');
+        }
+        setComplaints((current) => [complaint, ...current]);
+        return;
+      }
+
+      // Normal path: profile exists in DB, just insert the complaint.
       const { error } = await supabase.from('complaints').insert({
         id: complaint.id,
         profile_id: complaint.profileId,
