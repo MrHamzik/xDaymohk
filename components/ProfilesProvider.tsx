@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
 import { isAdminEmail } from '@/lib/admin';
-import { profileUpdatesToDbRow, reviewToDbRow } from '@/lib/profile-db';
+import { profileUpdatesToDbRow } from '@/lib/profile-db';
 import { isAdminProfile } from '@/lib/profile-filters';
 import { useNotifications } from '@/components/NotificationsProvider';
 import {
@@ -29,7 +29,7 @@ interface ProfilesContextValue {
   deleteProfile: (profileId: string) => Promise<void>;
   addComplaint: (profileId: string, reason: string) => Promise<void>;
   updateComplaint: (complaintId: string, status: ComplaintStatus) => Promise<void>;
-  addReview: (profileId: string, review: Omit<Review, 'id' | 'createdAt'>) => void;
+  addReview: (profileId: string, review: Omit<Review, 'id' | 'createdAt'>) => Promise<void>;
 }
 
 const ProfilesContext = createContext<ProfilesContextValue | undefined>(undefined);
@@ -469,37 +469,41 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
     )));
   }, []);
 
-  const addReview = useCallback((profileId: string, reviewData: Omit<Review, 'id' | 'createdAt'>) => {
+  const addReview = useCallback(async (profileId: string, reviewData: Omit<Review, 'id' | 'createdAt'>) => {
     if (account?.isBlocked) return;
     const profile = profiles.find((item) => item.id === profileId);
     if (!profile) return;
 
-    const previousCount = profile.reviewCount;
-    const nextCount = previousCount + 1;
-    const nextRating = previousCount > 0
-      ? Number(((profile.rating * previousCount + reviewData.rating) / nextCount).toFixed(1))
-      : reviewData.rating;
-    const review: Review = {
-      ...reviewData,
-      id: `review-${Date.now()}`,
-      createdAt: new Date().toISOString().split('T')[0],
-    };
-
-    setProfiles((currentProfiles) => currentProfiles.map((item) => (
-      item.id === profileId
-        ? { ...item, rating: nextRating, reviewCount: nextCount, reviews: [review, ...(item.reviews ?? [])] }
-        : item
-    )));
-
-    if (supabase) {
-      void Promise.all([
-        supabase.from('reviews').insert(reviewToDbRow(profileId, review)),
-        supabase.from('profiles').update({ rating: nextRating, review_count: nextCount }).eq('id', profileId),
-      ]).then(() => {
-        void refreshRemoteData();
-      });
+    // The server endpoint /api/reviews is the single place that
+    // can atomically insert a review AND bump the rolling rating,
+    // because the "profiles owner update" RLS policy would block a
+    // direct client-side update from a reviewer who doesn't own
+    // the target profile. We send the rating + text and let the
+    // server fill in author_id / author_name from the verified JWT.
+    if (!supabase) return;
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    if (!accessToken) {
+      throw new Error('Сессия истекла — войдите снова.');
     }
-  }, [profiles, account?.isBlocked, refreshRemoteData]);
+    const response = await fetch('/api/reviews', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        profileId,
+        rating: reviewData.rating,
+        text: reviewData.text,
+      }),
+    });
+    if (!response.ok) {
+      const result = await response.json().catch(() => null);
+      throw new Error(result?.error ?? 'Не удалось отправить отзыв.');
+    }
+    await refreshRemoteData();
+  }, [account?.isBlocked, profiles, refreshRemoteData, supabase]);
 
   const isCurrentUserAdmin = Boolean(account?.isAdmin);
   const isProfileAdmin = useCallback(

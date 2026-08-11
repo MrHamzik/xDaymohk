@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { Ban, Clock, ExternalLink, Flag, MapPin, MessageSquare, Phone, Send, Star, X } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
+import { supabase } from '@/lib/supabase';
 import { Certificate, Profile, Review } from '@/lib/types';
 import { formatReviews } from '@/lib/text';
 import { calculateWorkingStatus } from '@/lib/schedule';
@@ -63,13 +64,86 @@ export default function ProfileModal({
   const [reviewText, setReviewText] = useState('');
   const [activeTab, setActiveTab] = useState<'reviews' | 'questions' | 'ratings'>('reviews');
   const [notice, setNotice] = useState('');
+  const [questionText, setQuestionText] = useState('');
+  const [questionBusy, setQuestionBusy] = useState(false);
+  const [questions, setQuestions] = useState<Array<{
+    id: string;
+    author_name: string;
+    question: string;
+    created_at: string;
+  }>>([]);
 
   useEffect(() => {
     setReviewRating(0);
     setReviewText('');
     setNotice('');
     setSelectedCert(null);
+    setQuestionText('');
   }, [profile?.id]);
+
+  // Load the latest questions for this profile every time the user
+  // opens the "Вопросы" tab. Cheap on the server (one indexed
+  // SELECT, max 50 rows) and keeps the modal responsive.
+  useEffect(() => {
+    if (activeTab !== 'questions' || !profile?.id) return;
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const res = await fetch(`/api/profile-questions?profileId=${encodeURIComponent(profile.id)}`, { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) setQuestions(Array.isArray(data.questions) ? data.questions : []);
+      } catch {
+        // Network blip — leave the previous list in place.
+      }
+    };
+    void load();
+    return () => { cancelled = true; };
+  }, [activeTab, profile?.id]);
+
+  const handleQuestionSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!account) {
+      setNotice('Войдите через Google, чтобы задать вопрос.');
+      return;
+    }
+    if (!profile?.id) return;
+    if (isOwnProfile) return;
+    const trimmed = questionText.trim().slice(0, 500);
+    if (trimmed.length < 1) {
+      setNotice('Введите текст вопроса.');
+      return;
+    }
+    setQuestionBusy(true);
+    try {
+      if (!supabase) {
+        throw new Error('Supabase не настроен — войдите снова.');
+      }
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) throw new Error('Сессия истекла — войдите снова.');
+      const response = await fetch('/api/profile-questions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ profileId: profile.id, question: trimmed }),
+      });
+      if (!response.ok) {
+        const result = await response.json().catch(() => null);
+        throw new Error(result?.error ?? 'Не удалось отправить вопрос.');
+      }
+      const result = await response.json();
+      setQuestions((current) => [result.question, ...current]);
+      setQuestionText('');
+      setNotice('');
+    } catch (submitError) {
+      setNotice(submitError instanceof Error ? submitError.message : 'Не удалось отправить вопрос.');
+    } finally {
+      setQuestionBusy(false);
+    }
+  };
 
   if (!profile) return null;
 
@@ -107,7 +181,7 @@ export default function ProfileModal({
     }
   };
 
-  const handleReviewSubmit = (event: React.FormEvent) => {
+  const handleReviewSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
     if (!account) {
@@ -115,18 +189,23 @@ export default function ProfileModal({
       return;
     }
     if (!onReview || isOwnProfile) return;
-    if (reviewRating === 0 || !reviewText.trim()) {
-      setNotice('Поставьте оценку и напишите короткий отзыв.');
+    if (reviewRating === 0) {
+      setNotice('Поставьте оценку от 1 до 5 звёзд.');
       return;
     }
 
-    onReview(profile.id, {
-      author: account?.fullName || 'Житель Самашек',
-      rating: reviewRating,
-      text: reviewText.trim().slice(0, MAX_REVIEW_TEXT_LENGTH),
-    });
-    setReviewRating(0);
-    setReviewText('');
+    try {
+      await onReview(profile.id, {
+        author: account?.fullName || 'Житель Даймохк',
+        rating: reviewRating,
+        text: reviewText.trim().slice(0, MAX_REVIEW_TEXT_LENGTH),
+      });
+      setReviewRating(0);
+      setReviewText('');
+      setNotice('');
+    } catch (submitError) {
+      setNotice(submitError instanceof Error ? submitError.message : 'Не удалось отправить отзыв.');
+    }
   };
 
   if (!profile) return null;
@@ -315,8 +394,46 @@ export default function ProfileModal({
                   </div>
                 )}
                 {activeTab === 'questions' && (
-                  <div className="py-8 text-center">
-                    <p className="text-xs text-slate-500 dark:text-zinc-500">Вопросов пока нет. Задайте свой первый вопрос!</p>
+                  <div className="space-y-2">
+                    {questions.length > 0 ? (
+                      <div className="space-y-2">
+                        {questions.map((q) => (
+                          <article key={q.id} className="rounded-xl border border-slate-100 bg-slate-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-800">
+                            <div className="flex items-start justify-between gap-2">
+                              <p className="min-w-0 truncate text-xs font-bold text-slate-900 dark:text-white">{q.author_name || 'Житель Даймохк'}</p>
+                              <time className="shrink-0 text-[10px] font-medium text-slate-400">{formatReviewDate(q.created_at)}</time>
+                            </div>
+                            <p className="mt-1 break-words [overflow-wrap:anywhere] whitespace-pre-wrap text-xs leading-relaxed text-slate-600 dark:text-zinc-400">{q.question}</p>
+                          </article>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="rounded-xl border border-dashed border-slate-200 p-3 text-center text-xs text-slate-500 dark:border-zinc-800 dark:text-zinc-500">Вопросов пока нет. Задайте свой первый вопрос!</p>
+                    )}
+
+                    {isOwnProfile ? (
+                      <p className="mt-2 rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-500">Это ваша анкета. Задавать вопросы самому себе нельзя.</p>
+                    ) : account && !account.isBlocked ? (
+                      <form onSubmit={handleQuestionSubmit} className="mt-3 space-y-2.5 rounded-xl border border-emerald-100 bg-emerald-50/50 p-3 dark:border-zinc-800 dark:bg-zinc-800">
+                        <h4 className="text-xs font-bold text-slate-900 dark:text-white">Задать вопрос</h4>
+                        <div>
+                          <textarea
+                            rows={2}
+                            maxLength={500}
+                            value={questionText}
+                            onChange={(event) => setQuestionText(event.target.value)}
+                            placeholder="Например: в какое время лучше приехать?"
+                            className="w-full resize-y break-words rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white"
+                          />
+                          <p className="mt-0.5 text-right text-[10px] text-slate-400">{questionText.length}/500</p>
+                        </div>
+                        <button type="submit" disabled={questionBusy} className="rounded-xl bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50">
+                          {questionBusy ? 'Отправляем…' : 'Отправить'}
+                        </button>
+                      </form>
+                    ) : (
+                      <p className="mt-2 rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-500">Войдите, чтобы задать вопрос.</p>
+                    )}
                   </div>
                 )}
                 {activeTab === 'ratings' && (
