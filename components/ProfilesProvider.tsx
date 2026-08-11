@@ -484,6 +484,12 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
     const sanitizedReason = sanitizeReason(reason);
     if (!sanitizedReason) return;
     const reportedProfile = profiles.find((profile) => profile.id === profileId);
+    if (!reportedProfile) {
+      // No local copy of the profile — the user is trying to report
+      // something we don't even know about. Bail out with a clear
+      // message rather than letting Postgres fail the FK constraint.
+      throw new Error('Анкета не найдена. Откройте её заново и повторите попытку.');
+    }
     const complaint: Complaint = {
       id: `complaint-${Date.now()}`,
       profileId,
@@ -496,6 +502,22 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
     };
 
     if (supabase) {
+      // Make sure the profile being reported actually exists in the
+      // database before we try to insert the complaint. The catalog
+      // mixes remote (Supabase) and local-only rows; if a row lives
+      // only in this browser's localStorage (e.g. it was created
+      // client-side but the upload failed, or it was edited without
+      // reaching the server), the FK `complaints_profile_id_fkey`
+      // would reject the insert with the cryptic "violates foreign
+      // key constraint" error. We bridge that gap by upserting the
+      // local copy first — persistProfileToSupabase is a no-op when
+      // the row already matches what's in the DB, so the cost is
+      // one extra round-trip in the rare "phantom profile" case.
+      try {
+        await persistProfileToSupabase(reportedProfile);
+      } catch (persistError) {
+        console.warn('Не удалось синхронизировать анкету жертвы перед жалобой:', persistError);
+      }
       const { error } = await supabase.from('complaints').insert({
         id: complaint.id,
         profile_id: complaint.profileId,
