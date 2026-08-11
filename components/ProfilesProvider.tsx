@@ -111,33 +111,33 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
 
   /**
    * Make sure the calling user has a canonical personal profile in
-   * the database. The RPC is idempotent and runs as SECURITY DEFINER
-   * server-side, so the result is a single round-trip with no
-   * race-window for duplicate creation. We only do this once per
-   * browser session per user (tracked via a ref, not state, so the
-   * effect doesn't loop on every profile mutation).
+   * the database. The on_auth_user_created trigger (defined in
+   * supabase/steps/12-onboarding-trigger.sql) creates the row
+   * server-side at signup, so for normal Google-OAuth users this
+   * effect is a no-op — the profile already exists. We only fall
+   * back to the RPC when the row is somehow missing (e.g. the
+   * trigger hadn't been added yet, or the user was created via the
+   * Supabase dashboard directly).
    */
   const personalEnsuredRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     if (!isHydrated || !account) return;
     if (personalEnsuredRef.current.has(account.id)) return;
+
+    const localAlreadyHas = profiles.some(
+      (p) => p.ownerId === account.id && p.id === `personal-${account.id}`,
+    );
+    if (localAlreadyHas) {
+      personalEnsuredRef.current.add(account.id);
+      return;
+    }
+
     personalEnsuredRef.current.add(account.id);
-
-    const ensure = async () => {
-      // If the database already reports a personal profile for this
-      // user, we don't need to call the RPC at all. The
-      // server-side function would be a no-op anyway, but skipping
-      // the round-trip is friendlier.
-      const localAlreadyHas = profiles.some(
-        (p) => p.ownerId === account.id && p.id === `personal-${account.id}`,
-      );
-      if (localAlreadyHas) return;
-
+    void (async () => {
       if (!supabase) return;
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData.session?.access_token;
       if (!accessToken) return;
-
       try {
         const response = await fetch('/api/account/ensure-personal-profile', {
           method: 'POST',
@@ -147,16 +147,12 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
           },
         });
         if (response.ok) {
-          // The RPC may have created a row that wasn't in our local
-          // snapshot; ask the server for the fresh state so the UI
-          // shows the new personal profile.
           await refreshRemoteData();
         }
       } catch (ensureError) {
         console.warn('Не удалось создать личную анкету на сервере:', ensureError);
       }
-    };
-    void ensure();
+    })();
   }, [isHydrated, account?.id, profiles, refreshRemoteData, supabase]);
 
   const syncAccountToQuestionnaires = useCallback(async (targetAccount: NonNullable<typeof account>) => {
