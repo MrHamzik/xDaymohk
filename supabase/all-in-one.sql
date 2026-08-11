@@ -1562,92 +1562,114 @@ alter table public.profile_questions
   add column if not exists author_avatar_url text;
 -- <<<<<< 15-profile-questions-avatar.sql <<<<<<
 
--- >>>>>> 16-join-views.sql (6.6 kB) >>>>>>
+-- >>>>>> 16-join-views.sql (8.1 kB) >>>>>>
 -- =============================================================================
--- Step 16 — Live-JOIN views for reviews and profile_questions
+-- Step 16 — Live-JOIN views for reviews and profile_questions (v2)
 -- =============================================================================
 -- Run AFTER step 15. Idempotent.
 --
--- Why this step exists:
---   Steps 02 / 13 stored the author's display name and avatar URL as
---   denormalized columns on reviews / profile_questions. That
---   captured a snapshot at the moment the user submitted the
---   review/question, but it meant that when the user later edited
---   their name or avatar in the account modal, every old review /
---   question they had left kept showing the OLD name and OLD
---   avatar. From the UI this looked like a bug ("I changed my
---   name, why does the review I left yesterday still show the old
---   one?").
+-- Why this step exists (and why v2):
+--   Step 02 stored the author's display name and avatar URL as
+--   denormalized columns on reviews / profile_questions. When the
+--   user later edited their name or avatar in the account modal,
+--   every old review / question kept showing the OLD name and
+--   OLD avatar ("I changed my name, why does my old review still
+--   show the old one?").
 --
---   The standard Supabase fix is to expose the data through a view
---   that LEFT JOINs to user_profiles and projects the live values
---   (full_name, avatar_url) instead of the stale snapshot columns.
---   The Next.js API endpoints read the view, not the base tables,
---   and the UI receives the same field names it always has — no
---   client-side changes required.
+--   The standard Supabase fix is to expose the data through views
+--   that LEFT JOIN user_profiles and project the live values. The
+--   Next.js API endpoints read the views, not the base tables,
+--   and the UI receives the same field names it has always used.
+--
+--   v1 of this step failed with 2BP01 ("cannot drop column author
+--   of table reviews because other objects depend on it") because
+--   the v_reviews view still referenced reviews.author. v2 fixes
+--   that by:
+--     1) creating the views with a definition that does NOT
+--        reference the soon-to-be-dropped columns, and
+--     2) dropping the columns afterwards.
+--   The intermediate cached_* columns are also gone — there is no
+--   value in keeping a snapshot of the broken state around.
 --
 --   For authors whose user_profiles row was deleted (account
---   deletion), the LEFT JOIN returns NULL, and the view falls back
---   to a generic "Удалённый пользователь" placeholder. We keep
---   this behaviour instead of just blanking the name so reviewers
---   who used to be Samashki residents still have a stable identity
---   in old threads.
---
--- After the view is in place, the denormalized columns
---   reviews.author_name, reviews.author_avatar_url,
---   profile_questions.author_name, profile_questions.author_avatar_url
---   are dropped. The /api/reviews and /api/profile-questions routes
---   insert into the base tables with NULL for those columns
---   (they are no longer used), and the view projects user_profiles
---   values for every read.
+--   deletion), the LEFT JOIN returns NULL and the view projects
+--   the placeholder "Удалённый пользователь" so reviewers who
+--   used to live in Samashki still have a stable identity in old
+--   threads. Their avatar is NULL.
 -- =============================================================================
 
 
 -- ---------------------------------------------------------------------------
--- 1) Backfill: make sure the existing denormalized columns reflect
---    the CURRENT user_profiles value. This is a one-time correction
---    so that, for as long as the columns exist, the data is at
---    least consistent with the source of truth. We backfill BEFORE
---    creating the view (which references these columns) so that the
---    DROP COLUMN later doesn't have to think about legacy rows.
+-- 1) Backfill existing rows so the (still-present) denormalized
+--    columns reflect the CURRENT user_profiles value. This is a
+--    one-time correction: the views we create next will project
+--    user_profiles directly, but we backfill first so that any
+--    other code path that still reads the old columns gets the
+--    right data for the rest of its lifetime.
+--    (If the columns have already been dropped, this UPDATE is a
+--    no-op error which we swallow with the IF EXISTS-style guard
+--    below; just run the rest of the script in that case.)
 -- ---------------------------------------------------------------------------
-update public.reviews r
-   set author = coalesce(u.full_name, r.author)
-  from public.user_profiles u
- where u.id = r.author_id
-   and (r.author is null or r.author = '' or r.author <> u.full_name);
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'reviews' and column_name = 'author'
+  ) then
+    update public.reviews r
+       set author = coalesce(u.full_name, r.author)
+      from public.user_profiles u
+     where u.id = r.author_id
+       and (r.author is null or r.author = '' or r.author <> u.full_name);
+  end if;
 
-update public.reviews r
-   set author_avatar_url = u.avatar_url
-  from public.user_profiles u
- where u.id = r.author_id
-   and u.avatar_url is not null
-   and (r.author_avatar_url is null or r.author_avatar_url <> u.avatar_url);
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'reviews' and column_name = 'author_avatar_url'
+  ) then
+    update public.reviews r
+       set author_avatar_url = u.avatar_url
+      from public.user_profiles u
+     where u.id = r.author_id
+       and u.avatar_url is not null
+       and (r.author_avatar_url is null or r.author_avatar_url <> u.avatar_url);
+  end if;
 
-update public.profile_questions q
-   set author_name = coalesce(u.full_name, q.author_name)
-  from public.user_profiles u
- where u.id = q.author_id
-   and (q.author_name is null or q.author_name = '' or q.author_name <> u.full_name);
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'profile_questions' and column_name = 'author_name'
+  ) then
+    update public.profile_questions q
+       set author_name = coalesce(u.full_name, q.author_name)
+      from public.user_profiles u
+     where u.id = q.author_id
+       and (q.author_name is null or q.author_name = '' or q.author_name <> u.full_name);
+  end if;
 
-update public.profile_questions q
-   set author_avatar_url = u.avatar_url
-  from public.user_profiles u
- where u.id = q.author_id
-   and u.avatar_url is not null
-   and (q.author_avatar_url is null or q.author_avatar_url <> u.avatar_url);
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'profile_questions' and column_name = 'author_avatar_url'
+  ) then
+    update public.profile_questions q
+       set author_avatar_url = u.avatar_url
+      from public.user_profiles u
+     where u.id = q.author_id
+       and u.avatar_url is not null
+       and (q.author_avatar_url is null or q.author_avatar_url <> u.avatar_url);
+  end if;
+end $$;
 
 
 -- ---------------------------------------------------------------------------
--- 2) Views: LEFT JOIN user_profiles so the live name / avatar is
---    what the API returns. We use COALESCE(u.full_name, 'Удалённый
---    пользователь') so the placeholder only appears when the
---    author really has no user_profiles row (account deleted).
---    The denormalized snapshot columns are still projected as
---    `cached_author_name` / `cached_author_avatar_url` for
---    debugging — they are NOT used by the application after this
---    step is applied.
+-- 2) Drop the views first (if they exist from a previous failed
+--    run of step 16), then recreate them with a definition that
+--    does NOT touch the soon-to-be-dropped denormalized columns.
+--    We use CREATE OR REPLACE for the final state so subsequent
+--    re-runs of this step are a no-op.
 -- ---------------------------------------------------------------------------
+drop view if exists public.v_reviews cascade;
+drop view if exists public.v_profile_questions cascade;
+
 create or replace view public.v_reviews
   with (security_invoker = true) as
 select
@@ -1655,15 +1677,16 @@ select
   r.profile_id,
   r.author_id,
   -- Live name: prefer the current user_profiles value; fall back
-  -- to a generic placeholder only when the user is genuinely gone.
+  -- to a generic placeholder only when the author really has no
+  -- user_profiles row (account deleted). The base table's
+  -- snapshot columns (reviews.author, reviews.author_avatar_url)
+  -- are not referenced here on purpose — we drop them at the end
+  -- of this step.
   coalesce(u.full_name, 'Удалённый пользователь') as author,
   u.avatar_url                                       as author_avatar_url,
   r.rating,
   r.text,
-  r.created_at,
-  -- Snapshot columns (kept for debugging; the app does not read them)
-  r.author       as cached_author_name,
-  r.author_avatar_url as cached_author_avatar_url
+  r.created_at
 from public.reviews r
 left join public.user_profiles u on u.id = r.author_id;
 
@@ -1672,7 +1695,9 @@ comment on view public.v_reviews is
   'author full_name and avatar_url so name / avatar changes are '
   'reflected on every read, not just on new rows. The base '
   'reviews.author / reviews.author_avatar_url columns are kept '
-  'as cached_* for debugging only and will be dropped in step 17.';
+  'as denormalized snapshots (and are dropped by the rest of '
+  'this step) so any code that still reads them in flight gets '
+  'the most recently backfilled value.';
 
 create or replace view public.v_profile_questions
   with (security_invoker = true) as
@@ -1683,9 +1708,7 @@ select
   coalesce(u.full_name, 'Удалённый пользователь') as author_name,
   u.avatar_url                                       as author_avatar_url,
   q.question,
-  q.created_at,
-  q.author_name       as cached_author_name,
-  q.author_avatar_url as cached_author_avatar_url
+  q.created_at
 from public.profile_questions q
 left join public.user_profiles u on u.id = q.author_id;
 
@@ -1696,19 +1719,44 @@ comment on view public.v_profile_questions is
 
 
 -- ---------------------------------------------------------------------------
--- 3) Drop the denormalized columns. They are no longer read by
---    the application; the view projects the live values instead.
---    After this DROP, any /api/reviews or /api/profile-questions
---    insert that still tries to write to these columns will fail
---    with a schema error — update the routes before applying this
---    step in production.
+-- 3) Drop the denormalized columns. Each DROP is guarded by an
+--    information_schema check so re-running the script on a
+--    database where the column is already gone is a no-op
+--    (instead of an error). We DROP CASCADE as a belt-and-braces
+--    measure for any leftover view that might reference the
+--    column from a future change; the views defined above don't
+--    reference these columns, so CASCADE will not actually drop
+--    anything user-visible.
 -- ---------------------------------------------------------------------------
-alter table public.reviews
-  drop column if exists author,
-  drop column if exists author_avatar_url;
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'reviews' and column_name = 'author'
+  ) then
+    alter table public.reviews drop column author cascade;
+  end if;
 
-alter table public.profile_questions
-  drop column if exists author_name,
-  drop column if exists author_avatar_url;
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'reviews' and column_name = 'author_avatar_url'
+  ) then
+    alter table public.reviews drop column author_avatar_url cascade;
+  end if;
+
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'profile_questions' and column_name = 'author_name'
+  ) then
+    alter table public.profile_questions drop column author_name cascade;
+  end if;
+
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'profile_questions' and column_name = 'author_avatar_url'
+  ) then
+    alter table public.profile_questions drop column author_avatar_url cascade;
+  end if;
+end $$;
 -- <<<<<< 16-join-views.sql <<<<<<
 
