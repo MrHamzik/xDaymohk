@@ -1,5 +1,5 @@
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
-import { certificateToDbRow, profileToDbRow, reviewToDbRow } from '@/lib/profile-db';
+import { certificateToDbRow, profileToDbRow } from '@/lib/profile-db';
 import { Profile } from '@/lib/types';
 
 /**
@@ -94,10 +94,11 @@ export async function persistProfileToSupabase(profile: Profile): Promise<void> 
     }
   }
 
-  if ((profile.reviews ?? []).length > 0) {
-    const { error: reviewError } = await supabase
-      .from('reviews')
-      .upsert((profile.reviews ?? []).map((review) => reviewToDbRow(profile.id, review)), { onConflict: 'id' });
-    if (reviewError) console.warn('Не удалось сохранить отзывы анкеты:', reviewError.message);
-  }
+  // Reviews are intentionally NOT synced here. Step 16 dropped the
+  // reviews.author and reviews.author_avatar_url columns in
+  // favour of v_reviews, which JOINs to user_profiles to project
+  // the live name/avatar. Upserting the old row shape would fail
+  // with a "column does not exist" error. New reviews go through
+  // /api/reviews (which inserts only author_id + the rating text
+  // and lets the view resolve the author fields on read).
 }

@@ -83,49 +83,41 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Нельзя задать вопрос самому себе' }, { status: 400 });
   }
 
-  // Step 3: insert the question. Source-of-truth for the author's
-  // display name and avatar is user_profiles (not auth.users
-  // user_metadata, which is a stale Google cache). We fall back
-  // to the Google metadata only if user_profiles is missing, and
-  // to a generic placeholder if both are empty.
+  // Step 3: insert the question. We do NOT write author_name /
+  // author_avatar_url here — those columns were dropped in step 16
+  // in favour of the v_profile_questions view, which JOINs to
+  // user_profiles and projects the live display name / avatar.
+  // The result returned to the client is read back through the
+  // view below so the API responds with the same field names the
+  // UI has always used.
   const id = `question-${Date.now()}`;
   const today = new Date().toISOString().split('T')[0];
-  const { data: accountRow, error: accountError } = await admin
-    .from('user_profiles')
-    .select('full_name, avatar_url')
-    .eq('id', userData.user.id)
-    .maybeSingle();
-  if (accountError) {
-    return NextResponse.json({ error: accountError.message }, { status: 500 });
-  }
-  const fullName = String(
-    accountRow?.full_name
-    ?? userData.user.user_metadata?.full_name
-    ?? userData.user.user_metadata?.name
-    ?? 'Житель Даймохк',
-  );
-  const avatarUrl = String(
-    accountRow?.avatar_url
-    ?? userData.user.user_metadata?.avatar_url
-    ?? '',
-  );
   const { data, error } = await admin
     .from('profile_questions')
     .insert({
       id,
       profile_id: profileId,
       author_id: userData.user.id,
-      author_name: fullName,
-      author_avatar_url: avatarUrl || null,
       question,
       created_at: today,
     })
-    .select('id, profile_id, author_id, author_name, author_avatar_url, question, created_at')
+    .select('id, profile_id, author_id, question, created_at')
     .single();
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-  return NextResponse.json({ success: true, question: data });
+
+  // Re-read through v_profile_questions so the response carries
+  // the live author_name / author_avatar_url from user_profiles.
+  const { data: liveQuestion, error: liveError } = await admin
+    .from('v_profile_questions')
+    .select('id, profile_id, author_id, author_name, author_avatar_url, question, created_at')
+    .eq('id', id)
+    .maybeSingle();
+  if (liveError) {
+    return NextResponse.json({ error: liveError.message }, { status: 500 });
+  }
+  return NextResponse.json({ success: true, question: liveQuestion ?? data });
 }
 
 export async function GET(request: Request) {
@@ -143,8 +135,12 @@ export async function GET(request: Request) {
   const anon = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
+  // Read through v_profile_questions so the response carries the
+  // live author_name / author_avatar_url from user_profiles. The
+  // view has the same shape as the base table plus the resolved
+  // author fields, so the UI doesn't need to change.
   const { data, error } = await anon
-    .from('profile_questions')
+    .from('v_profile_questions')
     .select('id, profile_id, author_id, author_name, author_avatar_url, question, created_at')
     .eq('profile_id', profileId)
     .order('created_at', { ascending: false })

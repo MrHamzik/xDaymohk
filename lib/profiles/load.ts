@@ -25,7 +25,13 @@ export async function loadProfilesFromSupabase(): Promise<Profile[] | null> {
   const profileIds = profileRows.map((row) => row.id);
   const [{ data: certificateRows }, { data: reviewRows }] = await Promise.all([
     supabase.from('certificates').select('*').in('profile_id', profileIds),
-    supabase.from('reviews').select('*').in('profile_id', profileIds).order('created_at', { ascending: false }),
+    // Read reviews through v_reviews so the live author /
+    // author_avatar_url come from user_profiles, not from a
+    // snapshot stored at insert time. profileFromDb() maps the
+    // view's `author` / `author_avatar_url` columns straight into
+    // the same `author` / `authorAvatarUrl` fields on the Review
+    // type that the UI has always used.
+    supabase.from('v_reviews').select('*').in('profile_id', profileIds).order('created_at', { ascending: false }),
   ]);
 
   return profileRows

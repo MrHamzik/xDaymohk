@@ -170,19 +170,6 @@ export function profileUpdatesToDbRow(updates: Partial<Profile>) {
   return row;
 }
 
-export function reviewToDbRow(profileId: string, review: Review) {
-  return {
-    id: review.id,
-    profile_id: profileId,
-    author: review.author,
-    author_id: review.authorId,
-    author_avatar_url: review.authorAvatarUrl,
-    rating: review.rating,
-    text: review.text,
-    created_at: review.createdAt,
-  };
-}
-
 export function certificateToDbRow(profileId: string, certificate: Profile['certificates'][number]) {
   return {
     id: certificate.id,
