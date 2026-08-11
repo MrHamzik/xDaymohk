@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
-import { SAMASHKI_HOUSE_ADDRESSES } from '@/lib/samashki-addresses';
 import { isAdminEmail } from '@/lib/admin';
 import { rateLimit, withRateLimitHeaders } from '@/lib/rate-limit';
 
@@ -47,9 +46,9 @@ export async function GET(request: Request) {
         return NextResponse.json({ addresses: mapped, source: 'supabase', count: mapped.length });
       }
     }
-    return NextResponse.json({ addresses: SAMASHKI_HOUSE_ADDRESSES, source: 'constant' });
+    return NextResponse.json({ addresses: [], source: 'empty' });
   } catch (e) {
-    return NextResponse.json({ addresses: SAMASHKI_HOUSE_ADDRESSES, source: 'fallback', error: String(e) });
+    return NextResponse.json({ addresses: [], source: 'fallback', error: String(e) });
   }
 }
 

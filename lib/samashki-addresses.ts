@@ -1,5 +1,3 @@
-import housesData from '@/data/samashki-houses.json';
-
 export interface SamashkiHouseAddress {
   id: string;
   street: string;
@@ -15,11 +13,12 @@ export interface SamashkiHouseAddress {
 const CUSTOM_KEY = 'samashki-custom-addresses';
 
 /**
- * Comprehensive database of Samashki streets and house numbers with
- * geocoded coordinates. Loaded from data/samashki-houses.json so the
- * bundle stays small and the dataset can be updated without rebuild.
+ * The seed dataset (data/samashki-houses.json) was removed: the user
+ * asked for addresses to live ONLY in the database, edited through
+ * the admin panel. This empty array is the fall-back used when
+ * localStorage is unset AND the API doesn't return anything.
  */
-export const SAMASHKI_HOUSE_ADDRESSES: SamashkiHouseAddress[] = housesData as SamashkiHouseAddress[];
+export const SAMASHKI_HOUSE_ADDRESSES: SamashkiHouseAddress[] = [];
 
 export function getEffectiveHouseAddresses(): SamashkiHouseAddress[] {
   if (typeof window !== 'undefined') {
@@ -70,17 +69,32 @@ export function lookupSamashkiAddress(query: string): SamashkiHouseAddress[] {
   const clean = query.trim().toLowerCase();
   if (clean.length < 2) return [];
 
-  return SAMASHKI_HOUSE_ADDRESSES.filter((item) => (
+  // Search the live list (DB-backed), not the (now empty) seed
+  // dataset, so admin-added houses show up in autocomplete.
+  const pool = getEffectiveHouseAddresses();
+  return pool.filter((item) => (
     item.fullAddress.toLowerCase().includes(clean)
     || item.street.toLowerCase().includes(clean)
   ));
 }
 
 export function findClosestSamashkiHouse(position: { lat: number; lng: number }): SamashkiHouseAddress {
-  let closest = SAMASHKI_HOUSE_ADDRESSES[0];
+  const pool = getEffectiveHouseAddresses();
+  if (pool.length === 0) {
+    return {
+      id: 'fallback',
+      street: 'Самашки',
+      houseNumber: '',
+      fullAddress: 'Самашки',
+      lat: position.lat,
+      lng: position.lng,
+      postalCode: '366602',
+    };
+  }
+  let closest = pool[0];
   let minDistance = Infinity;
 
-  for (const house of SAMASHKI_HOUSE_ADDRESSES) {
+  for (const house of pool) {
     const dLat = house.lat - position.lat;
     const dLng = house.lng - position.lng;
     const dist = dLat * dLat + dLng * dLng;
