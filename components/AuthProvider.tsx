@@ -306,17 +306,11 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       }
 
       await supabase.auth.signOut();
-    } else {
-      const storedProfiles = window.localStorage.getItem('samashki-profiles');
-      if (storedProfiles) {
-        try {
-          const profiles = JSON.parse(storedProfiles) as Array<{ ownerId?: string }>;
-          window.localStorage.setItem('samashki-profiles', JSON.stringify(profiles.filter((profile) => profile.ownerId !== account.id)));
-        } catch {
-          // Continue with local account removal.
-        }
-      }
     }
+    // No local profile cache to clean up: ProfilesProvider reads
+    // everything from the database now, and the realtime channel
+    // will refresh the local view on the next postgres_changes
+    // event triggered by the server-side deletion.
 
     window.dispatchEvent(new CustomEvent('samashki-account-deleted', { detail: { ownerId: account.id } }));
     setAccount(null);

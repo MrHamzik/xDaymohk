@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Ban, Check, Clock3, Eye, EyeOff, FolderOpen, MapPin, Plus, RotateCcw, Save as SaveIcon, ShieldAlert, Trash2, UserCheck, UserRound, UserX, X, Pencil, Eraser } from 'lucide-react';
+import { ArrowLeft, Ban, Check, Clock3, Eye, EyeOff, FolderOpen, MapPin, Plus, RotateCcw, Save as SaveIcon, ShieldAlert, Trash2, UserCheck, UserRound, UserX, X, Pencil } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import BottomNav from '@/components/BottomNav';
 import ProfileModal from '@/components/ProfileModal';
@@ -149,13 +149,6 @@ export default function AdminPage() {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [addressFilter, setAddressFilter] = useState<string>('all');
   const [selectedAddressCategory, setSelectedAddressCategory] = useState<string>('Другое');
-  // When the local cache and the database disagree (typically because
-  // the database was wiped by hand and the localStorage still carries
-  // rows that no longer exist server-side, or vice versa), the admin
-  // can use this button to wipe the local cache and reload from the
-  // server. It is intentionally explicit: a single click never
-  // touches the database, and a confirm() dialog prevents accidents.
-  const [isClearingCache, setIsClearingCache] = useState(false);
   // Remember the active section across page reloads so the user does
   // not lose their place every time they refresh / re-open the admin
   // panel. Persisted in localStorage; falls back to 'pending'.
@@ -276,35 +269,6 @@ export default function AdminPage() {
     const next = customCategories.filter(c=>c!==cat);
     setCustomCategories(next);
     try { localStorage.setItem(CUSTOM_CATEGORIES_KEY, JSON.stringify(next)); } catch {}
-  };
-
-  /**
-   * Wipe the local browser cache for this app and reload the page.
-   * Use this when the database is the source of truth and the local
-   * cache is out of date (typically after manually deleting rows in
-   * Supabase Table Editor, or after a deploy that changed the
-   * ProfilesProvider bootstrap). The click is gated by a confirm()
-   * dialog so it cannot fire by accident.
-   */
-  const handleClearLocalCache = () => {
-    if (typeof window === 'undefined') return;
-    const message = 'Очистить локальный кэш (анкеты, адреса, категории) и перезагрузить страницу? БД не трогается.';
-    if (!window.confirm(message)) return;
-    setIsClearingCache(true);
-    const keysToWipe = [
-      'samashki-profiles',
-      'samashki-custom-addresses',
-      'samashki-custom-categories',
-      'samashki-admin-section',
-    ];
-    try {
-      for (const key of keysToWipe) window.localStorage.removeItem(key);
-    } catch {}
-    // Use location.reload() instead of router.refresh() so the
-    // Next.js client fully re-bootstraps ProfilesProvider from the
-    // server. A soft refresh would still pull stale state from
-    // memory.
-    window.location.reload();
   };
 
   useEffect(() => {
@@ -496,16 +460,6 @@ export default function AdminPage() {
             <Link href="/" aria-label="Вернуться в каталог" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400"><ArrowLeft className="h-4 w-4" /></Link>
             <div className="min-w-0"><h2 className="text-lg font-extrabold text-slate-900 dark:text-white">Панель администратора</h2><p className="text-sm text-slate-500 dark:text-zinc-500">Подтверждения, скрытые анкеты, жалобы, пользователи и адреса</p></div>
           </div>
-          <button
-            type="button"
-            onClick={handleClearLocalCache}
-            disabled={isClearingCache}
-            title="Сбросить локальный кэш браузера (анкеты, адреса, категории) и перезагрузить страницу. БД не трогается."
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
-          >
-            <Eraser className="h-3.5 w-3.5" />
-            Сбросить кэш
-          </button>
         </div>
 
         <nav className="mb-6 flex gap-1 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">

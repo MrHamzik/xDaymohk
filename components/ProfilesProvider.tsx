@@ -4,7 +4,6 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
 import { isAdminEmail } from '@/lib/admin';
-import { INITIAL_PROFILES } from '@/lib/mock-data';
 import { profileUpdatesToDbRow, reviewToDbRow } from '@/lib/profile-db';
 import { isAdminProfile } from '@/lib/profile-filters';
 import { useNotifications } from '@/components/NotificationsProvider';
@@ -13,13 +12,10 @@ import {
   loadProfilesFromSupabase,
   loadUsersFromSupabase,
 } from '@/lib/profiles/load';
-import { mergeProfilesWithLocal, normalizeProfiles } from '@/lib/profiles/merge';
 import { persistProfileToSupabase } from '@/lib/profiles/persist';
 import { sanitizeReason } from '@/lib/validation';
 import { extractPhoneDigits } from '@/lib/phone';
 import { Complaint, ComplaintStatus, Profile, Review, UserSummary } from '@/lib/types';
-
-const PROFILES_STORAGE_KEY = 'samashki-profiles';
 
 interface ProfilesContextValue {
   profiles: Profile[];
@@ -38,155 +34,139 @@ interface ProfilesContextValue {
 
 const ProfilesContext = createContext<ProfilesContextValue | undefined>(undefined);
 
-function readStoredProfiles(): Profile[] | null {
-  try {
-    const stored = window.localStorage.getItem(PROFILES_STORAGE_KEY);
-    if (!stored) return null;
-    return normalizeProfiles(JSON.parse(stored));
-  } catch {
-    return null;
-  }
-}
-
-function buildPersonalProfile(account: NonNullable<ReturnType<typeof useAuth>['account']>): Profile {
-  return {
-    id: `personal-${account.id}`,
-    ownerId: account.id,
-    fullName: account.fullName,
-    avatarUrl: account.avatarUrl,
-    photos: [],
-    isSpecialist: false,
-    isPersonal: true,
-    bio: 'Житель Даймохк. Личная анкета.',
-    workplaceAddress: 'Даймохк',
-    workplaceCoords: { lat: 43.288024, lng: 45.298989 },
-    rating: 0,
-    reviewCount: 0,
-    reviews: [],
-    certificates: [],
-    phone: account.phone || '',
-    hidePhone: true,
-    sameAsPhoneWhatsapp: false,
-    whatsapp: undefined,
-    telegram: undefined,
-    isVerified: false,
-    verificationStatus: 'none',
-    isAdmin: Boolean(account.isAdmin),
-    isHidden: false,
-    isBanned: false,
-    createdAt: new Date().toISOString().split('T')[0],
-  };
-}
-
 export default function ProfilesProvider({ children }: { children: React.ReactNode }) {
   const { account } = useAuth();
   const { createNotification } = useNotifications();
-  const [profiles, setProfiles] = useState<Profile[]>(isSupabaseConfigured ? [] : INITIAL_PROFILES);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
   const [users, setUsers] = useState<UserSummary[]>([]);
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [isHydrated, setIsHydrated] = useState(false);
 
-  // Bootstrap: load remote + local, merge
+  /**
+   * Fetch all remote data and reconcile the local view. The database
+   * is the single source of truth; we don't keep a separate
+   * localStorage cache for profiles anymore. (localStorage was the
+   * source of "phantom" rows that leaked across users and sessions.)
+   */
+  const refreshRemoteData = useCallback(async () => {
+    const [remoteProfiles, remoteUsers, remoteComplaints] = await Promise.all([
+      loadProfilesFromSupabase(),
+      loadUsersFromSupabase(),
+      loadComplaintsFromSupabase(),
+    ]);
+    if (remoteProfiles !== null) {
+      setProfiles(remoteProfiles);
+    }
+    setUsers(remoteUsers);
+    setComplaints(remoteComplaints);
+  }, []);
+
+  // Initial bootstrap + realtime + refresh hook.
   useEffect(() => {
     let cancelled = false;
     const bootstrap = async () => {
-      const storedProfiles = readStoredProfiles();
-      const remoteProfiles = await loadProfilesFromSupabase();
-      const remoteUsers = await loadUsersFromSupabase();
-      const remoteComplaints = await loadComplaintsFromSupabase();
-      const merged = mergeProfilesWithLocal(
-        remoteProfiles ? normalizeProfiles(remoteProfiles) : null,
-        storedProfiles
-      );
-      const nextProfiles = merged ?? normalizeProfiles(storedProfiles ?? INITIAL_PROFILES) ?? INITIAL_PROFILES;
-      const nextUsers = remoteUsers.map((user) => ({
-        ...user,
-        profileCount: nextProfiles.filter((profile) => profile.ownerId === user.id).length,
-      }));
-
-      if (!cancelled) {
-        setProfiles(nextProfiles);
-        setUsers(nextUsers);
-        setComplaints(remoteComplaints);
-        setIsHydrated(true);
+      try {
+        await refreshRemoteData();
+      } finally {
+        if (!cancelled) setIsHydrated(true);
       }
     };
     void bootstrap();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
-  // Real-time + periodic refresh (real-time pushes, polling as fallback)
-  useEffect(() => {
-    if (!isSupabaseConfigured || !supabase) return;
-
-    let cancelled = false;
-    const refreshRemoteData = async () => {
-      const [remoteProfiles, remoteUsers, remoteComplaints] = await Promise.all([
-        loadProfilesFromSupabase(),
-        loadUsersFromSupabase(),
-        loadComplaintsFromSupabase(),
-      ]);
-      if (cancelled) return;
-      if (remoteProfiles !== null) {
-        const stored = readStoredProfiles();
-        const normalizedRemote = normalizeProfiles(remoteProfiles) ?? [];
-        const merged = stored ? mergeProfilesWithLocal(normalizedRemote, stored) ?? normalizedRemote : normalizedRemote;
-        setProfiles(merged);
-        setUsers(remoteUsers.map((user) => ({
-          ...user,
-          profileCount: merged.filter((profile) => profile.ownerId === user.id).length,
-        })));
-      }
-      setComplaints(remoteComplaints);
-    };
-
-    const channel = supabase
-      .channel('samashki-live-data')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
-        void refreshRemoteData();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_profiles' }, () => {
-        void refreshRemoteData();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'complaints' }, () => {
-        void refreshRemoteData();
-      })
-      .subscribe();
-
-    return () => {
-      cancelled = true;
-      void supabase?.removeChannel(channel);
-    };
-  }, []);
-
-  // Persist to localStorage whenever profiles change (after hydration)
-  useEffect(() => {
-    if (!isHydrated) return;
-    try {
-      window.localStorage.setItem(PROFILES_STORAGE_KEY, JSON.stringify(profiles));
-    } catch {
-      // localStorage may be disabled; profiles still work in-memory.
+    let channel: ReturnType<NonNullable<typeof supabase>['channel']> | null = null;
+    if (isSupabaseConfigured && supabase) {
+      channel = supabase
+        .channel('samashki-live-data')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
+          void refreshRemoteData();
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'user_profiles' }, () => {
+          void refreshRemoteData();
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'complaints' }, () => {
+          void refreshRemoteData();
+        })
+        .subscribe();
     }
-  }, [profiles, isHydrated]);
+
+    return () => {
+      cancelled = true;
+      if (channel && supabase) {
+        void supabase.removeChannel(channel);
+      }
+    };
+  }, [refreshRemoteData]);
 
   useEffect(() => {
     const handleAccountDeleted = (event: Event) => {
       const ownerId = (event as CustomEvent<{ ownerId?: string }>).detail?.ownerId;
       if (!ownerId) return;
-      setProfiles((current) => current.filter((profile) => profile.ownerId !== ownerId));
+      // No local cache to clean up; just refetch so the deleted
+      // user's profiles disappear from the UI on the next render.
+      void refreshRemoteData();
     };
     window.addEventListener('samashki-account-deleted', handleAccountDeleted);
     return () => window.removeEventListener('samashki-account-deleted', handleAccountDeleted);
-  }, []);
+  }, [refreshRemoteData]);
 
-  const syncAccountToQuestionnaires = useCallback((targetAccount: NonNullable<typeof account>) => {
+  /**
+   * Make sure the calling user has a canonical personal profile in
+   * the database. The RPC is idempotent and runs as SECURITY DEFINER
+   * server-side, so the result is a single round-trip with no
+   * race-window for duplicate creation. We only do this once per
+   * browser session per user (tracked via a ref, not state, so the
+   * effect doesn't loop on every profile mutation).
+   */
+  const personalEnsuredRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!isHydrated || !account) return;
+    if (personalEnsuredRef.current.has(account.id)) return;
+    personalEnsuredRef.current.add(account.id);
+
+    const ensure = async () => {
+      // If the database already reports a personal profile for this
+      // user, we don't need to call the RPC at all. The
+      // server-side function would be a no-op anyway, but skipping
+      // the round-trip is friendlier.
+      const localAlreadyHas = profiles.some(
+        (p) => p.ownerId === account.id && p.id === `personal-${account.id}`,
+      );
+      if (localAlreadyHas) return;
+
+      if (!supabase) return;
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) return;
+
+      try {
+        const response = await fetch('/api/account/ensure-personal-profile', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+        if (response.ok) {
+          // The RPC may have created a row that wasn't in our local
+          // snapshot; ask the server for the fresh state so the UI
+          // shows the new personal profile.
+          await refreshRemoteData();
+        }
+      } catch (ensureError) {
+        console.warn('Не удалось создать личную анкету на сервере:', ensureError);
+      }
+    };
+    void ensure();
+  }, [isHydrated, account?.id, profiles, refreshRemoteData, supabase]);
+
+  const syncAccountToQuestionnaires = useCallback(async (targetAccount: NonNullable<typeof account>) => {
+    if (!supabase) return;
     const phoneDigits = extractPhoneDigits(targetAccount.phone);
     const formattedWhatsapp = phoneDigits ? `7${phoneDigits}` : undefined;
 
-    setProfiles((currentProfiles) => {
-      const updatedProfiles = currentProfiles.map((profile) => {
+    // Apply display changes optimistically in the local snapshot.
+    setProfiles((currentProfiles) =>
+      currentProfiles.map((profile) => {
         if (profile.ownerId !== targetAccount.id) return profile;
         const isSameWhatsapp = profile.sameAsPhoneWhatsapp === true;
         return {
@@ -200,68 +180,32 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
               ? undefined
               : profile.whatsapp,
           isAdmin: Boolean(targetAccount.isAdmin || profile.isAdmin),
-          // NOTE: do NOT copy targetAccount.statusOverride onto every
-          // profile here. Each profile keeps its own statusOverride
-          // (set when the owner overrides it on that specific profile)
-          // and otherwise falls back to the automatic schedule. The
-          // master "working status" switch in the side menu is applied
-          // per-viewer in the components that read it (e.g. the map),
-          // NOT by mutating every profile of the owner.
         };
-      });
+      }),
+    );
 
-      try {
-        window.localStorage.setItem(PROFILES_STORAGE_KEY, JSON.stringify(updatedProfiles));
-      } catch {
-        // localStorage unavailable.
-      }
-      return updatedProfiles;
-    });
-
-    setUsers((currentUsers) => {
-      const existingUser = currentUsers.find((user) => user.id === targetAccount.id);
-      const updatedUser: UserSummary = {
-        id: targetAccount.id,
-        email: targetAccount.email,
-        fullName: targetAccount.fullName,
-        avatarUrl: targetAccount.avatarUrl,
-        isAdmin: Boolean(targetAccount.isAdmin),
-        isBlocked: Boolean(targetAccount.isBlocked),
-        profileCount: existingUser?.profileCount ?? 0,
-      };
-      return currentUsers.some((user) => user.id === targetAccount.id)
-        ? currentUsers.map((user) => user.id === targetAccount.id ? { ...updatedUser, profileCount: user.profileCount } : user)
-        : [updatedUser, ...currentUsers];
-    });
-
-    if (supabase) {
-      void (async () => {
-        await supabase
-          .from('profiles')
-          .update({
-            full_name: targetAccount.fullName,
-            avatar_url: targetAccount.avatarUrl,
-            phone: targetAccount.phone,
-            is_admin: Boolean(targetAccount.isAdmin),
-          })
-          .eq('owner_id', targetAccount.id);
-
-        if (formattedWhatsapp) {
-          await supabase
-            .from('profiles')
-            .update({ whatsapp: formattedWhatsapp })
-            .eq('owner_id', targetAccount.id)
-            .or('same_as_phone_whatsapp.is.null,same_as_phone_whatsapp.eq.true');
-        }
-      })();
+    // Persist to the server. We do this in the background and
+    // refetch on completion so the local snapshot matches the
+    // canonical DB state.
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        full_name: targetAccount.fullName,
+        avatar_url: targetAccount.avatarUrl,
+        phone: targetAccount.phone,
+        is_admin: Boolean(targetAccount.isAdmin),
+      })
+      .eq('owner_id', targetAccount.id);
+    if (!error) {
+      await refreshRemoteData();
     }
-  }, []);
+  }, [refreshRemoteData]);
 
   useEffect(() => {
     const handleAccountUpdated = (event: Event) => {
       const detail = (event as CustomEvent<{ account?: NonNullable<typeof account> }>).detail;
       if (detail?.account) {
-        syncAccountToQuestionnaires(detail.account);
+        void syncAccountToQuestionnaires(detail.account);
       }
     };
     window.addEventListener('samashki-account-updated', handleAccountUpdated);
@@ -270,39 +214,16 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
 
   useEffect(() => {
     if (!isHydrated || !account) return;
-    syncAccountToQuestionnaires(account);
+    void syncAccountToQuestionnaires(account);
   }, [account?.id, account?.fullName, account?.avatarUrl, account?.phone, account?.isAdmin, isHydrated, syncAccountToQuestionnaires]);
-
-  // Auto-create the personal profile for the signed-in user (once per account)
-  //
-  // Uses a ref-based guard so the effect can run on every profile change
-  // (it has to, since it depends on `profiles`) without re-creating the
-  // personal profile each time. The previous version used a synchronous
-  // check inside setProfiles, which raced with React's async state
-  // batching and could spawn duplicate personal profiles.
-  const personalCreatedRef = useRef<Set<string>>(new Set());
-  useEffect(() => {
-    if (!isHydrated || !account) return;
-    if (personalCreatedRef.current.has(account.id)) return;
-    const hasPersonal = profiles.some(
-      (p) => p.ownerId === account.id && (p.isPersonal || p.id === `personal-${account.id}` || p.id.startsWith('personal-'))
-    );
-    if (hasPersonal) {
-      personalCreatedRef.current.add(account.id);
-      return;
-    }
-
-    const personalProfile = buildPersonalProfile(account);
-    personalCreatedRef.current.add(account.id);
-    setProfiles((cur) => [personalProfile, ...cur]);
-    if (supabase) void persistProfileToSupabase(personalProfile);
-  }, [isHydrated, account?.id, profiles]);
 
   const addProfile = useCallback((profile: Profile) => {
     const profileWithRole: Profile = {
       ...profile,
       isAdmin: Boolean(profile.isAdmin || account?.isAdmin),
     };
+    // Optimistic update so the UI reflects the new profile
+    // immediately; the server-side insert follows in the background.
     setProfiles((currentProfiles) => {
       const personals = currentProfiles.filter((p) => p.isPersonal && p.ownerId === profileWithRole.ownerId);
       const others = currentProfiles.filter((p) => !(p.isPersonal && p.ownerId === profileWithRole.ownerId));
@@ -311,18 +232,15 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
       }
       return [profileWithRole, ...others];
     });
-    if (profileWithRole.ownerId) {
-      setUsers((currentUsers) => currentUsers.map((user) => (
-        user.id === profileWithRole.ownerId ? { ...user, profileCount: user.profileCount + 1 } : user
-      )));
-    }
     if (supabase) {
-      void persistProfileToSupabase(profileWithRole);
+      void persistProfileToSupabase(profileWithRole).then(() => {
+        void refreshRemoteData();
+      });
     }
     if (profileWithRole.ownerId && profileWithRole.ownerId === account?.id) {
       void createNotification(profileWithRole.ownerId, 'system', 'Анкета сохранена', 'Ваша анкета добавлена в каталог.');
     }
-  }, [account?.id, account?.isAdmin, createNotification]);
+  }, [account?.id, account?.isAdmin, createNotification, refreshRemoteData]);
 
   const updateProfile = useCallback((profileId: string, updates: Partial<Profile>) => {
     const currentProfile = profiles.find((profile) => profile.id === profileId);
@@ -353,17 +271,20 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
       );
     }
     if (currentProfile.ownerId && currentProfile.ownerId !== account?.id && updates.verificationStatus === 'verified') {
-      void createNotification(currentProfile.ownerId, 'system', 'Анкета проверена', 'Администратор подтвердил анкету. Рядом с именем появилась галочка.');
+      void createNotification(currentProfile.ownerId, 'system', 'Анкета проверена', 'Администратор подтвердил анкету. Рядом с именем появится галочка.');
     }
+
     setProfiles((currentProfiles) => currentProfiles.map((profile) => (
       profile.id === profileId ? nextProfile : profile
     )));
 
     const row = profileUpdatesToDbRow(nextProfile);
     if (supabase && Object.keys(row).length > 0) {
-      void persistProfileToSupabase(nextProfile);
+      void persistProfileToSupabase(nextProfile).then(() => {
+        void refreshRemoteData();
+      });
     }
-  }, [profiles, account?.id, account?.isAdmin, account?.isBlocked, createNotification]);
+  }, [profiles, account?.id, account?.isAdmin, account?.isBlocked, createNotification, refreshRemoteData]);
 
   const updateUserBlocked = useCallback(async (userId: string, isBlocked: boolean) => {
     const target = users.find((user) => user.id === userId);
@@ -392,24 +313,19 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
         ? 'Администратор заблокировал ваш аккаунт и скрыл его анкеты.'
         : 'Администратор разблокировал ваш аккаунт.',
     );
-    setUsers((currentUsers) => currentUsers.map((user) => (
-      user.id === userId ? { ...user, isBlocked } : user
-    )));
-    setProfiles((currentProfiles) => currentProfiles.map((profile) => (
-      profile.ownerId === userId ? { ...profile, isHidden: isBlocked } : profile
-    )));
-  }, [users, account?.id, createNotification]);
+    await refreshRemoteData();
+  }, [users, account?.id, createNotification, refreshRemoteData]);
 
   const deleteProfile = useCallback(async (profileId: string) => {
     const target = profiles.find((p) => p.id === profileId);
     if (!target) {
       throw new Error('Анкета не найдена.');
     }
-    // The canonical personal profile (`personal-<userId>`) is the
-    // single protected row and cannot be deleted. Any OTHER personal
-    // profile that ends up in the database (e.g. duplicates created
-    // by an earlier bug) IS deletable — otherwise the user is stuck
-    // with a phantom row they can neither edit nor remove.
+    // Only the canonical personal profile (personal-<userId>) is
+    // protected from deletion. If the user has duplicate personal
+    // rows (created by an earlier bug), they ARE deletable — the
+    // API endpoint at /api/account/delete-personal-duplicate handles
+    // the service-role cleanup.
     const isCanonicalPersonal = target.isPersonal
       && target.id === `personal-${target.ownerId}`;
     if (isCanonicalPersonal) {
@@ -430,13 +346,7 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
         if (ownerIdText !== account.id) {
           throw new Error('Удалять можно только свои анкеты.');
         }
-
-        // For duplicate personal rows the RLS policy 'profiles owner
-        // delete' is gated on `not is_personal`, so we bypass it via
-        // the service-role-aware delete from the API. Falling back
-        // to the regular client delete works for non-personal rows.
-        const dbIsPersonal = Boolean(ownershipCheck.is_personal);
-        if (dbIsPersonal) {
+        if (Boolean(ownershipCheck.is_personal)) {
           const { data: sessionData } = await supabase.auth.getSession();
           const accessToken = sessionData.session?.access_token;
           if (!accessToken) {
@@ -458,26 +368,21 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
             .eq('id', profileId);
           if (deleteError) throw new Error(deleteError.message);
           if (count === 0) {
-            throw new Error('Не удалось удалить анкету — проверьте RLS политики (см. supabase/upgrade_existing.sql).');
+            throw new Error('Не удалось удалить анкету.');
           }
         }
       }
-      // If !ownershipCheck, the row is a LOCAL-ONLY phantom (it lives
-      // in the user's localStorage but never reached Supabase, e.g.
-      // because of an interrupted sync, a deleted localStorage entry,
-      // or an old bug that created the profile client-side only).
-      // Fall through to the local delete below — that's exactly the
-      // behaviour the user expects when they click "Удалить".
+      // If !ownershipCheck the row was already gone from the DB
+      // (deleted by another tab or an admin); we still want to
+      // remove it from the local snapshot, which happens below.
     }
 
-    const deletedProfile = profiles.find((profile) => profile.id === profileId);
+    // Remove from the local snapshot optimistically. The realtime
+    // channel will replace this with the server's truth on the
+    // next refresh.
     setProfiles((currentProfiles) => currentProfiles.filter((profile) => profile.id !== profileId));
-    if (deletedProfile?.ownerId) {
-      setUsers((currentUsers) => currentUsers.map((user) => (
-        user.id === deletedProfile.ownerId ? { ...user, profileCount: Math.max(0, user.profileCount - 1) } : user
-      )));
-    }
-  }, [profiles, account]);
+    void refreshRemoteData();
+  }, [profiles, account, refreshRemoteData]);
 
   const addComplaint = useCallback(async (profileId: string, reason: string) => {
     if (!account || account.isBlocked) return;
@@ -485,9 +390,6 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
     if (!sanitizedReason) return;
     const reportedProfile = profiles.find((profile) => profile.id === profileId);
     if (!reportedProfile) {
-      // No local copy of the profile — the user is trying to report
-      // something we don't even know about. Bail out with a clear
-      // message rather than letting Postgres fail the FK constraint.
       throw new Error('Анкета не найдена. Откройте её заново и повторите попытку.');
     }
     const complaint: Complaint = {
@@ -502,42 +404,21 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
     };
 
     if (supabase) {
-      // Two failure modes we have to defend against:
-      //
-      // 1) The reported profile lives ONLY in this browser's
-      //    localStorage (it was authored client-side but the upsert
-      //    was rejected by RLS — e.g. the user is reporting someone
-      //    else's profile, or the original sync was interrupted).
-      //    The FK `complaints_profile_id_fkey` rejects the insert.
-      //
-      // 2) Same as (1) but with a slight twist: the user is on a
-      //    stale page where the profile has since been deleted from
-      //    the database, but they can still see it locally.
-      //
-      // In both cases we don't want to leak the cryptic FK error to
-      // the user. We do a quick existence check first; if the row is
-      // missing, we route the complaint through a server endpoint
-      // that runs with the service role and bridges the FK gap.
+      // The server is the only thing that knows whether the
+      // profile exists. If it does, we just insert. If it
+      // doesn't, the server endpoint /api/complaints/attach-target
+      // creates a placeholder so the FK doesn't fail.
       const { data: targetRow, error: targetError } = await supabase
         .from('profiles')
         .select('id')
         .eq('id', profileId)
         .maybeSingle();
-
-      if (targetError) {
-        throw new Error(targetError.message);
-      }
+      if (targetError) throw new Error(targetError.message);
 
       if (!targetRow) {
-        // Profile is not in the database — bridge the FK gap on the server.
-        if (!supabase) {
-          throw new Error('Supabase не настроен — жалобу нельзя отправить.');
-        }
         const { data: sessionData } = await supabase.auth.getSession();
         const accessToken = sessionData.session?.access_token;
-        if (!accessToken) {
-          throw new Error('Сессия истекла — войдите снова.');
-        }
+        if (!accessToken) throw new Error('Сессия истекла — войдите снова.');
         const response = await fetch('/api/complaints/attach-target', {
           method: 'POST',
           headers: {
@@ -548,12 +429,6 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
             profileId,
             reason: sanitizedReason,
             target: {
-              // Only display fields needed to create a placeholder
-              // profile if one doesn't exist. ownerId is intentionally
-              // omitted — the server reads it from the profiles row
-              // itself (or stores NULL for a placeholder), which is
-              // the safe default that prevents an unverified client
-              // from forging a target_user_id.
               fullName: reportedProfile.fullName,
               isSpecialist: reportedProfile.isSpecialist,
               isPersonal: reportedProfile.isPersonal,
@@ -569,10 +444,14 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
       }
 
       // Normal path: profile exists in DB, just insert the complaint.
+      // target_user_id is intentionally null on this client; the FK
+      // is set to null on delete of the target user, so the
+      // complaint can be filed even when the target has been
+      // removed or has no user_profiles row.
       const { error } = await supabase.from('complaints').insert({
         id: complaint.id,
         profile_id: complaint.profileId,
-        target_user_id: complaint.targetUserId ?? null,
+        target_user_id: null,
         author_id: complaint.authorId,
         author_name: complaint.authorName,
         reason: complaint.reason,
@@ -620,9 +499,11 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
       void Promise.all([
         supabase.from('reviews').insert(reviewToDbRow(profileId, review)),
         supabase.from('profiles').update({ rating: nextRating, review_count: nextCount }).eq('id', profileId),
-      ]);
+      ]).then(() => {
+        void refreshRemoteData();
+      });
     }
-  }, [profiles, account?.isBlocked]);
+  }, [profiles, account?.isBlocked, refreshRemoteData]);
 
   const isCurrentUserAdmin = Boolean(account?.isAdmin);
   const isProfileAdmin = useCallback(

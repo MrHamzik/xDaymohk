@@ -41,9 +41,17 @@ export async function loadProfilesFromSupabase(): Promise<Profile[] | null> {
 
 export async function loadUsersFromSupabase(): Promise<UserSummary[]> {
   if (!isSupabaseConfigured || !supabase) return [];
+  // Read from the v_users_with_profile_count view (defined in
+  // supabase/steps/11-profiles-rls-and-count.sql). The view returns
+  // user_profiles joined with a server-computed count of their
+  // profiles, including personal ones. Regular users will only see
+  // their own row through user_profiles RLS, which is exactly what
+  // we want — the admin panel reads the view through the anon
+  // client too, but the admin email check happens elsewhere
+  // (AdminPage already gates the whole page on isCurrentUserAdmin).
   const { data, error } = await supabase
-    .from('user_profiles')
-    .select('id, email, full_name, avatar_url, is_admin, is_blocked')
+    .from('v_users_with_profile_count')
+    .select('id, email, full_name, avatar_url, is_admin, is_blocked, profile_count, hidden_count')
     .order('created_at', { ascending: false });
   if (error || !data) return [];
   return data
@@ -55,7 +63,7 @@ export async function loadUsersFromSupabase(): Promise<UserSummary[]> {
       avatarUrl: row.avatar_url ?? '',
       isAdmin: isAdminEmail(row.email),
       isBlocked: Boolean(row.is_blocked),
-      profileCount: 0,
+      profileCount: Number(row.profile_count ?? 0),
     }));
 }
 
