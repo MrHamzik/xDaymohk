@@ -548,7 +548,12 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
             profileId,
             reason: sanitizedReason,
             target: {
-              ownerId: reportedProfile.ownerId,
+              // Only display fields needed to create a placeholder
+              // profile if one doesn't exist. ownerId is intentionally
+              // omitted — the server reads it from the profiles row
+              // itself (or stores NULL for a placeholder), which is
+              // the safe default that prevents an unverified client
+              // from forging a target_user_id.
               fullName: reportedProfile.fullName,
               isSpecialist: reportedProfile.isSpecialist,
               isPersonal: reportedProfile.isPersonal,

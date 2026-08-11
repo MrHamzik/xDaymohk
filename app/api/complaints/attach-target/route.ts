@@ -4,25 +4,32 @@ import { rateLimit, withRateLimitHeaders } from '@/lib/rate-limit';
 
 /**
  * Submit a complaint while making sure the target profile actually
- * exists in the database. The catalog mixes remote (Supabase) and
- * local-only rows; when a user files a complaint about a profile that
- * lives only in their localStorage (e.g. because the original upsert
- * was rejected by RLS — they don't own the row, or it never made it
- * to the server), the FK `complaints_profile_id_fkey` rejects the
- * insert with the cryptic "violates foreign key constraint" error.
+ * exists in the database.
  *
- * This endpoint runs with the service-role key and:
- *   1. Verifies the caller is authenticated.
- *   2. Upserts a minimal row into public.profiles if it doesn't exist
- *      yet (so the FK on complaints.profile_id is satisfied). The row
- *      is populated from whatever the client sends; if the row already
- *      exists we DO NOT overwrite it (we just confirm it does).
- *   3. Inserts the complaint itself.
+ * Why this endpoint exists:
+ *   The catalog mixes remote (Supabase) and local-only rows; when a
+ *   user files a complaint about a profile that lives only in their
+ *   localStorage (e.g. it was authored client-side but the original
+ *   upsert was rejected by RLS — they don't own the row, or the
+ *   original sync was interrupted), the FK `complaints_profile_id_fkey`
+ *   rejects the insert with the cryptic "violates foreign key
+ *   constraint" error.
  *
- * We intentionally keep this small: the goal is just to bridge the
- * FK gap, not to give the user a way to forge or modify profiles
- * they don't own. The caller is the auth.uid() of the complaint's
- * author; the target profile is the row the user is reporting.
+ * Why we use the service role here:
+ *   The caller is the auth.uid() of the complaint's author; they
+ *   have NO write permission on someone else's profile row, so the
+ *   placeholder upsert would be rejected by RLS. We bridge that gap
+ *   with the service-role client (which bypasses RLS by design)
+ *   AFTER verifying the caller's bearer JWT.
+ *
+ * Why we never accept target_user_id from the client:
+ *   The client doesn't have to know (or be trusted to know) the
+ *   target profile's owner. The server looks up `owner_id` itself
+ *   from the profiles table. If the target profile has no owner
+ *   (e.g. it was created as a placeholder by a previous call to
+ *   this endpoint), target_user_id is simply left NULL — the column
+ *   is nullable, the FK is `on delete set null`, so the complaint
+ *   still inserts cleanly.
  */
 export async function POST(request: Request) {
   const limit = rateLimit(request, { limit: 30, windowMs: 60_000 });
@@ -33,12 +40,12 @@ export async function POST(request: Request) {
     );
   }
 
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const authorization = request.headers.get('authorization');
   const accessToken = authorization?.startsWith('Bearer ') ? authorization.slice(7) : '';
 
-  if (!serviceRoleKey || !supabaseUrl) {
+  if (!supabaseUrl || !serviceRoleKey) {
     return NextResponse.json({ error: 'Service-role client not configured.' }, { status: 503 });
   }
   if (!accessToken) {
@@ -65,51 +72,58 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Причина жалобы должна быть от 1 до 500 символов.' }, { status: 400 });
   }
 
-  const adminClient = createClient(supabaseUrl, serviceRoleKey, {
+  // Step 1: validate the bearer JWT with the anon client.
+  // getUser() goes through PostgREST's auth API and verifies the
+  // signature + expiry server-side. The anon client is fine for
+  // this; we only switch to service-role for the actual write.
+  const anon = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '', {
     auth: { autoRefreshToken: false, persistSession: false },
   });
-
-  // Authenticate the caller.
-  const { data: userData, error: userError } = await adminClient.auth.getUser(accessToken);
+  const { data: userData, error: userError } = await anon.auth.getUser(accessToken);
   if (userError || !userData.user) {
     return NextResponse.json({ error: 'Сессия недействительна.' }, { status: 401 });
   }
   const userId = userData.user.id;
   const userEmail = userData.user.email ?? '';
 
-  // Check whether the target profile already exists.
-  const { data: existing, error: existingError } = await adminClient
+  // Step 2: switch to service-role for the actual data work.
+  const admin = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+
+  // Step 3: bridge the FK gap if needed. If the target profile is
+  // already in the database we leave it alone — we don't want to
+  // overwrite a fuller record authored by the real owner.
+  const { data: existing, error: existingError } = await admin
     .from('profiles')
-    .select('id')
+    .select('id, owner_id')
     .eq('id', profileId)
     .maybeSingle();
-
   if (existingError) {
     return NextResponse.json({ error: existingError.message }, { status: 500 });
   }
 
-  if (!existing) {
-    // Bridge the FK gap: insert a minimal placeholder row so the
-    // complaints row has something to point at. We DO NOT overwrite
-    // an existing row (it might already be a fuller record authored
-    // by the real owner). The minimal row is enough to satisfy the
-    // schema defaults — every required field has a DEFAULT in
-    // public.profiles, so an empty insert is valid.
+  let targetOwnerId: string | null = null;
+  if (existing) {
+    targetOwnerId = existing.owner_id ?? null;
+  } else {
+    // Create a minimal placeholder row so the FK on complaints is
+    // satisfied. We intentionally do NOT copy owner_id from the
+    // client — the client cannot be trusted to know or report the
+    // real owner. The placeholder is owned by no one (NULL), and
+    // target_user_id will also be NULL in the complaint row.
     const target = body.target ?? {};
-    const placeholderOwner = typeof target.ownerId === 'string' && target.ownerId.length > 0
-      ? target.ownerId
-      : null;
     const placeholderFullName = typeof target.fullName === 'string' && target.fullName.length > 0
       ? String(target.fullName).slice(0, 200)
       : 'Неизвестный пользователь';
     const placeholderRow: Record<string, unknown> = {
       id: profileId,
-      owner_id: placeholderOwner,
+      owner_id: null,
       full_name: placeholderFullName,
       is_specialist: Boolean(target.isSpecialist),
       is_personal: Boolean(target.isPersonal) || profileId.startsWith('personal-'),
     };
-    const { error: insertError } = await adminClient
+    const { error: insertError } = await admin
       .from('profiles')
       .upsert(placeholderRow, { onConflict: 'id' });
     if (insertError) {
@@ -117,16 +131,16 @@ export async function POST(request: Request) {
     }
   }
 
-  // Now insert the complaint.
+  // Step 4: insert the complaint. target_user_id is null when the
+  // target profile has no owner (placeholder or genuine standalone
+  // row), which is the safe default — admins can still resolve
+  // complaints without knowing who the target user is.
   const complaintId = `complaint-${Date.now()}`;
   const today = new Date().toISOString().split('T')[0];
-  const targetUserId = typeof body.target?.ownerId === 'string' && body.target.ownerId.length > 0
-    ? String(body.target.ownerId)
-    : null;
-  const { error: complaintError } = await adminClient.from('complaints').insert({
+  const { error: complaintError } = await admin.from('complaints').insert({
     id: complaintId,
     profile_id: profileId,
-    target_user_id: targetUserId,
+    target_user_id: targetOwnerId,
     author_id: userId,
     author_name: userEmail,
     reason,
