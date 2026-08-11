@@ -83,13 +83,31 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Нельзя задать вопрос самому себе' }, { status: 400 });
   }
 
-  // Step 3: insert the question.
+  // Step 3: insert the question. Source-of-truth for the author's
+  // display name and avatar is user_profiles (not auth.users
+  // user_metadata, which is a stale Google cache). We fall back
+  // to the Google metadata only if user_profiles is missing, and
+  // to a generic placeholder if both are empty.
   const id = `question-${Date.now()}`;
   const today = new Date().toISOString().split('T')[0];
+  const { data: accountRow, error: accountError } = await admin
+    .from('user_profiles')
+    .select('full_name, avatar_url')
+    .eq('id', userData.user.id)
+    .maybeSingle();
+  if (accountError) {
+    return NextResponse.json({ error: accountError.message }, { status: 500 });
+  }
   const fullName = String(
-    userData.user.user_metadata?.full_name
+    accountRow?.full_name
+    ?? userData.user.user_metadata?.full_name
     ?? userData.user.user_metadata?.name
     ?? 'Житель Даймохк',
+  );
+  const avatarUrl = String(
+    accountRow?.avatar_url
+    ?? userData.user.user_metadata?.avatar_url
+    ?? '',
   );
   const { data, error } = await admin
     .from('profile_questions')
@@ -98,10 +116,11 @@ export async function POST(request: Request) {
       profile_id: profileId,
       author_id: userData.user.id,
       author_name: fullName,
+      author_avatar_url: avatarUrl || null,
       question,
       created_at: today,
     })
-    .select('id, profile_id, author_id, author_name, question, created_at')
+    .select('id, profile_id, author_id, author_name, author_avatar_url, question, created_at')
     .single();
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -126,7 +145,7 @@ export async function GET(request: Request) {
   });
   const { data, error } = await anon
     .from('profile_questions')
-    .select('id, profile_id, author_id, author_name, question, created_at')
+    .select('id, profile_id, author_id, author_name, author_avatar_url, question, created_at')
     .eq('profile_id', profileId)
     .order('created_at', { ascending: false })
     .limit(50);

@@ -68,7 +68,9 @@ export default function ProfileModal({
   const [questionBusy, setQuestionBusy] = useState(false);
   const [questions, setQuestions] = useState<Array<{
     id: string;
+    author_id?: string;
     author_name: string;
+    author_avatar_url?: string | null;
     question: string;
     created_at: string;
   }>>([]);
@@ -400,7 +402,16 @@ export default function ProfileModal({
                         {questions.map((q) => (
                           <article key={q.id} className="rounded-xl border border-slate-100 bg-slate-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-800">
                             <div className="flex items-start justify-between gap-2">
-                              <p className="min-w-0 truncate text-xs font-bold text-slate-900 dark:text-white">{q.author_name || 'Житель Даймохк'}</p>
+                              <div className="flex min-w-0 items-center gap-2">
+                                <div className="h-6 w-6 shrink-0 overflow-hidden rounded-full bg-slate-200 dark:bg-zinc-700 flex items-center justify-center">
+                                  {q.author_avatar_url ? (
+                                    <img src={q.author_avatar_url} alt="" className="h-full w-full object-cover" />
+                                  ) : (
+                                    <span className="text-[10px] font-bold text-slate-500">{(q.author_name || 'Ж').charAt(0)}</span>
+                                  )}
+                                </div>
+                                <p className="min-w-0 truncate text-xs font-bold text-slate-900 dark:text-white">{q.author_name || 'Житель Даймохк'}</p>
+                              </div>
                               <time className="shrink-0 text-[10px] font-medium text-slate-400">{formatReviewDate(q.created_at)}</time>
                             </div>
                             <p className="mt-1 break-words [overflow-wrap:anywhere] whitespace-pre-wrap text-xs leading-relaxed text-slate-600 dark:text-zinc-400">{q.question}</p>

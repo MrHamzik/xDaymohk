@@ -129,12 +129,35 @@ export async function POST(request: Request) {
   // because both rows are owned by the service role.
   const reviewId = `review-${Date.now()}`;
   const today = new Date().toISOString().split('T')[0];
+
+  // Source of truth for the reviewer's display name and avatar
+  // is user_profiles, not auth.users.user_metadata. The latter is
+  // a stale cache of whatever Google sent at signup; if the user
+  // later edited their name / avatar in the account modal,
+  // user_profiles holds the up-to-date value. We fall back to the
+  // Google metadata only when user_profiles is empty (e.g. the
+  // account row was just created by the onboarding trigger and the
+  // realtime sync hasn't finished yet), and to a generic default
+  // when both are missing.
+  const { data: accountRow, error: accountError } = await admin
+    .from('user_profiles')
+    .select('full_name, avatar_url')
+    .eq('id', userData.user.id)
+    .maybeSingle();
+  if (accountError) {
+    return NextResponse.json({ error: accountError.message }, { status: 500 });
+  }
   const fullName = String(
-    userData.user.user_metadata?.full_name
+    accountRow?.full_name
+    ?? userData.user.user_metadata?.full_name
     ?? userData.user.user_metadata?.name
     ?? 'Житель Даймохк',
   );
-  const avatarUrl = String(userData.user.user_metadata?.avatar_url ?? '');
+  const avatarUrl = String(
+    accountRow?.avatar_url
+    ?? userData.user.user_metadata?.avatar_url
+    ?? '',
+  );
 
   const [{ error: insertError }, { error: updateError }] = await Promise.all([
     admin.from('reviews').insert({
