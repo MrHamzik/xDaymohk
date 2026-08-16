@@ -10,7 +10,8 @@ interface NotificationsContextValue {
   unreadCount: number;
   markRead: (notificationId: string) => Promise<void>;
   markAllRead: () => Promise<void>;
-  createNotification: (recipientId: string, type: NotificationType, title: string, message: string) => Promise<void>;
+  createNotification: (recipientId: string, type: NotificationType, title: string, message: string, ceTitle?: string, ceMessage?: string, sender?: string) => Promise<void>;
+  deleteNotification: (notificationId: string) => Promise<void>;
 }
 
 const NotificationsContext = createContext<NotificationsContextValue | undefined>(undefined);
@@ -22,6 +23,9 @@ function fromDbRow(row: Record<string, any>): AppNotification {
     type: row.type ?? 'system',
     title: row.title ?? 'Уведомление',
     message: row.message ?? '',
+    titleCe: row.title_ce ?? undefined,
+    messageCe: row.message_ce ?? undefined,
+    sender: row.sender ?? undefined,
     isRead: Boolean(row.is_read),
     createdAt: row.created_at ?? new Date().toISOString(),
   };
@@ -120,13 +124,16 @@ export default function NotificationsProvider({ children }: { children: React.Re
     setNotifications((current) => current.map((item) => ({ ...item, isRead: true })));
   }, [account?.id]);
 
-  const createNotification = useCallback(async (recipientId: string, type: NotificationType, title: string, message: string) => {
+  const createNotification = useCallback(async (recipientId: string, type: NotificationType, title: string, message: string, ceTitle?: string, ceMessage?: string, sender?: string) => {
     const notification: AppNotification = {
       id: `notification-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       recipientId,
       type,
       title,
       message,
+      titleCe: ceTitle || undefined,
+      messageCe: ceMessage || undefined,
+      sender: sender || undefined,
       isRead: false,
       createdAt: new Date().toISOString(),
     };
@@ -138,6 +145,9 @@ export default function NotificationsProvider({ children }: { children: React.Re
         type: notification.type,
         title: notification.title,
         message: notification.message,
+        title_ce: notification.titleCe ?? null,
+        message_ce: notification.messageCe ?? null,
+        sender: notification.sender ?? null,
         is_read: false,
         created_at: notification.createdAt,
       });
@@ -154,13 +164,24 @@ export default function NotificationsProvider({ children }: { children: React.Re
     }
   }, [account?.id]);
 
+  const deleteNotification = useCallback(async (notificationId: string) => {
+    if (supabase && isSupabaseConfigured) {
+      const { error } = await supabase.from('notifications').delete().eq('id', notificationId);
+      if (error) {
+        console.warn('Не удалось удалить уведомление:', error.message);
+      }
+    }
+    setNotifications((current) => current.filter((item) => item.id !== notificationId));
+  }, []);
+
   const value = useMemo(() => ({
     notifications,
     unreadCount: notifications.filter((item) => !item.isRead).length,
     markRead,
     markAllRead,
     createNotification,
-  }), [notifications, markRead, markAllRead, createNotification]);
+    deleteNotification,
+  }), [notifications, markRead, markAllRead, createNotification, deleteNotification]);
 
   return <NotificationsContext.Provider value={value}>{children}</NotificationsContext.Provider>;
 }

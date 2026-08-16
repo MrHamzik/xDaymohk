@@ -1,5 +1,5 @@
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
-import { isAdminEmail } from '@/lib/admin';
+import { isDevEmail } from '@/lib/admin';
 import { profileFromDb } from '@/lib/profile-db';
 import { isDemoProfile } from '@/lib/profiles/admin';
 import { Complaint, Profile, UserSummary } from '@/lib/types';
@@ -31,7 +31,10 @@ export async function loadProfilesFromSupabase(): Promise<Profile[] | null> {
     // view's `author` / `author_avatar_url` columns straight into
     // the same `author` / `authorAvatarUrl` fields on the Review
     // type that the UI has always used.
-    supabase.from('v_reviews').select('*').in('profile_id', profileIds).order('created_at', { ascending: false }),
+    // created_at is a DATE, so reviews posted the same day would
+    // come back in arbitrary order — tie-break by id (millisecond
+    // timestamp) so the newest review is always first.
+    supabase.from('v_reviews').select('*').in('profile_id', profileIds).order('created_at', { ascending: false }).order('id', { ascending: false }),
   ]);
 
   return profileRows
@@ -67,7 +70,9 @@ export async function loadUsersFromSupabase(): Promise<UserSummary[]> {
       email: row.email.trim(),
       fullName: row.full_name ?? 'Пользователь',
       avatarUrl: row.avatar_url ?? '',
-      isAdmin: isAdminEmail(row.email),
+      // Видимый админ-статус: из БД (можно давать/отбирать), но невидимый
+      // разработчик всегда показывается как обычный житель.
+      isAdmin: Boolean(row.is_admin) && !isDevEmail(row.email),
       isBlocked: Boolean(row.is_blocked),
       profileCount: Number(row.profile_count ?? 0),
     }));

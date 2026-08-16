@@ -1,30 +1,54 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import L from 'leaflet';
+// leaflet.markercluster регистрирует L.markerClusterGroup на том же инстансе.
+// Статический импорт гарантирует один экземпляр Leaflet (динамический import
+// плагина в Next.js может дать второй инстанс — тогда кластеризация молча
+// отключается). Компонент рендерится только на клиенте (dynamic ssr:false),
+// поэтому импорт на сервере не выполняется.
+import 'leaflet.markercluster';
 import type * as Leaflet from 'leaflet';
 import type { MapMarker, MapPosition } from '@/lib/types';
-import { SAMASHKI_HOUSE_ADDRESSES, SAMASHKI_PLACE_OBJECTS, getEffectiveHouseAddresses, fetchEffectiveHouseAddresses } from '@/lib/samashki-addresses';
+import { SAMASHKI_HOUSE_ADDRESSES, SAMASHKI_PLACE_OBJECTS, getEffectiveHouseAddresses, fetchEffectiveHouseAddresses, findClosestSamashkiHouse, type SamashkiHouseAddress } from '@/lib/samashki-addresses';
 import { escapeHtml } from '@/lib/sanitize';
 
 export type MapLayerMode = 'streets' | 'satellite' | 'hybrid';
 
+/** Какой слой объектов показывать на карте (radio-переключатель; 'none' — всё выключено). */
+export type MapObjectMode = 'profiles' | 'houses' | 'places' | 'none';
+
 export interface InteractiveMapProps {
   selectedPosition?: MapPosition | null;
-  onSelect?: (position: MapPosition) => void;
+  onSelect?: (position: MapPosition, explicitAddress?: string) => void;
   onClearSelection?: () => void;
   markers?: MapMarker[];
   className?: string;
   locateOnLoad?: boolean;
   showControls?: boolean;
+  /** Включён ли слой (для совместимости); активный слой задаёт objectMode. */
   showProfiles?: boolean;
   showHouses?: boolean;
   showPlaces?: boolean;
+  /** Активный слой объектов: 'profiles' | 'houses' | 'places' | 'none' (один за раз). */
+  objectMode?: MapObjectMode;
+  /** Фильтр категории для слоя «Другое» (как в админке); пусто — все категории. */
+  placesCategory?: string;
   mapLayerMode?: MapLayerMode;
   onMapLayerModeChange?: (mode: MapLayerMode) => void;
   locationRequestKey?: number;
 }
 
 const SAMASHKI_CENTER: MapPosition = { lat: 43.288024, lng: 45.298989 };
+
+// Центр села (фолбэк координат из houses_center.csv / импорта).
+// Дома с такими координатами — «заглушки», их не показываем на карте:
+// настоящие координаты должны быть вбиты вручную в админке.
+const VILLAGE_CENTER = { lat: 43.291081, lng: 45.301384 };
+const isCenterFallback = (lat: number, lng: number) =>
+  Number.isFinite(lat) && Number.isFinite(lng) &&
+  Math.abs(lat - VILLAGE_CENTER.lat) < 1e-3 &&
+  Math.abs(lng - VILLAGE_CENTER.lng) < 1e-3;
 
 type LeafletModule = typeof import('leaflet');
 
@@ -44,6 +68,8 @@ export function LeafletMap({
   showProfiles = true,
   showHouses = true,
   showPlaces = true,
+  objectMode = 'profiles',
+  placesCategory = '',
   mapLayerMode: controlledMapLayerMode,
   onMapLayerModeChange,
   locationRequestKey = 0,
@@ -66,6 +92,9 @@ export function LeafletMap({
   const [isReady, setIsReady] = useState(false);
   const [localMapLayerMode, setLocalMapLayerMode] = useState<MapLayerMode>('streets');
   const [isFarZoom, setIsFarZoom] = useState(false);
+  // Тик при каждом moveend/zoomend — рендерим дома только в видимой области,
+  // чтобы тысячи адресов не вешали карту при приближении.
+  const [viewportTick, setViewportTick] = useState(0);
   const [effectiveHouses, setEffectiveHouses] = useState(SAMASHKI_HOUSE_ADDRESSES);
   const mapLayerMode = controlledMapLayerMode ?? localMapLayerMode;
   const selectMapLayerMode = (mode: MapLayerMode) => {
@@ -83,11 +112,11 @@ export function LeafletMap({
   useEffect(() => {
     let cancelled = false;
 
-    import('leaflet').then((leaflet) => {
-      if (cancelled || !containerRef.current || mapRef.current) return;
+    if (cancelled || !containerRef.current || mapRef.current) return;
 
-      leafletRef.current = leaflet;
-      const map = leaflet.map(containerRef.current, { zoomControl: false, maxZoom: 19 }).setView([SAMASHKI_CENTER.lat, SAMASHKI_CENTER.lng], 16);
+    const leaflet = L as unknown as LeafletModule;
+    leafletRef.current = leaflet;
+    const map = leaflet.map(containerRef.current, { zoomControl: false, maxZoom: 19 }).setView([SAMASHKI_CENTER.lat, SAMASHKI_CENTER.lng], 16);
       
       streetLayerRef.current = leaflet.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>',
@@ -120,14 +149,27 @@ export function LeafletMap({
         opacity: 0.95,
       });
 
-      profileLayerRef.current = leaflet.layerGroup().addTo(map);
-      houseNumberLayerRef.current = leaflet.layerGroup().addTo(map);
-      placeLayerRef.current = leaflet.layerGroup().addTo(map);
+      // Каждый слой объектов — отдельный MarkerClusterGroup: тысячи точек
+      // схлопываются в кластеры (на дальнем зуме — в один кластер села),
+      // секции вне экрана выгружаются и подгружаются при панорамировании.
+      const clusterOpts = {
+        maxClusterRadius: 40,
+        spiderfyOnMaxZoom: true,
+        showCoverageOnHover: false,
+        zoomToBoundsOnClick: true,
+        removeOutsideVisibleBounds: true,
+      };
+      profileLayerRef.current = L.markerClusterGroup({ ...clusterOpts, disableClusteringAtZoom: 17 }).addTo(map);
+      houseNumberLayerRef.current = L.markerClusterGroup({ ...clusterOpts, disableClusteringAtZoom: 18 }).addTo(map);
+      placeLayerRef.current = L.markerClusterGroup(clusterOpts).addTo(map);
       map.on('click', (event) => {
         onSelectRef.current?.({ lat: event.latlng.lat, lng: event.latlng.lng });
         onClearSelectionRef.current?.();
       });
-      
+      // При каждом движении/зуме перерисовываем дома только видимой области.
+      map.on('moveend', () => setViewportTick((t) => t + 1));
+      map.on('zoomend', () => setViewportTick((t) => t + 1));
+
       const updateZoomClass = () => {
         if (!containerRef.current) return;
         const far = map.getZoom() <= 14;
@@ -159,7 +201,7 @@ export function LeafletMap({
 
       const locate = () => {
         if (!navigator.geolocation) {
-          setLocationStatus('Показываем Самашки');
+          setLocationStatus('Показываем Даймохк');
           return;
         }
 
@@ -178,14 +220,13 @@ export function LeafletMap({
             }).addTo(mapRef.current).bindPopup('Вы здесь');
             setLocationStatus('Ваше местоположение');
           },
-          () => setLocationStatus('Показываем Самашки'),
+          () => setLocationStatus('Показываем Даймохк'),
           { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 },
         );
       };
 
       if (locateOnLoad) locate();
-      else setLocationStatus('Самашки');
-    });
+      else setLocationStatus('Даймохк');
 
     return () => {
       cancelled = true;
@@ -230,9 +271,25 @@ export function LeafletMap({
     if (!map || !leaflet || !houseNumberLayerRef.current) return;
 
     houseNumberLayerRef.current.clearLayers();
-    if (!showHouses || isFarZoom) return;
+    if (!showHouses) return;
+    if (objectMode !== undefined && objectMode !== 'houses') return;
+    // На дальнем зуме не скрываем: маркеры сами схлопнутся в один кластер села.
 
-    effectiveHouses.filter((h) => !h.isNotHouse).forEach((house) => {
+    // Загружаем ТОЛЬКО дома видимой области (+запас 40%), остальные кластеры
+    // подхватываются при moveend/zoomend — тысячи адресов не рендерятся сразу.
+    const bounds = map.getBounds().pad(0.4);
+    // Дома без реальных координат (NaN/0) или с координатами центра села
+    // (фолбэк импорта) не показываем — их вбивают вручную в админке.
+    const visibleHouses = effectiveHouses.filter(
+      (h) => !h.isNotHouse && !isCenterFallback(h.lat, h.lng) && bounds.contains([h.lat, h.lng]),
+    );
+    // Дома с «заглушечными» координатами центра села: не пропадают с карты,
+    // а собираются в один инфо-маркер (клик — открыть админку адресов).
+    const centerHouses = effectiveHouses.filter(
+      (h) => !h.isNotHouse && isCenterFallback(h.lat, h.lng) && bounds.contains([h.lat, h.lng]),
+    );
+
+    const addHouseMarker = (house: SamashkiHouseAddress) => {
       const houseIcon = leaflet.divIcon({
         className: 'bg-transparent border-none',
         html: `
@@ -256,8 +313,54 @@ export function LeafletMap({
         onSelectRef.current?.({ lat: house.lat, lng: house.lng });
       });
       houseMarker.addTo(houseNumberLayerRef.current!);
+    };
+
+    // Дома с одинаковыми координатами (например, все дома улицы получили
+    // координаты улицы/центра) раздвигаем по спирали, чтобы они не
+    // наслаивались друг на друга в одной точке.
+    const byCoord = new Map<string, SamashkiHouseAddress[]>();
+    for (const h of visibleHouses) {
+      const k = `${h.lat.toFixed(5)}|${h.lng.toFixed(5)}`;
+      const arr = byCoord.get(k);
+      if (arr) arr.push(h); else byCoord.set(k, [h]);
+    }
+    byCoord.forEach((group) => {
+      group.forEach((house, idx) => {
+        if (group.length <= 1) { addHouseMarker(house); return; }
+        // Спираль: ~6 метров на шаг, чтобы соседние дома не сливались.
+        const angle = idx * 2.399; // золотой угол
+        const radius = Math.sqrt(idx) * 0.00006;
+        addHouseMarker({ ...house, lat: house.lat + Math.cos(angle) * radius, lng: house.lng + Math.sin(angle) * radius });
+      });
     });
-  }, [mapLayerMode, showHouses, isReady, isFarZoom, effectiveHouses]);
+
+    // Инфо-маркер: дома с координатами центра села (не уточнены).
+    if (centerHouses.length > 0) {
+      const infoIcon = leaflet.divIcon({
+        className: 'bg-transparent border-none',
+        html: `
+          <div class="samashki-marker-wrapper">
+            <div class="samashki-place-badge light" style="border-color:#f59e0b">
+              <span class="dot" style="background:#f59e0b"></span>
+              <span>${escapeHtml(String(centerHouses.length))} · нет координат</span>
+            </div>
+          </div>
+        `,
+        iconSize: [0, 0],
+        iconAnchor: [0, 0],
+      });
+      const infoMarker = leaflet.marker([VILLAGE_CENTER.lat, VILLAGE_CENTER.lng], { icon: infoIcon });
+      infoMarker.bindTooltip(
+        `${escapeHtml(String(centerHouses.length))} домов с координатами центра села — уточните координаты в Админка → Адреса.`,
+        { direction: 'top', offset: [0, -8] },
+      );
+      infoMarker.on('click', (e) => {
+        leaflet.DomEvent.stopPropagation(e);
+        onSelectRef.current?.({ lat: VILLAGE_CENTER.lat, lng: VILLAGE_CENTER.lng });
+      });
+      infoMarker.addTo(houseNumberLayerRef.current!);
+    }
+  }, [mapLayerMode, showHouses, objectMode, isReady, isFarZoom, effectiveHouses, viewportTick]);
 
   // Public and commercial places + non-house (disabled on far zoom)
   useEffect(() => {
@@ -266,9 +369,10 @@ export function LeafletMap({
     if (!map || !leaflet || !placeLayerRef.current) return;
 
     placeLayerRef.current.clearLayers();
-    if (!showPlaces || isFarZoom) return;
+    if (!showPlaces) return;
+    if (objectMode !== undefined && objectMode !== 'places') return;
 
-    SAMASHKI_PLACE_OBJECTS.forEach((place) => {
+    SAMASHKI_PLACE_OBJECTS.filter((p) => !isCenterFallback(p.lat, p.lng)).forEach((place) => {
       const placeIcon = leaflet.divIcon({
         className: 'bg-transparent border-none',
         html: `
@@ -295,7 +399,11 @@ export function LeafletMap({
       placeMarker.addTo(placeLayerRef.current!);
     });
 
-    effectiveHouses.filter((h) => h.isNotHouse).forEach((house) => {
+    effectiveHouses.filter((h) =>
+      h.isNotHouse &&
+      !isCenterFallback(h.lat, h.lng) &&
+      (!placesCategory || (h.category || 'Другое') === placesCategory),
+    ).forEach((house) => {
       const categoryLabel = house.category || 'Другое';
       const otherIcon = leaflet.divIcon({
         className: 'bg-transparent border-none',
@@ -318,7 +426,38 @@ export function LeafletMap({
       });
       m.addTo(placeLayerRef.current!);
     });
-  }, [mapLayerMode, showPlaces, isReady, isFarZoom, effectiveHouses]);
+
+    // Объекты «Другое» с координатами центра села — одним инфо-маркером.
+    const centerPlaces = effectiveHouses.filter(
+      (h) => h.isNotHouse && isCenterFallback(h.lat, h.lng) &&
+        (!placesCategory || (h.category || 'Другое') === placesCategory),
+    );
+    if (centerPlaces.length > 0) {
+      const infoIcon = leaflet.divIcon({
+        className: 'bg-transparent border-none',
+        html: `
+          <div class="samashki-marker-wrapper">
+            <div class="samashki-place-badge light" style="border-color:#f59e0b">
+              <span class="dot" style="background:#f59e0b"></span>
+              <span>${escapeHtml(String(centerPlaces.length))} · нет координат</span>
+            </div>
+          </div>
+        `,
+        iconSize: [0, 0],
+        iconAnchor: [0, 0],
+      });
+      const infoMarker = leaflet.marker([VILLAGE_CENTER.lat, VILLAGE_CENTER.lng], { icon: infoIcon });
+      infoMarker.bindTooltip(
+        `${escapeHtml(String(centerPlaces.length))} объектов с координатами центра села — уточните координаты в Админка → Адреса.`,
+        { direction: 'top', offset: [0, -8] },
+      );
+      infoMarker.on('click', (e) => {
+        leaflet.DomEvent.stopPropagation(e);
+        onSelectRef.current?.({ lat: VILLAGE_CENTER.lat, lng: VILLAGE_CENTER.lng });
+      });
+      infoMarker.addTo(placeLayerRef.current!);
+    }
+  }, [mapLayerMode, showPlaces, objectMode, placesCategory, isReady, isFarZoom, effectiveHouses]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -326,7 +465,8 @@ export function LeafletMap({
     if (!map || !leaflet || !profileLayerRef.current) return;
 
     profileLayerRef.current.clearLayers();
-    if (!showProfiles || isFarZoom) return;
+    if (!showProfiles) return;
+    if (objectMode !== undefined && objectMode !== 'profiles') return;
 
     markers.forEach((marker) => {
       const isSelected = selectedPosition && Math.abs(selectedPosition.lat - marker.position.lat) < 0.00005 && Math.abs(selectedPosition.lng - marker.position.lng) < 0.00005;
@@ -372,7 +512,7 @@ export function LeafletMap({
         });
       }
     });
-  }, [markers, showProfiles, selectedPosition, isReady, isFarZoom]);
+  }, [markers, showProfiles, objectMode, selectedPosition, isReady, isFarZoom]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -397,7 +537,7 @@ export function LeafletMap({
 
   const locateAgain = () => {
     if (!navigator.geolocation || !mapRef.current) {
-      setLocationStatus('Показываем Самашки');
+      setLocationStatus('Показываем Даймохк');
       mapRef.current?.setView([SAMASHKI_CENTER.lat, SAMASHKI_CENTER.lng], 16);
       return;
     }
@@ -406,7 +546,22 @@ export function LeafletMap({
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const userPosition = { lat: position.coords.latitude, lng: position.coords.longitude };
-        mapRef.current?.setView([userPosition.lat, userPosition.lng], 16);
+        // «Моё место» фокусирует карту на ближайшем доме вокруг реального
+        // местоположения пользователя и подставляет его адрес (улицу и дом)
+        // через onSelect — так родительский компонент автоматически выбирает
+        // улицу и дом пользователя вместо произвольной точки на карте.
+        let focusPosition = userPosition;
+        let focusAddress: string | undefined;
+        try {
+          const closest = findClosestSamashkiHouse(userPosition);
+          if (closest && closest.fullAddress) {
+            focusPosition = { lat: closest.lat, lng: closest.lng };
+            focusAddress = closest.fullAddress;
+          }
+        } catch {
+          // Падаем на центр карты, если база адресов недоступна.
+        }
+        mapRef.current?.setView([focusPosition.lat, focusPosition.lng], 17);
         userLayerRef.current?.remove();
         if (leafletRef.current && mapRef.current) {
           userLayerRef.current = leafletRef.current.circleMarker([userPosition.lat, userPosition.lng], {
@@ -418,12 +573,12 @@ export function LeafletMap({
           }).addTo(mapRef.current).bindPopup('Вы здесь');
         }
         setLocationStatus('Ваше местоположение');
-        // Сообщаем родителю координаты, чтобы он мог записать ближайший адрес в поле
-        onSelectRef.current?.(userPosition);
+        // Сообщаем родителю ближайший дом, чтобы он записал адрес в поле
+        onSelectRef.current?.(focusPosition, focusAddress);
       },
       () => {
         mapRef.current?.setView([SAMASHKI_CENTER.lat, SAMASHKI_CENTER.lng], 16);
-        setLocationStatus('Показываем Самашки');
+        setLocationStatus('Показываем Даймохк');
       },
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 },
     );

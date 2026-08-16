@@ -1,7 +1,7 @@
 'use client';
 
 import { useAuth } from '@/components/AuthProvider';
-import { CheckCircle2, Clock3, ShieldAlert } from 'lucide-react';
+import { CheckCircle2, Clock3, ShieldAlert, Star } from 'lucide-react';
 import { Profile } from '@/lib/types';
 import { calculateWorkingStatus } from '@/lib/schedule';
 import { useI18n } from '@/lib/i18n';
@@ -65,7 +65,7 @@ interface ProfileBadgesProps {
 
 export default function ProfileBadges({ profile, adminStatus = false, onDarkBackground = false, showPending = false }: ProfileBadgesProps) {
   const { t } = useI18n();
-  const isAdmin = Boolean(adminStatus || profile.isAdmin);
+  const isAdmin = Boolean(adminStatus);
   const isPending = showPending && profile.verificationStatus === 'pending';
   const isVerified = Boolean(!isPending && (profile.isVerified || profile.verificationStatus === 'verified'));
 
@@ -88,6 +88,7 @@ export default function ProfileBadges({ profile, adminStatus = false, onDarkBack
             ? 'border-emerald-300/50 bg-emerald-500/40 text-emerald-50'
             : 'border-emerald-200/60 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
         }`}>
+          <Star className={`h-3 w-3 ${onDarkBackground ? 'text-emerald-100' : 'text-emerald-600 dark:text-emerald-400'}`} />
           {t.roleSpecialist}
         </span>
       )}

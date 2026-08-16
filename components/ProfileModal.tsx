@@ -2,14 +2,17 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { Ban, Clock, ExternalLink, Flag, MapPin, MessageSquare, Phone, Send, Star, X } from 'lucide-react';
+import { Ban, ChevronDown, Clock, ExternalLink, Flag, MapPin, MessageSquare, Phone, Send, Star, Trash2, X } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
+import { useProfiles } from '@/components/ProfilesProvider';
+import { useI18n } from '@/lib/i18n';
 import { supabase } from '@/lib/supabase';
 import { Certificate, Profile, Review } from '@/lib/types';
 import { formatReviews } from '@/lib/text';
 import { calculateWorkingStatus } from '@/lib/schedule';
 import Notice from '@/components/Notice';
 import ProfileBadges, { WorkingStatusBadge } from '@/components/ProfileBadges';
+import { cacheBustAvatarUrl } from '@/lib/media';
 
 interface ProfileModalProps {
   profile: Profile | null;
@@ -23,6 +26,20 @@ interface ProfileModalProps {
   canBlock?: boolean;
   onBlock?: () => void;
   isViewerBlocked?: boolean;
+}
+
+/** One comment in the inline discussion under a question. */
+interface QuestionComment {
+  id: string;
+  question_id: string;
+  author_id?: string;
+  author_name: string;
+  author_avatar_url?: string | null;
+  comment: string;
+  created_at: string;
+  reply_to_id?: string | null;
+  reply_to_author_id?: string | null;
+  reply_to_author_name?: string | null;
 }
 
 function getYoutubeEmbedUrl(value: string) {
@@ -46,6 +63,35 @@ function formatReviewDate(value: string) {
   return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat('ru-RU').format(date);
 }
 
+/**
+ * Достаёт ID видео из ссылки YouTube (watch?v=, youtu.be/, /embed/, /shorts/).
+ * Возвращает null для любых других ссылок — в iframe вставляем ТОЛЬКО
+ * youtube-nocookie.com/embed/<id>, произвольные URL не рендерим.
+ */
+function youtubeEmbedId(url?: string): string | null {
+  if (!url) return null;
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return null;
+  }
+  const host = parsed.hostname.toLowerCase().replace(/^www\./, '');
+  if (host === 'youtu.be') {
+    const id = parsed.pathname.split('/').filter(Boolean)[0];
+    return id && /^[A-Za-z0-9_-]{6,}$/.test(id) ? id : null;
+  }
+  if (host === 'youtube.com' || host === 'm.youtube.com' || host === 'www.youtube-nocookie.com') {
+    if (parsed.pathname.startsWith('/embed/') || parsed.pathname.startsWith('/shorts/')) {
+      const id = parsed.pathname.split('/')[2];
+      return id && /^[A-Za-z0-9_-]{6,}$/.test(id) ? id : null;
+    }
+    const v = parsed.searchParams.get('v');
+    return v && /^[A-Za-z0-9_-]{6,}$/.test(v) ? v : null;
+  }
+  return null;
+}
+
 export default function ProfileModal({
   profile,
   onClose,
@@ -59,7 +105,13 @@ export default function ProfileModal({
   isViewerBlocked = false,
 }: ProfileModalProps) {
   const { account } = useAuth();
+  const { language, t } = useI18n();
+  const { profiles: allProfiles, users: allUsers, isProfileAdmin, createNotification } = useProfiles();
   const [selectedCert, setSelectedCert] = useState<Certificate | null>(null);
+  // A user card opened from a name link renders as a nested ProfileModal
+  // on top of this one; closing it returns to this анкета instead of
+  // closing everything and dropping back to the catalog.
+  const [nestedProfile, setNestedProfile] = useState<Profile | null>(null);
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewText, setReviewText] = useState('');
   const [activeTab, setActiveTab] = useState<'reviews' | 'questions' | 'ratings'>('reviews');
@@ -72,8 +124,23 @@ export default function ProfileModal({
     author_name: string;
     author_avatar_url?: string | null;
     question: string;
+    comment_count?: number;
     created_at: string;
   }>>([]);
+  // Inline discussion under each question: loaded comments per question id,
+  // which question is expanded, draft comments, and which question's
+  // comments are currently loading.
+  const [commentsByQuestion, setCommentsByQuestion] = useState<Record<string, QuestionComment[]>>({});
+  const [expandedQuestion, setExpandedQuestion] = useState<string | null>(null);
+  const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
+  const [commentsLoading, setCommentsLoading] = useState<string | null>(null);
+  // "Ответить" target per question: the comment being replied to.
+  const [replyTargets, setReplyTargets] = useState<Record<string, { id: string; name: string } | null>>({});
+  // Id of the review / question / comment currently being deleted.
+  const [busyId, setBusyId] = useState<string | null>(null);
+  // Local copy of the reviews list so deletions reflect immediately
+  // without waiting for a full provider refresh.
+  const [localReviews, setLocalReviews] = useState<Review[] | null>(null);
 
   useEffect(() => {
     setReviewRating(0);
@@ -81,13 +148,17 @@ export default function ProfileModal({
     setNotice('');
     setSelectedCert(null);
     setQuestionText('');
+    setCommentsByQuestion({});
+    setExpandedQuestion(null);
+    setCommentDrafts({});
+    setReplyTargets({});
+    setLocalReviews(null);
   }, [profile?.id]);
 
-  // Load the latest questions for this profile every time the user
-  // opens the "Вопросы" tab. Cheap on the server (one indexed
-  // SELECT, max 50 rows) and keeps the modal responsive.
+  // Load the latest questions for this profile every time the modal opens —
+  // the list is also used for the "ВОПРОСЫ (N)" counter in the tab header.
   useEffect(() => {
-    if (activeTab !== 'questions' || !profile?.id) return;
+    if (!profile?.id) return;
     let cancelled = false;
     const load = async () => {
       try {
@@ -101,7 +172,7 @@ export default function ProfileModal({
     };
     void load();
     return () => { cancelled = true; };
-  }, [activeTab, profile?.id]);
+  }, [profile?.id]);
 
   const handleQuestionSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -147,13 +218,247 @@ export default function ProfileModal({
     }
   };
 
+  /** Resolve the current access token for API calls. */
+  const requireSession = async (): Promise<string> => {
+    if (!supabase) {
+      throw new Error('Supabase не настроен — войдите снова.');
+    }
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    if (!accessToken) throw new Error('Сессия истекла — войдите снова.');
+    return accessToken;
+  };
+
+  /** Toggle the collapsible discussion under a question, loading the
+   *  comments on first expand. */
+  const toggleDiscussion = (questionId: string) => {
+    if (expandedQuestion === questionId) {
+      setExpandedQuestion(null);
+      return;
+    }
+    setExpandedQuestion(questionId);
+    if (!commentsByQuestion[questionId] && commentsLoading !== questionId) {
+      void loadComments(questionId);
+    }
+  };
+
+  const loadComments = async (questionId: string) => {
+    setCommentsLoading(questionId);
+    try {
+      const response = await fetch(`/api/question-comments?questionId=${encodeURIComponent(questionId)}`, { cache: 'no-store' });
+      if (!response.ok) return;
+      const result = await response.json();
+      const comments = Array.isArray(result.comments) ? result.comments : [];
+      setCommentsByQuestion((current) => ({ ...current, [questionId]: comments }));
+      // Keep the "Обсуждение (N)" counter in sync with the loaded thread.
+      setQuestions((current) => current.map((q) => (q.id === questionId ? { ...q, comment_count: comments.length } : q)));
+    } catch {
+      // Network blip — leave the previous state in place.
+    } finally {
+      setCommentsLoading(null);
+    }
+  };
+
+  const handleCommentSubmit = async (event: React.FormEvent, questionId: string) => {
+    event.preventDefault();
+    if (!account) {
+      setNotice('Войдите через Google, чтобы оставить комментарий.');
+      return;
+    }
+    if (busyId) return;
+    const comment = (commentDrafts[questionId] ?? '').trim().slice(0, 500);
+    if (comment.length < 1) {
+      setNotice('Введите текст комментария.');
+      return;
+    }
+    const replyToId = replyTargets[questionId]?.id;
+    setBusyId(`comment-${questionId}`);
+    try {
+      const accessToken = await requireSession();
+      const response = await fetch('/api/question-comments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ questionId, comment, replyToId }),
+      });
+      if (!response.ok) {
+        const result = await response.json().catch(() => null);
+        throw new Error(result?.error ?? 'Не удалось отправить комментарий.');
+      }
+      const result = await response.json();
+      if (result.comment) {
+        setCommentsByQuestion((current) => ({
+          ...current,
+          [questionId]: [...(current[questionId] ?? []), result.comment],
+        }));
+        setQuestions((current) => current.map((q) => (q.id === questionId ? { ...q, comment_count: (q.comment_count ?? 0) + 1 } : q)));
+        setCommentDrafts((drafts) => {
+          const next = { ...drafts };
+          delete next[questionId];
+          return next;
+        });
+        setReplyTargets((targets) => {
+          const next = { ...targets };
+          delete next[questionId];
+          return next;
+        });
+        if (profile?.ownerId && profile.ownerId !== account.id) {
+          void createNotification(
+            profile.ownerId,
+            'comment_replied',
+            'Новый комментарий',
+            `${account.fullName || 'Кто-то'} оставил комментарий в обсуждении вашей анкеты.`,
+            'Керла комментарий',
+            `${account.fullName || 'Цхьаммо'} хьан анкетан хьежамехь комментарий йаздина.`,
+          );
+        }
+      }
+      setNotice('');
+    } catch (submitError) {
+      setNotice(submitError instanceof Error ? submitError.message : 'Не удалось отправить комментарий.');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string, questionId: string) => {
+    if (!account || busyId) return;
+    setBusyId(commentId);
+    try {
+      const accessToken = await requireSession();
+      const response = await fetch('/api/question-comments', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ commentId }),
+      });
+      if (!response.ok) {
+        const result = await response.json().catch(() => null);
+        throw new Error(result?.error ?? 'Не удалось удалить комментарий.');
+      }
+      setCommentsByQuestion((current) => ({
+        ...current,
+        [questionId]: (current[questionId] ?? []).filter((comment) => comment.id !== commentId),
+      }));
+      setQuestions((current) => current.map((q) => (q.id === questionId ? { ...q, comment_count: Math.max(0, (q.comment_count ?? 0) - 1) } : q)));
+      setNotice('');
+    } catch (submitError) {
+      setNotice(submitError instanceof Error ? submitError.message : 'Не удалось удалить комментарий.');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  /** "Ответить" on a comment: remember the target and pre-fill "Имя, ". */
+  const handleReplyToComment = (questionId: string, comment: QuestionComment) => {
+    const name = comment.author_name || 'Житель Даймохк';
+    setReplyTargets((targets) => ({ ...targets, [questionId]: { id: comment.id, name } }));
+    setCommentDrafts((drafts) => {
+      const base = drafts[questionId] ?? '';
+      const prefix = `${name}, `;
+      return { ...drafts, [questionId]: base.startsWith(prefix) ? base : `${prefix}${base}` };
+    });
+  };
+
+  const clearReply = (questionId: string) => {
+    setReplyTargets((targets) => ({ ...targets, [questionId]: null }));
+  };
+
+  /** Open the user's personal card (their personal profile, or any of their
+   *  profiles as a fallback) — used by the clickable "@Имя" links. */
+  const openUserCard = (userId?: string) => {
+    if (!userId) return;
+    const card = allProfiles.find((p) => p.ownerId === userId && p.isPersonal)
+      ?? allProfiles.find((p) => p.ownerId === userId);
+    if (card) setNestedProfile(card);
+  };
+
+  const handleDeleteQuestion = async (questionId: string) => {
+    if (!account || busyId) return;
+    setBusyId(questionId);
+    try {
+      const accessToken = await requireSession();
+      const response = await fetch('/api/profile-questions', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ questionId }),
+      });
+      if (!response.ok) {
+        const result = await response.json().catch(() => null);
+        throw new Error(result?.error ?? 'Не удалось удалить вопрос.');
+      }
+      setQuestions((current) => current.filter((q) => q.id !== questionId));
+      setNotice('');
+    } catch (submitError) {
+      setNotice(submitError instanceof Error ? submitError.message : 'Не удалось удалить вопрос.');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleDeleteReview = async (reviewId: string) => {
+    if (!account || busyId) return;
+    setBusyId(reviewId);
+    try {
+      const accessToken = await requireSession();
+      const response = await fetch('/api/reviews', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ reviewId }),
+      });
+      if (!response.ok) {
+        const result = await response.json().catch(() => null);
+        throw new Error(result?.error ?? 'Не удалось удалить отзыв.');
+      }
+      setLocalReviews((current) => (current ?? profile?.reviews ?? []).filter((r) => r.id !== reviewId));
+      setNotice('');
+    } catch (submitError) {
+      setNotice(submitError instanceof Error ? submitError.message : 'Не удалось удалить отзыв.');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   if (!profile) return null;
 
   const mapAddress = profile.workplaceAddress.toLowerCase().includes('самаш')
     ? profile.workplaceAddress
-    : `Самашки, ${profile.workplaceAddress}`;
+    : `Даймохк, ${profile.workplaceAddress}`;
   const isOwnProfile = Boolean(account && profile.ownerId && account.id === profile.ownerId);
-  const canReview = Boolean(account && !account.isBlocked && onReview && !isOwnProfile);
+  // Один аккаунт — один отзыв на анкету: форму скрываем, если уже оставил.
+  const alreadyReviewed = Boolean(
+    account && (localReviews ?? profile.reviews ?? []).some((r) => r.authorId === account.id),
+  );
+  const canReview = Boolean(account && !account.isBlocked && onReview && !isOwnProfile && !alreadyReviewed);
+
+  // Reviews rendered in the modal. After a local deletion we switch to
+  // the local list so the removed review disappears immediately and the
+  // rating / count are recomputed from what is left.
+  const displayReviews = localReviews ?? profile.reviews ?? [];
+  const displayReviewCount = localReviews !== null ? localReviews.length : profile.reviewCount;
+  const displayRating = (() => {
+    if (localReviews === null) return profile.rating;
+    if (localReviews.length === 0) return 0;
+    return Number((localReviews.reduce((sum, r) => sum + r.rating, 0) / localReviews.length).toFixed(1));
+  })();
+
+  /** May the viewer delete a review / question / comment? Author, анкета owner, admin. */
+  const canDeleteBy = (authorId?: string) =>
+    Boolean(
+      account &&
+      !account.isBlocked &&
+      (account.id === authorId || account.id === profile.ownerId || account.isAdmin),
+    );
 
   const isPersonal = Boolean(profile.isPersonal);
   const hasPhone = !isPersonal && !profile.hidePhone && Boolean(profile.phone && profile.phone.trim().length > 0);
@@ -229,7 +534,7 @@ export default function ProfileModal({
           <div className="flex items-center gap-3.5 pr-8">
             <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-slate-200/80 bg-slate-100 shadow-sm dark:border-zinc-800/60 dark:bg-zinc-800 sm:h-16 sm:w-16">
               <Image
-                src={profile.avatarUrl}
+                src={cacheBustAvatarUrl(profile.avatarUrl)}
                 alt={profile.fullName}
                 fill
                 sizes="(max-width: 768px) 64px, 64px"
@@ -250,20 +555,20 @@ export default function ProfileModal({
                 </p>
               )}
 
-              {profile.isSpecialist && profile.rating > 0 && (
+              {profile.isSpecialist && displayRating > 0 && (
                 <div className="mt-1 flex items-center gap-1 text-xs">
                   <div className="flex items-center font-bold text-amber-500">
                     <Star className="mr-0.5 h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                    {profile.rating.toFixed(1)}
+                    {displayRating.toFixed(1)}
                   </div>
-                  <span className="text-slate-400 dark:text-zinc-500">({formatReviews(profile.reviewCount)})</span>
+                  <span className="text-slate-400 dark:text-zinc-500">({formatReviews(displayReviewCount)})</span>
                 </div>
               )}
             </div>
           </div>
         </div>
 
-        <div className="flex-1 space-y-4 overflow-y-auto p-4 text-xs text-slate-800 dark:text-zinc-300 sm:p-5">
+        <div className="flex-1 space-y-4 overflow-y-auto p-4 text-xs text-slate-800 dark:text-zinc-300 sm:p-5 no-scrollbar">
           {(() => {
             const isOwner = Boolean(account && account.id === profile.ownerId);
             const effectiveOverride = isOwner ? account?.statusOverride : profile.statusOverride;
@@ -289,49 +594,87 @@ export default function ProfileModal({
           })()}
 
           {(profile.isHidden || profile.isBanned) && (
-            <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-800 dark:border-red-200 dark:bg-red-50 dark:text-red-800">
+            <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-800 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
               Эта анкета скрыта администратором и сейчас не видна в общем каталоге.
             </div>
           )}
           {isViewerBlocked && (
-            <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-800 dark:border-red-200 dark:bg-red-50 dark:text-red-800">
+            <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-800 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
               Ваш аккаунт заблокирован. Вы можете только просматривать информацию.
             </div>
           )}
-          <section>
-            <h3 className="mb-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">О человеке</h3>
-                        {profile.birthDate && (
-              <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-zinc-300">
-                <span className="flex h-5 items-center rounded-md bg-slate-100 px-2 dark:bg-zinc-800">Год рождения: {profile.birthDate}</span>
-                {profile.gender && (
-                  <span className="flex h-5 items-center rounded-md bg-slate-100 px-2 dark:bg-zinc-800">
-                    Пол: {profile.gender === 'male' ? 'Мужской' : 'Женский'}
-                  </span>
-                )}
+          {/* Пол и возраст — только в ЛИЧНОЙ анкете (это личные данные владельца,
+              в анкетах специалистов/жителей они не показываются). */}
+          {profile.isPersonal && (
+            <section>
+              <h3 className="mb-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">{t.aboutPerson}</h3>
+              {(() => {
+                // Пол и возраст берём из профиля аккаунта владельца (user_profiles),
+                // fallback — на данные анкеты.
+                const ownerUser = profile.ownerId ? allUsers.find((u) => u.id === profile.ownerId) : undefined;
+                const gender = ownerUser?.gender || profile.gender;
+                const birth = ownerUser?.birthDate || profile.birthDate;
+                if (!birth && !gender) return null;
+                const year = birth ? Number(String(birth).slice(0, 4)) : NaN;
+                const age = Number.isFinite(year) ? new Date().getFullYear() - year : NaN;
+                return (
+                  <div className="mb-2 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-700 dark:text-zinc-300">
+                    {birth && Number.isFinite(age) && age >= 0 && (
+                      <span className="flex h-5 items-center rounded-md bg-slate-100 px-2 dark:bg-zinc-800">
+                        {t.ageLabel}: {age}
+                      </span>
+                    )}
+                    {gender && (
+                      <span className="flex h-5 items-center rounded-md bg-slate-100 px-2 dark:bg-zinc-800">
+                        {t.genderLabel}: {gender === 'male' ? t.genderMale : t.genderFemale}
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
+            </section>
+          )}
+
+          <p className="break-words [overflow-wrap:anywhere] whitespace-pre-wrap rounded-xl border border-slate-100 bg-slate-50/70 p-3 text-xs leading-relaxed text-slate-700 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-400">
+            {profile.bio}
+          </p>
+          {profile.experience && (
+            <p className="mt-2 rounded-lg bg-emerald-50 px-2.5 py-1.5 text-sm font-extrabold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">Стаж: {profile.experience}</p>
+          )}
+
+          {/* Видео (YouTube) — показываем, если ссылка указана в анкете */}
+          {(() => {
+            const videoId = profile.videoUrl ? youtubeEmbedId(profile.videoUrl) : null;
+            if (!videoId) return null;
+            return (
+              <div className="mt-2 overflow-hidden rounded-2xl border border-slate-100 dark:border-zinc-800">
+                <iframe
+                  className="aspect-video w-full"
+                  src={`https://www.youtube-nocookie.com/embed/${videoId}`}
+                  title="Видео из анкеты"
+                  loading="lazy"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  allowFullScreen
+                />
               </div>
-            )}
-<p className="break-words [overflow-wrap:anywhere] whitespace-pre-wrap rounded-xl border border-slate-100 bg-slate-50/70 p-3 text-xs leading-relaxed text-slate-700 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-400">
-              {profile.bio}
-            </p>
-            {profile.experience && (
-              <p className="mt-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-400">Стаж: {profile.experience}</p>
-            )}
-          </section>
+            );
+          })()}
 
           {profile.isSpecialist && (
             <section className="bg-slate-50/50 dark:bg-zinc-950/50 rounded-2xl overflow-hidden border border-slate-100 dark:border-zinc-800">
               <div className="flex border-b border-slate-100 dark:border-zinc-800">
-                <button type="button" onClick={() => setActiveTab('reviews')} className={`flex-1 border-b-2 py-3 text-[11px] font-bold transition ${activeTab === 'reviews' ? 'border-emerald-500 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400' : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-zinc-500 dark:hover:text-zinc-300'}`}>ОТЗЫВЫ ({(profile.reviews ?? []).length})</button>
-                <button type="button" onClick={() => setActiveTab('questions')} className={`flex-1 border-b-2 py-3 text-[11px] font-bold transition ${activeTab === 'questions' ? 'border-emerald-500 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400' : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-zinc-500 dark:hover:text-zinc-300'}`}>ВОПРОСЫ</button>
+                <button type="button" onClick={() => setActiveTab('reviews')} className={`flex-1 border-b-2 py-3 text-[11px] font-bold transition ${activeTab === 'reviews' ? 'border-emerald-500 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400' : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-zinc-500 dark:hover:text-zinc-300'}`}>ОТЗЫВЫ ({displayReviewCount})</button>
+                <button type="button" onClick={() => setActiveTab('questions')} className={`flex-1 border-b-2 py-3 text-[11px] font-bold transition ${activeTab === 'questions' ? 'border-emerald-500 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400' : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-zinc-500 dark:hover:text-zinc-300'}`}>ВОПРОСЫ ({questions.length})</button>
                 <button type="button" onClick={() => setActiveTab('ratings')} className={`flex-1 border-b-2 py-3 text-[11px] font-bold transition ${activeTab === 'ratings' ? 'border-emerald-500 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400' : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-zinc-500 dark:hover:text-zinc-300'}`}>ОЦЕНКИ</button>
               </div>
 
               <div className="p-3">
                 {activeTab === 'reviews' && (
                   <div className="space-y-2">
-                    {(profile.reviews ?? []).length > 0 ? (
+                    {displayReviews.length > 0 ? (
                       <div className="space-y-2">
-                        {(profile.reviews ?? []).map((review) => (
+                        {displayReviews.map((review) => (
                     <article key={review.id} className="rounded-xl border border-slate-100 bg-slate-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-800">
                                             <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-2 min-w-0">
@@ -342,7 +685,14 @@ export default function ProfileModal({
                               <span className="text-[10px] font-bold text-slate-500">{review.author.charAt(0)}</span>
                             )}
                           </div>
-                          <p className="min-w-0 break-words text-xs font-bold text-slate-900 dark:text-white">{review.author}</p>
+                          <button
+                            type="button"
+                            onClick={() => openUserCard(review.authorId)}
+                            title="Открыть карточку пользователя"
+                            className="min-w-0 break-words text-left text-xs font-bold text-slate-900 transition hover:text-emerald-600 hover:underline dark:text-white dark:hover:text-emerald-400"
+                          >
+                            {review.author}
+                          </button>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <time className="text-[10px] font-medium text-slate-400">{formatReviewDate(review.createdAt)}</time>
@@ -350,6 +700,18 @@ export default function ProfileModal({
                             <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
                             {review.rating.toFixed(1)}
                           </span>
+                          {canDeleteBy(review.authorId) && (
+                            <button
+                              type="button"
+                              onClick={() => void handleDeleteReview(review.id)}
+                              disabled={busyId === review.id}
+                              aria-label="Удалить отзыв"
+                              title="Удалить отзыв"
+                              className="flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-40 dark:hover:bg-red-950 dark:hover:text-red-400"
+                            >
+                              <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                            </button>
+                          )}
                         </div>
                       </div>
                       <p className="mt-1 break-words [overflow-wrap:anywhere] whitespace-pre-wrap text-xs leading-relaxed text-slate-600 dark:text-zinc-400">{review.text}</p>
@@ -410,11 +772,173 @@ export default function ProfileModal({
                                     <span className="text-[10px] font-bold text-slate-500">{(q.author_name || 'Ж').charAt(0)}</span>
                                   )}
                                 </div>
-                                <p className="min-w-0 truncate text-xs font-bold text-slate-900 dark:text-white">{q.author_name || 'Житель Даймохк'}</p>
+                                <button
+                                  type="button"
+                                  onClick={() => openUserCard(q.author_id)}
+                                  title="Открыть карточку пользователя"
+                                  className="min-w-0 truncate text-xs font-bold text-slate-900 transition hover:text-emerald-600 hover:underline dark:text-white dark:hover:text-emerald-400"
+                                >
+                                  {q.author_name || 'Житель Даймохк'}
+                                </button>
                               </div>
-                              <time className="shrink-0 text-[10px] font-medium text-slate-400">{formatReviewDate(q.created_at)}</time>
+                              <div className="flex shrink-0 items-center gap-2">
+                                <time className="text-[10px] font-medium text-slate-400">{formatReviewDate(q.created_at)}</time>
+                                {canDeleteBy(q.author_id) && (
+                                  <button
+                                    type="button"
+                                    onClick={() => void handleDeleteQuestion(q.id)}
+                                    disabled={busyId === q.id}
+                                    aria-label="Удалить вопрос"
+                                    title="Удалить вопрос"
+                                    className="flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-40 dark:hover:bg-red-950 dark:hover:text-red-400"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                                  </button>
+                                )}
+                              </div>
                             </div>
                             <p className="mt-1 break-words [overflow-wrap:anywhere] whitespace-pre-wrap text-xs leading-relaxed text-slate-600 dark:text-zinc-400">{q.question}</p>
+
+                            <button
+                              type="button"
+                              onClick={() => toggleDiscussion(q.id)}
+                              aria-expanded={expandedQuestion === q.id}
+                              className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 transition hover:underline dark:text-emerald-400"
+                            >
+                              <MessageSquare className="h-3 w-3" />
+                              Обсуждение ({q.comment_count ?? commentsByQuestion[q.id]?.length ?? 0})
+                              <ChevronDown className={`h-3 w-3 transition-transform ${expandedQuestion === q.id ? 'rotate-180' : ''}`} />
+                            </button>
+
+                            {expandedQuestion === q.id && (
+                              <div className="mt-2 space-y-2 rounded-lg border border-slate-100 bg-white/60 p-2.5 dark:border-zinc-800 dark:bg-zinc-950/40">
+                                {commentsLoading === q.id ? (
+                                  <p className="text-[10px] text-slate-400">Загружаем обсуждение…</p>
+                                ) : (commentsByQuestion[q.id] ?? []).length > 0 ? (
+                                  <div className="space-y-2">
+                                    {(commentsByQuestion[q.id] ?? []).map((comment) => (
+                                      <div key={comment.id} className="flex items-start gap-2">
+                                        <div className="h-6 w-6 shrink-0 overflow-hidden rounded-full bg-slate-200 dark:bg-zinc-700 flex items-center justify-center">
+                                          {comment.author_avatar_url ? (
+                                            <img src={comment.author_avatar_url} alt="" className="h-full w-full object-cover" />
+                                          ) : (
+                                            <span className="text-[10px] font-bold text-slate-500">{(comment.author_name || 'Ж').charAt(0)}</span>
+                                          )}
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                          <div className="flex flex-wrap items-center gap-1.5">
+                                            <button
+                                              type="button"
+                                              onClick={() => openUserCard(comment.author_id)}
+                                              className="min-w-0 truncate text-[11px] font-bold text-slate-900 hover:text-emerald-600 hover:underline dark:text-white dark:hover:text-emerald-400"
+                                              title="Открыть карточку пользователя"
+                                            >
+                                              {comment.author_name || 'Житель Даймохк'}
+                                            </button>
+                                            {comment.author_id === profile.ownerId && (
+                                              <span className="shrink-0 rounded bg-emerald-100 px-1 py-px text-[9px] font-bold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">
+                                                Владелец анкеты
+                                              </span>
+                                            )}
+                                            <time className="shrink-0 text-[9px] font-medium text-slate-400">{formatReviewDate(comment.created_at)}</time>
+                                          </div>
+                                          <p className="mt-0.5 break-words [overflow-wrap:anywhere] whitespace-pre-wrap text-[11px] leading-relaxed text-slate-600 dark:text-zinc-400">
+                                            {comment.reply_to_author_name && comment.comment.startsWith(`${comment.reply_to_author_name}, `) ? (
+                                              <>
+                                                <button
+                                                  type="button"
+                                                  onClick={() => openUserCard(comment.reply_to_author_id ?? undefined)}
+                                                  className="font-bold text-emerald-600 hover:underline dark:text-emerald-400"
+                                                  title="Открыть карточку пользователя"
+                                                >
+                                                  {comment.reply_to_author_name}
+                                                </button>
+                                                {comment.comment.slice(comment.reply_to_author_name.length)}
+                                              </>
+                                            ) : (
+                                              comment.comment
+                                            )}
+                                          </p>
+                                        </div>
+                                        <div className="flex shrink-0 flex-col items-center gap-1">
+                                          {account && !account.isBlocked && (
+                                            <button
+                                              type="button"
+                                              onClick={() => handleReplyToComment(q.id, comment)}
+                                              disabled={busyId !== null}
+                                              aria-label="Ответить на комментарий"
+                                              title="Ответить"
+                                              className="flex h-5 w-5 items-center justify-center rounded-full text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-600 disabled:opacity-40 dark:hover:bg-emerald-950 dark:hover:text-emerald-400"
+                                            >
+                                              <MessageSquare className="h-3 w-3" />
+                                            </button>
+                                          )}
+                                          {canDeleteBy(comment.author_id) && (
+                                            <button
+                                              type="button"
+                                              onClick={() => void handleDeleteComment(comment.id, q.id)}
+                                              disabled={busyId === comment.id}
+                                              aria-label="Удалить комментарий"
+                                              title="Удалить комментарий"
+                                              className="flex h-5 w-5 items-center justify-center rounded-full text-slate-400 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-40 dark:hover:bg-red-950 dark:hover:text-red-400"
+                                            >
+                                              <Trash2 className="h-3 w-3 text-red-500" />
+                                            </button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <p className="text-[10px] text-slate-400">Комментариев пока нет. Станьте первым!</p>
+                                )}
+
+                                {account && !account.isBlocked ? (
+                                  <form
+                                    onSubmit={(event) => void handleCommentSubmit(event, q.id)}
+                                    className="space-y-1.5"
+                                  >
+                                    {replyTargets[q.id] && (
+                                      <div className="flex items-center justify-between rounded-lg bg-emerald-50 px-2 py-1 text-[10px] text-slate-600 dark:bg-emerald-950/40 dark:text-zinc-300">
+                                        <span>
+                                          Ответ для <span className="font-bold text-emerald-700 dark:text-emerald-400">@{replyTargets[q.id]?.name}</span>
+                                        </span>
+                                        <button
+                                          type="button"
+                                          onClick={() => clearReply(q.id)}
+                                          className="flex h-4 w-4 items-center justify-center rounded-full text-slate-400 transition hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400"
+                                          aria-label="Отменить ответ"
+                                          title="Отменить ответ"
+                                        >
+                                          <X className="h-3 w-3" />
+                                        </button>
+                                      </div>
+                                    )}
+                                    <div className="flex items-start gap-2">
+                                      <textarea
+                                        rows={2}
+                                        maxLength={500}
+                                        value={commentDrafts[q.id] ?? ''}
+                                        onChange={(event) =>
+                                          setCommentDrafts((drafts) => ({ ...drafts, [q.id]: event.target.value }))
+                                        }
+                                        placeholder="Написать комментарий…"
+                                        className="w-full min-w-0 resize-y break-words rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                                      />
+                                      <button
+                                        type="submit"
+                                        disabled={busyId === `comment-${q.id}`}
+                                        className="shrink-0 rounded-lg bg-emerald-600 px-3 py-1.5 text-[11px] font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+                                      >
+                                        {busyId === `comment-${q.id}` ? 'Отправляем…' : 'Отправить'}
+                                      </button>
+                                    </div>
+                                  </form>
+                                ) : (
+                                  <p className="text-[10px] text-slate-400">Войдите, чтобы комментировать.</p>
+                                )}
+                              </div>
+                            )}
                           </article>
                         ))}
                       </div>
@@ -450,7 +974,7 @@ export default function ProfileModal({
                 {activeTab === 'ratings' && (
                   <div className="py-4 px-2">
                     <div className="flex items-center gap-4 mb-4">
-                      <span className="text-4xl font-black text-slate-900 dark:text-white">{profile.rating > 0 ? profile.rating.toFixed(1) : '0'}</span>
+                      <span className="text-4xl font-black text-slate-900 dark:text-white">{displayRating > 0 ? displayRating.toFixed(1) : '0'}</span>
                       <div className="flex flex-col gap-0.5">
                         <div className="flex gap-0.5">
                           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-star h-3.5 w-3.5 fill-amber-400 text-amber-400"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
@@ -459,13 +983,13 @@ export default function ProfileModal({
                           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-star h-3.5 w-3.5 fill-amber-400 text-amber-400"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
                           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-star h-3.5 w-3.5 fill-amber-400 text-amber-400"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
                         </div>
-                        <span className="text-[10px] text-slate-500 dark:text-zinc-500">{(profile.reviews ?? []).length} оценок</span>
+                        <span className="text-[10px] text-slate-500 dark:text-zinc-500">{displayReviewCount} оценок</span>
                       </div>
                     </div>
                     <div className="space-y-1.5">
                       {[5,4,3,2,1].map(stars => {
-                        const count = (profile.reviews ?? []).filter(r => r.rating === stars).length;
-                        const total = (profile.reviews ?? []).length || 1;
+                        const count = displayReviews.filter(r => r.rating === stars).length;
+                        const total = displayReviews.length || 1;
                         const percent = Math.round((count / total) * 100);
                         return (
                           <div key={stars} className="flex items-center gap-2 text-[10px]">
@@ -485,6 +1009,75 @@ export default function ProfileModal({
             </section>
           )}
 
+          {/* «Анкеты пользователя» — только в ЛИЧНОЙ анкете (это и есть профиль
+              владельца). Показываем ВСЕ анкеты владельца: личную и специалистов.
+              Текущая (открытая) анкета некликабельна — клик по ней игнорируется,
+              но можно переключаться на любую другую. */}
+          {profile.isPersonal && profile.ownerId && (
+            <section className="mt-4">
+              <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                {language === 'ce' ? 'Лелорхочун анкеташ' : 'Анкеты пользователя'}
+              </h3>
+              {(() => {
+                const ownerProfiles = allProfiles.filter(
+                  (p) => p.ownerId === profile.ownerId && !p.isHidden && !p.isBanned
+                );
+                if (ownerProfiles.length === 0) {
+                  return (
+                    <p className="rounded-xl border border-dashed border-slate-200 p-3 text-center text-xs text-slate-500 dark:border-zinc-800 dark:text-zinc-500">
+                      {language === 'ce' ? 'Анкеташ бац.' : 'Анкет нет.'}
+                    </p>
+                  );
+                }
+                return (
+                  <div className="space-y-1.5">
+                    {ownerProfiles.map((other) => {
+                      const isCurrent = other.id === profile.id;
+                      return (
+                        <button
+                          key={other.id}
+                          type="button"
+                          disabled={isCurrent}
+                          onClick={() => { if (!isCurrent) setNestedProfile(other); }}
+                          className={`flex w-full items-center gap-2 rounded-xl border p-2 text-left transition ${
+                            isCurrent
+                              ? 'cursor-default border-emerald-300 bg-emerald-50/60 dark:border-emerald-800 dark:bg-emerald-950/30'
+                              : 'border-slate-100 bg-slate-50/70 hover:border-emerald-300 dark:border-zinc-800 dark:bg-zinc-800 dark:hover:border-emerald-800'
+                          }`}
+                        >
+                          <div className="h-7 w-7 shrink-0 overflow-hidden rounded-lg bg-slate-200 dark:bg-zinc-700">
+                            {other.avatarUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={cacheBustAvatarUrl(other.avatarUrl)} alt="" className="h-full w-full object-cover" />
+                            ) : (
+                              <span className="flex h-full w-full items-center justify-center text-[10px] font-bold text-slate-500">
+                                {other.fullName.charAt(0)}
+                              </span>
+                            )}
+                          </div>
+                          <span className="min-w-0 flex-1 truncate text-xs font-bold text-slate-900 dark:text-white">
+                            {other.professionTitle || other.fullName}
+                            {other.isPersonal ? ` (${t.personalProfile.toLowerCase()})` : ''}
+                          </span>
+                          {other.isVerified || other.verificationStatus === 'verified' ? (
+                            <span className="shrink-0 rounded bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold text-blue-700 dark:bg-blue-950/60 dark:text-blue-300">
+                              {t.roleVerified}
+                            </span>
+                          ) : null}
+                          {isCurrent && (
+                            <span className="shrink-0 rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
+                              {language === 'ce' ? 'ХIинца' : 'Открыта'}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </section>
+          )}
+
           <section>
             <h3 className="mb-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Адресс</h3>
             <div className="flex items-start gap-3 rounded-xl border border-slate-100 bg-slate-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-800">
@@ -494,7 +1087,7 @@ export default function ProfileModal({
               <div className="flex-1 min-w-0">
                 <p className="truncate text-xs font-bold text-slate-900 dark:text-white">{profile.workplaceAddress}</p>
                 <a
-                  href={`geo:${profile.workplaceCoords.lat},${profile.workplaceCoords.lng}?q=${profile.workplaceCoords.lat},${profile.workplaceCoords.lng}`}
+                  href={`https://yandex.ru/maps/?pt=${profile.workplaceCoords.lng},${profile.workplaceCoords.lat}&z=16&l=map`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:underline dark:text-emerald-400"
@@ -607,6 +1200,20 @@ export default function ProfileModal({
         </div>
       )}
       </div>
+
+      {/* User card opened from a name link: nested modal on top of this
+          one. Closing it returns to the current анкета instead of closing
+          everything and dropping back to the catalog. */}
+      {nestedProfile && (
+        <ProfileModal
+          profile={nestedProfile}
+          onClose={() => setNestedProfile(null)}
+          onReview={onReview}
+          isAdminStatus={isProfileAdmin(nestedProfile)}
+          showPending={Boolean(account?.isAdmin || (account && nestedProfile.ownerId === account.id))}
+          isViewerBlocked={isViewerBlocked}
+        />
+      )}
     </>
   );
 }

@@ -40,7 +40,7 @@ export async function persistProfileToSupabase(profile: Profile): Promise<void> 
       telegram: profile.telegram ?? null,
       whatsapp: profile.whatsapp ?? null,
       video_url: profile.videoUrl ?? null,
-      work_days: profile.workDays ?? null,
+      work_days: profile.workDays ?? [],
       work_hours_start: profile.workHoursStart ?? null,
       work_hours_end: profile.workHoursEnd ?? null,
       break_start: profile.breakStart ?? null,

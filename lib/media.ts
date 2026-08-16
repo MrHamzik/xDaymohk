@@ -20,30 +20,49 @@ function readFileAsDataUrl(file: File) {
 function loadImage(dataUrl: string) {
   return new Promise<HTMLImageElement>((resolve, reject) => {
     const image = new Image();
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error('Не удалось обработать изображение.'));
+    const timer = window.setTimeout(() => {
+      image.onload = null;
+      image.onerror = null;
+      reject(new Error('Не удалось обработать изображение (таймаут).'));
+    }, 15000);
+    image.onload = () => {
+      window.clearTimeout(timer);
+      resolve(image);
+    };
+    image.onerror = () => {
+      window.clearTimeout(timer);
+      reject(new Error('Не удалось обработать изображение.'));
+    };
     image.src = dataUrl;
   });
 }
 
-async function compressDataUrl(dataUrl: string) {
+async function compressDataUrl(dataUrl: string, square = false) {
   if (!dataUrl.startsWith('data:') || dataUrlBytes(dataUrl) <= MAX_INLINE_IMAGE_BYTES) {
     return dataUrl;
   }
 
   const image = await loadImage(dataUrl);
+  // Для аватара сразу вырезаем центральный квадрат — меньше пикселей,
+  // меньше вес файла в Storage.
+  const cropSize = square ? Math.min(image.width, image.height) : 0;
+  const srcX = square ? (image.width - cropSize) / 2 : 0;
+  const srcY = square ? (image.height - cropSize) / 2 : 0;
+  const srcW = square ? cropSize : image.width;
+  const srcH = square ? cropSize : image.height;
+
   let scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(image.width, image.height));
   let smallestDataUrl = dataUrl;
   let smallestBytes = dataUrlBytes(dataUrl);
 
   for (let attempt = 0; attempt < 8; attempt += 1) {
     const canvas = document.createElement('canvas');
-    canvas.width = Math.max(1, Math.round(image.width * scale));
-    canvas.height = Math.max(1, Math.round(image.height * scale));
+    canvas.width = Math.max(1, Math.round(srcW * scale));
+    canvas.height = Math.max(1, Math.round(srcH * scale));
     const context = canvas.getContext('2d');
     if (!context) return smallestDataUrl;
 
-    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    context.drawImage(image, srcX, srcY, srcW, srcH, 0, 0, canvas.width, canvas.height);
     const compressed = canvas.toDataURL('image/webp', Math.max(0.35, 0.82 - attempt * 0.07));
     const compressedBytes = dataUrlBytes(compressed);
     if (compressedBytes < smallestBytes) {
@@ -57,32 +76,49 @@ async function compressDataUrl(dataUrl: string) {
   return smallestDataUrl;
 }
 
-export async function compressImageFile(file: File) {
+export async function compressImageFile(file: File, square = false) {
   const dataUrl = await readFileAsDataUrl(file);
-  return compressDataUrl(dataUrl);
+  return compressDataUrl(dataUrl, square);
 }
 
-export async function compressImageDataUrl(dataUrl: string) {
-  return compressDataUrl(dataUrl);
+/**
+ * Добавляет ?v=<timestamp> к URL аватара, если его ещё нет — чтобы браузер
+ * не показывал закэшированную старую версию после перезаписи файла в Storage.
+ * Работает только с нашими storage-URL (profile-media).
+ */
+export function cacheBustAvatarUrl(url: string): string {
+  if (!url || !url.includes('/profile-media/')) return url;
+  const sep = url.includes('?') ? '&' : '?';
+  return `${url}${sep}v=${Date.now()}`;
+}
+
+export async function compressImageDataUrl(dataUrl: string, square = false) {
+  return compressDataUrl(dataUrl, square);
 }
 
 export async function uploadImageIfStorageConfigured(dataUrl: string, ownerId: string, folder: 'avatars' | 'documents') {
-  const safeDataUrl = await compressDataUrl(dataUrl);
+  const safeDataUrl = await compressDataUrl(dataUrl, folder === 'avatars');
   if (!isSupabaseConfigured || !supabase || !safeDataUrl.startsWith('data:')) return safeDataUrl;
 
   try {
     const response = await fetch(safeDataUrl);
     const blob = await response.blob();
-    const path = `${folder}/${ownerId}-${Date.now()}.webp`;
+    // Путь = uuid владельца: при повторной загрузке аватар ПЕРЕЗАПИСЫВАЕТСЯ,
+    // а не копится новыми файлами (upsert: true).
+    const path = `${folder}/${ownerId}.webp`;
     const { error } = await supabase.storage.from('profile-media').upload(path, blob, {
       contentType: 'image/webp',
-      upsert: false,
+      upsert: true,
     });
 
-    if (error) return safeDataUrl;
-    return supabase.storage.from('profile-media').getPublicUrl(path).data.publicUrl;
-  } catch {
-    // The app still works with a compressed inline image if Storage is not configured.
-    return safeDataUrl;
+    if (error) {
+      // Больше НЕ проглатываем: пробрасываем, чтобы пользователь увидел,
+      // почему аватар не сохраняется (например, нет прав на bucket).
+      throw new Error(`Не удалось загрузить файл в Storage: ${error.message}`);
+    }
+    return `${supabase.storage.from('profile-media').getPublicUrl(path).data.publicUrl}?v=${Date.now()}`;
+  } catch (e) {
+    // Пробрасываем наверх, чтобы updateAccount показал реальную причину.
+    throw e instanceof Error ? e : new Error('Не удалось загрузить изображение');
   }
 }

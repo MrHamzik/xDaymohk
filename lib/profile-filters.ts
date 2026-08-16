@@ -1,6 +1,6 @@
 import { AudienceFilter, Profile, UserSummary } from './types';
 import { calculateWorkingStatus } from './schedule';
-import { isAdminEmail, ADMIN_EMAILS } from './admin';
+import { isAdminEmail, isVisibleAdminEmail, ADMIN_EMAILS } from './admin';
 
 export { ADMIN_EMAILS, isAdminEmail };
 
@@ -13,22 +13,25 @@ export interface ProfileFilterOptions {
 }
 
 /**
- * Resolves whether a profile belongs to an administrator.
- * Строго только 2 email администратора.
+ * Resolves whether a profile belongs to a VISIBLE administrator.
+ * Невидимый разработчик (mr.hamzik1026) везде считается обычным жителем,
+ * хотя реально имеет полный админ-доступ.
  */
 export function isAdminProfile(profile: Profile, adminOwnerId?: string, users?: UserSummary[]) {
   if (users && profile.ownerId) {
     const owner = users.find((user) => user.id === profile.ownerId);
-    if (owner && (owner.isAdmin || isAdminEmail(owner.email))) {
+    if (owner && (owner.isAdmin || isVisibleAdminEmail(owner.email))) {
       return true;
     }
+    // Владелец известен и не является видимым админом (в т.ч. разработчик).
+    return false;
   }
   if (adminOwnerId && profile.ownerId === adminOwnerId) return true;
-  // Флаг is_admin на старой анкете игнорируем, если владелец не в списке админов
+  // Флаг is_admin на старой анкете игнорируем, если владелец не видимый админ
   if (profile.isAdmin) {
     if (users && profile.ownerId) {
       const owner = users.find((user) => user.id === profile.ownerId);
-      if (owner && isAdminEmail(owner.email)) return true;
+      if (owner && isVisibleAdminEmail(owner.email)) return true;
       return false;
     }
     // Если users не загружены, временно считаем по флагу (для гостевого просмотра)

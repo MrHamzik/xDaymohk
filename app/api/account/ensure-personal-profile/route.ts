@@ -22,7 +22,7 @@ import { profileFromDb } from '@/lib/profile-db';
  *   row instead of creating a duplicate.
  */
 export async function POST(request: Request) {
-  const limit = rateLimit(request, { limit: 10, windowMs: 60_000 });
+  const limit = await rateLimit(request, { limit: 10, windowMs: 60_000 });
   if (!limit.allowed) {
     return withRateLimitHeaders(
       NextResponse.json({ error: 'Too many requests' }, { status: 429 }),

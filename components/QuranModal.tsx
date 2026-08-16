@@ -80,7 +80,7 @@ export default function QuranModal({ isOpen, onClose }: QuranModalProps) {
         </div>
 
         {/* Surahs list */}
-        <div className="flex-1 space-y-2 overflow-y-auto p-4 sm:p-5">
+        <div className="flex-1 space-y-2 overflow-y-auto p-4 sm:p-5 no-scrollbar">
           {filteredSurahs.map((surah) => (
             <div
               key={surah.number}

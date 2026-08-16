@@ -31,8 +31,8 @@ export function calculateWorkingStatus(
       status: 'active',
       color: 'emerald',
       colorHex: '#059669',
-      label: profile.settlement ? `Житель ${profile.settlement}` : 'Житель Самашки',
-      badgeLabel: profile.settlement ? `Житель ${profile.settlement}` : 'Житель Самашки',
+      label: 'Житель',
+      badgeLabel: 'Житель',
       isSpecialist: false,
     };
   }

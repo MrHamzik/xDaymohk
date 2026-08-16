@@ -4,28 +4,27 @@ import ThemeProvider from '@/components/ThemeProvider';
 import AuthProvider from '@/components/AuthProvider';
 import ProfilesProvider from '@/components/ProfilesProvider';
 import NotificationsProvider from '@/components/NotificationsProvider';
+import OnboardingModal from '@/components/OnboardingModal';
 import { I18nProvider } from '@/lib/i18n';
 import SidebarNav from '@/components/SidebarNav';
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://daymohk.vercel.app'),
   title: {
-    default: 'Даймохк — платформа села Самашки',
+    default: 'Даймохк — платформа Чеченской Республики',
     template: '%s | Даймохк',
   },
-  description: 'Даймохк — платформа села Самашки: каталог жителей, специалистов, ВайГIуллакх, ВайГIо, Вайнах. Найдите мастера, соседа, услугу рядом с домом.',
+  description: 'Даймохк — каталог жителей, специалистов и услуг Чеченской Республики: ВайГIуллакх, ВайГIо, Вайнах. Найдите мастера, соседа, услугу рядом с домом.',
   keywords: [
     'Даймохк',
-    'Самашки',
-    'Samashki',
+    'Чеченская Республика',
     'каталог жителей',
-    'специалисты Самашки',
+    'специалисты Чечни',
     'ВайГIуллакх',
     'ВайГIо',
     'Вайнах',
     'услуги Чечня',
-    'Ачхой-Мартан',
-    'самашкинцы',
+    'родина чеченцев',
   ],
   authors: [{ name: 'Даймохк', url: 'https://daymohk.vercel.app' }],
   creator: 'Даймохк',
@@ -37,14 +36,14 @@ export const metadata: Metadata = {
     locale: 'ru_RU',
     url: '/',
     siteName: 'Даймохк',
-    title: 'Даймохк — платформа села Самашки',
-    description: 'Каталог жителей, специалистов, ВайГIуллакх, ВайГIо, Вайнах. Всё о жизни села Самашки.',
+    title: 'Даймохк — платформа Чеченской Республики',
+    description: 'Каталог жителей, специалистов, ВайГIуллакх, ВайГIо, Вайнах. Всё о жизни Даймохка.',
     images: [{ url: '/icon.png', width: 512, height: 512, alt: 'Даймохк' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Даймохк — платформа села Самашки',
-    description: 'Даймохк — каталог жителей и специалистов села Самашки: ВайГIуллакх, ВайГIо, Вайнах.',
+    title: 'Даймохк — платформа Чеченской Республики',
+    description: 'Даймохк — каталог жителей и специалистов Чеченской Республики: ВайГIуллакх, ВайГIо, Вайнах.',
     images: ['/icon.png'],
   },
   robots: { index: true, follow: true, googleBot: { index: true, follow: true } },
@@ -66,6 +65,7 @@ export default function RootLayout({
               <NotificationsProvider>
                 <ProfilesProvider>
                   {children}
+                  <OnboardingModal />
                 </ProfilesProvider>
               </NotificationsProvider>
             </AuthProvider>

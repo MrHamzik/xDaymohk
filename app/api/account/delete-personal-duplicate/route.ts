@@ -12,7 +12,7 @@ import { rateLimit, withRateLimitHeaders } from '@/lib/rate-limit';
  * personal row, and only then deletes.
  */
 export async function DELETE(request: Request) {
-  const limit = rateLimit(request, { limit: 10, windowMs: 60 * 60_000 });
+  const limit = await rateLimit(request, { limit: 10, windowMs: 60 * 60_000 });
   if (!limit.allowed) {
     return withRateLimitHeaders(
       NextResponse.json({ error: 'Too many requests' }, { status: 429 }),

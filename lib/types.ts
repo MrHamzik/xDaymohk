@@ -53,7 +53,42 @@ export interface UserSummary {
   profileCount: number;
 }
 
-export type NotificationType = 'system' | 'profile_hidden' | 'profile_visible' | 'user_blocked' | 'user_unblocked';
+export type NotificationType =
+  | 'system'
+  | 'profile_hidden'
+  | 'profile_visible'
+  | 'user_blocked'
+  | 'user_unblocked'
+  // Активность
+  | 'review_received'
+  | 'question_commented'
+  | 'comment_replied'
+  | 'like_received'
+  // Жалобы
+  | 'complaint_result'
+  // Такси
+  | 'taxi_request'
+  | 'taxi_info';
+
+/** Категории уведомлений (вкладки в центре уведомлений). */
+export type NotificationCategory = 'system' | 'activity' | 'complaint' | 'taxi';
+
+export function notificationCategory(type: NotificationType): NotificationCategory {
+  switch (type) {
+    case 'review_received':
+    case 'question_commented':
+    case 'comment_replied':
+    case 'like_received':
+      return 'activity';
+    case 'complaint_result':
+      return 'complaint';
+    case 'taxi_request':
+    case 'taxi_info':
+      return 'taxi';
+    default:
+      return 'system';
+  }
+}
 
 export interface AppNotification {
   id: string;
@@ -61,8 +96,27 @@ export interface AppNotification {
   type: NotificationType;
   title: string;
   message: string;
+  /** Чеченский вариант (показывается, если пользователь выбрал чеченский). */
+  titleCe?: string;
+  messageCe?: string;
+  /** Отправитель (по умолчанию «Даймохк»); админ может изменить. */
+  sender?: string;
   isRead: boolean;
   createdAt: string;
+}
+
+/** Письмо-уведомление, отправляемое из админки (например, итог жалобы). */
+export interface NotificationLetterPayload {
+  recipientId: string;
+  title: string;
+  message: string;
+  /** Чеченский вариант темы и текста. */
+  ceTitle?: string;
+  ceMessage?: string;
+  /** Отправитель (по умолчанию «Даймохк»). */
+  sender?: string;
+  /** Категория; по умолчанию 'system'. */
+  type?: NotificationType;
 }
 
 export interface Certificate {

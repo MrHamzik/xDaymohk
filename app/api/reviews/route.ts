@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { rateLimit, withRateLimitHeaders } from '@/lib/rate-limit';
+import { isAdminEmail } from '@/lib/admin';
+import { log } from '@/lib/logger';
 
 /**
  * Submit a review for a profile.
@@ -24,7 +26,7 @@ import { rateLimit, withRateLimitHeaders } from '@/lib/rate-limit';
  *   of from the request body.
  */
 export async function POST(request: Request) {
-  const limit = rateLimit(request, { limit: 20, windowMs: 60_000 });
+  const limit = await rateLimit(request, { limit: 20, windowMs: 60_000 });
   if (!limit.allowed) {
     return withRateLimitHeaders(
       NextResponse.json({ error: 'Too many requests' }, { status: 429 }),
@@ -110,6 +112,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Нельзя оставить отзыв самому себе' }, { status: 400 });
   }
 
+  // Один аккаунт — один отзыв на одну анкету (защита от накрутки/спама).
+  const { data: existingReview, error: existingError } = await admin
+    .from('reviews')
+    .select('id')
+    .eq('profile_id', profileId)
+    .eq('author_id', userData.user.id)
+    .maybeSingle();
+  if (existingError) {
+    return NextResponse.json({ error: existingError.message }, { status: 500 });
+  }
+  if (existingReview) {
+    return NextResponse.json({ error: 'Вы уже оставили отзыв на эту анкету' }, { status: 400 });
+  }
+
   // Compute the new rolling average. If the previous count is 0 the
   // new rating is just the new score; otherwise it's a weighted
   // average rounded to one decimal place.
@@ -161,7 +177,7 @@ export async function POST(request: Request) {
     // and the next refresh will show the right number. If the
     // recompute_profile_rating trigger were wired up, it would
     // already be fixed.
-    console.warn('Review aggregate update failed:', updateError.message);
+    log.warn('Review aggregate update failed:', updateError.message);
   }
 
   // Read the live review row back through v_reviews so the response
@@ -187,5 +203,134 @@ export async function POST(request: Request) {
       createdAt: today,
     },
     aggregate: { rating: nextRating, reviewCount: nextCount },
+  });
+}
+
+/**
+ * DELETE — remove a review. Allowed for the review's author, the owner
+ * of the анкета it belongs to, and admins.
+ *
+ * The rating / review_count aggregate is recomputed by the
+ * recompute_profile_rating() trigger (step 07) on DELETE; we also call
+ * the RPC explicitly so the numbers are correct even on databases where
+ * the trigger is missing or was not wired up yet.
+ */
+export async function DELETE(request: Request) {
+  const limit = await rateLimit(request, { limit: 30, windowMs: 60_000 });
+  if (!limit.allowed) {
+    return withRateLimitHeaders(
+      NextResponse.json({ error: 'Too many requests' }, { status: 429 }),
+      { ...limit, limit: 30 },
+    );
+  }
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const authorization = request.headers.get('authorization');
+  const accessToken = authorization?.startsWith('Bearer ') ? authorization.slice(7) : '';
+
+  if (!supabaseUrl || !serviceRoleKey || !anonKey) {
+    return NextResponse.json({ error: 'Supabase not configured' }, { status: 503 });
+  }
+  if (!accessToken) {
+    return NextResponse.json({ error: 'Сессия не найдена' }, { status: 401 });
+  }
+
+  let body: { reviewId?: string } = {};
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Неверный запрос' }, { status: 400 });
+  }
+
+  const reviewId = String(body.reviewId ?? '').trim();
+  if (!reviewId) {
+    return NextResponse.json({ error: 'reviewId обязателен' }, { status: 400 });
+  }
+
+  // Step 1: verify the caller's bearer JWT.
+  const anon = createClient(supabaseUrl, anonKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const { data: userData, error: userError } = await anon.auth.getUser(accessToken);
+  if (userError || !userData.user) {
+    return NextResponse.json({ error: 'Сессия недействительна' }, { status: 401 });
+  }
+  if (userData.user.email && userData.user.app_metadata?.banned_until) {
+    const bannedUntil = new Date(String(userData.user.app_metadata.banned_until));
+    if (Number.isFinite(bannedUntil.getTime()) && bannedUntil.getTime() > Date.now()) {
+      return NextResponse.json({ error: 'Ваш аккаунт временно заблокирован' }, { status: 403 });
+    }
+  }
+
+  // Step 2: switch to the service-role client.
+  const admin = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+
+  // Step 3: load the review and the анкета it belongs to, so we can
+  // authorise the deletion server-side (author / owner / admin).
+  const { data: review, error: reviewError } = await admin
+    .from('reviews')
+    .select('id, profile_id, author_id')
+    .eq('id', reviewId)
+    .maybeSingle();
+  if (reviewError) {
+    return NextResponse.json({ error: reviewError.message }, { status: 500 });
+  }
+  if (!review) {
+    return NextResponse.json({ error: 'Отзыв не найден' }, { status: 404 });
+  }
+
+  const { data: profile, error: profileError } = await admin
+    .from('profiles')
+    .select('id, owner_id')
+    .eq('id', review.profile_id)
+    .maybeSingle();
+  if (profileError) {
+    return NextResponse.json({ error: profileError.message }, { status: 500 });
+  }
+
+  const isAuthor = String(review.author_id ?? '') === userData.user.id;
+  const isOwner = Boolean(profile && String(profile.owner_id ?? '') === userData.user.id);
+  const isAdmin = isAdminEmail(userData.user.email);
+  if (!profile || (!isAuthor && !isOwner && !isAdmin)) {
+    return NextResponse.json({ error: 'Удалять отзыв может только его автор, владелец анкеты или админ' }, { status: 403 });
+  }
+
+  // Step 4: delete the review. The trg_reviews_after_delete trigger
+  // recomputes profiles.rating / profiles.review_count; we call the
+  // RPC explicitly as well so the aggregate is right even if the
+  // trigger was never applied.
+  const { error: deleteError } = await admin
+    .from('reviews')
+    .delete()
+    .eq('id', reviewId);
+  if (deleteError) {
+    return NextResponse.json({ error: deleteError.message }, { status: 500 });
+  }
+
+  const { error: rpcError } = await admin.rpc('recompute_profile_rating', {
+    target_id: review.profile_id,
+  });
+  if (rpcError) {
+    log.warn('recompute_profile_rating failed after review delete:', rpcError.message);
+  }
+
+  const { data: aggregate } = await admin
+    .from('profiles')
+    .select('rating, review_count')
+    .eq('id', review.profile_id)
+    .maybeSingle();
+
+  return NextResponse.json({
+    success: true,
+    reviewId,
+    profileId: review.profile_id,
+    aggregate: {
+      rating: Number(aggregate?.rating ?? 0),
+      reviewCount: Number(aggregate?.review_count ?? 0),
+    },
   });
 }

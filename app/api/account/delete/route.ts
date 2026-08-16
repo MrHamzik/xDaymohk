@@ -4,7 +4,7 @@ import { rateLimit, withRateLimitHeaders } from '@/lib/rate-limit';
 
 export async function DELETE(request: Request) {
   // Rate limit: 5 destructive ops / hour per IP
-  const limit = rateLimit(request, { limit: 5, windowMs: 60 * 60_000 });
+  const limit = await rateLimit(request, { limit: 5, windowMs: 60 * 60_000 });
   if (!limit.allowed) {
     return withRateLimitHeaders(
       NextResponse.json({ error: 'Too many requests' }, { status: 429 }),
@@ -36,8 +36,10 @@ export async function DELETE(request: Request) {
 
   for (const folder of ['avatars', 'documents']) {
     const { data: files } = await adminClient.storage.from('profile-media').list(folder);
+    const uid = userData.user.id;
     const ownedFiles = (files ?? [])
-      .filter((file) => file.name.startsWith(`${userData.user.id}-`))
+      // Новые аватары: <uuid>.webp (без дефиса); старые: <uuid>-<ts>.webp.
+      .filter((file) => file.name === `${uid}.webp` || file.name.startsWith(`${uid}-`))
       .map((file) => `${folder}/${file.name}`);
 
     if (ownedFiles.length > 0) {

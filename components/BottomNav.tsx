@@ -34,11 +34,11 @@ export default function BottomNav({ onOpenMenu, onOpenCreate }: BottomNavProps) 
           <span className="text-[11px] font-semibold">{t.menu}</span>
         </button>
 
-        {/* 2. Catalog */}
+        {/* 2. Catalog — каталог живёт на /catalog (главная — отдельная landing) */}
         <Link
-          href="/"
+          href="/catalog"
           className={`flex flex-col items-center justify-center rounded-2xl py-1 transition active:scale-95 ${
-            pathname === '/'
+            pathname === '/catalog'
               ? 'font-bold text-emerald-600 dark:text-emerald-400'
               : 'text-slate-500 hover:text-slate-900 dark:text-zinc-500 dark:hover:text-white'
           }`}

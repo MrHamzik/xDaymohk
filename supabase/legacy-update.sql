@@ -1,0 +1,23 @@
+-- =============================================================================
+-- Даймохк — обновление существующей БД (по шагам, чтобы избежать deadlock)
+-- =============================================================================
+-- ВАЖНО: не запускайте этот файл целиком — в нём есть ALTER TABLE /
+-- CREATE POLICY, которые берут AccessExclusiveLock и могут дать deadlock
+-- (40P01) при параллельных сессиях (вторая вкладка SQL Editor, dev-сервер,
+-- realtime-подписки приложения).
+--
+-- Вместо этого запускайте файлы из папки supabase/update/ ПО ОДНОМУ:
+--
+--   1. supabase/update/01-settlement.sql          — «Самашки» → «Даймохк»
+--   2. supabase/update/02-notifications-type.sql  — типы уведомлений
+--   3. supabase/update/03-notifications-ce.sql    — title_ce/message_ce/sender
+--   4. supabase/update/04-notifications-delete-policy.sql — RLS delete
+--   5. supabase/update/05-view-users-count.sql    — v_users_with_profile_count
+--   6. supabase/update/06-work-days-nullable.sql  — work_days NOT NULL → NULL
+--
+-- Перед каждым запуском: закройте другие вкладки SQL Editor и остановите
+-- dev-сервер / приложение. Каждый файл идемпотентен и короткий — лок
+-- держится доли секунды, deadlock невозможен.
+--
+-- (Файл legacy-update.sql оставлен как заглушка-инструкция.)
+-- =============================================================================

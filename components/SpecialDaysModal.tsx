@@ -58,7 +58,7 @@ export default function SpecialDaysModal({ isOpen, onClose }: SpecialDaysModalPr
           </button>
         </div>
 
-        <div className="flex-1 space-y-3 overflow-y-auto p-4 sm:p-5">
+        <div className="flex-1 space-y-3 overflow-y-auto p-4 sm:p-5 no-scrollbar">
           {ISLAMIC_SPECIAL_DAYS.map((item) => (
             <div
               key={item.id}

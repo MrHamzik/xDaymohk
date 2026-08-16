@@ -174,7 +174,7 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
   //   * DIAL (the ring with N/S/E/W + tick marks) rotates by
   //     -heading so that N always points to the local North
   //     direction the sensor reports.
-  //   * NEEDLE (the green Navigation icon) is STATIC at qiblaAngle
+  //   * NEEDLE (the flat teal triangle) is STATIC at qiblaAngle
   //     relative to the dial. Because the dial moves underneath
   //     it, the needle visually swings to the correct Kaaba
   //     direction on the screen.
@@ -235,7 +235,7 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
                 {language === 'ce' ? 'Къилба' : 'Кибла'}
               </h2>
               <p className="text-xs text-slate-500 dark:text-zinc-500">
-                {userCoords ? `${userCoords.lat.toFixed(4)}, ${userCoords.lng.toFixed(4)}` : 'Самашки / Даймохк'} · {qiblaAngle.toFixed(1)}°
+                {userCoords ? `${userCoords.lat.toFixed(4)}, ${userCoords.lng.toFixed(4)}` : 'Даймохк / Чеченская Республика'} · {qiblaAngle.toFixed(1)}°
               </p>
             </div>
           </div>
@@ -245,7 +245,7 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
         </div>
 
         <div className="my-5 flex flex-col items-center justify-center">
-          <div className="relative flex h-72 w-72 items-center justify-center rounded-full border-[6px] border-slate-100 bg-white shadow-inner dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="relative flex h-[273.6px] w-[273.6px] items-center justify-center rounded-full border-4 border-slate-200 bg-white shadow-[0_16px_40px_-16px_rgba(15,45,60,0.3)] dark:border-8 dark:border-[#2c4b61] dark:bg-[#0b2c41] dark:shadow-[0_18px_45px_-18px_rgba(0,0,0,0.8)]">
             {/* ROTATING dial — the ring with N/S/E/W and tick marks.
                 The whole ring rotates by -heading so N always points
                 to local North. The N/S/E/W letters are CHILDREN of
@@ -257,43 +257,57 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
               className="absolute inset-0"
               style={{ willChange: 'transform' }}
             >
-              <span
-                className="absolute left-1/2 top-3 -translate-x-1/2 text-base font-black text-red-600"
-              >
-                С
-              </span>
-              <span
-                className="absolute bottom-3 left-1/2 -translate-x-1/2 text-base font-black text-slate-700 dark:text-slate-200"
-              >
-                Ю
-              </span>
-              <span
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-base font-black text-slate-700 dark:text-slate-200"
-              >
-                В
-              </span>
-              <span
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-base font-black text-slate-700 dark:text-slate-200"
-              >
-                З
-              </span>
-              <div className="absolute inset-2 rounded-full border border-dashed border-slate-200 dark:border-zinc-700" />
-              {Array.from({ length: 12 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="absolute left-1/2 top-0 h-2 w-0.5 -translate-x-1/2 bg-slate-300 dark:bg-zinc-700"
-                  style={{ transform: `rotate(${i * 30}deg)`, transformOrigin: '50% 144px' }}
-                />
-              ))}
+              {/* SVG face: guide circles + 60 ticks, masked so the lines
+                  never cross the cardinal letters. The letters themselves
+                  are drawn in a separate (unmasked) group and centered
+                  exactly on the N/S/E/W tick axes. */}
+              <svg viewBox="0 0 273.6 273.6" className="absolute inset-0 h-full w-full" aria-hidden="true">
+                <defs>
+                  <mask id="qibla-letter-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="273.6" height="273.6">
+                    <rect x="0" y="0" width="273.6" height="273.6" fill="white" />
+                    <rect x="116.8" y="0" width="40" height="40" rx="6" fill="black" />
+                    <rect x="116.8" y="233.6" width="40" height="40" rx="6" fill="black" />
+                    <rect x="0" y="116.8" width="40" height="40" rx="6" fill="black" />
+                    <rect x="233.6" y="116.8" width="40" height="40" rx="6" fill="black" />
+                  </mask>
+                </defs>
+                <g mask="url(#qibla-letter-mask)">
+                  <circle cx="136.8" cy="136.8" r="124.8" fill="none" strokeWidth="1" className="stroke-slate-200 dark:stroke-white/10" />
+                  <circle cx="136.8" cy="136.8" r="112.8" fill="none" strokeWidth="1" className="stroke-slate-100 dark:stroke-white/5" />
+                  {Array.from({ length: 60 }).map((_, i) => {
+                    const a = (i * 6 * Math.PI) / 180;
+                    const major = i % 15 === 0;
+                    const medium = i % 5 === 0;
+                    const len = major ? 12 : medium ? 8 : 6;
+                    const rOuter = 132;
+                    const x1 = 136.8 + rOuter * Math.sin(a);
+                    const y1 = 136.8 - rOuter * Math.cos(a);
+                    const x2 = 136.8 + (rOuter - len) * Math.sin(a);
+                    const y2 = 136.8 - (rOuter - len) * Math.cos(a);
+                    return (
+                      <line
+                        key={i}
+                        x1={x1.toFixed(2)}
+                        y1={y1.toFixed(2)}
+                        x2={x2.toFixed(2)}
+                        y2={y2.toFixed(2)}
+                        strokeWidth={major ? 1.5 : 1}
+                        className={major ? 'stroke-slate-500 dark:stroke-slate-200' : medium ? 'stroke-slate-400 dark:stroke-slate-300/70' : 'stroke-slate-300 dark:stroke-slate-400/40'}
+                      />
+                    );
+                  })}
+                </g>
+                <text x="136.8" y="21" textAnchor="middle" dominantBaseline="central" fontSize="19" fontWeight="900" className="fill-red-600 dark:fill-red-500">С</text>
+                <text x="136.8" y="252.6" textAnchor="middle" dominantBaseline="central" fontSize="19" fontWeight="900" className="fill-slate-800 dark:fill-slate-100">Ю</text>
+                <text x="21" y="136.8" textAnchor="middle" dominantBaseline="central" fontSize="19" fontWeight="900" className="fill-slate-800 dark:fill-slate-100">З</text>
+                <text x="252.6" y="136.8" textAnchor="middle" dominantBaseline="central" fontSize="19" fontWeight="900" className="fill-slate-800 dark:fill-slate-100">В</text>
+              </svg>
             </div>
 
             {/* STATIC needle — stays at qiblaAngle relative to the
                 rotating dial, so it ALWAYS points to the Kaaba from
-                the user's current perspective. The arrow tip is
-                aimed "up" (toward the top of the dial) at angle
-                qiblaAngle; because the dial is rotated to North,
-                the arrow tip therefore points to North + qiblaAngle,
-                which is the actual Kaaba bearing. */}
+                the user's current perspective. Minimalist flat
+                triangle, no gradients, no gloss, no Kaaba icon. */}
             <div
               ref={needleRef}
               className="absolute inset-0 pointer-events-none"
@@ -301,33 +315,24 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
             >
               <svg
                 viewBox="0 0 64 64"
-                className="absolute left-1/2 top-1/2 h-28 w-28 -translate-x-1/2 -translate-y-1/2 drop-shadow-[0_4px_12px_rgba(16,185,129,0.6)]"
+                className="absolute left-1/2 top-1/2 h-[171.6px] w-[171.6px] -translate-x-1/2 -translate-y-1/2"
                 aria-hidden="true"
               >
-                <defs>
-                  <linearGradient id="qibla-needle" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#34d399" />
-                    <stop offset="100%" stopColor="#059669" />
-                  </linearGradient>
-                  <linearGradient id="qibla-tail" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#94a3b8" />
-                    <stop offset="100%" stopColor="#475569" />
-                  </linearGradient>
-                </defs>
-                <path d="M 32 56 L 26 36 L 38 36 Z" fill="url(#qibla-tail)" />
-                <path d="M 32 6 L 24 36 L 40 36 Z" fill="url(#qibla-needle)" stroke="#10b981" strokeWidth="0.5" />
-                <circle cx="32" cy="36" r="3.5" fill="#065f46" />
+                <path d="M 32 6 L 28.5 40 L 35.5 40 Z" className="fill-[#0d7379] dark:fill-[#2ba6ad]" />
               </svg>
             </div>
+
+            {/* Center pivot — tiny static axis dot */}
+            <div className="absolute left-1/2 top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-slate-400 dark:bg-slate-200" />
           </div>
 
-          <div className="mt-4 grid w-full grid-cols-3 gap-2 text-center">
-            <div className="rounded-xl bg-slate-50 p-2.5 dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800">
+          <div className="mt-6 grid w-full grid-cols-3 gap-2 text-center">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-2.5 shadow-[0_2px_10px_-2px_rgba(15,45,60,0.1)] dark:border-zinc-700/60 dark:bg-zinc-900 dark:shadow-[0_2px_10px_-2px_rgba(0,0,0,0.5)]">
               <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Кибла</p>
-              <p className="text-[12px] font-black text-slate-900 dark:text-white">{qiblaAngle.toFixed(1)}°</p>
+              <p className="text-[14px] font-black text-[#0d7379] dark:text-[#2ba6ad]">{qiblaAngle.toFixed(1)}°</p>
               <p className="text-[9px] text-slate-500">от севера</p>
             </div>
-            <div className="rounded-xl bg-slate-50 p-2.5 dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-2.5 shadow-[0_2px_10px_-2px_rgba(15,45,60,0.1)] dark:border-zinc-700/60 dark:bg-zinc-900 dark:shadow-[0_2px_10px_-2px_rgba(0,0,0,0.5)]">
               <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Вы</p>
               <p
                 ref={headingLabelRef}
@@ -340,10 +345,10 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
               </p>
             </div>
             <div
-              className={`rounded-xl p-2.5 border ${
+              className={`rounded-xl border p-2.5 shadow-[0_2px_10px_-2px_rgba(15,45,60,0.1)] dark:shadow-[0_2px_10px_-2px_rgba(0,0,0,0.5)] ${
                 mode === 'ready'
-                  ? 'bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-900'
-                  : 'bg-slate-50 border-slate-100 dark:bg-zinc-900 dark:border-zinc-800'
+                  ? 'border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/20'
+                  : 'border-slate-200 bg-slate-50 dark:border-zinc-700/60 dark:bg-zinc-900'
               }`}
             >
               <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Поворот</p>
@@ -394,7 +399,7 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
           )}
 
           {mode === 'no-support' && (
-            <p className="mt-3 rounded-xl bg-slate-100 p-2 text-center text-[11px] text-slate-500 dark:bg-zinc-800 dark:text-zinc-400">
+            <p className="mt-3 rounded-xl border border-slate-200 bg-slate-100 p-2 text-center text-[11px] text-slate-500 shadow-[0_2px_10px_-2px_rgba(15,45,60,0.1)] dark:border-zinc-700/60 dark:bg-zinc-800 dark:text-zinc-400 dark:shadow-[0_2px_10px_-2px_rgba(0,0,0,0.5)]">
               На этом устройстве нет датчика компаса. Стрелка показывает статичное направление на Каабу: {qiblaAngle.toFixed(1)}° от севера.
             </p>
           )}

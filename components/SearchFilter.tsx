@@ -52,6 +52,9 @@ export default function SearchFilter({
   const { t } = useI18n();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isRegionOpen, setIsRegionOpen] = useState(true);
+  // Регионы: «Даймохк (везде)» и «Самашки» — отключаемые чекбоксы.
+  const [regionAll, setRegionAll] = useState(true);
+  const [regionSamashki, setRegionSamashki] = useState(true);
   const [isWhoOpen, setIsWhoOpen] = useState(true);
   const [isStatusOpen, setIsStatusOpen] = useState(true);
   const [isProfessionOpen, setIsProfessionOpen] = useState(true);
@@ -192,11 +195,21 @@ export default function SearchFilter({
                       </span>
                     </div>
                     <div className="grid flex flex-wrap gap-2">
+                      <label className="flex cursor-pointer items-center gap-2 rounded-xl bg-emerald-600 px-2.5 py-1.5 text-xs font-bold text-white shadow-sm">
+                        <input
+                          type="checkbox"
+                          checked={regionAll}
+                          onChange={(e) => setRegionAll(e.target.checked)}
+                          className="h-3.5 w-3.5 rounded text-white focus:ring-emerald-500"
+                        />
+                        <MapPin className="h-3.5 w-3.5" />
+                        {t.filterRegionAll}
+                      </label>
                       <label className="flex cursor-pointer items-center gap-2 rounded-xl bg-white px-2.5 py-1.5 text-xs font-bold text-slate-900 shadow-sm dark:bg-zinc-800 dark:text-white">
                         <input
                           type="checkbox"
-                          checked={true}
-                          readOnly
+                          checked={regionSamashki}
+                          onChange={(e) => setRegionSamashki(e.target.checked)}
                           className="h-3.5 w-3.5 rounded text-emerald-600 focus:ring-emerald-500"
                         />
                         <MapPin className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />

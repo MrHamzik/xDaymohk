@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, CircleUserRound, Clock3, LogIn, LogOut, Pencil, RotateCcw, Trash2, UserPlus, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, CircleUserRound, Clock3, LogIn, LogOut, Pencil, RotateCcw, Trash2, UserPlus, UserRound, Eye, EyeOff } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import SidebarNav from '@/components/SidebarNav';
 import BottomNav from '@/components/BottomNav';
@@ -14,7 +14,7 @@ import MobileMenuDrawer from '@/components/MobileMenuDrawer';
 import { useAuth } from '@/components/AuthProvider';
 import { useProfiles } from '@/components/ProfilesProvider';
 import { useI18n } from '@/lib/i18n';
-import { compressImageFile } from '@/lib/media';
+import { compressImageFile, cacheBustAvatarUrl } from '@/lib/media';
 import { extractPhoneDigits, formatPhone, isValidCyrillicName } from '@/lib/phone';
 import { Profile } from '@/lib/types';
 
@@ -28,7 +28,7 @@ export default function ProfilePage() {
   const [accountPhone, setAccountPhone] = useState('');
   const [gender, setGender] = useState<'male' | 'female' | ''>('');
   const [birthDate, setBirthDate] = useState('');
-  const [settlement, setSettlement] = useState('Самашки');
+  const [settlement, setSettlement] = useState('Даймохк');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -54,7 +54,7 @@ export default function ProfilePage() {
     setAvatarUrl(account.avatarUrl);
         setGender(account.gender || '');
     setBirthDate(account.birthDate || '');
-    setSettlement(account.settlement || 'Самашки');
+    setSettlement(account.settlement || 'Даймохк');
   }, [account]);
 
   const ownProfiles = account
@@ -80,7 +80,7 @@ export default function ProfilePage() {
     }
 
     try {
-      setAvatarUrl(await compressImageFile(file));
+      setAvatarUrl(await compressImageFile(file, true));
       setError('');
     } catch (imageError) {
       setError(imageError instanceof Error ? imageError.message : 'Не удалось обработать фото.');
@@ -122,7 +122,7 @@ export default function ProfilePage() {
         avatarUrl,
         gender: gender ? (gender as 'male' | 'female') : undefined,
         birthDate: birthDate ? birthDate : undefined,
-        settlement: settlement.trim() || 'Самашки'
+        settlement: settlement.trim() || 'Даймохк'
       });
       setError('Данные профиля и всех ваших анкет сохранены.');
     } catch (accountError) {
@@ -186,6 +186,33 @@ export default function ProfilePage() {
     setIsAddModalOpen(false);
   };
 
+  // Профиль доступен ТОЛЬКО после входа. Гостя — к окну согласия.
+  if (!isLoading && !account) {
+    return (
+      <div className="flex min-h-[100dvh] min-w-0 flex-col overflow-x-hidden bg-slate-50 bg-radial-gradient transition-colors dark:bg-zinc-950">
+        <Navbar />
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-300">
+            <UserRound className="h-8 w-8" />
+          </div>
+          <div>
+            <h1 className="text-lg font-black text-slate-900 dark:text-white">Профиль</h1>
+            <p className="mt-1 text-sm text-slate-500 dark:text-zinc-400">
+              Войдите в Даймохк, чтобы открыть свой профиль.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new Event('samashki-open-consent'))}
+            className="rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-700"
+          >
+            Войти в Даймохк
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-[100dvh] min-w-0 flex-col overflow-x-hidden bg-slate-50 bg-radial-gradient transition-colors dark:bg-zinc-950">
       <Navbar />
@@ -193,7 +220,7 @@ export default function ProfilePage() {
             <div className="mx-auto flex w-full max-w-6xl items-start justify-start gap-6 px-3.5 pb-20 pt-18 sm:pb-8 lg:pt-24">
         {/* Detached Sidebar for Desktop */}
         <aside className="sticky top-24 z-40 hidden w-[290px] shrink-0 flex-col lg:flex h-[calc(100vh-8rem)]">
-          <div className="flex-1 overflow-y-auto rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-950 no-scrollbar">
+          <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-950 no-scrollbar">
             <SidebarNav isAdmin={isCurrentUserAdmin} />
           </div>
         </aside>
@@ -205,7 +232,7 @@ export default function ProfilePage() {
             <Link
               href="/"
               aria-label="Вернуться в каталог"
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-700 transition hover:bg-slate-50 dark:border-zinc-700/60 dark:bg-zinc-900 dark:text-zinc-400"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-slate-200/70 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-zinc-700/60 dark:bg-zinc-900 dark:text-zinc-400"
             >
               <ArrowLeft className="h-4 w-4" />
             </Link>
@@ -228,14 +255,14 @@ export default function ProfilePage() {
           <form onSubmit={handleSaveAccount} className="space-y-3.5">
             {account.isBlocked && (
               <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
-                Ваш аккаунт заблокирован администратором. Новые анкеты создавать нельзя.
+                {t.accountBlocked}
               </p>
             )}
 
             {/* Sleek Profile Card with Avatar */}
             <div className="flex items-center gap-3.5 rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-sm dark:border-zinc-700/60 dark:bg-zinc-900">
               <img
-                src={avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop'}
+                src={cacheBustAvatarUrl(avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop')}
                 alt="Аватар профиля"
                 className="h-14 w-14 shrink-0 rounded-xl object-cover shadow-sm"
                 style={{ width: '3.5rem', height: '3.5rem', minWidth: '3.5rem', minHeight: '3.5rem', borderRadius: 'var(--radius-xl, 0.75rem)' }}
@@ -261,7 +288,7 @@ export default function ProfilePage() {
                   required
                   pattern="[А-ЯЁа-яё\-]{2,30}"
                   title="Только кириллица и дефис"
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white"
+                  className="w-full rounded-xl border border-slate-200/70 bg-white px-3 py-2.5 text-xs text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white"
                 />
               </div>
               <div>
@@ -274,7 +301,7 @@ export default function ProfilePage() {
                   required
                   pattern="[А-ЯЁа-яё\-]{2,30}"
                   title="Только кириллица и дефис"
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white"
+                  className="w-full rounded-xl border border-slate-200/70 bg-white px-3 py-2.5 text-xs text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white"
                 />
               </div>
             </div>
@@ -287,21 +314,21 @@ export default function ProfilePage() {
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
-                <label htmlFor="account-gender" className="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-300">Пол</label>
-                <select id="account-gender" value={gender} onChange={(event) => setGender(event.target.value as any)} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 pr-8 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-100">
-                  <option value="">Не указано</option>
-                  <option value="male">Мужской</option>
-                  <option value="female">Женский</option>
+                <label htmlFor="account-gender" className="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-300">{t.genderLabel}</label>
+                <select id="account-gender" value={gender} onChange={(event) => setGender(event.target.value as any)} className="w-full rounded-xl border border-slate-200/70 bg-white px-3 pr-8 py-2.5 text-xs text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-100">
+                  <option value="">{t.genderNotSet}</option>
+                  <option value="male">{t.genderMale}</option>
+                  <option value="female">{t.genderFemale}</option>
                 </select>
               </div>
               <div>
-                <label htmlFor="account-birthDate" className="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-300">Дата рождения</label>
-                <input id="account-birthDate" type="date" value={birthDate} onChange={(event) => setBirthDate(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-100" />
+                <label htmlFor="account-birthDate" className="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-300">{t.birthDateLabel}</label>
+                <input id="account-birthDate" type="date" value={birthDate} onChange={(event) => setBirthDate(event.target.value)} className="w-full rounded-xl border border-slate-200/70 bg-white px-3 py-2.5 text-xs text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-100" />
               </div>
             </div>
 
             {/* My Questionnaires list */}
-            <section className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-3.5 dark:border-zinc-700/60 dark:bg-zinc-900">
+            <section className="space-y-2 rounded-2xl border border-slate-200/60 bg-white p-3.5 shadow-sm dark:border-zinc-700/60 dark:bg-zinc-900">
               <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-2 dark:border-zinc-700/60">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-400">{t.myProfiles}</h3>
                 <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300">{ownProfiles.length}</span>
@@ -312,12 +339,12 @@ export default function ProfilePage() {
                 <div key={profile.id} className={`flex items-center gap-2 rounded-xl border p-2 ${profile.isPersonal ? 'border-emerald-200 bg-emerald-50/60 dark:border-emerald-900 dark:bg-emerald-950/20' : profile.isHidden || profile.isBanned ? 'border-red-300 bg-red-50 dark:border-red-900 dark:bg-red-950/30' : 'border-slate-100 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-800'}`}>
                   <div className="min-w-0 flex-1">
                     <div className="flex min-w-0 items-center gap-1.5">
-                      <p className="truncate text-xs font-bold text-slate-900 dark:text-white">{profile.isPersonal ? 'Личная анкета' : (profile.professionTitle || 'Личная анкета')}</p>
-                      {profile.isPersonal && <span className="shrink-0 rounded bg-emerald-100 px-1 py-0.5 text-[8px] font-bold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">Личная</span>}
+                      <p className="truncate text-xs font-bold text-slate-900 dark:text-white">{profile.isPersonal ? t.personalProfile : (profile.professionTitle || t.personalProfile)}</p>
+                      {profile.isPersonal && <span className="shrink-0 rounded bg-emerald-100 px-1 py-0.5 text-[8px] font-bold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">{t.personalBadge}</span>}
                       {(profile.isHidden || profile.isBanned) && !profile.isPersonal && <span className="shrink-0 rounded-md bg-red-600 px-1.5 py-0.5 text-[9px] font-bold text-white">Скрыта</span>}
                       {profile.verificationStatus === 'pending' && <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-slate-200 px-1.5 py-0.5 text-[9px] font-bold text-slate-700 dark:bg-zinc-700 dark:text-zinc-300"><Clock3 className="h-2.5 w-2.5 animate-spin" />На проверке</span>}
                     </div>
-                    <p className="truncate text-[10px] text-slate-500 dark:text-zinc-500">{profile.isPersonal ? 'Минимальная информация, без контактов' : profile.workplaceAddress}</p>
+                    <p className="truncate text-[10px] text-slate-500 dark:text-zinc-500">{profile.isPersonal ? t.personalMinInfo : profile.workplaceAddress}</p>
                   </div>
                   {!profile.isPersonal && <button type="button" disabled={Boolean(account.isBlocked)} onClick={() => updateProfile(profile.id, { isHidden: !profile.isHidden })} aria-label={profile.isHidden ? 'Показать анкету' : 'Скрыть анкету'} title={profile.isHidden ? 'Показать' : 'Скрыть'} className="inline-flex shrink-0 items-center gap-1 rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 dark:text-zinc-400 dark:hover:bg-zinc-800">{profile.isHidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}</button>}
                   <button type="button" disabled={Boolean(account.isBlocked)} onClick={() => { setEditingProfile(profile); setIsAddModalOpen(true); }} aria-label="Изменить анкету" title="Изменить" className="inline-flex shrink-0 items-center gap-1 rounded-lg p-1.5 text-emerald-700 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50 dark:text-emerald-400 dark:hover:bg-emerald-950/40"><Pencil className="h-3.5 w-3.5" /></button>

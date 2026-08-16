@@ -3,8 +3,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, FileText, LocateFixed, MapPinned, Phone, Users, Star } from 'lucide-react';
+import { cacheBustAvatarUrl } from '@/lib/media';
+import { fetchEffectiveHouseAddresses, type SamashkiHouseAddress } from '@/lib/samashki-addresses';
 import InteractiveMap from '@/components/InteractiveMapLazy';
-import { type MapLayerMode } from '@/components/InteractiveMap';
+import { type MapLayerMode, type MapObjectMode } from '@/components/InteractiveMap';
 import AccountModal from '@/components/AccountModal';
 import EditProfileModal from '@/components/EditProfileModal';
 import Navbar from '@/components/Navbar';
@@ -43,9 +45,27 @@ export default function MapPage() {
   const [professionFilters, setProfessionFilters] = useState<string[]>([]);
   const [mapLayerMode, setMapLayerMode] = useState<MapLayerMode>('streets');
   const [locationRequestKey, setLocationRequestKey] = useState(0);
-  const [showProfiles, setShowProfiles] = useState(true);
-  const [showHouses, setShowHouses] = useState(true);
-  const [showPlaces, setShowPlaces] = useState(true);
+  // Слой объектов на карте — только один активный (как «карта/спутник/гибрид»).
+  const [objectMode, setObjectMode] = useState<MapObjectMode>('profiles');
+  // Категория для слоя «Другое» ('' = все), как фильтр в админке.
+  const [placesCategory, setPlacesCategory] = useState('');
+  const [allAddresses, setAllAddresses] = useState<SamashkiHouseAddress[]>([]);
+  // Список категорий «Других» объектов из загруженных адресов.
+  const placeCategories = useMemo(() => {
+    const cats = new Set<string>();
+    for (const a of allAddresses) {
+      if (a.isNotHouse && a.category) cats.add(a.category);
+    }
+    return Array.from(cats).sort();
+  }, [allAddresses]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchEffectiveHouseAddresses().then((addr) => {
+      if (!cancelled && Array.isArray(addr)) setAllAddresses(addr);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   const adminOwnerId = account?.isAdmin ? account.id : undefined;
   const profilesWithAddresses = useMemo(
@@ -115,7 +135,7 @@ export default function MapPage() {
             <div className="mx-auto flex w-full max-w-6xl items-start justify-start gap-6 px-3.5 pb-20 pt-18 sm:pb-8 lg:pt-24">
         {/* Detached Sidebar for Desktop */}
         <aside className="sticky top-24 z-40 hidden w-[290px] shrink-0 flex-col lg:flex h-[calc(100vh-8rem)]">
-          <div className="flex-1 overflow-y-auto rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-950 no-scrollbar">
+          <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-950 no-scrollbar">
             <SidebarNav isAdmin={isCurrentUserAdmin} />
           </div>
         </aside>
@@ -124,7 +144,7 @@ export default function MapPage() {
         <main className="flex-1 min-w-0 max-w-3xl">
         <div className="mb-5 flex items-center gap-3">
           <Link
-            href="/"
+            href="/catalog"
             aria-label="Вернуться в каталог"
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400"
           >
@@ -169,7 +189,7 @@ export default function MapPage() {
                     onClick={() => hasMapPoint ? setSelectedProfileId(profile.id) : setActiveProfileId(profile.id)}
                     className={`flex min-w-0 items-center gap-2 rounded-xl border p-2 text-left transition ${isSelected ? 'border-emerald-400 bg-emerald-50 dark:border-emerald-700 dark:bg-emerald-950/30' : 'border-slate-200 bg-slate-50 hover:border-emerald-300 dark:border-zinc-700 dark:bg-zinc-800/70 dark:hover:border-emerald-800'}`}
                   >
-                    <img src={profile.avatarUrl} alt="" className="h-10 w-10 shrink-0 rounded-lg object-cover" />
+                    <img src={cacheBustAvatarUrl(profile.avatarUrl)} alt="" className="h-10 w-10 shrink-0 rounded-lg object-cover" />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-xs font-bold text-slate-900 dark:text-white">{profile.professionTitle || 'Личная анкета'}</span>
                       <span className="block truncate text-[11px] text-slate-500 dark:text-zinc-500">{profile.workplaceAddress || 'Адрес не указан'}</span>
@@ -201,9 +221,11 @@ export default function MapPage() {
             <InteractiveMap
               selectedPosition={selectedProfile?.workplaceCoords ?? null}
               showControls={false}
-              showProfiles={showProfiles}
-              showHouses={showHouses}
-              showPlaces={showPlaces}
+              showProfiles={objectMode === 'profiles'}
+              showHouses={objectMode === 'houses'}
+              showPlaces={objectMode === 'places'}
+              objectMode={objectMode}
+              placesCategory={placesCategory}
               onClearSelection={() => setSelectedProfileId(null)}
               mapLayerMode={mapLayerMode}
               onMapLayerModeChange={setMapLayerMode}
@@ -223,42 +245,56 @@ export default function MapPage() {
             />
             
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 px-2 pt-3 dark:border-zinc-700">
-              <div className="flex items-center gap-1.5" aria-label="Слои объектов">
+              <div className="flex flex-wrap items-center gap-1.5" aria-label="Слои объектов">
                 <span className="text-[11px] font-bold text-slate-400">{t.mapShowLayers}</span>
-                <button
-                  type="button"
-                  onClick={() => setShowProfiles((prev) => !prev)}
-                  className={`rounded-xl px-2.5 py-1 text-xs font-bold transition ${
-                    showProfiles
-                      ? 'bg-emerald-600 text-white shadow-sm'
-                      : 'border border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-500'
-                  }`}
-                >
-                  {t.mapLayerProfiles}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowHouses((prev) => !prev)}
-                  className={`rounded-xl px-2.5 py-1 text-xs font-bold transition ${
-                    showHouses
-                      ? 'bg-emerald-600 text-white shadow-sm'
-                      : 'border border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-500'
-                  }`}
-                >
-                  {t.mapLayerHouses}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowPlaces((prev) => !prev)}
-                  className={`rounded-xl px-2.5 py-1 text-xs font-bold transition ${
-                    showPlaces
-                      ? 'bg-emerald-600 text-white shadow-sm'
-                      : 'border border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-500'
-                  }`}
-                >
-                  {t.mapLayerPlaces}
-                </button>
+                {(() => {
+                  // Счётчики адресов из БД — видно, сколько домов/объектов загружено.
+                  const houseCount = allAddresses.filter((a) => !a.isNotHouse).length;
+                  const placeCount = allAddresses.filter((a) => a.isNotHouse).length;
+                  return [
+                    ['profiles', t.mapLayerProfiles, null],
+                    ['houses', t.mapLayerHouses, houseCount],
+                    ['places', t.mapLayerPlaces, placeCount],
+                  ] as [MapObjectMode, string, number | null][];
+                })().map(([mode, label, count]) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    aria-pressed={objectMode === mode}
+                    // Повторный клик по активному — отключает слой (none).
+                    onClick={() => setObjectMode(objectMode === mode ? 'none' : mode)}
+                    className={`rounded-xl px-2.5 py-1 text-xs font-bold transition ${
+                      objectMode === mode
+                        ? 'bg-emerald-600 text-white shadow-sm'
+                        : 'border border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-500'
+                    }`}
+                  >
+                    {label}
+                    {count !== null && <span className={`ml-1 rounded-full px-1.5 text-[9px] ${objectMode === mode ? 'bg-white/25' : 'bg-white dark:bg-zinc-700'}`}>{count}</span>}
+                  </button>
+                ))}
               </div>
+
+              {/* Фильтр категорий для слоя «Другое» (как в админке) */}
+              {objectMode === 'places' && (
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  <span className="text-[11px] font-bold text-slate-400">Категория:</span>
+                  {(['', ...placeCategories]).map((cat) => (
+                    <button
+                      key={cat || 'all'}
+                      type="button"
+                      onClick={() => setPlacesCategory(cat)}
+                      className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold transition ${
+                        placesCategory === cat
+                          ? 'bg-emerald-600 text-white'
+                          : 'border border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-500'
+                      }`}
+                    >
+                      {cat || 'Все'}
+                    </button>
+                  ))}
+                </div>
+              )}
 
               <p className="text-[11px] text-slate-400">{t.mapClearHint}</p>
             </div>
@@ -269,7 +305,7 @@ export default function MapPage() {
               <div>
                 <div className="mb-4 flex items-start gap-3">
                   <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 dark:border-zinc-700 dark:bg-zinc-800">
-                    <img src={selectedProfile.avatarUrl} alt={selectedProfile.fullName} className="h-full w-full object-cover" />
+                    <img src={cacheBustAvatarUrl(selectedProfile.avatarUrl)} alt={selectedProfile.fullName} className="h-full w-full object-cover" />
                   </div>
                   <div className="min-w-0">
                     <h3 id="profile-location-title" className="break-words text-sm font-bold text-slate-900 dark:text-white">{selectedProfile.fullName}</h3>

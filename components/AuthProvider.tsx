@@ -19,6 +19,8 @@ export interface Account {
   phone: string;
   isAdmin?: boolean;
   isBlocked?: boolean;
+  /** ISO timestamp when a temporary ban expires (undefined = no ban / permanent). */
+  bannedUntil?: string;
   statusOverride?: UserMasterStatus;
 }
 
@@ -100,24 +102,32 @@ async function resolveAccount(user: AuthUser): Promise<Account> {
     const stored = data as StoredAccount;
     const emailForCheck = (stored.email || fallbackAccount.email || '').toLowerCase();
     const isAdminByEmail = isAdminEmail(emailForCheck);
-    if (Boolean(stored.is_admin) !== isAdminByEmail) {
-      await supabase.from('user_profiles').update({ is_admin: isAdminByEmail }).eq('id', user.id);
+    // Эффективный статус: админы из списка email (всегда) + выданные админ-
+    // права из БД (их можно давать/отбирать через админ-панель). НЕ сбрасываем
+    // выданный статус до «false» — иначе выдача прав не работала бы.
+    const effectiveIsAdmin = isAdminByEmail || Boolean(stored.is_admin);
+    if (Boolean(stored.is_admin) !== effectiveIsAdmin) {
+      await supabase.from('user_profiles').update({ is_admin: effectiveIsAdmin }).eq('id', user.id);
     }
-    // Мержим с локальным аккаунтом, чтобы не потерять gender/birthDate если колонки ещё не в БД
-    const mergedGender = stored.gender || (local && local.id === stored.id ? local.gender : undefined);
-    const mergedBirth = stored.birth_date || (stored.birth_year ? String(stored.birth_year) : undefined) || (local && local.id === stored.id ? local.birthDate : undefined);
-    const mergedSettlement = stored.settlement || (local && local.id === stored.id ? local.settlement : undefined);
+    // Мержим с локальным аккаунтом, чтобы не потерять gender/birthDate/ник/аватар,
+    // если в БД ещё пусто (пользователь мог сменить ник/фото локально, а Google
+    // при повторном входе перезаписал бы их метаданными аккаунта).
+    const localMine = local && local.id === stored.id ? local : undefined;
+    const mergedGender = stored.gender || (localMine ? localMine.gender : undefined);
+    const mergedBirth = stored.birth_date || (stored.birth_year ? String(stored.birth_year) : undefined) || (localMine ? localMine.birthDate : undefined);
+    const mergedSettlement = stored.settlement || (localMine ? localMine.settlement : undefined);
     return {
       id: stored.id,
       email: stored.email || fallbackAccount.email,
-      fullName: stored.full_name || fallbackAccount.fullName,
-      avatarUrl: stored.avatar_url || fallbackAccount.avatarUrl,
+      fullName: stored.full_name || (localMine ? localMine.fullName : undefined) || fallbackAccount.fullName,
+      avatarUrl: stored.avatar_url || (localMine ? localMine.avatarUrl : undefined) || fallbackAccount.avatarUrl,
       phone: stored.phone || fallbackAccount.phone,
       gender: mergedGender,
       birthDate: mergedBirth,
       settlement: mergedSettlement,
-      isAdmin: isAdminByEmail,
+      isAdmin: effectiveIsAdmin,
       isBlocked: Boolean(stored.is_blocked),
+      bannedUntil: typeof (user as any).app_metadata?.banned_until === 'string' ? (user as any).app_metadata.banned_until : undefined,
       statusOverride: stored.status_override || 'auto',
     };
   }
@@ -161,6 +171,24 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       if (isSupabaseConfigured && supabase) {
         const { data } = await supabase.auth.getUser();
         if (!cancelled) {
+          // Если временный бан истёк — автоматически разблокируемся и
+          // показываем все анкеты (см. /api/account/self-unban).
+          const bannedUntilRaw = (data.user as any)?.app_metadata?.banned_until;
+          const bannedUntil = typeof bannedUntilRaw === 'string' ? new Date(bannedUntilRaw) : null;
+          if (bannedUntil && Number.isFinite(bannedUntil.getTime()) && bannedUntil.getTime() <= Date.now()) {
+            try {
+              const session = await supabase.auth.getSession();
+              const accessToken = session.data.session?.access_token;
+              if (accessToken) {
+                await fetch('/api/account/self-unban', {
+                  method: 'POST',
+                  headers: { Authorization: `Bearer ${accessToken}` },
+                });
+              }
+            } catch {
+              // Не критично — при следующей загрузке повторим.
+            }
+          }
           const acc = data.user ? await resolveAccount(data.user) : null;
           setAccount(acc);
           if (acc) saveLocalAccount(acc);
@@ -256,6 +284,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       };
       const { error } = await supabase.from('user_profiles').upsert(upsertPayload as any, { onConflict: 'id' });
       if (error) {
+        console.warn('[updateAccount] upsert extended failed:', error.message);
         // Fallback for older schemas without new columns
         const { error: fallbackError } = await supabase.from('user_profiles').upsert({
           id: nextAccount.id,
@@ -265,7 +294,10 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
           phone: nextAccount.phone,
           is_admin: Boolean(nextAccount.isAdmin),
         } as any, { onConflict: 'id' });
-        if (fallbackError) throw new Error(fallbackError.message);
+        if (fallbackError) {
+          console.warn('[updateAccount] upsert fallback failed:', fallbackError.message);
+          throw new Error(`Не удалось сохранить профиль в БД: ${fallbackError.message}`);
+        }
       }
     }
 
@@ -315,6 +347,11 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     window.dispatchEvent(new CustomEvent('samashki-account-deleted', { detail: { ownerId: account.id } }));
     setAccount(null);
     saveLocalAccount(null);
+    // Сбрасываем локальные флаги, чтобы при повторной регистрации
+    // онбординг (welcome-письмо) показался заново.
+    try {
+      window.localStorage.removeItem('samashki-onboarded-v1');
+    } catch {}
   }, [account]);
 
   const signOut = useCallback(async () => {

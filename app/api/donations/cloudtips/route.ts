@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import { rateLimit, withRateLimitHeaders } from '@/lib/rate-limit';
+import { log } from '@/lib/logger';
 
 const MAX_BODY_BYTES = 64 * 1024; // 64 KB upper bound for CloudTips payload
 
@@ -19,7 +20,7 @@ function isValidSignature(body: string, provided: string, secret: string) {
 
 export async function POST(request: Request) {
   // Rate limit: 120 req / minute per IP (CloudTips may burst during incidents)
-  const limit = rateLimit(request, { limit: 120, windowMs: 60_000 });
+  const limit = await rateLimit(request, { limit: 120, windowMs: 60_000 });
   if (!limit.allowed) {
     return withRateLimitHeaders(
       Response.json({ code: 1, error: 'Too many requests' }, { status: 429 }),
@@ -70,7 +71,7 @@ export async function POST(request: Request) {
   }, { onConflict: 'operation_id' });
 
   if (donationError) {
-    console.error('Failed to store CloudTips donation:', donationError.message);
+    log.error('Failed to store CloudTips donation:', donationError.message);
     return Response.json({ code: 1, error: 'Storage error' }, { status: 500 });
   }
 
@@ -84,7 +85,7 @@ export async function POST(request: Request) {
     .lt('received_at', `${nextMonth}-01T00:00:00.000Z`);
 
   if (totalError) {
-    console.error('Failed to calculate CloudTips total:', totalError.message);
+    log.error('Failed to calculate CloudTips total:', totalError.message);
     return Response.json({ code: 1, error: 'Calculation error' }, { status: 500 });
   }
 
@@ -102,7 +103,7 @@ export async function POST(request: Request) {
   }, { onConflict: 'month_key' });
 
   if (budgetError) {
-    console.error('Failed to update support progress:', budgetError.message);
+    log.error('Failed to update support progress:', budgetError.message);
     return Response.json({ code: 1, error: 'Progress error' }, { status: 500 });
   }
 

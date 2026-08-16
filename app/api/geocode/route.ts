@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { rateLimit, withRateLimitHeaders } from '@/lib/rate-limit';
+import { log } from '@/lib/logger';
 
 interface DadataSuggestion {
   value?: string;
@@ -10,6 +11,8 @@ interface DadataSuggestion {
     house?: string;
     settlement_with_type?: string;
     city_with_type?: string;
+    region_with_type?: string;
+    region?: string;
     geo_lat?: string;
     geo_lon?: string;
     qc_geo?: string;
@@ -27,7 +30,7 @@ function compactDadataAddress(suggestion: DadataSuggestion) {
   const street = data.street_with_type || data.street;
   const house = data.house;
   if (street) return house ? `${street}, д. ${house}` : street;
-  return data.settlement_with_type || data.city_with_type || suggestion.value || suggestion.unrestricted_value || 'Самашки';
+  return data.settlement_with_type || data.city_with_type || suggestion.value || suggestion.unrestricted_value || 'Даймохк';
 }
 
 function parseDadataSuggestion(suggestion: DadataSuggestion) {
@@ -44,7 +47,7 @@ function parseDadataSuggestion(suggestion: DadataSuggestion) {
 
 export async function GET(request: Request) {
   // Rate limit: 30 req / minute per IP
-  const limit = rateLimit(request, { limit: 30, windowMs: 60_000 });
+  const limit = await rateLimit(request, { limit: 30, windowMs: 60_000 });
   if (!limit.allowed) {
     return withRateLimitHeaders(
       NextResponse.json({ error: 'Too many requests' }, { status: 429 }),
@@ -75,7 +78,7 @@ export async function GET(request: Request) {
         Accept: 'application/json',
       },
       body: JSON.stringify({
-        query: `${query}, Самашки, Чеченская Республика`,
+        query: `${query}, Чеченская Республика`,
         count: 8,
         locations: [{ region: 'Чеченская Республика' }],
       }),
@@ -83,7 +86,7 @@ export async function GET(request: Request) {
     });
 
     if (!response.ok) {
-      console.warn(`DaData suggestions returned ${response.status}`);
+      log.warn('geocode/suggest', `DaData returned ${response.status}`);
       return NextResponse.json({ results: [], fallback: true });
     }
 
@@ -95,8 +98,84 @@ export async function GET(request: Request) {
     );
   } catch (error) {
     if (error instanceof Error && error.name !== 'AbortError') {
-      console.warn('DaData suggestions are unavailable:', error.message);
+      log.warn('DaData suggestions are unavailable:', error.message);
     }
     return NextResponse.json({ results: [], fallback: true });
+  }
+}
+
+
+/**
+ * Обратный геокодинг по координатам (DaData /address/geocode).
+ * GET /api/geocode/reverse?lat=..&lng=..
+ */
+export async function POST(request: Request) {
+  const limit = await rateLimit(request, { limit: 60, windowMs: 60_000 });
+  if (!limit.allowed) {
+    return withRateLimitHeaders(
+      NextResponse.json({ error: 'Too many requests' }, { status: 429 }),
+      { ...limit, limit: 60 }
+    );
+  }
+
+  const origin = request.headers.get('origin');
+  if (origin && !ALLOWED_ORIGINS.has(origin)) {
+    return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+  }
+
+  const token = process.env.DADATA_API_TOKEN;
+  if (!token) {
+    return NextResponse.json({ error: 'DaData token not configured' }, { status: 503 });
+  }
+
+  let body: { lat?: number; lng?: number } = {};
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Неверный запрос' }, { status: 400 });
+  }
+  const lat = Number(body.lat);
+  const lng = Number(body.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return NextResponse.json({ error: 'lat/lng обязательны' }, { status: 400 });
+  }
+
+  try {
+    const response = await fetch('https://suggestions.dadata.ru/suggestions/api/4_1/rs/geolocate/address', {
+      method: 'POST',
+      headers: {
+        Authorization: `Token ${token}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({
+        lat,
+        lon: lng,
+        radius_meters: 200,
+        count: 5,
+        locations: [{ region: 'Чеченская Республика' }],
+      }),
+    });
+    if (!response.ok) {
+      log.warn('geocode/reverse', `DaData returned ${response.status}`);
+      return NextResponse.json({ error: 'Геокодер недоступен' }, { status: 502 });
+    }
+    const payload = (await response.json()) as { suggestions?: DadataSuggestion[] };
+    const results = (payload.suggestions ?? []).map((s) => {
+      const d = s.data ?? {};
+      return {
+        value: s.unrestricted_value || s.value || '',
+        region: d.region_with_type || d.region || '',
+        settlement: d.settlement_with_type || d.city_with_type || '',
+        street: d.street_with_type || d.street || '',
+        house: d.house || '',
+      };
+    }).filter((r) => r.value);
+    return withRateLimitHeaders(NextResponse.json({ results }), { ...limit, limit: 60 });
+  } catch (error) {
+    if (error instanceof Error && error.name !== 'AbortError') {
+      log.warn('DaData geolocate unavailable:', error.message);
+    }
+    return NextResponse.json({ error: 'Геокодер недоступен' }, { status: 502 });
   }
 }

@@ -1,6 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
 @import "leaflet/dist/leaflet.css";
+@import "leaflet.markercluster/dist/MarkerCluster.css";
+@import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 
 /* Tailwind v4 dark variant binding */
 @custom-variant dark (&:where(.dark, .dark *));
@@ -402,7 +404,6 @@ html.dark input,
 html.dark select,
 html.dark textarea {
   border-color: rgb(50 50 55 / 90%);
-  background-color: rgba(30, 30, 35, 0.8);
 }
 
 /* Fix house badge in dark to be visible but soft */
@@ -425,4 +426,54 @@ html.dark .samashki-profile-badge.selected {
 html.dark .bg-emerald-600.border-white,
 html.dark .bg-emerald-600.border-slate-200 {
   border-color: var(--border-green-dark);
+}
+
+/* ===== Кластеры объектов (leaflet.markercluster) =====
+   Светлая тема: фон --color-slate-50 (почти белый), тёмный текст.
+   Тёмная тема: фон --color-zinc-800, светлый текст.
+   Цифры центрируются через flex; размер уменьшен на 30% от прошлой версии. */
+.marker-cluster-small,
+.marker-cluster-medium,
+.marker-cluster-large {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background-color: var(--color-slate-50);
+  box-shadow: 0 1px 6px -1px rgba(15, 23, 42, 0.25);
+}
+.marker-cluster-small { width: 28px; height: 28px; }
+.marker-cluster-medium { width: 36px; height: 36px; }
+.marker-cluster-large { width: 44px; height: 44px; }
+
+.marker-cluster-small div,
+.marker-cluster-medium div,
+.marker-cluster-large div {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background-color: var(--color-slate-50);
+  color: #334155;
+  font-weight: 800;
+  font-family: inherit;
+  line-height: 1;
+}
+.marker-cluster-small div { font-size: 11px; }
+.marker-cluster-medium div { font-size: 12px; }
+.marker-cluster-large div { font-size: 13px; }
+
+html.dark .marker-cluster-small,
+html.dark .marker-cluster-medium,
+html.dark .marker-cluster-large {
+  background-color: var(--color-zinc-800);
+  box-shadow: 0 1px 8px -1px rgba(0, 0, 0, 0.6);
+}
+html.dark .marker-cluster-small div,
+html.dark .marker-cluster-medium div,
+html.dark .marker-cluster-large div {
+  background-color: var(--color-zinc-800);
+  color: #e4e4e7;
 }

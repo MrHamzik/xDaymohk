@@ -1,32 +1,9 @@
 import { NextResponse } from 'next/server';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { createAdminClient } from '@/lib/supabase-admin';
-import { isAdminEmail } from '@/lib/admin';
+import { authenticateAdmin } from '@/lib/auth';
 import { rateLimit, withRateLimitHeaders } from '@/lib/rate-limit';
-
-/**
- * Verify the caller's bearer JWT and confirm they are an admin.
- * Returns the email on success, or null on any failure (with a
- * human-readable error message for the response).
- */
-async function authenticateAdmin(request: Request): Promise<{ email: string; userId: string } | { error: string; status: number }> {
-  if (!isSupabaseConfigured || !supabase) {
-    return { error: 'Supabase not configured', status: 500 };
-  }
-  const auth = request.headers.get('authorization');
-  const token = auth?.replace('Bearer ', '').trim();
-  if (!token) {
-    return { error: 'Сессия не найдена', status: 401 };
-  }
-  const { data, error } = await supabase.auth.getUser(token);
-  if (error || !data?.user?.email) {
-    return { error: 'Сессия недействительна', status: 401 };
-  }
-  if (!isAdminEmail(data.user.email)) {
-    return { error: 'Forbidden: admin only', status: 403 };
-  }
-  return { email: data.user.email, userId: data.user.id };
-}
+import { log } from '@/lib/logger';
 
 export async function GET() {
   // GET is intentionally public (the /map page reads the same data
@@ -34,12 +11,29 @@ export async function GET() {
   // policy on public.house_addresses allows it.
   try {
     if (isSupabaseConfigured && supabase) {
-      const { data, error } = await supabase
-        .from('house_addresses')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (!error && data) {
-        const mapped = data.map((row: any) => ({
+      // Supabase (PostgREST) режет выборку на db-max-rows (по умолчанию 1000)
+      // независимо от .limit(). Поэтому идём страницами по 1000 через .range(),
+      // пока не соберём все адреса — лимит на количество домов отсутствует.
+      const PAGE = 1000;
+      const all: any[] = [];
+      let from = 0;
+      for (;;) {
+        const { data, error } = await supabase
+          .from('house_addresses')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .range(from, from + PAGE - 1);
+        if (error) {
+          log.warn('Supabase house_addresses page failed', error);
+          break;
+        }
+        if (!data || data.length === 0) break;
+        all.push(...data);
+        if (data.length < PAGE) break;
+        from += PAGE;
+      }
+      if (all.length > 0) {
+        const mapped = all.map((row: any) => ({
           id: String(row.id),
           street: row.street,
           houseNumber: row.house_number,
@@ -60,7 +54,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const limit = rateLimit(request, { limit: 30, windowMs: 60_000 });
+  const limit = await rateLimit(request, { limit: 30, windowMs: 60_000 });
   if (!limit.allowed) {
     return withRateLimitHeaders(
       NextResponse.json({ error: 'Too many requests' }, { status: 429 }),
@@ -82,7 +76,7 @@ export async function POST(request: Request) {
   }
 
   // Step 2: parse the payload.
-  let body: { addresses?: unknown } = {};
+  let body: { addresses?: unknown; deleteIds?: unknown } = {};
   try {
     body = await request.json();
   } catch {
@@ -91,6 +85,12 @@ export async function POST(request: Request) {
   if (!Array.isArray(body.addresses)) {
     return NextResponse.json({ error: 'Неверные данные: ожидается { addresses: [...] }' }, { status: 400 });
   }
+  // Явный список id на удаление (из pendingDeletes админки). Удаляем РОВНО их,
+  // а не «всё, чего нет в payload» — так удаление не зависит от лимитов и
+  // от совпадения id между локальным состоянием и БД.
+  const deleteIds = Array.isArray(body.deleteIds)
+    ? body.deleteIds.map((x) => String(x)).filter(Boolean)
+    : [];
 
   const sanitized = (body.addresses as any[]).map((a) => ({
     id: String(a?.id || `addr-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
@@ -113,16 +113,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { data: existing, error: existingError } = await admin
-      .from('house_addresses')
-      .select('id');
-    if (existingError) throw existingError;
-    const existingIds = new Set((existing || []).map((r: any) => String(r.id)));
-    const newIds = new Set(sanitized.map((a) => a.id));
-
     // Upsert is safer than plain INSERT here: it covers both add and
     // edit-in-place in one round-trip, and the conflict target is
-    // the primary key.
+    // the primary key. Большие payload бьём на чанки (лимит запроса).
+    const CHUNK = 1000;
     const rows = sanitized.map((a) => ({
       id: a.id,
       street: a.street,
@@ -134,27 +128,41 @@ export async function POST(request: Request) {
       is_not_house: a.isNotHouse,
       category: a.category,
     }));
-    const { error: upsertError } = await admin
-      .from('house_addresses')
-      .upsert(rows, { onConflict: 'id' });
-    if (upsertError) throw upsertError;
-
-    // Soft-deleted rows in the UI mean "delete from DB": any row
-    // that was in the table but is not in the new payload gets
-    // physically removed.
-    const toDelete = Array.from(existingIds).filter((id) => !newIds.has(id));
-    if (toDelete.length > 0) {
-      const { error: deleteError } = await admin
+    log.warn('addresses:POST', `rows=${rows.length} deleteIds=${deleteIds.length}`);
+    for (let i = 0; i < rows.length; i += CHUNK) {
+      const chunk = rows.slice(i, i + CHUNK);
+      log.warn('addresses:POST', `upsert chunk ${i / CHUNK + 1} size=${chunk.length}`);
+      const { error: upsertError } = await admin
         .from('house_addresses')
-        .delete()
-        .in('id', toDelete);
-      if (deleteError) throw deleteError;
+        .upsert(chunk, { onConflict: 'id' });
+      if (upsertError) {
+        log.warn('[addresses:POST] upsert ERROR', upsertError);
+        throw upsertError;
+      }
     }
 
-    return NextResponse.json({ success: true, count: sanitized.length, source: 'supabase' });
+    // Удаляем РОВНО те id, что прислал клиент (помеченные в админке).
+    // Без пагинации чтения existingIds — никаких «осталось >1000» багов.
+    let deletedCount = 0;
+    for (let i = 0; i < deleteIds.length; i += CHUNK) {
+      const chunk = deleteIds.slice(i, i + CHUNK);
+      log.warn('addresses:POST', `delete chunk ${i / CHUNK + 1} size=${chunk.length}`);
+      const { error: deleteError, count } = await admin
+        .from('house_addresses')
+        .delete({ count: 'exact' })
+        .in('id', chunk);
+      if (deleteError) {
+        log.warn('[addresses:POST] delete ERROR', deleteError);
+        throw deleteError;
+      }
+      deletedCount += count ?? chunk.length;
+    }
+
+    log.warn('addresses:POST', `OK deleted=${deletedCount}`);
+    return NextResponse.json({ success: true, count: sanitized.length, deletedCount, source: 'supabase' });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
-    console.warn('Supabase house_addresses upsert failed', e);
+    log.warn('Supabase house_addresses upsert failed', e);
     return NextResponse.json({ error: `Supabase error: ${message}` }, { status: 500 });
   }
 }

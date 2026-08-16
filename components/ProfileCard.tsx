@@ -1,10 +1,12 @@
 'use client';
 
 import Image from 'next/image';
-import { Award, Ban, Flag, MapPin, Star } from 'lucide-react';
+import { Award, Ban, ChevronRight, Flag, MapPin, Star } from 'lucide-react';
 import { Profile } from '@/lib/types';
 import { formatDisplayName, formatReviews } from '@/lib/text';
+import { useI18n } from '@/lib/i18n';
 import ProfileBadges, { WorkingStatusBadge } from '@/components/ProfileBadges';
+import { cacheBustAvatarUrl } from '@/lib/media';
 
 interface ProfileCardProps {
   profile: Profile;
@@ -30,8 +32,14 @@ export default function ProfileCard({
   onReport,
   onBlock,
 }: ProfileCardProps) {
+  const { t } = useI18n();
   const openProfile = () => onSelect(profile);
-  const profileIsAdmin = Boolean(isAdminStatus || profile.isAdmin);
+  const profileIsAdmin = Boolean(isAdminStatus);
+  const hasAction = Boolean((isAdmin && !profileIsAdmin && onBlock) || (!isOwnProfile && !profile.isVerified && profile.verificationStatus !== 'verified' && onReport));
+
+  const age = profile.birthDate
+    ? Math.floor((new Date().getTime() - new Date(profile.birthDate).getTime()) / 31557600000)
+    : null;
 
   return (
     <article
@@ -45,91 +53,84 @@ export default function ProfileCard({
       role="button"
       tabIndex={0}
       aria-label={`Открыть ${profile.fullName}`}
-      className="group relative flex cursor-pointer flex-col justify-between overflow-hidden rounded-2xl border border-slate-200/50 bg-white shadow-sm transition hover:border-emerald-300/80 hover:shadow-md focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 dark:border-zinc-800 dark:bg-zinc-800"
+      className="group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-sm transition hover:border-emerald-300/80 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-800"
     >
-      {/* Upper Main Body */}
-      <div className="p-3.5 sm:p-4">
-        <div className="flex items-start gap-3">
-          <div
-            className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-slate-200/60 bg-slate-100 dark:border-zinc-800/60 dark:bg-zinc-950"
-            style={{ borderRadius: 'var(--radius-xl, 0.75rem)' }}
-          >
-            <Image
-              src={profile.avatarUrl}
-              alt={profile.fullName}
-              fill
-              sizes="48px"
-              className="object-cover transition duration-300 group-hover:scale-105"
-            />
-          </div>
-
-          <div className="min-w-0 flex-1">
-            {/* Line 1: Full Name + Status Badge */}
-            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-              <h3 className="truncate text-sm font-bold text-slate-900 dark:text-white">
-                <span className="sm:hidden">{formatDisplayName(profile.fullName, true)}</span>
-                <span className="hidden sm:inline">{profile.fullName}</span>
-              </h3>
-              <WorkingStatusBadge profile={profile} />
-            </div>
-
-            {/* Line 2: Role Badges */}
-            <div className="mt-0.5">
-              <ProfileBadges profile={profile} adminStatus={profileIsAdmin} showPending={showPending} />
-            </div>
-
-            {/* Profession specialization */}
-            {profile.isSpecialist && profile.professionTitle && (
-              <p className="mt-1 truncate text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-                {profile.professionTitle}
-              </p>
-            )}
-
-            {/* Rating Stars */}
-            {profile.isSpecialist && profile.rating > 0 && (
-              <div className="mt-1 flex items-center gap-1 text-[11px]">
-                <div className="flex items-center font-bold text-amber-500">
-                  <Star className="mr-0.5 h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                  {profile.rating.toFixed(1)}
-                </div>
-                <span className="text-slate-400 dark:text-zinc-500">
-                  ({formatReviews(profile.reviewCount)})
-                </span>
-              </div>
-            )}
-          </div>
+      {/* Шапка: аватар + имя + статус + стрелка */}
+      <div className="flex items-start gap-3 p-3.5 sm:p-4">
+        <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-slate-200/60 bg-slate-100 dark:border-zinc-800/60 dark:bg-zinc-950">
+          <Image
+            src={cacheBustAvatarUrl(profile.avatarUrl)}
+            alt={profile.fullName}
+            fill
+            sizes="48px"
+            className="object-cover transition duration-300 group-hover:scale-105"
+          />
         </div>
 
-        {/* Bio summary */}
-        {profile.bio && (
-          <p className="mt-2.5 line-clamp-2 break-words [overflow-wrap:anywhere] whitespace-pre-wrap text-xs leading-relaxed text-slate-600 dark:text-zinc-400">
-            {profile.bio}
-          </p>
-        )}
-
-        {/* Info row with divider */}
-        <div className="mt-2.5 flex flex-wrap items-center gap-y-1 gap-x-3 border-t border-slate-100 pt-2 text-xs text-slate-500 dark:border-zinc-800 dark:text-zinc-400">
-          {!profile.isSpecialist && profile.birthDate && (
-            <span className="truncate">Возраст: {Math.floor((new Date().getTime() - new Date(profile.birthDate).getTime()) / 31557600000)}</span>
-          )}
-          {!profile.isSpecialist && profile.gender && (
-            <span className="truncate">Пол: {profile.gender === 'male' ? 'Мужской' : 'Женский'}</span>
-          )}
-          <div className="flex items-center gap-1.5 min-w-0">
-            <MapPin className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
-            <span className="truncate">{profile.workplaceAddress}</span>
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+            <h3 className="truncate text-sm font-bold text-slate-900 dark:text-white">
+              <span className="sm:hidden">{formatDisplayName(profile.fullName, true)}</span>
+              <span className="hidden sm:inline">{profile.fullName}</span>
+            </h3>
+            <WorkingStatusBadge profile={profile} />
           </div>
+          <div className="mt-0.5">
+            <ProfileBadges profile={profile} adminStatus={profileIsAdmin} showPending={showPending} />
+          </div>
+
+          {profile.isSpecialist && profile.professionTitle && (
+            <p className="mt-1.5 line-clamp-2 text-xs font-semibold leading-5 text-emerald-700 dark:text-emerald-400">
+              {profile.professionTitle}
+            </p>
+          )}
+        </div>
+
+        <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-emerald-500 dark:text-zinc-600" />
+      </div>
+
+      {/* Разделитель */}
+      <div className="border-t border-slate-100 dark:border-zinc-800/70" />
+
+      {/* Описание */}
+      {profile.bio && (
+        <p className="line-clamp-2 px-3.5 py-2.5 break-words [overflow-wrap:anywhere] whitespace-pre-wrap text-xs leading-5 text-slate-600 dark:text-zinc-400 sm:px-4">
+          {profile.bio}
+        </p>
+      )}
+
+      {/* Инфо-строка: рейтинг, возраст/пол, адрес */}
+      <div className="mt-auto space-y-1.5 px-3.5 pb-3 text-xs text-slate-500 dark:text-zinc-400 sm:px-4">
+        {(profile.isSpecialist && profile.rating > 0) && (
+          <div className="flex items-center gap-1">
+            <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+            <span className="font-bold text-amber-500">{profile.rating.toFixed(1)}</span>
+            <span className="text-slate-400 dark:text-zinc-500">({formatReviews(profile.reviewCount)})</span>
+          </div>
+        )}
+        {!profile.isSpecialist && (age !== null || profile.gender) && (
+          <div className="flex items-center gap-1.5">
+            {age !== null && <span>Возраст: {age}</span>}
+            {age !== null && profile.gender && <span className="text-slate-300 dark:text-zinc-700">·</span>}
+            {profile.gender && <span>{t.genderLabel}: {profile.gender === 'male' ? t.genderMale : t.genderFemale}</span>}
+          </div>
+        )}
+        <div className="flex items-center gap-1.5">
+          <MapPin className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+          <span className="truncate">{profile.workplaceAddress}</span>
         </div>
       </div>
 
-      {/* Contrasting Lower Footer with separate background tone */}
-      <div className="flex min-h-9 items-center justify-between border-t border-slate-100 bg-slate-50/80 px-3.5 py-2.5 text-xs dark:border-zinc-800 dark:bg-zinc-950/90">
+      {/* Нижний блок: документы / действия. Выше, когда есть кнопка действия. */}
+      <div className={`flex items-center justify-between gap-2 border-t border-slate-100 px-3.5 text-xs dark:border-zinc-800 sm:px-4 ${hasAction ? 'bg-slate-50/90 py-2.5 dark:bg-zinc-900/60' : 'bg-transparent py-2'}`}>
         <div className="font-medium text-slate-600 dark:text-zinc-400">
-          {profile.certificates.length > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-1.5 py-0.5 text-[11px] font-bold text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300">
+          {profile.certificates.length > 0 ? (
+            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-500 dark:text-zinc-400">
               <Award className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
               Документы: {profile.certificates.length}
             </span>
+          ) : (
+            <span className="text-[11px] text-slate-300 dark:text-zinc-700">{hasAction ? '' : ' '}</span>
           )}
         </div>
 
@@ -141,10 +142,10 @@ export default function ProfileCard({
                 event.stopPropagation();
                 onBlock(profile);
               }}
-              className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-1.5 py-0.5 font-semibold text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40"
+              className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-lg bg-red-50 px-2.5 py-1 text-[11px] font-bold text-red-600 transition hover:bg-red-100 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-950/70"
             >
               <Ban className="h-3.5 w-3.5 shrink-0" />
-              <span>Заблокировать</span>
+              Заблокировать
             </button>
           ) : !isOwnProfile && !profile.isVerified && profile.verificationStatus !== 'verified' && onReport ? (
             <button
@@ -153,11 +154,11 @@ export default function ProfileCard({
                 event.stopPropagation();
                 onReport(profile);
               }}
-              className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-2 py-1 text-xs font-semibold text-slate-500 hover:text-amber-600 dark:text-zinc-500 dark:hover:text-amber-400 transition"
+              className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600 transition hover:bg-amber-50 hover:text-amber-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-amber-950/40 dark:hover:text-amber-400"
               aria-label="Пожаловаться на анкету"
             >
               <Flag className="h-3.5 w-3.5 shrink-0 text-amber-500" />
-              <span>Пожаловаться</span>
+              Пожаловаться
             </button>
           ) : null}
         </div>

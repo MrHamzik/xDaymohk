@@ -10,3 +10,24 @@ tsconfig.tsbuildinfo
 .vercel
 next-env.d.ts
 .media-cache/
+__pycache__/
+
+# Скрипты, данные и обёртки — НЕ коммитим
+# (обмен такими файлами идёт только через папку connection-channel/)
+*.py
+*.pyc
+*.pyo
+*.csv
+*.xlsx
+*.xls
+*.bat
+*.cmd
+*.sh
+*.ps1
+
+# Папка для обмена файлами — ИСКЛЮЧЕНИЕ из игнора
+!connection-channel/
+!connection-channel/**
+
+# кэш Python внутри connection-channel
+connection-channel/__pycache__/

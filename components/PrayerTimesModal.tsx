@@ -88,7 +88,7 @@ export default function PrayerTimesModal({ isOpen, onClose }: PrayerTimesModalPr
                 {language === 'ce' ? 'Ламазан рузма (ДУМ ЧР)' : 'Расписание намазов (ДУМ ЧР)'}
               </h2>
               <p className="text-[11px] text-emerald-100">
-                {language === 'ce' ? 'СемаIашка, Нохчийн Республика' : 'Самашки, Чеченская Республика (UTC+3)'}
+                {language === 'ce' ? 'Даймохк, Нохчийн Республика' : 'Даймохк, Чеченская Республика (UTC+3)'}
               </p>
             </div>
           </div>
@@ -181,7 +181,7 @@ export default function PrayerTimesModal({ isOpen, onClose }: PrayerTimesModalPr
         )}
 
         {/* Timetable Table with fixed width and auto fitting */}
-        <div className="flex-1 overflow-y-auto p-2 sm:p-4">
+        <div className="flex-1 overflow-y-auto p-2 sm:p-4 no-scrollbar">
           <table className="w-full table-fixed text-center text-xs">
             <thead>
               <tr className="border-b border-slate-200 text-slate-500 dark:border-zinc-800 dark:text-zinc-500">

@@ -83,9 +83,9 @@ export function findClosestSamashkiHouse(position: { lat: number; lng: number })
   if (pool.length === 0) {
     return {
       id: 'fallback',
-      street: 'Самашки',
+      street: 'Даймохк',
       houseNumber: '',
-      fullAddress: 'Самашки',
+      fullAddress: 'Даймохк',
       lat: position.lat,
       lng: position.lng,
       postalCode: '366602',

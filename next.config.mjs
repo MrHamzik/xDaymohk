@@ -1,4 +1,6 @@
 /** @type {import('next').NextConfig} */
+import { withSentryConfig } from '@sentry/nextjs';
+
 const ALLOWED_IMAGE_HOSTNAMES = [
   'images.unsplash.com',
   'tile.openstreetmap.org',
@@ -47,4 +49,16 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+// Sentry: подключаем обёртку только если задан SENTRY_DSN / DSN в конфиге,
+// чтобы локальная разработка и сборка не требовали Sentry-ключей.
+const sentryDsn = process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN;
+const config = sentryDsn
+  ? withSentryConfig(nextConfig, {
+      org: process.env.SENTRY_ORG,
+      project: process.env.SENTRY_PROJECT,
+      silent: true,
+      telemetry: false,
+    })
+  : nextConfig;
+
+export default config;

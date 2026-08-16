@@ -9,6 +9,9 @@ import PrayerTimesModal from '@/components/PrayerTimesModal';
 export default function PrayerTimesBar() {
   const { language } = useI18n();
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  // Рендер счётчика только после mount — иначе new Date() на сервере и
+  // клиенте различаются и Next.js падает с hydration mismatch.
+  const [mounted, setMounted] = useState(false);
   const [coords, setCoords] = useState<{ lat: number; lng: number }>({
     lat: DEFAULT_LAT,
     lng: DEFAULT_LNG,
@@ -16,6 +19,8 @@ export default function PrayerTimesBar() {
   const [data, setData] = useState(() => getCurrentDayPrayerTimes(new Date(), DEFAULT_LAT, DEFAULT_LNG));
 
   // Geolocation lookup per DUM RF standard
+  useEffect(() => { setMounted(true); }, []);
+
   useEffect(() => {
     if (typeof window !== 'undefined' && 'geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
@@ -64,7 +69,7 @@ export default function PrayerTimesBar() {
 
           <div className="flex items-center gap-1.5">
             <span className="rounded-lg bg-emerald-100 px-2 py-0.5 font-mono text-[11px] font-black text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300">
-              {countdownText}
+              {mounted ? countdownText : '— мин'}
             </span>
 
             <button

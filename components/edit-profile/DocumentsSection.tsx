@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Award } from 'lucide-react';
 import { compressImageFile } from '@/lib/media';
 import { Certificate } from '@/lib/types';
+import { useI18n } from '@/lib/i18n';
 
 interface DocumentsSectionProps {
   certificates: Certificate[];
@@ -14,6 +15,7 @@ interface DocumentsSectionProps {
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 export default function DocumentsSection({ certificates, setCertificates, onNotice }: DocumentsSectionProps) {
+  const { t } = useI18n();
   const [title, setTitle] = useState('');
   const [issuer, setIssuer] = useState('');
   const [imageUrl, setImageUrl] = useState('');
@@ -45,7 +47,7 @@ export default function DocumentsSection({ certificates, setCertificates, onNoti
     const next: Certificate = {
       id: `cert-${Date.now()}`,
       title: title.trim() || 'Документ',
-      issuer: issuer.trim() || 'Самашки',
+      issuer: issuer.trim() || 'Даймохк',
       year: new Date().getFullYear().toString(),
       imageUrl,
     };
@@ -59,8 +61,8 @@ export default function DocumentsSection({ certificates, setCertificates, onNoti
     <div className="space-y-2.5 border-t border-slate-200/80 pt-2.5 dark:border-zinc-800">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-400">Документы и грамоты</h4>
-          <p className="text-[10px] text-slate-500 dark:text-zinc-500">Добавьте дипломы или сертификаты.</p>
+          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-400">{t.documentsTitle}</h4>
+          <p className="text-[10px] text-slate-500 dark:text-zinc-500">{t.documentsHint}</p>
         </div>
         <Award className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
       </div>
@@ -79,7 +81,7 @@ export default function DocumentsSection({ certificates, setCertificates, onNoti
                 onClick={() => setCertificates((items) => items.filter((item) => item.id !== certificate.id))}
                 className="shrink-0 px-2 py-1 text-[11px] font-semibold text-red-600 hover:underline dark:text-red-400"
               >
-                Удалить
+                {t.delete}
               </button>
             </div>
           ))}
@@ -89,14 +91,14 @@ export default function DocumentsSection({ certificates, setCertificates, onNoti
       <input
         value={title}
         onChange={(event) => setTitle(event.target.value)}
-        placeholder="Название документа"
-        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white"
+        placeholder={t.documentTitlePlaceholder}
+        className="w-full rounded-xl border border-slate-200 bg-white shadow-sm px-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white"
       />
       <input
         value={issuer}
         onChange={(event) => setIssuer(event.target.value)}
-        placeholder="Кем выдан"
-        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white"
+        placeholder={t.documentIssuerPlaceholder}
+        className="w-full rounded-xl border border-slate-200 bg-white shadow-sm px-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white"
       />
       <input
         id="profile-certificate"
@@ -105,13 +107,13 @@ export default function DocumentsSection({ certificates, setCertificates, onNoti
         onChange={handleUpload}
         className="w-full text-xs text-slate-500 file:mr-3 file:rounded-xl file:border-0 file:bg-emerald-600 file:px-3 file:py-1 file:text-xs file:font-semibold file:text-white hover:file:bg-emerald-700"
       />
-      {imageUrl && <p className="text-xs text-emerald-700 dark:text-emerald-400">Документ загружен, нажмите «Добавить документ».</p>}
+      {imageUrl && <p className="text-xs text-emerald-700 dark:text-emerald-400">{t.documentUploaded}</p>}
       <button
         type="button"
         onClick={handleAdd}
         className="rounded-xl border border-emerald-200 px-3 py-1 text-xs font-bold text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950/40"
       >
-        Добавить документ
+        {t.documentAdd}
       </button>
     </div>
   );

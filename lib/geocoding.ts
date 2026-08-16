@@ -35,7 +35,7 @@ async function searchNominatim(query: string, signal?: AbortSignal): Promise<Add
     limit: '8',
     bounded: '1',
     viewbox: SAMASHKI_VIEWBOX,
-    q: `${query}, Самашки, Чеченская Республика`,
+    q: `${query}, Чеченская Республика`,
   });
   const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
     signal,
@@ -83,7 +83,7 @@ async function reverseNominatim(position: MapPosition, signal?: AbortSignal) {
   if (!response.ok) throw new Error('Не удалось определить адрес точки.');
 
   const result = await response.json() as { display_name?: string; address?: Record<string, string> };
-  return formatAddress(result.address, result.display_name ?? `Самашки, ${position.lat.toFixed(5)}, ${position.lng.toFixed(5)}`);
+  return formatAddress(result.address, result.display_name ?? `${position.lat.toFixed(5)}, ${position.lng.toFixed(5)}`);
 }
 
 export async function reverseGeocode(position: MapPosition, signal?: AbortSignal) {

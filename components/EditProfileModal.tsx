@@ -8,6 +8,7 @@ import Notice from '@/components/Notice';
 import { extractPhoneDigits, formatPhone } from '@/lib/phone';
 import { findClosestSamashkiHouse, getEffectiveHouseAddresses } from '@/lib/samashki-addresses';
 import { Certificate, MapPosition, PROFESSION_CATEGORIES, Profile } from '@/lib/types';
+import { useI18n } from '@/lib/i18n';
 import ScheduleSection from '@/components/edit-profile/ScheduleSection';
 import DocumentsSection from '@/components/edit-profile/DocumentsSection';
 import WorkplaceSection from '@/components/edit-profile/WorkplaceSection';
@@ -25,8 +26,8 @@ const MAX_BIO_LENGTH = 1000;
 
 function normalizeAddress(value: string) {
   const address = value.trim();
-  if (!address) return 'Самашки';
-  return /самашк/i.test(address) ? address : `Самашки, ${address}`;
+  if (!address) return 'Даймохк';
+  return /даймохк|самашк/i.test(address) ? address : `Даймохк, ${address}`;
 }
 
 function isVideoLink(value: string) {
@@ -41,9 +42,10 @@ function isVideoLink(value: string) {
 const DEFAULT_WORK_DAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
 
 export default function EditProfileModal({ isOpen, account, profile = null, onClose, onSave }: EditProfileModalProps) {
+  const { t } = useI18n();
   const [gender, setGender] = useState<'male' | 'female' | ''>('');
   const [birthYear, setBirthYear] = useState('');
-  const [settlement, setSettlement] = useState('Самашки');
+  const [settlement, setSettlement] = useState('Даймохк');
   const [isSpecialist, setIsSpecialist] = useState(true);
   const [professionCategory, setProfessionCategory] = useState('doctor');
   const [professionTitle, setProfessionTitle] = useState('');
@@ -82,7 +84,7 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
     setExperienceEnd(profile?.experienceEnd ?? '');
     setExperienceCurrent(profile?.experienceCurrent ?? !profile?.experienceEnd);
     setRequestVerification(profile?.verificationStatus === 'pending');
-    setBio(profile?.bio === 'Житель Самашек.' ? '' : profile?.bio ?? '');
+    setBio(profile?.bio === 'Житель Даймохка.' ? '' : profile?.bio ?? '');
     setWorkplaceAddress(profile?.workplaceAddress ?? '');
     setWorkplaceCoords(profile?.workplaceCoords ?? null);
     setHidePhone(profile?.hidePhone ?? false);
@@ -141,9 +143,33 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
 
     const phoneDigits = extractPhoneDigits(account.phone);
 
-    if (!workplaceAddress.trim()) {
+    // Личная анкета может иметь любой адрес/дефолт — строгая проверка БД
+    // применяется только к анкетам специалистов/жителей в каталоге.
+    const isPersonalProfile = Boolean(profile?.isPersonal);
+    if (!isPersonalProfile && !workplaceAddress.trim()) {
       setNotice('Укажите место работы или адрес.');
       return;
+    }
+    if (!isPersonalProfile) {
+      // Строгий формат: адрес должен быть из базы (домов/объектов) или
+      // выбран точкой на карте. Допускается префикс «Даймохк, …» / «Самашки, …»
+      // (normalizeAddress добавляет его при сохранении).
+      const dbAddresses = getEffectiveHouseAddresses().map((a) => a.fullAddress);
+      const trimmedAddress = workplaceAddress.trim();
+      // «Даймохк» — всегда валидный адрес (область по умолчанию), даже если
+      // пользователь не выбрал точку на карте.
+      const isDefaultRegion = /^даймохк$/i.test(trimmedAddress)
+        || /^с\.\s+даймохк$/i.test(trimmedAddress)
+        || /^даймохк,\s*/i.test(trimmedAddress);
+      const addressMatchesDb = isDefaultRegion || dbAddresses.some((db) =>
+        trimmedAddress === db
+        || trimmedAddress.endsWith(`, ${db}`)
+        || trimmedAddress.endsWith(db),
+      );
+      if (!addressMatchesDb) {
+        setNotice('Адрес не найден в базе. Выберите адрес из списка подсказок или отметьте точку на карте.');
+        return;
+      }
     }
 
     if (isSpecialist && experienceStart && !experienceCurrent && !experienceEnd) {
@@ -181,14 +207,14 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
       experienceStart: isSpecialist ? experienceStart || undefined : undefined,
       experienceEnd: isSpecialist ? experienceCurrent ? undefined : experienceEnd || undefined : undefined,
       experienceCurrent: isSpecialist ? experienceCurrent : undefined,
-      bio: bio.trim() || 'Житель Самашек.',
+      bio: bio.trim() || 'Житель Даймохка.',
       workplaceAddress: normalizeAddress(workplaceAddress),
       workplaceCoords: workplaceCoords ?? { lat: 43.288024, lng: 45.298989 },
       rating: profile?.rating ?? 0,
       reviewCount: profile?.reviewCount ?? 0,
       reviews: profile?.reviews ?? [],
-      gender: gender ? (gender as 'male' | 'female') : undefined,
-      birthDate: birthYear ? birthYear : undefined,
+      gender: profile?.gender ?? account.gender,
+      birthDate: profile?.birthDate ?? account.birthDate,
       settlement: settlement.trim(),
       phone: formatPhone(account.phone),
       hidePhone,
@@ -218,7 +244,7 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
   return (
     <>
       {notice && <Notice message={notice} type="error" onClose={() => setNotice('')} />}
-      <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/60 p-0 backdrop-blur-sm sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label={profile ? 'Изменить анкету' : 'Добавить анкету'}>
+      <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/60 p-0 backdrop-blur-sm sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label={profile ? t.editProfileTitle : t.newProfileTitle}>
         <div className="flex max-h-[90vh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl transition-colors dark:bg-zinc-950 sm:max-w-2xl sm:rounded-2xl border border-slate-200/50 dark:border-zinc-800">
           <div className="flex shrink-0 items-center justify-between border-b border-slate-100 p-4 dark:border-zinc-800 dark:bg-zinc-950">
             <div className="flex items-center gap-2.5">
@@ -226,32 +252,32 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
                 <UserPlus className="h-4 w-4" />
               </div>
               <div>
-                <h2 className="text-sm font-bold text-slate-900 dark:text-white">{profile ? 'Изменить анкету' : 'Новая анкета'}</h2>
-                <p className="text-[11px] text-slate-500 dark:text-zinc-500">{profile ? 'Обновите данные этой анкеты' : 'Отдельная страница для одной услуги или профессии'}</p>
+                <h2 className="text-sm font-bold text-slate-900 dark:text-white">{profile ? t.editProfileTitle : t.newProfileTitle}</h2>
+                <p className="text-[11px] text-slate-500 dark:text-zinc-500">{profile ? t.editProfileSubtitle : t.newProfileSubtitle}</p>
               </div>
             </div>
             <button onClick={onClose} aria-label="Закрыть форму" className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400"><X className="h-3.5 w-3.5" /></button>
           </div>
 
-          <form onSubmit={handleSubmit} className="flex-1 space-y-4 overflow-y-auto p-4 text-xs text-slate-800 dark:text-zinc-300">
+          <form onSubmit={handleSubmit} className="flex-1 space-y-4 overflow-y-auto p-4 text-xs text-slate-800 dark:text-zinc-300 no-scrollbar">
             {account ? (
               <section className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-800">
                 <img src={account.avatarUrl} alt="" className="h-12 w-12 rounded-xl object-cover" />
                 <div>
                   <p className="font-bold text-slate-900 dark:text-white">{account.fullName}</p>
-                  <p className="text-xs text-slate-500 dark:text-zinc-500">{account.phone || 'Телефон не указан'}</p>
-                  {!profile?.isPersonal && <p className="mt-0.5 text-[11px] text-emerald-700 dark:text-emerald-400">Информация профиля используется для каждой анкеты.</p>}
+                  <p className="mt-1 text-xs text-slate-500 dark:text-zinc-500">{account.phone || t.phoneNotSet}</p>
+                  {!profile?.isPersonal && <p className="mt-0.5 text-[11px] text-emerald-700 dark:text-emerald-400">{t.profileInfoUsed}</p>}
                 </div>
               </section>
             ) : (
-              <p className="rounded-xl bg-amber-50 p-3 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">Для создания анкеты нужно войти в профиль.</p>
+              <p className="rounded-xl bg-amber-50 p-3 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">{t.signInToCreate}</p>
             )}
 
             {!profile?.isPersonal && !profile?.id && (
               <div className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 dark:border-emerald-900 dark:bg-emerald-950/30">
                 <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-700 dark:text-emerald-300" />
                 <p className="text-[11px] leading-relaxed text-emerald-800 dark:text-emerald-200">
-                  Личная анкета у вас уже есть — она не удаляется. Эта анкета будет опубликована как анкета специалиста и появится в каталоге по выбранной сфере.
+                  {t.personalProfileExists}
                 </p>
               </div>
             )}
@@ -259,15 +285,15 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
             {isSpecialist && (
               <section className="space-y-3.5 rounded-xl border border-slate-100 bg-slate-50/60 p-3.5 dark:border-zinc-800 dark:bg-zinc-950">
                 <div>
-                  <label htmlFor="profile-category" className="mb-1 block text-xs font-bold text-slate-700 dark:text-zinc-400">Сфера деятельности</label>
-                  <select id="profile-category" value={professionCategory} onChange={(event) => setProfessionCategory(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-3 pr-10 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white">
+                  <label htmlFor="profile-category" className="mb-1 block text-xs font-bold text-slate-700 dark:text-zinc-400">{t.professionCategory}</label>
+                  <select id="profile-category" value={professionCategory} onChange={(event) => setProfessionCategory(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white shadow-sm pl-3 pr-10 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white">
                     {PROFESSION_CATEGORIES.filter((category) => category.id !== 'all').map((category) => <option key={category.id} value={category.id}>{category.label}</option>)}
                   </select>
                 </div>
 
                 <div>
-                  <label htmlFor="profile-specialization" className="mb-1 block text-xs font-bold text-slate-700 dark:text-zinc-400">Специализация</label>
-                  <input id="profile-specialization" value={professionTitle} onChange={(event) => setProfessionTitle(event.target.value)} placeholder="Например, стоматолог или электрик" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white" />
+                  <label htmlFor="profile-specialization" className="mb-1 block text-xs font-bold text-slate-700 dark:text-zinc-400">{t.professionSpecialization}</label>
+                  <input id="profile-specialization" value={professionTitle} onChange={(event) => setProfessionTitle(event.target.value)} placeholder={t.professionSpecializationPlaceholder} className="w-full rounded-xl border border-slate-200 bg-white shadow-sm px-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white" />
                 </div>
 
                 <ExperienceSection
@@ -302,16 +328,16 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
 
                 <div className="border-t border-slate-200/80 pt-2.5 dark:border-zinc-800">
                   <div className="mb-1 flex items-center justify-between gap-2">
-                    <label htmlFor="profile-video" className="text-xs font-semibold text-slate-700 dark:text-zinc-400">Видео о работе</label>
+                    <label htmlFor="profile-video" className="text-xs font-semibold text-slate-700 dark:text-zinc-400">{t.videoTitle}</label>
                     <button type="button" onClick={() => setShowVideoHint((isShown) => !isShown)} aria-label="Пояснение о видео" className="text-amber-500 transition hover:text-amber-600"><Info className="h-3.5 w-3.5" /></button>
                   </div>
-                  {showVideoHint && <p className="mb-2 rounded-xl bg-amber-50 p-2 text-xs leading-relaxed text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">Загрузите ролик на YouTube и вставьте ссылку сюда («По ссылке»).</p>}
-                  <input id="profile-video" type="url" value={videoUrl} onChange={(event) => setVideoUrl(event.target.value)} placeholder="https://youtu.be/..." className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white" />
+                  {showVideoHint && <p className="mb-2 rounded-xl bg-amber-50 p-2 text-xs leading-relaxed text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">{t.videoHint}</p>}
+                  <input id="profile-video" type="url" value={videoUrl} onChange={(event) => setVideoUrl(event.target.value)} placeholder="https://youtu.be/..." className="w-full rounded-xl border border-slate-200 bg-white shadow-sm px-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white" />
                 </div>
 
                 <label className="flex cursor-pointer items-start gap-2 border-t border-slate-200/80 pt-2.5 text-xs dark:border-zinc-800">
                   <input type="checkbox" checked={requestVerification} onChange={(event) => setRequestVerification(event.target.checked)} className="mt-0.5 h-3.5 w-3.5 rounded text-emerald-600 focus:ring-emerald-500" />
-                  <span><span className="block font-semibold text-slate-700 dark:text-zinc-300">Отправить на проверку</span><span className="mt-0.5 block text-[10px] text-slate-500 dark:text-zinc-500">Администратор проверит данные анкеты и присвоит галочку.</span></span>
+                  <span><span className="block font-semibold text-slate-700 dark:text-zinc-300">{t.requestVerificationLabel}</span><span className="mt-0.5 block text-[10px] text-slate-500 dark:text-zinc-500">{t.requestVerificationHint}</span></span>
                 </label>
               </section>
             )}
@@ -324,8 +350,8 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
             />
 
             <div>
-              <label htmlFor="profile-bio" className="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-400">Описание анкеты</label>
-              <textarea id="profile-bio" rows={3} maxLength={MAX_BIO_LENGTH} value={bio} onChange={(event) => setBio(event.target.value)} placeholder="О себе, услугах или деятельности..." className="w-full resize-y break-words [overflow-wrap:anywhere] rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white" />
+              <label htmlFor="profile-bio" className="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-400">{t.bioLabel}</label>
+              <textarea id="profile-bio" rows={3} maxLength={MAX_BIO_LENGTH} value={bio} onChange={(event) => setBio(event.target.value)} placeholder={t.bioPlaceholder} className="w-full resize-y break-words [overflow-wrap:anywhere] rounded-xl border border-slate-200 bg-white shadow-sm px-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white" />
               <p className="mt-0.5 text-right text-[10px] text-slate-400">{bio.length}/{MAX_BIO_LENGTH}</p>
             </div>
 
@@ -333,23 +359,23 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
               <div>
                 <div className="mb-1 flex items-center justify-between gap-2">
                   <label htmlFor="profile-whatsapp" className="block text-xs font-semibold text-slate-700 dark:text-zinc-400">WhatsApp</label>
-                  <label className="flex cursor-pointer items-center gap-1 text-[11px] text-emerald-700 dark:text-emerald-400"><input type="checkbox" checked={sameAsPhoneWhatsapp} onChange={(event) => { setSameAsPhoneWhatsapp(event.target.checked); if (event.target.checked && account) setWhatsappDigits(extractPhoneDigits(account.phone)); }} className="h-3 w-3 rounded text-emerald-600 focus:ring-emerald-500" />Использовать общий номер</label>
+                  <label className="flex cursor-pointer items-center gap-1 text-[11px] text-emerald-700 dark:text-emerald-400"><input type="checkbox" checked={sameAsPhoneWhatsapp} onChange={(event) => { setSameAsPhoneWhatsapp(event.target.checked); if (event.target.checked && account) setWhatsappDigits(extractPhoneDigits(account.phone)); }} className="h-3 w-3 rounded text-emerald-600 focus:ring-emerald-500" />{t.useCommonNumber}</label>
                 </div>
                 <PhoneField id="profile-whatsapp" value={whatsappDigits} onChange={handleWhatsappChange} />
               </div>
               <div>
                 <label htmlFor="profile-telegram" className="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-400">Telegram</label>
-                <div className="relative"><span className="absolute inset-y-0 left-0 flex items-center pl-3 font-bold text-slate-400">@</span><input id="profile-telegram" value={telegram} onChange={(event) => setTelegram(event.target.value.replace(/^@/, ''))} placeholder="username" className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-8 pr-4 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white" /></div>
+                <div className="relative"><span className="absolute inset-y-0 left-0 flex items-center pl-3 font-bold text-slate-400">@</span><input id="profile-telegram" value={telegram} onChange={(event) => setTelegram(event.target.value.replace(/^@/, ''))} placeholder={t.telegramUsername} className="w-full rounded-xl border border-slate-200 bg-white shadow-sm py-2.5 pl-8 pr-4 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white" /></div>
               </div>
             </div>
 
-            <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-600 dark:text-zinc-400"><input type="checkbox" checked={hidePhone} onChange={(event) => setHidePhone(event.target.checked)} className="h-3.5 w-3.5 rounded text-emerald-600 focus:ring-emerald-500" />Не показывать общий телефон в этой анкете</label>
+            <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-600 dark:text-zinc-400"><input type="checkbox" checked={hidePhone} onChange={(event) => setHidePhone(event.target.checked)} className="h-3.5 w-3.5 rounded text-emerald-600 focus:ring-emerald-500" />{t.hidePhoneLabel}</label>
 
             <div className="rounded-xl border border-amber-200/80 bg-amber-50/80 p-2.5 text-[11px] text-amber-800 dark:border-amber-200/80 dark:bg-amber-50/80">
-              ⚠️ Если оставить поля WhatsApp и Telegram пустыми, они не будут показываться в анкете.
+              {t.emptyContactsWarning}
             </div>
 
-            <button type="submit" className="w-full rounded-xl bg-emerald-600 py-2.5 text-xs font-bold text-white shadow-md shadow-emerald-600/25 transition hover:bg-emerald-700 active:scale-95">{profile ? 'Сохранить изменения' : 'Добавить в каталог'}</button>
+            <button type="submit" className="w-full rounded-xl bg-emerald-600 py-2.5 text-xs font-bold text-white shadow-md shadow-emerald-600/25 transition hover:bg-emerald-700 active:scale-95">{profile ? t.saveProfileBtn : t.addToCatalogBtn}</button>
           </form>
         </div>
       </div>

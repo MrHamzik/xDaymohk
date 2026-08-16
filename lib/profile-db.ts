@@ -53,7 +53,7 @@ export function profileFromDb(row: DbRow, certificateRows: DbRow[] = [], reviewR
     isFlexibleSchedule: Boolean(row.is_flexible_schedule),
     gender: row.gender ?? undefined,
     birthDate: row.birth_date ?? (row.birth_year ? String(row.birth_year) : undefined),
-    settlement: row.settlement ?? 'Самашки',
+    settlement: row.settlement ?? 'Даймохк',
     createdAt: row.created_at ?? new Date().toISOString().split('T')[0],
   };
 }
@@ -63,7 +63,7 @@ function reviewFromDb(row: DbRow): Review {
     id: String(row.id),
     authorId: row.author_id ?? undefined,
     authorAvatarUrl: row.author_avatar_url ?? undefined,
-    author: row.author ?? 'Житель Самашек',
+    author: row.author ?? 'Житель Даймохка',
     rating: Number(row.rating) || 0,
     text: row.text ?? '',
     createdAt: row.created_at ?? '',
@@ -100,7 +100,7 @@ export function profileToDbRow(profile: Profile) {
     telegram: profile.telegram ?? null,
     whatsapp: profile.whatsapp ?? null,
     video_url: profile.videoUrl ?? null,
-    work_days: profile.workDays ?? null,
+    work_days: profile.workDays ?? [],
     work_hours_start: profile.workHoursStart ?? null,
     work_hours_end: profile.workHoursEnd ?? null,
     break_start: profile.breakStart ?? null,
@@ -108,7 +108,7 @@ export function profileToDbRow(profile: Profile) {
     is_flexible_schedule: profile.isFlexibleSchedule ?? false,
     gender: profile.gender ?? null,
     birth_date: profile.birthDate ?? null,
-    settlement: profile.settlement ?? 'Самашки',
+    settlement: profile.settlement ?? 'Даймохк',
     created_at: profile.createdAt,
   };
   // New installations have is_hidden. Omitting false keeps ordinary profile
@@ -161,7 +161,6 @@ export function profileUpdatesToDbRow(updates: Partial<Profile>) {
   };
 
   Object.entries(updates).forEach(([key, value]) => {
-    if (key === 'isHidden' && value !== true) return;
     if (mapping[key]) {
       row[mapping[key]] = value ?? null;
     }

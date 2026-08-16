@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
-import { isAdminEmail } from '@/lib/admin';
+import { isAdminEmail, isDevEmail } from '@/lib/admin';
 import { profileUpdatesToDbRow } from '@/lib/profile-db';
 import { isAdminProfile } from '@/lib/profile-filters';
 import { useNotifications } from '@/components/NotificationsProvider';
@@ -15,7 +15,7 @@ import {
 import { persistProfileToSupabase } from '@/lib/profiles/persist';
 import { sanitizeReason } from '@/lib/validation';
 import { extractPhoneDigits } from '@/lib/phone';
-import { Complaint, ComplaintStatus, Profile, Review, UserSummary } from '@/lib/types';
+import { Complaint, ComplaintStatus, NotificationType, Profile, Review, UserSummary } from '@/lib/types';
 
 interface ProfilesContextValue {
   profiles: Profile[];
@@ -30,6 +30,10 @@ interface ProfilesContextValue {
   addComplaint: (profileId: string, reason: string) => Promise<void>;
   updateComplaint: (complaintId: string, status: ComplaintStatus) => Promise<void>;
   addReview: (profileId: string, review: Omit<Review, 'id' | 'createdAt'>) => Promise<void>;
+  /** Send a system notification to a user (used by the admin panel). */
+  createNotification: (recipientId: string, type: NotificationType, title: string, message: string, ceTitle?: string, ceMessage?: string, sender?: string) => Promise<void>;
+  /** Reload profiles/users/complaints from Supabase. */
+  refreshRemoteData: () => Promise<void>;
 }
 
 const ProfilesContext = createContext<ProfilesContextValue | undefined>(undefined);
@@ -234,7 +238,7 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
       });
     }
     if (profileWithRole.ownerId && profileWithRole.ownerId === account?.id) {
-      void createNotification(profileWithRole.ownerId, 'system', 'Анкета сохранена', 'Ваша анкета добавлена в каталог.');
+      void createNotification(profileWithRole.ownerId, 'system', 'Анкета сохранена', 'Ваша анкета добавлена в каталог.', 'Анкета дIаязйина', 'Хьан анкета могIаме тIетоьхна.');
     }
   }, [account?.id, account?.isAdmin, createNotification, refreshRemoteData]);
 
@@ -245,6 +249,10 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
 
     const adminOwnerId = account?.isAdmin ? account.id : undefined;
     if (account?.isBlocked && currentProfile.ownerId === account.id) return;
+    // Невидимый разработчик: его анкеты нельзя скрыть/забанить (как и его
+    // самого — см. /api/admin/ban). Жалобы при этом работают.
+    const owner = users.find((u) => u.id === currentProfile.ownerId);
+    if ((updates.isHidden === true || updates.isBanned === true) && owner && isDevEmail(owner.email)) return;
     if (updates.isHidden === true && isAdminProfile(currentProfile, adminOwnerId)) return;
 
     const nextProfile: Profile = {
@@ -264,53 +272,112 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
         isNowHidden
           ? 'Администратор скрыл вашу анкету. Откройте профиль и проверьте причину.'
           : 'Администратор снова сделал вашу анкету видимой в каталоге.',
+        isNowHidden ? 'Анкета къайлайаьккхина' : 'Анкета юха зорбане яьккхина',
+        isNowHidden
+          ? 'Администраторо хьан анкета къайлайаьккхина. Профиль схьаелла, бахьана хьажа.'
+          : 'Администраторо хьан анкета могIаме юха гайтина.',
       );
     }
     if (currentProfile.ownerId && currentProfile.ownerId !== account?.id && updates.verificationStatus === 'verified') {
-      void createNotification(currentProfile.ownerId, 'system', 'Анкета проверена', 'Администратор подтвердил анкету. Рядом с именем появится галочка.');
+      void createNotification(currentProfile.ownerId, 'system', 'Анкета проверена', 'Администратор подтвердил анкету. Рядом с именем появится галочка.', 'Анкета теллина', 'Администраторо анкета тIечIагIдина. ЦIерна уллохь билгало хир ю.');
     }
 
     setProfiles((currentProfiles) => currentProfiles.map((profile) => (
       profile.id === profileId ? nextProfile : profile
     )));
 
-    const row = profileUpdatesToDbRow(nextProfile);
-    if (supabase && Object.keys(row).length > 0) {
-      void persistProfileToSupabase(nextProfile).then(() => {
-        void refreshRemoteData();
-      });
+    if (supabase) {
+      // Модерационные поля (скрыть/показать/проверка) админ меняет у ЧУЖИХ
+      // анкет — upsert требует INSERT-RLS (только владелец), поэтому падало
+      // с 403. Для таких полей делаем прямой UPDATE (RLS "profiles admin
+      // update" разрешает). Остальные изменения — обычный persist (upsert).
+      const modFields = ['isHidden', 'isBanned', 'isVerified', 'verificationStatus', 'isAdmin'];
+      const onlyModeration = Object.keys(updates).every((key) => modFields.includes(key));
+      if (onlyModeration && Object.keys(updates).length > 0) {
+        const modRow = profileUpdatesToDbRow(updates);
+        void (async () => {
+          await supabase.from('profiles').update(modRow).eq('id', profileId);
+          void refreshRemoteData();
+        })();
+      } else {
+        const row = profileUpdatesToDbRow(nextProfile);
+        if (Object.keys(row).length > 0) {
+          void persistProfileToSupabase(nextProfile).then(() => {
+            void refreshRemoteData();
+          });
+        }
+      }
     }
-  }, [profiles, account?.id, account?.isAdmin, account?.isBlocked, createNotification, refreshRemoteData]);
+  }, [profiles, users, account?.id, account?.isAdmin, account?.isBlocked, createNotification, refreshRemoteData]);
 
   const updateUserBlocked = useCallback(async (userId: string, isBlocked: boolean) => {
     const target = users.find((user) => user.id === userId);
     const targetEmail = target?.email?.trim().toLowerCase();
     if (target?.isAdmin || (targetEmail && isAdminEmail(targetEmail)) || userId === account?.id) return;
 
+    // Оптимистичное обновление UI — статус меняется сразу, без перезагрузки.
+    setUsers((cur) => cur.map((u) => (u.id === userId ? { ...u, isBlocked } : u)));
+
     if (supabase) {
       const { error: userError } = await supabase
         .from('user_profiles')
         .update({ is_blocked: isBlocked })
         .eq('id', userId);
-      if (userError) throw new Error(userError.message);
+      if (userError) console.warn('updateUserBlocked: user_profiles', userError.message);
 
-      const { error: profilesError } = await supabase
-        .from('profiles')
-        .update({ is_hidden: isBlocked })
-        .eq('owner_id', userId);
-      if (profilesError) throw new Error(profilesError.message);
+      try {
+        if (isBlocked) {
+          // Блокировка пользователя = скрыть ВСЕ его анкеты + снять метку
+          // проверенности.
+          const { error: hideError } = await supabase
+            .from('profiles')
+            .update({ is_hidden: true, is_verified: false, verification_status: 'none' })
+            .eq('owner_id', userId);
+          if (hideError) console.warn('updateUserBlocked: hide profiles', hideError.message);
+        } else {
+          // Ручная разблокировка админом: показываем ТОЛЬКО личную анкету.
+          const { error: showPersonalError } = await supabase
+            .from('profiles')
+            .update({ is_hidden: false })
+            .eq('owner_id', userId)
+            .like('id', 'personal-%');
+          if (showPersonalError) console.warn('updateUserBlocked: show personal', showPersonalError.message);
+        }
+      } catch (e) {
+        console.warn('updateUserBlocked: profiles update failed', e);
+      }
     }
 
-    void createNotification(
-      userId,
-      isBlocked ? 'user_blocked' : 'user_unblocked',
-      isBlocked ? 'Аккаунт заблокирован' : 'Аккаунт разблокирован',
-      isBlocked
-        ? 'Администратор заблокировал ваш аккаунт и скрыл его анкеты.'
-        : 'Администратор разблокировал ваш аккаунт.',
-    );
+    // Письмо + realtime-событие через /api/notifications (service role):
+    // тип user_blocked/user_unblocked заставляет NotificationsProvider
+    // обновить account.isBlocked у получателя (мини-профиль, меню).
+    try {
+      const session = await supabase?.auth.getSession();
+      const accessToken = session?.data.session?.access_token;
+      if (accessToken) {
+        await fetch('/api/notifications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+          body: JSON.stringify({
+            recipientId: userId,
+            type: isBlocked ? 'user_blocked' : 'user_unblocked',
+            title: isBlocked ? 'Аккаунт заблокирован' : 'Аккаунт разблокирован',
+            message: isBlocked
+              ? 'Администратор заблокировал ваш аккаунт и скрыл его анкеты.'
+              : 'Администратор разблокировал ваш аккаунт.',
+            ceTitle: isBlocked ? 'Аккаунт билсена яьлла' : 'Аккаунт дIаяьккхина',
+            ceMessage: isBlocked
+              ? 'Администраторо хьан аккаунт билсена а, цуьнан анкеташ къайлайаьхна а.'
+              : 'Администраторо хьан аккаунт дIаяьккхина.',
+            sender: 'Даймохк',
+          }),
+        });
+      }
+    } catch (e) {
+      console.warn('updateUserBlocked: letter failed', e);
+    }
     await refreshRemoteData();
-  }, [users, account?.id, createNotification, refreshRemoteData]);
+  }, [users, account?.id, supabase, refreshRemoteData]);
 
   const deleteProfile = useCallback(async (profileId: string) => {
     const target = profiles.find((p) => p.id === profileId);
@@ -503,7 +570,17 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
       throw new Error(result?.error ?? 'Не удалось отправить отзыв.');
     }
     await refreshRemoteData();
-  }, [account?.isBlocked, profiles, refreshRemoteData, supabase]);
+    if (profile.ownerId && profile.ownerId !== account?.id) {
+      void createNotification(
+        profile.ownerId,
+        'review_received',
+        'Новый отзыв',
+        `${account?.fullName || 'Кто-то'} оставил отзыв на вашей анкете «${profile.fullName}».`,
+        'Керла хастам',
+        `${account?.fullName || 'Цхьаммо'} хьан «${profile.fullName}» анкетана хастам йаздина.`,
+      );
+    }
+  }, [account?.id, account?.isBlocked, profiles, refreshRemoteData, supabase, createNotification]);
 
   const isCurrentUserAdmin = Boolean(account?.isAdmin);
   const isProfileAdmin = useCallback(
@@ -512,8 +589,8 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
   );
 
   const value = useMemo(
-    () => ({ profiles, users, complaints, isCurrentUserAdmin, isProfileAdmin, addProfile, updateProfile, updateUserBlocked, deleteProfile, addComplaint, updateComplaint, addReview }),
-    [profiles, users, complaints, isCurrentUserAdmin, isProfileAdmin, addProfile, updateProfile, updateUserBlocked, deleteProfile, addComplaint, updateComplaint, addReview],
+    () => ({ profiles, users, complaints, isCurrentUserAdmin, isProfileAdmin, addProfile, updateProfile, updateUserBlocked, deleteProfile, addComplaint, updateComplaint, addReview, createNotification, refreshRemoteData }),
+    [profiles, users, complaints, isCurrentUserAdmin, isProfileAdmin, addProfile, updateProfile, updateUserBlocked, deleteProfile, addComplaint, updateComplaint, addReview, createNotification, refreshRemoteData],
   );
 
   return <ProfilesContext.Provider value={value}>{children}</ProfilesContext.Provider>;
