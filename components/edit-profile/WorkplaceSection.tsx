@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { ExternalLink, MapPin } from 'lucide-react';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 import InteractiveMap from '@/components/InteractiveMapLazy';
+import MapSegmentedControl from '@/components/MapSegmentedControl';
 import { type MapLayerMode } from '@/components/InteractiveMap';
 import { findClosestSamashkiHouse, getEffectiveHouseAddresses } from '@/lib/samashki-addresses';
 import { MapPosition } from '@/lib/types';
@@ -104,35 +105,16 @@ export default function WorkplaceSection({
               странице «Карта» */}
           <div className="flex items-center gap-1.5 pt-1">
             <span className="text-[10px] font-bold text-slate-400">{t.showLabel}</span>
-            <div className="flex items-center gap-1 rounded-xl bg-slate-100 p-1 dark:bg-zinc-800" role="tablist" aria-label="Тип карты">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={mapLayerMode === 'streets'}
-                onClick={() => setMapLayerMode('streets')}
-                className={`rounded-lg px-2 py-1 text-[11px] font-bold transition ${mapLayerMode === 'streets' ? 'bg-white text-slate-900 shadow-sm dark:bg-zinc-700 dark:text-white' : 'text-slate-500 hover:text-slate-800 dark:text-zinc-500 dark:hover:text-zinc-200'}`}
-              >
-                {t.mapLayerStreets}
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={mapLayerMode === 'satellite'}
-                onClick={() => setMapLayerMode('satellite')}
-                className={`rounded-lg px-2 py-1 text-[11px] font-bold transition ${mapLayerMode === 'satellite' ? 'bg-white text-slate-900 shadow-sm dark:bg-zinc-700 dark:text-white' : 'text-slate-500 hover:text-slate-800 dark:text-zinc-500 dark:hover:text-zinc-200'}`}
-              >
-                {t.mapLayerSatellite}
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={mapLayerMode === 'hybrid'}
-                onClick={() => setMapLayerMode('hybrid')}
-                className={`rounded-lg px-2 py-1 text-[11px] font-bold transition ${mapLayerMode === 'hybrid' ? 'bg-white text-slate-900 shadow-sm dark:bg-zinc-700 dark:text-white' : 'text-slate-500 hover:text-slate-800 dark:text-zinc-500 dark:hover:text-zinc-200'}`}
-              >
-                {t.mapLayerHybrid}
-              </button>
-            </div>
+            <MapSegmentedControl
+              ariaLabel="Тип карты"
+              active={[mapLayerMode]}
+              onSelect={setMapLayerMode}
+              options={[
+                { value: 'streets' as MapLayerMode, label: t.mapLayerStreets },
+                { value: 'satellite' as MapLayerMode, label: t.mapLayerSatellite },
+                { value: 'hybrid' as MapLayerMode, label: t.mapLayerHybrid },
+              ]}
+            />
           </div>
           <InteractiveMap
             selectedPosition={workplaceCoords}
@@ -149,24 +131,23 @@ export default function WorkplaceSection({
             <span className="text-[10px] font-bold text-slate-400">{t.showLabel}</span>
             {/* Независимые переключатели (можно включить оба) в том же
                 сегмент-стиле. */}
-            <div className="flex items-center gap-1 rounded-xl bg-slate-100 p-1 dark:bg-zinc-800" aria-label="Слои объектов">
-              <button
-                type="button"
-                aria-pressed={showHouses}
-                onClick={() => setShowHouses((v) => !v)}
-                className={`rounded-lg px-2 py-1 text-[11px] font-bold transition ${showHouses ? 'bg-white text-slate-900 shadow-sm dark:bg-zinc-700 dark:text-white' : 'text-slate-500 hover:text-slate-800 dark:text-zinc-500 dark:hover:text-zinc-200'}`}
-              >
-                {t.layerHouses}
-              </button>
-              <button
-                type="button"
-                aria-pressed={showPlaces}
-                onClick={() => setShowPlaces((v) => !v)}
-                className={`rounded-lg px-2 py-1 text-[11px] font-bold transition ${showPlaces ? 'bg-white text-slate-900 shadow-sm dark:bg-zinc-700 dark:text-white' : 'text-slate-500 hover:text-slate-800 dark:text-zinc-500 dark:hover:text-zinc-200'}`}
-              >
-                {t.layerOther}
-              </button>
-            </div>
+            <MapSegmentedControl
+              ariaLabel="Слои объектов"
+              // Независимые тумблеры: дома и «другое» можно включить вместе.
+              radio={false}
+              active={[
+                ...(showHouses ? (['houses'] as const) : []),
+                ...(showPlaces ? (['places'] as const) : []),
+              ]}
+              onSelect={(value) => {
+                if (value === 'houses') setShowHouses((v) => !v);
+                else setShowPlaces((v) => !v);
+              }}
+              options={[
+                { value: 'houses' as const, label: t.layerHouses },
+                { value: 'places' as const, label: t.layerOther },
+              ]}
+            />
           </div>
         </div>
       )}

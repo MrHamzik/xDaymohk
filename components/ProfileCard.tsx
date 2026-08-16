@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import { Award, Ban, ChevronRight, Flag, MapPin, Star } from 'lucide-react';
 import { Profile } from '@/lib/types';
-import { formatDisplayName, formatReviews } from '@/lib/text';
+import { calculateAge, formatDisplayName, formatReviews } from '@/lib/text';
 import { useI18n } from '@/lib/i18n';
 import ProfileBadges, { WorkingStatusBadge } from '@/components/ProfileBadges';
 import { cacheBustAvatarUrl } from '@/lib/media';
@@ -37,9 +37,10 @@ export default function ProfileCard({
   const profileIsAdmin = Boolean(isAdminStatus);
   const hasAction = Boolean((isAdmin && !profileIsAdmin && onBlock) || (!isOwnProfile && !profile.isVerified && profile.verificationStatus !== 'verified' && onReport));
 
-  const age = profile.birthDate
-    ? Math.floor((new Date().getTime() - new Date(profile.birthDate).getTime()) / 31557600000)
-    : null;
+  // Возраст считаем по полной дате рождения (с учётом того, прошёл ли
+  // день рождения в этом году). Деление разницы в миллисекундах на
+  // «средний год» давало ошибку ±1 год.
+  const age = calculateAge(profile.birthDate);
 
   return (
     <article
