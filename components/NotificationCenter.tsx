@@ -2,7 +2,7 @@
 
 import { createPortal } from 'react-dom';
 import { useState, useEffect, useRef } from 'react';
-import { Bell, CarFront, CheckCheck, MessageSquare, ShieldAlert, Settings2, Trash2, X } from 'lucide-react';
+import { Bell, Briefcase, CarFront, CheckCheck, MessageSquare, ShieldAlert, Settings2, Trash2, X } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { useI18n } from '@/lib/i18n';
 import { useNotifications } from '@/components/NotificationsProvider';
@@ -50,6 +50,7 @@ export default function NotificationCenter() {
     { id: 'system', labelRu: 'Система', labelCe: 'Система', Icon: Settings2 },
     { id: 'activity', labelRu: 'Активность', labelCe: 'Жималла', Icon: MessageSquare },
     { id: 'complaint', labelRu: 'Жалобы', labelCe: 'Арз', Icon: ShieldAlert },
+    { id: 'task', labelRu: 'Задания', labelCe: 'ТIедилларш', Icon: Briefcase },
     { id: 'taxi', labelRu: 'Такси', labelCe: 'Такси', Icon: CarFront },
   ];
 
