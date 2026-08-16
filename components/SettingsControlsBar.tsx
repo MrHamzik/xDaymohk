@@ -1,11 +1,10 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Clock, Coffee, Minimize2, Moon, PowerOff, Sparkles, Sun, Check } from 'lucide-react';
+import { Clock, Coffee, Moon, PowerOff, Sparkles, Sun, Check } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { useTheme } from '@/components/ThemeProvider';
 import { useI18n } from '@/lib/i18n';
-import { isCompactMapEnabled, setCompactMapEnabled } from '@/lib/map-prefs';
 import NotificationCenter from '@/components/NotificationCenter';
 import { UserMasterStatus } from '@/lib/types';
 
@@ -16,18 +15,7 @@ export default function SettingsControlsBar() {
 
   const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false);
   const [localStatus, setLocalStatus] = useState<UserMasterStatus>('auto');
-  // «Компактная карта»: тонкие цифры домов без фона, мелкие кластеры.
-  const [compactMap, setCompactMap] = useState(false);
-  useEffect(() => {
-    setCompactMap(isCompactMapEnabled());
-  }, []);
   const statusRef = useRef<HTMLDivElement | null>(null);
-
-  const handleToggleCompactMap = () => {
-    const next = !compactMap;
-    setCompactMap(next);
-    setCompactMapEnabled(next);
-  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -206,26 +194,6 @@ export default function SettingsControlsBar() {
         </button>
       </div>
 
-      {/* 5. Компактная карта (тумблер): тонкие цифры без фона, мелкие кластеры */}
-      <div className="flex-1 flex justify-center">
-        <button
-          type="button"
-          onClick={handleToggleCompactMap}
-          role="switch"
-          aria-checked={compactMap}
-          title={language === 'ce'
-            ? (compactMap ? 'Гӏеза карта: юкъдаккха' : 'Гӏеза карта: ялата')
-            : (compactMap ? 'Компактная карта: включено (выключить)' : 'Компактная карта: выключено (включить)')}
-          aria-label={language === 'ce' ? 'Гӏеза карта' : 'Компактная карта'}
-          className={`flex h-11 w-11 items-center justify-center rounded-xl shadow-sm transition-all active:scale-95 ${
-            compactMap
-              ? 'bg-emerald-600 text-white shadow-emerald-600/30 hover:bg-emerald-700'
-              : 'bg-slate-200 text-slate-500 hover:bg-slate-300 dark:bg-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-600'
-          }`}
-        >
-          <Minimize2 className="h-5 w-5" />
-        </button>
-      </div>
     </div>
   );
 }

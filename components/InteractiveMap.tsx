@@ -12,7 +12,6 @@ import type * as Leaflet from 'leaflet';
 import type { MapMarker, MapPosition } from '@/lib/types';
 import { SAMASHKI_HOUSE_ADDRESSES, SAMASHKI_PLACE_OBJECTS, getEffectiveHouseAddresses, fetchEffectiveHouseAddresses, findClosestSamashkiHouse, type SamashkiHouseAddress } from '@/lib/samashki-addresses';
 import { escapeHtml } from '@/lib/sanitize';
-import { COMPACT_MAP_EVENT, isCompactMapEnabled } from '@/lib/map-prefs';
 import MapSegmentedControl from '@/components/MapSegmentedControl';
 
 export type MapLayerMode = 'streets' | 'satellite' | 'hybrid';
@@ -118,24 +117,11 @@ export function LeafletMap({
   // чтобы тысячи адресов не вешали карту при приближении.
   const [viewportTick, setViewportTick] = useState(0);
   const [effectiveHouses, setEffectiveHouses] = useState(SAMASHKI_HOUSE_ADDRESSES);
-  // «Компактная карта» — пользовательская настройка (тонкие цифры без
-  // фона, маленькие кластеры). При смене карта пересобирается, потому что
-  // размер иконок кластеров задаётся в iconCreateFunction при создании.
-  const [compactMode, setCompactMode] = useState(isCompactMapEnabled);
   const mapLayerMode = controlledMapLayerMode ?? localMapLayerMode;
   // Актуальный режим слоя для колбэков (locate), созданных в mount-эффекте.
   const mapLayerModeRef = useRef(mapLayerMode);
   mapLayerModeRef.current = mapLayerMode;
 
-  useEffect(() => {
-    const refresh = () => setCompactMode(isCompactMapEnabled());
-    window.addEventListener(COMPACT_MAP_EVENT, refresh);
-    window.addEventListener('storage', refresh);
-    return () => {
-      window.removeEventListener(COMPACT_MAP_EVENT, refresh);
-      window.removeEventListener('storage', refresh);
-    };
-  }, []);
   const selectMapLayerMode = (mode: MapLayerMode) => {
     setLocalMapLayerMode(mode);
     onMapLayerModeChange?.(mode);
@@ -200,9 +186,7 @@ export function LeafletMap({
       // Кастомная иконка: свой iconSize + класс smk-cluster-* (оформление
       // в globals.css) вместо дефолтного .marker-cluster, у которого фон
       // есть и у внешнего, и у внутреннего div — второй «двойной диск».
-      const clusterSizes = compactMode
-        ? { small: 18, medium: 21, large: 25 }
-        : { small: 22, medium: 27, large: 32 };
+      const clusterSizes = { small: 22, medium: 27, large: 32 };
       const makeClusterIcon = (cluster: { getChildCount(): number }) => {
         const count = cluster.getChildCount();
         const tier = count < 10 ? 'small' : count < 100 ? 'medium' : 'large';
@@ -307,9 +291,7 @@ export function LeafletMap({
       leafletRef.current = null;
       setIsReady(false);
     };
-    // compactMode: смена настройки пересобирает карту (размеры кластеров
-    // задаются при создании слоёв).
-  }, [locateOnLoad, compactMode]);
+  }, [locateOnLoad]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -655,11 +637,11 @@ export function LeafletMap({
     const residents = near.length - specialists;
 
     selectedLayerRef.current = leaflet.circleMarker([selectedPosition.lat, selectedPosition.lng], {
-      radius: compactMode ? 5 : 7,
+      radius: 7,
       color: '#0f172a',
       fillColor: '#f59e0b',
       fillOpacity: 0.95,
-      weight: compactMode ? 2 : 3,
+      weight: 3,
     })
       .addTo(map)
       .bindPopup(
@@ -668,7 +650,7 @@ export function LeafletMap({
         // autoPan: false — открытие попапа не двигает карту.
         { autoPan: false, closeButton: true },
       );
-  }, [selectedPosition, markers, isReady, mapLayerMode, effectiveHouses, compactMode]);
+  }, [selectedPosition, markers, isReady, mapLayerMode, effectiveHouses]);
 
   const locateAgain = () => {
     if (!navigator.geolocation || !mapRef.current) {
@@ -728,7 +710,7 @@ export function LeafletMap({
   }, [locationRequestKey]);
 
   return (
-    <div className={`relative z-0 isolate w-full overflow-hidden rounded-2xl ${compactMode ? 'compact-map ' : ''}${className}`}>
+    <div className={`relative z-0 isolate w-full overflow-hidden rounded-2xl ${className}`}>
       <div ref={containerRef} className="h-full w-full" />
       {showControls && (
         <div className="absolute left-3 right-3 top-3 z-[400] flex max-w-[calc(100%-1.5rem)] flex-wrap items-center justify-between gap-2 rounded-xl bg-white/95 px-3 py-2 text-xs font-semibold text-slate-700 shadow-md backdrop-blur dark:bg-zinc-950/95 dark:text-zinc-300">
