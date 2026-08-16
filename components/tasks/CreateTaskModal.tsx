@@ -1,0 +1,386 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { X, Loader2 } from 'lucide-react';
+import AddressAutocomplete from '@/components/AddressAutocomplete';
+import { createTask, fetchTaskFilters } from '@/lib/tasks/client';
+import { taskTotalReward, type AppFilter, type TaskKind, type TaskPriority } from '@/lib/types';
+
+interface CreateTaskModalProps {
+  isOpen: boolean;
+  /** true — «Аренца Темщик» (за деньги), false — «ГIончалла» (безвозмездно). */
+  isPaid: boolean;
+  onClose: () => void;
+  onCreated: () => void;
+}
+
+/** input[type=datetime-local] хочет local-time без таймзоны. */
+function toLocalInput(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: CreateTaskModalProps) {
+  const [categories, setCategories] = useState<AppFilter[]>([]);
+  const [kind, setKind] = useState<TaskKind>('urgent');
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [category, setCategory] = useState('other');
+  const [reward, setReward] = useState('');
+  const [priority, setPriority] = useState<TaskPriority>('normal');
+  const [slots, setSlots] = useState('1');
+  const [deadlineAt, setDeadlineAt] = useState('');
+  const [scheduledAt, setScheduledAt] = useState('');
+  const [address, setAddress] = useState('');
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [minRating, setMinRating] = useState('0');
+  const [minAccountDays, setMinAccountDays] = useState('0');
+  const [minTasksDone, setMinTasksDone] = useState('0');
+  const [allowNewcomers, setAllowNewcomers] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!isOpen) return;
+    fetchTaskFilters('tasks').then(setCategories).catch(() => setCategories([]));
+    // Разумные значения по умолчанию: срочное — на 3 часа вперёд,
+    // запланированное — на завтра, чтобы не заполнять руками.
+    const soon = new Date(Date.now() + 3 * 3600_000);
+    const tomorrow = new Date(Date.now() + 24 * 3600_000);
+    setDeadlineAt(toLocalInput(soon));
+    setScheduledAt(toLocalInput(tomorrow));
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  const rewardValue = Number(reward) || 0;
+  const total = taskTotalReward(rewardValue, priority);
+  const slotsValue = Math.max(1, Number(slots) || 1);
+
+  const handleSubmit = async () => {
+    setError('');
+    if (title.trim().length < 3) {
+      setError('Опишите задание в заголовке (минимум 3 символа)');
+      return;
+    }
+    if (isPaid && rewardValue <= 0) {
+      setError('Укажите награду за задание');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await createTask({
+        isPaid,
+        kind,
+        title: title.trim(),
+        description: description.trim(),
+        category,
+        reward: isPaid ? rewardValue : 0,
+        priority: isPaid ? priority : 'normal',
+        slots: kind === 'scheduled' ? slotsValue : 1,
+        // datetime-local отдаёт локальное время — переводим в ISO (UTC).
+        deadlineAt: kind === 'urgent' && deadlineAt ? new Date(deadlineAt).toISOString() : null,
+        scheduledAt: kind === 'scheduled' && scheduledAt ? new Date(scheduledAt).toISOString() : null,
+        address: address.trim(),
+        lat: coords?.lat ?? null,
+        lng: coords?.lng ?? null,
+        minRating: Number(minRating) || 0,
+        minAccountDays: Number(minAccountDays) || 0,
+        minTasksDone: Number(minTasksDone) || 0,
+        allowNewcomers,
+      });
+      // Сбрасываем форму, чтобы следующее открытие было чистым.
+      setTitle('');
+      setDescription('');
+      setReward('');
+      setPriority('normal');
+      setSlots('1');
+      setAddress('');
+      setCoords(null);
+      onCreated();
+      onClose();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Не удалось создать задание');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const fieldClass = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white';
+  const labelClass = 'mb-1 block text-xs font-bold text-slate-700 dark:text-zinc-300';
+
+  return (
+    <div
+      className="fixed inset-0 z-[90] flex items-end justify-center bg-zinc-950/70 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="create-task-title"
+      onClick={onClose}
+    >
+      <div
+        className="flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl dark:bg-zinc-900 sm:rounded-3xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 dark:border-zinc-800">
+          <h2 id="create-task-title" className="text-sm font-extrabold text-slate-900 dark:text-white">
+            {isPaid ? 'Новое задание — Аренца Темщик' : 'Новая помощь — ГIончалла'}
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Закрыть"
+            className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 dark:hover:bg-zinc-800"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
+          {/* Тип задания */}
+          <div className="flex items-center gap-1 rounded-xl bg-slate-100 p-1 dark:bg-zinc-800" role="tablist">
+            {([['urgent', 'Срочное'], ['scheduled', 'На дату']] as [TaskKind, string][]).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                role="tab"
+                aria-selected={kind === value}
+                onClick={() => setKind(value)}
+                className={`flex-1 rounded-lg px-2 py-1.5 text-[11px] font-bold transition ${
+                  kind === value
+                    ? 'bg-white text-slate-900 shadow-sm dark:bg-zinc-700 dark:text-white'
+                    : 'text-slate-500 hover:text-slate-800 dark:text-zinc-500'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <div>
+            <label htmlFor="task-title" className={labelClass}>Что нужно сделать *</label>
+            <input
+              id="task-title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              maxLength={120}
+              placeholder="Например: купить хлеб и молоко"
+              className={fieldClass}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="task-desc" className={labelClass}>Подробности</label>
+            <textarea
+              id="task-desc"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              maxLength={2000}
+              rows={3}
+              placeholder="Уточните детали: что именно, куда принести, особые пожелания"
+              className={`${fieldClass} resize-none`}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="task-category" className={labelClass}>Категория</label>
+              <select
+                id="task-category"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className={fieldClass}
+              >
+                {categories.length === 0 && <option value="other">Другое</option>}
+                {categories.map((c) => (
+                  <option key={c.id} value={c.value}>{c.labelRu}</option>
+                ))}
+              </select>
+            </div>
+
+            {isPaid && (
+              <div>
+                <label htmlFor="task-reward" className={labelClass}>Награда, ₽ *</label>
+                <input
+                  id="task-reward"
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  value={reward}
+                  onChange={(e) => setReward(e.target.value)}
+                  placeholder="300"
+                  className={fieldClass}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Приоритет — надбавка платит заказчик */}
+          {isPaid && (
+            <div>
+              <span className={labelClass}>Срочность</span>
+              <div className="flex items-center gap-1 rounded-xl bg-slate-100 p-1 dark:bg-zinc-800">
+                {([
+                  ['normal', 'Обычно'],
+                  ['high', '🟡 +20%'],
+                  ['critical', '🔴 +50%'],
+                ] as [TaskPriority, string][]).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setPriority(value)}
+                    className={`flex-1 rounded-lg px-2 py-1.5 text-[11px] font-bold transition ${
+                      priority === value
+                        ? 'bg-white text-slate-900 shadow-sm dark:bg-zinc-700 dark:text-white'
+                        : 'text-slate-500 hover:text-slate-800 dark:text-zinc-500'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {rewardValue > 0 && (
+                <p className="mt-1.5 rounded-lg bg-emerald-50 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
+                  Исполнитель получит {total} ₽
+                  {total !== rewardValue && ` (${rewardValue} ₽ + надбавка за срочность)`}
+                </p>
+              )}
+            </div>
+          )}
+
+          {kind === 'urgent' ? (
+            <div>
+              <label htmlFor="task-deadline" className={labelClass}>Сделать до *</label>
+              <input
+                id="task-deadline"
+                type="datetime-local"
+                value={deadlineAt}
+                onChange={(e) => setDeadlineAt(e.target.value)}
+                className={fieldClass}
+              />
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="task-scheduled" className={labelClass}>Дата и время *</label>
+                <input
+                  id="task-scheduled"
+                  type="datetime-local"
+                  value={scheduledAt}
+                  onChange={(e) => setScheduledAt(e.target.value)}
+                  className={fieldClass}
+                />
+              </div>
+              <div>
+                <label htmlFor="task-slots" className={labelClass}>Сколько человек</label>
+                <input
+                  id="task-slots"
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={100}
+                  value={slots}
+                  onChange={(e) => setSlots(e.target.value)}
+                  className={fieldClass}
+                />
+              </div>
+            </div>
+          )}
+
+          <div>
+            <label htmlFor="task-address" className={labelClass}>Адрес</label>
+            <AddressAutocomplete
+              id="task-address"
+              value={address}
+              onChange={setAddress}
+              onSelect={(s) => {
+                setAddress(s.displayName);
+                setCoords({ lat: s.lat, lng: s.lng });
+              }}
+            />
+          </div>
+
+          {/* Требования: кого пускать на задание */}
+          <details className="rounded-xl border border-slate-200 p-3 dark:border-zinc-700">
+            <summary className="cursor-pointer text-xs font-bold text-slate-700 dark:text-zinc-300">
+              Требования к исполнителю
+            </summary>
+            <div className="mt-3 space-y-3">
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label htmlFor="task-min-rating" className={labelClass}>Рейтинг</label>
+                  <input
+                    id="task-min-rating" type="number" min={0} max={5} step={0.5}
+                    value={minRating} onChange={(e) => setMinRating(e.target.value)}
+                    className={fieldClass}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="task-min-days" className={labelClass}>Дней в сети</label>
+                  <input
+                    id="task-min-days" type="number" min={0}
+                    value={minAccountDays} onChange={(e) => setMinAccountDays(e.target.value)}
+                    className={fieldClass}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="task-min-done" className={labelClass}>Заданий</label>
+                  <input
+                    id="task-min-done" type="number" min={0}
+                    value={minTasksDone} onChange={(e) => setMinTasksDone(e.target.value)}
+                    className={fieldClass}
+                  />
+                </div>
+              </div>
+              <label className="flex cursor-pointer items-start gap-2 text-xs text-slate-600 dark:text-zinc-400">
+                <input
+                  type="checkbox"
+                  checked={allowNewcomers}
+                  onChange={(e) => setAllowNewcomers(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded accent-emerald-600"
+                />
+                <span>
+                  <span className="font-bold text-slate-800 dark:text-zinc-200">Показывать новичкам</span>
+                  <br />
+                  Без этого люди без выполненных заданий не смогут взять задание.
+                </span>
+              </label>
+            </div>
+          </details>
+
+          {error && (
+            <p className="rounded-xl bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
+              {error}
+            </p>
+          )}
+        </div>
+
+        <div className="flex gap-2 border-t border-slate-100 p-4 dark:border-zinc-800">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            Отмена
+          </button>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={isSaving}
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:opacity-60"
+          >
+            {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+            Опубликовать
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

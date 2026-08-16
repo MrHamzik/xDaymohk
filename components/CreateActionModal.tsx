@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Bot, Briefcase, CarFront, Compass, Globe2, HandHeart, UserPlus, X } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import QiblaModal from '@/components/QiblaModal';
@@ -25,6 +26,7 @@ export default function CreateActionModal({
   onOpenDjanna,
 }: CreateActionModalProps) {
   const { t } = useI18n();
+  const router = useRouter();
   const [isQiblaOpen, setIsQiblaOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
@@ -92,7 +94,9 @@ export default function CreateActionModal({
       bg: 'bg-emerald-700 text-white shadow-xl shadow-emerald-700/40 hover:bg-emerald-800',
       action: () => {
         onClose();
-        onOpenGullaq?.();
+        // Раздел реализован — ведём на него; колбэк оставлен для
+        // мест, где модалка используется со своим обработчиком.
+        if (onOpenGullaq) onOpenGullaq(); else router.push('/vayghullakh');
       },
     },
     {
@@ -103,7 +107,7 @@ export default function CreateActionModal({
       bg: 'bg-rose-500 text-white shadow-xl shadow-rose-500/40 hover:bg-rose-600',
       action: () => {
         onClose();
-        onOpenGo?.();
+        if (onOpenGo) onOpenGo(); else router.push('/vaygo');
       },
     },
     {
