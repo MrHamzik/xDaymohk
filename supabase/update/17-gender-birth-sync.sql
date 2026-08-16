@@ -1,8 +1,11 @@
 -- =============================================================================
--- Даймохк — обновление 17 (v3)
+-- Даймохк — обновление 17 (v4)
 -- Пол и возраст в ЛИЧНОЙ анкете. Проверено по живой схеме (supabase/DB.md):
 -- все нужные столбцы существуют; birth_date в user_profiles и profiles
 -- хранится как text (не date) — миграция это учитывает.
+-- v4: исправлена опечатка во вьюхе — внутренний алиас hidden_total
+-- (в v2/v3 внутри подзапроса колонка называлась hidden_count, а внешний
+-- SELECT искал c.hidden_total → ERROR 42703).
 --
 -- Проблема: пол и дата рождения пользователь заполняет на странице профиля
 -- (таблица user_profiles), а личная анкета (profiles, is_personal = true) их
@@ -87,7 +90,7 @@ left join (
   select
     owner_id,
     count(*)                          as profiles_total,
-    count(*) filter (where is_hidden or is_banned) as hidden_count
+    count(*) filter (where is_hidden or is_banned) as hidden_total
   from public.profiles
   where owner_id is not null
   group by owner_id
