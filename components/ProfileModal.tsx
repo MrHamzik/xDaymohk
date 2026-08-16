@@ -8,7 +8,7 @@ import { useProfiles } from '@/components/ProfilesProvider';
 import { useI18n } from '@/lib/i18n';
 import { supabase } from '@/lib/supabase';
 import { Certificate, Profile, Review } from '@/lib/types';
-import { formatReviews } from '@/lib/text';
+import { calculateAge, formatReviews } from '@/lib/text';
 import { calculateWorkingStatus } from '@/lib/schedule';
 import Notice from '@/components/Notice';
 import ProfileBadges, { WorkingStatusBadge } from '@/components/ProfileBadges';
@@ -731,11 +731,12 @@ export default function ProfileModal({
                 const gender = ownerUser?.gender || profile.gender;
                 const birth = ownerUser?.birthDate || profile.birthDate;
                 if (!birth && !gender) return null;
-                const year = birth ? Number(String(birth).slice(0, 4)) : NaN;
-                const age = Number.isFinite(year) ? new Date().getFullYear() - year : NaN;
+                // Точный возраст: по полной дате 'YYYY-MM-DD' (с учётом того,
+                // прошёл ли день рождения в этом году), иначе грубо по году.
+                const age = birth ? calculateAge(String(birth)) : null;
                 return (
                   <div className="mb-2 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-700 dark:text-zinc-300">
-                    {birth && Number.isFinite(age) && age >= 0 && (
+                    {age !== null && (
                       <span className="flex h-5 items-center rounded-md bg-slate-100 px-2 dark:bg-zinc-800">
                         {t.ageLabel}: {age}
                       </span>

@@ -100,30 +100,39 @@ export default function WorkplaceSection({
       </div>
       {showMap && (
         <div className="mb-2.5 space-y-2">
-          {/* Слои карты вынесены НАД картой, с отступами от подписи и кнопки «Скрыть карту» */}
+          {/* Слои карты вынесены НАД картой — единый сегмент-стиль как на
+              странице «Карта» */}
           <div className="flex items-center gap-1.5 pt-1">
             <span className="text-[10px] font-bold text-slate-400">{t.showLabel}</span>
-            <button
-              type="button"
-              onClick={() => setMapLayerMode('streets')}
-              className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition ${mapLayerMode === 'streets' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700'}`}
-            >
-              {t.mapLayerStreets}
-            </button>
-            <button
-              type="button"
-              onClick={() => setMapLayerMode('satellite')}
-              className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition ${mapLayerMode === 'satellite' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700'}`}
-            >
-              {t.mapLayerSatellite}
-            </button>
-            <button
-              type="button"
-              onClick={() => setMapLayerMode('hybrid')}
-              className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition ${mapLayerMode === 'hybrid' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700'}`}
-            >
-              {t.mapLayerHybrid}
-            </button>
+            <div className="flex items-center gap-1 rounded-xl bg-slate-100 p-1 dark:bg-zinc-800" role="tablist" aria-label="Тип карты">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mapLayerMode === 'streets'}
+                onClick={() => setMapLayerMode('streets')}
+                className={`rounded-lg px-2 py-1 text-[11px] font-bold transition ${mapLayerMode === 'streets' ? 'bg-white text-slate-900 shadow-sm dark:bg-zinc-700 dark:text-white' : 'text-slate-500 hover:text-slate-800 dark:text-zinc-500 dark:hover:text-zinc-200'}`}
+              >
+                {t.mapLayerStreets}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mapLayerMode === 'satellite'}
+                onClick={() => setMapLayerMode('satellite')}
+                className={`rounded-lg px-2 py-1 text-[11px] font-bold transition ${mapLayerMode === 'satellite' ? 'bg-white text-slate-900 shadow-sm dark:bg-zinc-700 dark:text-white' : 'text-slate-500 hover:text-slate-800 dark:text-zinc-500 dark:hover:text-zinc-200'}`}
+              >
+                {t.mapLayerSatellite}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mapLayerMode === 'hybrid'}
+                onClick={() => setMapLayerMode('hybrid')}
+                className={`rounded-lg px-2 py-1 text-[11px] font-bold transition ${mapLayerMode === 'hybrid' ? 'bg-white text-slate-900 shadow-sm dark:bg-zinc-700 dark:text-white' : 'text-slate-500 hover:text-slate-800 dark:text-zinc-500 dark:hover:text-zinc-200'}`}
+              >
+                {t.mapLayerHybrid}
+              </button>
+            </div>
           </div>
           <InteractiveMap
             selectedPosition={workplaceCoords}
@@ -136,22 +145,28 @@ export default function WorkplaceSection({
             onMapLayerModeChange={setMapLayerMode}
             className="h-56 sm:h-72"
           />
-          <div className="flex items-center gap-2 px-1">
+          <div className="flex items-center gap-1.5 px-1">
             <span className="text-[10px] font-bold text-slate-400">{t.showLabel}</span>
-            <button
-              type="button"
-              onClick={() => setShowHouses((v) => !v)}
-              className={`rounded-full px-2.5 py-1 text-[11px] font-bold transition ${showHouses ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500 dark:bg-zinc-800 dark:text-zinc-400'}`}
-            >
-              {t.layerHouses}
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowPlaces((v) => !v)}
-              className={`rounded-full px-2.5 py-1 text-[11px] font-bold transition ${showPlaces ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500 dark:bg-zinc-800 dark:text-zinc-400'}`}
-            >
-              {t.layerOther}
-            </button>
+            {/* Независимые переключатели (можно включить оба) в том же
+                сегмент-стиле. */}
+            <div className="flex items-center gap-1 rounded-xl bg-slate-100 p-1 dark:bg-zinc-800" aria-label="Слои объектов">
+              <button
+                type="button"
+                aria-pressed={showHouses}
+                onClick={() => setShowHouses((v) => !v)}
+                className={`rounded-lg px-2 py-1 text-[11px] font-bold transition ${showHouses ? 'bg-white text-slate-900 shadow-sm dark:bg-zinc-700 dark:text-white' : 'text-slate-500 hover:text-slate-800 dark:text-zinc-500 dark:hover:text-zinc-200'}`}
+              >
+                {t.layerHouses}
+              </button>
+              <button
+                type="button"
+                aria-pressed={showPlaces}
+                onClick={() => setShowPlaces((v) => !v)}
+                className={`rounded-lg px-2 py-1 text-[11px] font-bold transition ${showPlaces ? 'bg-white text-slate-900 shadow-sm dark:bg-zinc-700 dark:text-white' : 'text-slate-500 hover:text-slate-800 dark:text-zinc-500 dark:hover:text-zinc-200'}`}
+              >
+                {t.layerOther}
+              </button>
+            </div>
           </div>
         </div>
       )}

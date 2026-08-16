@@ -429,26 +429,18 @@ html.dark .bg-emerald-600.border-slate-200 {
 }
 
 /* ===== Кластеры объектов (leaflet.markercluster) =====
-   Светлая тема: фон --color-slate-50 (почти белый), тёмный текст.
-   Тёмная тема: фон --color-zinc-800, светлый текст.
-   Цифры центрируются через flex; размер уменьшен на 30% от прошлой версии. */
-.marker-cluster-small,
-.marker-cluster-medium,
-.marker-cluster-large {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background-color: var(--color-slate-50);
-  box-shadow: 0 1px 6px -1px rgba(15, 23, 42, 0.25);
+   Иконки создаются в InteractiveMap (smk-cluster-*, свой iconSize),
+   поэтому внешний маркер-элемент прозрачен: видимый диск — только
+   внутренний div. Раньше фон был и у внешнего, и у внутреннего слоя
+   (внутренний при этом был сдвинут margin'ами из CSS библиотеки) —
+   кластер выглядел «двойным». Теперь диск один.
+   Размер иконки задаётся в JS (IconCreateFunction), здесь — только
+   оформление. */
+.smk-cluster {
+  background: transparent;
+  box-shadow: none;
 }
-.marker-cluster-small { width: 28px; height: 28px; }
-.marker-cluster-medium { width: 36px; height: 36px; }
-.marker-cluster-large { width: 44px; height: 44px; }
-
-.marker-cluster-small div,
-.marker-cluster-medium div,
-.marker-cluster-large div {
+.smk-cluster div {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -460,20 +452,65 @@ html.dark .bg-emerald-600.border-slate-200 {
   font-weight: 800;
   font-family: inherit;
   line-height: 1;
+  box-shadow: 0 1px 6px -1px rgba(15, 23, 42, 0.25);
 }
-.marker-cluster-small div { font-size: 11px; }
-.marker-cluster-medium div { font-size: 12px; }
-.marker-cluster-large div { font-size: 13px; }
+.smk-cluster-small div { font-size: 10px; }
+.smk-cluster-medium div { font-size: 11px; }
+.smk-cluster-large div { font-size: 12px; }
 
-html.dark .marker-cluster-small,
-html.dark .marker-cluster-medium,
-html.dark .marker-cluster-large {
-  background-color: var(--color-zinc-800);
-  box-shadow: 0 1px 8px -1px rgba(0, 0, 0, 0.6);
-}
-html.dark .marker-cluster-small div,
-html.dark .marker-cluster-medium div,
-html.dark .marker-cluster-large div {
+html.dark .smk-cluster div {
   background-color: var(--color-zinc-800);
   color: #e4e4e7;
+  box-shadow: 0 1px 8px -1px rgba(0, 0, 0, 0.6);
+}
+
+/* ===== «Компактная карта» (настройка в панели быстрых настроек) =====
+   Без фона, теней и жирного начертания — тонкие цифры; с небольшой
+   светлой обводкой text-shadow, чтобы читались на спутнике/гибриде. */
+.compact-map .samashki-house-badge.light,
+.compact-map .samashki-place-badge.light {
+  background-color: transparent;
+  box-shadow: none;
+  border-color: transparent;
+  font-weight: 500;
+  font-size: 10px;
+  padding: 0 1px;
+  color: #0f172a;
+  text-shadow:
+    0 1px 2px rgba(255, 255, 255, 0.9),
+    0 0 3px rgba(255, 255, 255, 0.9),
+    1px 0 2px rgba(255, 255, 255, 0.9),
+    -1px 0 2px rgba(255, 255, 255, 0.9);
+}
+.compact-map .samashki-house-badge:hover,
+.compact-map .samashki-place-badge:hover,
+.compact-map .samashki-house-badge:active,
+.compact-map .samashki-place-badge:active {
+  transform: scale(1.08);
+  box-shadow: none;
+  text-decoration: underline;
+}
+.compact-map .smk-cluster div {
+  background-color: rgba(255, 255, 255, 0.78);
+  box-shadow: none;
+  font-weight: 600;
+}
+.compact-map .smk-cluster-small div { font-size: 9px; }
+.compact-map .smk-cluster-medium div { font-size: 10px; }
+.compact-map .smk-cluster-large div { font-size: 11px; }
+
+html.dark .compact-map .samashki-house-badge.light,
+html.dark .compact-map .samashki-place-badge.light {
+  background-color: transparent;
+  color: #f8fafc;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.95),
+    0 0 3px rgba(0, 0, 0, 0.95),
+    1px 0 2px rgba(0, 0, 0, 0.95),
+    -1px 0 2px rgba(0, 0, 0, 0.95);
+}
+html.dark .compact-map .smk-cluster div {
+  background-color: rgba(39, 39, 42, 0.78);
+  color: #fafafa;
+  box-shadow: none;
 }

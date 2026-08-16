@@ -50,6 +50,10 @@ export default function MapPage() {
   // Категория для слоя «Другое» ('' = все), как фильтр в админке.
   const [placesCategory, setPlacesCategory] = useState('');
   const [allAddresses, setAllAddresses] = useState<SamashkiHouseAddress[]>([]);
+  // Адрес, выбранный кликом по дому/объекту на карте (или по карте рядом с
+  // домом): панель «Анкеты по адресу» показывает анкеты всех, кто привязан
+  // к этому адресу — независимо от того, чья это точка.
+  const [selectedAddress, setSelectedAddress] = useState<SamashkiHouseAddress | null>(null);
   // Список категорий «Других» объектов из загруженных адресов.
   const placeCategories = useMemo(() => {
     const cats = new Set<string>();
@@ -104,6 +108,51 @@ export default function MapPage() {
     if (!selectedProfile.ownerId) return [selectedProfile];
     return profiles.filter((profile) => profile.ownerId === selectedProfile.ownerId && !profile.isHidden && !profile.isBanned);
   }, [profiles, selectedProfile]);
+
+  // Анкеты всех жителей/специалистов по выбранному адресу. Совпадение — по
+  // координатам (адреса анкет «привязаны» к координатам дома; допуск ~40 м
+  // покрывает спиральное разнесение домов с общими координатами) ИЛИ по
+  // тексту адреса без названия населённого пункта (старые записи).
+  const addressProfiles = useMemo(() => {
+    if (!selectedAddress) return [];
+    const stripRegion = (value: string) =>
+      value
+        .replace(/^(с\.|г\.)?\s*(даймохк|самашки)\s*,\s*/i, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+    const target = stripRegion(selectedAddress.fullAddress);
+    return profiles.filter((profile) => {
+      if (profile.isHidden || profile.isBanned || !profile.workplaceAddress.trim()) return false;
+      const byCoords =
+        Math.abs(profile.workplaceCoords.lat - selectedAddress.lat) < 0.0005 &&
+        Math.abs(profile.workplaceCoords.lng - selectedAddress.lng) < 0.0005;
+      const byText = stripRegion(profile.workplaceAddress) === target;
+      return byCoords || byText;
+    });
+  }, [profiles, selectedAddress]);
+
+  /** Клик по карте/дому выбирает ближайший адрес (в пределах ~250 м) —
+   *  панель выше покажет анкеты всех, кто живёт/работает по этому адресу. */
+  const handleMapSelect = (position: { lat: number; lng: number }) => {
+    const pool = allAddresses.filter(
+      (a) => Number.isFinite(a.lat) && Number.isFinite(a.lng),
+    );
+    if (pool.length === 0) return;
+    let closest = pool[0];
+    let best = Infinity;
+    for (const addr of pool) {
+      const d = (addr.lat - position.lat) ** 2 + (addr.lng - position.lng) ** 2;
+      if (d < best) { best = d; closest = addr; }
+    }
+    // Клик вдали от любого дома — просто сброс выбора адреса.
+    if (best > 0.003 * 0.003) {
+      setSelectedAddress(null);
+      return;
+    }
+    setSelectedProfileId(null);
+    setSelectedAddress(closest);
+  };
 
   const handleSaveProfile = (profile: Profile) => {
     if (editingProfile) {
@@ -170,16 +219,35 @@ export default function MapPage() {
             <div className="flex min-w-0 items-center gap-2">
               <Users className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
               <div className="min-w-0">
-                <h3 id="map-profiles-title" className="truncate text-sm font-bold text-slate-900 dark:text-white">Анкеты выбранного пользователя</h3>
-                <p className="text-xs text-slate-500 dark:text-zinc-500">Нажмите на миниатюру, чтобы выбрать его точку или открыть анкету.</p>
+                <h3 id="map-profiles-title" className="truncate text-sm font-bold text-slate-900 dark:text-white">
+                  {selectedAddress ? 'Анкеты по адресу' : 'Анкеты выбранного пользователя'}
+                </h3>
+                <p className="truncate text-xs text-slate-500 dark:text-zinc-500">
+                  {selectedAddress
+                    ? selectedAddress.fullAddress
+                    : 'Нажмите на миниатюру, чтобы выбрать его точку или открыть анкету.'}
+                </p>
               </div>
             </div>
-            <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">{selectedOwnerProfiles.length}</span>
+            <div className="flex shrink-0 items-center gap-1.5">
+              <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">{(selectedAddress ? addressProfiles : selectedOwnerProfiles).length}</span>
+              {selectedAddress && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedAddress(null)}
+                  aria-label="Сбросить выбранный адрес"
+                  title="Сбросить адрес"
+                  className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200 dark:bg-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-600"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           </div>
 
-          {selectedOwnerProfiles.length > 0 ? (
+          {(selectedAddress ? addressProfiles : selectedOwnerProfiles).length > 0 ? (
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {selectedOwnerProfiles.map((profile) => {
+              {(selectedAddress ? addressProfiles : selectedOwnerProfiles).map((profile) => {
                 const hasMapPoint = filteredProfiles.some((item) => item.id === profile.id);
                 const isSelected = profile.id === selectedProfile?.id;
                 return (
@@ -200,7 +268,9 @@ export default function MapPage() {
               })}
             </div>
           ) : (
-            <p className="rounded-2xl border border-dashed border-slate-300 p-4 text-center text-sm text-slate-500 dark:border-zinc-700 dark:text-zinc-500">Выберите точку анкеты на карте.</p>
+            <p className="rounded-2xl border border-dashed border-slate-300 p-4 text-center text-sm text-slate-500 dark:border-zinc-700 dark:text-zinc-500">
+              {selectedAddress ? 'По этому адресу анкет не найдено.' : 'Выберите точку анкеты на карте.'}
+            </p>
           )}
         </section>
 
@@ -219,13 +289,14 @@ export default function MapPage() {
               </div>
             </div>
             <InteractiveMap
-              selectedPosition={selectedProfile?.workplaceCoords ?? null}
+              selectedPosition={selectedProfile?.workplaceCoords ?? (selectedAddress ? { lat: selectedAddress.lat, lng: selectedAddress.lng } : null)}
               showControls={false}
               showProfiles={objectMode === 'profiles'}
               showHouses={objectMode === 'houses'}
               showPlaces={objectMode === 'places'}
               objectMode={objectMode}
               placesCategory={placesCategory}
+              onSelect={handleMapSelect}
               onClearSelection={() => setSelectedProfileId(null)}
               mapLayerMode={mapLayerMode}
               onMapLayerModeChange={setMapLayerMode}
@@ -238,7 +309,8 @@ export default function MapPage() {
                   label: profile.fullName,
                   description: `${statusInfo.label} (${statusInfo.details || ''}) · ${profile.workplaceAddress}`,
                   status: statusInfo.status,
-                  onClick: () => setSelectedProfileId(profile.id),
+                  isSpecialist: profile.isSpecialist,
+                  onClick: () => { setSelectedAddress(null); setSelectedProfileId(profile.id); },
                 };
               })}
               className="h-[380px] sm:h-[460px]"
@@ -247,34 +319,39 @@ export default function MapPage() {
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 px-2 pt-3 dark:border-zinc-700">
               <div className="flex flex-wrap items-center gap-1.5" aria-label="Слои объектов">
                 <span className="text-[11px] font-bold text-slate-400">{t.mapShowLayers}</span>
-                {(() => {
-                  // Счётчики: у «Анкеты» — число точек на карте, у «Дома» и
-                  // «Другие» — сколько адресов загружено из БД. Показываем
-                  // число ТОЛЬКО на активном слое — остальные кнопки чистые.
-                  const houseCount = allAddresses.filter((a) => !a.isNotHouse).length;
-                  const placeCount = allAddresses.filter((a) => a.isNotHouse).length;
-                  return [
-                    ['profiles', t.mapLayerProfiles, filteredProfiles.length],
-                    ['houses', t.mapLayerHouses, houseCount],
-                    ['places', t.mapLayerPlaces, placeCount],
-                  ] as [MapObjectMode, string, number][];
-                })().map(([mode, label, count]) => (
-                  <button
-                    key={mode}
-                    type="button"
-                    aria-pressed={objectMode === mode}
-                    // Повторный клик по активному — отключает слой (none).
-                    onClick={() => setObjectMode(objectMode === mode ? 'none' : mode)}
-                    className={`rounded-xl px-2.5 py-1 text-xs font-bold transition ${
-                      objectMode === mode
-                        ? 'bg-emerald-600 text-white shadow-sm'
-                        : 'border border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-500'
-                    }`}
-                  >
-                    {label}
-                    {objectMode === mode && <span className="ml-1 rounded-full bg-white/25 px-1.5 text-[9px]">{count}</span>}
-                  </button>
-                ))}
+                {/* Единый сегмент-переключатель — то же оформление, что у
+                    «Карта/Спутник/Гибрид» сверху. Число — только у активного. */}
+                <div className="flex items-center gap-1 rounded-xl bg-slate-100 p-1 dark:bg-zinc-800" role="tablist" aria-label="Слои объектов">
+                  {(() => {
+                    // Счётчики: у «Анкеты» — число точек на карте, у «Дома» и
+                    // «Другие» — сколько адресов загружено из БД. Показываем
+                    // число ТОЛЬКО на активном слое — остальные кнопки чистые.
+                    const houseCount = allAddresses.filter((a) => !a.isNotHouse).length;
+                    const placeCount = allAddresses.filter((a) => a.isNotHouse).length;
+                    return [
+                      ['profiles', t.mapLayerProfiles, filteredProfiles.length],
+                      ['houses', t.mapLayerHouses, houseCount],
+                      ['places', t.mapLayerPlaces, placeCount],
+                    ] as [MapObjectMode, string, number][];
+                  })().map(([mode, label, count]) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      role="tab"
+                      aria-selected={objectMode === mode}
+                      // Повторный клик по активному — отключает слой (none).
+                      onClick={() => setObjectMode(objectMode === mode ? 'none' : mode)}
+                      className={`rounded-lg px-2 py-1 text-[11px] font-bold transition ${
+                        objectMode === mode
+                          ? 'bg-white text-slate-900 shadow-sm dark:bg-zinc-700 dark:text-white'
+                          : 'text-slate-500 hover:text-slate-800 dark:text-zinc-500 dark:hover:text-zinc-200'
+                      }`}
+                    >
+                      {label}
+                      {objectMode === mode && <span className="ml-1 rounded-full bg-slate-100 px-1.5 text-[9px] text-slate-500 dark:bg-zinc-600 dark:text-zinc-200">{count}</span>}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* Фильтр категорий для слоя «Другое» (как в админке) */}

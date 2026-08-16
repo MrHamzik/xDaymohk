@@ -14,6 +14,8 @@ export interface MapMarker {
   label: string;
   description?: string;
   status?: ProfileStatusType;
+  /** Анкета специалиста (иначе — житель); нужно для счётчиков в попапе адреса. */
+  isSpecialist?: boolean;
   onClick?: () => void;
 }
 

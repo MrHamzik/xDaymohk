@@ -12,6 +12,7 @@ import type * as Leaflet from 'leaflet';
 import type { MapMarker, MapPosition } from '@/lib/types';
 import { SAMASHKI_HOUSE_ADDRESSES, SAMASHKI_PLACE_OBJECTS, getEffectiveHouseAddresses, fetchEffectiveHouseAddresses, findClosestSamashkiHouse, type SamashkiHouseAddress } from '@/lib/samashki-addresses';
 import { escapeHtml } from '@/lib/sanitize';
+import { COMPACT_MAP_EVENT, isCompactMapEnabled } from '@/lib/map-prefs';
 
 export type MapLayerMode = 'streets' | 'satellite' | 'hybrid';
 
@@ -52,11 +53,6 @@ const isCenterFallback = (lat: number, lng: number) =>
 
 type LeafletModule = typeof import('leaflet');
 
-function extractHouseNumber(value: string) {
-  const match = value.match(/(?:д\.|дом|,|\s)\s*(\d+[а-яА-Яa-zA-Z\/-]*)/i);
-  return match ? match[1] : '';
-}
-
 export function LeafletMap({
   selectedPosition,
   onSelect,
@@ -83,6 +79,9 @@ export function LeafletMap({
   const leafletRef = useRef<LeafletModule | null>(null);
   const selectedLayerRef = useRef<Leaflet.Marker | Leaflet.CircleMarker | null>(null);
   const userLayerRef = useRef<Leaflet.CircleMarker | null>(null);
+  // Последняя известная геопозиция пользователя — чтобы перерисовывать
+  // точку «Вы здесь» при смене слоя (в режиме Спутник маркеры скрыты).
+  const lastUserPosRef = useRef<MapPosition | null>(null);
   const profileLayerRef = useRef<Leaflet.LayerGroup | null>(null);
   const houseNumberLayerRef = useRef<Leaflet.LayerGroup | null>(null);
   const placeLayerRef = useRef<Leaflet.LayerGroup | null>(null);
@@ -100,7 +99,24 @@ export function LeafletMap({
   // чтобы тысячи адресов не вешали карту при приближении.
   const [viewportTick, setViewportTick] = useState(0);
   const [effectiveHouses, setEffectiveHouses] = useState(SAMASHKI_HOUSE_ADDRESSES);
+  // «Компактная карта» — пользовательская настройка (тонкие цифры без
+  // фона, маленькие кластеры). При смене карта пересобирается, потому что
+  // размер иконок кластеров задаётся в iconCreateFunction при создании.
+  const [compactMode, setCompactMode] = useState(isCompactMapEnabled);
   const mapLayerMode = controlledMapLayerMode ?? localMapLayerMode;
+  // Актуальный режим слоя для колбэков (locate), созданных в mount-эффекте.
+  const mapLayerModeRef = useRef(mapLayerMode);
+  mapLayerModeRef.current = mapLayerMode;
+
+  useEffect(() => {
+    const refresh = () => setCompactMode(isCompactMapEnabled());
+    window.addEventListener(COMPACT_MAP_EVENT, refresh);
+    window.addEventListener('storage', refresh);
+    return () => {
+      window.removeEventListener(COMPACT_MAP_EVENT, refresh);
+      window.removeEventListener('storage', refresh);
+    };
+  }, []);
   const selectMapLayerMode = (mode: MapLayerMode) => {
     setLocalMapLayerMode(mode);
     onMapLayerModeChange?.(mode);
@@ -156,12 +172,29 @@ export function LeafletMap({
       // Каждый слой объектов — отдельный MarkerClusterGroup: тысячи точек
       // схлопываются в кластеры (на дальнем зуме — в один кластер села),
       // секции вне экрана выгружаются и подгружаются при панорамировании.
+      // Кастомная иконка кластера: свой iconSize + класс smk-cluster-*
+      // (оформление в globals.css) — убирает «двойной диск» дефолтных
+      // стилей и даёт меньшие размеры; в компакт-режиме ещё меньше.
+      const clusterSizes = compactMode
+        ? { small: 20, medium: 24, large: 28 }
+        : { small: 26, medium: 32, large: 38 };
+      const makeClusterIcon = (cluster: { getChildCount(): number }) => {
+        const count = cluster.getChildCount();
+        const tier = count < 10 ? 'small' : count < 100 ? 'medium' : 'large';
+        const size = clusterSizes[tier];
+        return leaflet.divIcon({
+          html: `<div><span>${count}</span></div>`,
+          className: `smk-cluster smk-cluster-${tier}`,
+          iconSize: [size, size] as [number, number],
+        });
+      };
       const clusterOpts = {
         maxClusterRadius: 40,
         spiderfyOnMaxZoom: true,
         showCoverageOnHover: false,
         zoomToBoundsOnClick: true,
         removeOutsideVisibleBounds: true,
+        iconCreateFunction: makeClusterIcon,
       };
       profileLayerRef.current = L.markerClusterGroup({ ...clusterOpts, disableClusteringAtZoom: 17 }).addTo(map);
       houseNumberLayerRef.current = L.markerClusterGroup({ ...clusterOpts, disableClusteringAtZoom: 18 }).addTo(map);
@@ -213,8 +246,15 @@ export function LeafletMap({
           (position) => {
             const userPosition = { lat: position.coords.latitude, lng: position.coords.longitude };
             if (!mapRef.current || !leafletRef.current) return;
+            lastUserPosRef.current = userPosition;
             mapRef.current.setView([userPosition.lat, userPosition.lng], 16);
             userLayerRef.current?.remove();
+            userLayerRef.current = null;
+            // В спутниковом режиме маркеры не рисуем — чистая карта.
+            if (mapLayerModeRef.current === 'satellite') {
+              setLocationStatus('Ваше местоположение');
+              return;
+            }
             userLayerRef.current = leafletRef.current.circleMarker([userPosition.lat, userPosition.lng], {
               radius: 8,
               color: '#2563eb',
@@ -239,7 +279,9 @@ export function LeafletMap({
       leafletRef.current = null;
       setIsReady(false);
     };
-  }, [locateOnLoad]);
+    // compactMode: смена настройки пересобирает карту (размеры кластеров
+    // задаются при создании слоёв).
+  }, [locateOnLoad, compactMode]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -268,6 +310,28 @@ export function LeafletMap({
     }
   }, [mapLayerMode, isReady]);
 
+  // В спутниковом режиме точка «Вы здесь» скрыта (чистая карта); при
+  // возврате на Карту/Гибрид восстанавливаем её по последней геопозиции.
+  useEffect(() => {
+    const map = mapRef.current;
+    const leaflet = leafletRef.current;
+    if (!map || !leaflet || !isReady) return;
+    if (mapLayerMode === 'satellite') {
+      userLayerRef.current?.remove();
+      userLayerRef.current = null;
+      return;
+    }
+    const pos = lastUserPosRef.current;
+    if (!pos || userLayerRef.current) return;
+    userLayerRef.current = leaflet.circleMarker([pos.lat, pos.lng], {
+      radius: 8,
+      color: '#2563eb',
+      fillColor: '#60a5fa',
+      fillOpacity: 0.9,
+      weight: 3,
+    }).addTo(map).bindPopup('Вы здесь');
+  }, [mapLayerMode, isReady]);
+
   // House numbers layer across Samashki streets (disabled on far zoom)
   useEffect(() => {
     const map = mapRef.current;
@@ -277,20 +341,18 @@ export function LeafletMap({
     houseNumberLayerRef.current.clearLayers();
     if (!showHouses) return;
     if (objectMode !== undefined && objectMode !== 'houses') return;
+    // Спутниковый режим — чистая карта без маркеров (по требованию).
+    if (mapLayerMode === 'satellite') return;
     // На дальнем зуме не скрываем: маркеры сами схлопнутся в один кластер села.
 
     // Загружаем ТОЛЬКО дома видимой области (+запас 40%), остальные кластеры
     // подхватываются при moveend/zoomend — тысячи адресов не рендерятся сразу.
     const bounds = map.getBounds().pad(0.4);
     // Дома без реальных координат (NaN/0) или с координатами центра села
-    // (фолбэк импорта) не показываем — их вбивают вручную в админке.
+    // (фолбэк импорта) НЕ показываем на карте вообще — их уточняют вручную
+    // в админке (Админка → Адреса), инфо-маркер «нет координат» отключён.
     const visibleHouses = effectiveHouses.filter(
       (h) => !h.isNotHouse && !isCenterFallback(h.lat, h.lng) && bounds.contains([h.lat, h.lng]),
-    );
-    // Дома с «заглушечными» координатами центра села: не пропадают с карты,
-    // а собираются в один инфо-маркер (клик — открыть админку адресов).
-    const centerHouses = effectiveHouses.filter(
-      (h) => !h.isNotHouse && isCenterFallback(h.lat, h.lng) && bounds.contains([h.lat, h.lng]),
     );
 
     const addHouseMarker = (house: SamashkiHouseAddress) => {
@@ -337,33 +399,6 @@ export function LeafletMap({
         addHouseMarker({ ...house, lat: house.lat + Math.cos(angle) * radius, lng: house.lng + Math.sin(angle) * radius });
       });
     });
-
-    // Инфо-маркер: дома с координатами центра села (не уточнены).
-    if (centerHouses.length > 0) {
-      const infoIcon = leaflet.divIcon({
-        className: 'bg-transparent border-none',
-        html: `
-          <div class="samashki-marker-wrapper">
-            <div class="samashki-place-badge light" style="border-color:#f59e0b">
-              <span class="dot" style="background:#f59e0b"></span>
-              <span>${escapeHtml(String(centerHouses.length))} · нет координат</span>
-            </div>
-          </div>
-        `,
-        iconSize: [0, 0],
-        iconAnchor: [0, 0],
-      });
-      const infoMarker = leaflet.marker([VILLAGE_CENTER.lat, VILLAGE_CENTER.lng], { icon: infoIcon });
-      infoMarker.bindTooltip(
-        `${escapeHtml(String(centerHouses.length))} домов с координатами центра села — уточните координаты в Админка → Адреса.`,
-        { direction: 'top', offset: [0, -8] },
-      );
-      infoMarker.on('click', (e) => {
-        leaflet.DomEvent.stopPropagation(e);
-        onSelectRef.current?.({ lat: VILLAGE_CENTER.lat, lng: VILLAGE_CENTER.lng });
-      });
-      infoMarker.addTo(houseNumberLayerRef.current!);
-    }
   }, [mapLayerMode, showHouses, objectMode, isReady, isFarZoom, effectiveHouses, viewportTick]);
 
   // Public and commercial places + non-house (disabled on far zoom)
@@ -375,6 +410,8 @@ export function LeafletMap({
     placeLayerRef.current.clearLayers();
     if (!showPlaces) return;
     if (objectMode !== undefined && objectMode !== 'places') return;
+    // Спутниковый режим — чистая карта без маркеров (по требованию).
+    if (mapLayerMode === 'satellite') return;
 
     SAMASHKI_PLACE_OBJECTS.filter((p) => !isCenterFallback(p.lat, p.lng)).forEach((place) => {
       const placeIcon = leaflet.divIcon({
@@ -431,36 +468,6 @@ export function LeafletMap({
       m.addTo(placeLayerRef.current!);
     });
 
-    // Объекты «Другое» с координатами центра села — одним инфо-маркером.
-    const centerPlaces = effectiveHouses.filter(
-      (h) => h.isNotHouse && isCenterFallback(h.lat, h.lng) &&
-        (!placesCategory || (h.category || 'Другое') === placesCategory),
-    );
-    if (centerPlaces.length > 0) {
-      const infoIcon = leaflet.divIcon({
-        className: 'bg-transparent border-none',
-        html: `
-          <div class="samashki-marker-wrapper">
-            <div class="samashki-place-badge light" style="border-color:#f59e0b">
-              <span class="dot" style="background:#f59e0b"></span>
-              <span>${escapeHtml(String(centerPlaces.length))} · нет координат</span>
-            </div>
-          </div>
-        `,
-        iconSize: [0, 0],
-        iconAnchor: [0, 0],
-      });
-      const infoMarker = leaflet.marker([VILLAGE_CENTER.lat, VILLAGE_CENTER.lng], { icon: infoIcon });
-      infoMarker.bindTooltip(
-        `${escapeHtml(String(centerPlaces.length))} объектов с координатами центра села — уточните координаты в Админка → Адреса.`,
-        { direction: 'top', offset: [0, -8] },
-      );
-      infoMarker.on('click', (e) => {
-        leaflet.DomEvent.stopPropagation(e);
-        onSelectRef.current?.({ lat: VILLAGE_CENTER.lat, lng: VILLAGE_CENTER.lng });
-      });
-      infoMarker.addTo(placeLayerRef.current!);
-    }
   }, [mapLayerMode, showPlaces, objectMode, placesCategory, isReady, isFarZoom, effectiveHouses]);
 
   useEffect(() => {
@@ -471,6 +478,8 @@ export function LeafletMap({
     profileLayerRef.current.clearLayers();
     if (!showProfiles) return;
     if (objectMode !== undefined && objectMode !== 'profiles') return;
+    // Спутниковый режим — чистая карта без маркеров (по требованию).
+    if (mapLayerMode === 'satellite') return;
 
     markers.forEach((marker) => {
       const isSelected = selectedPosition && Math.abs(selectedPosition.lat - marker.position.lat) < 0.00005 && Math.abs(selectedPosition.lng - marker.position.lng) < 0.00005;
@@ -516,8 +525,11 @@ export function LeafletMap({
         });
       }
     });
-  }, [markers, showProfiles, objectMode, selectedPosition, isReady, isFarZoom]);
+  }, [markers, showProfiles, objectMode, selectedPosition, isReady, isFarZoom, mapLayerMode]);
 
+  // Маркер выбранной точки. БЕЗ автоматического openPopup() — раньше попап
+  // открывался сам и карта насильно панорамировалась на него. Теперь текст
+  // виден только по клику: «ул. N, д. N» + счётчики анкет на этом адресе.
   useEffect(() => {
     const map = mapRef.current;
     const leaflet = leafletRef.current;
@@ -525,19 +537,58 @@ export function LeafletMap({
 
     selectedLayerRef.current?.remove();
     if (!selectedPosition) return;
+    // Спутниковый режим — чистая карта без маркеров (по требованию).
+    if (mapLayerMode === 'satellite') return;
 
     const isMarker = markers.some((m) => Math.abs(m.position.lat - selectedPosition.lat) < 0.00005 && Math.abs(m.position.lng - selectedPosition.lng) < 0.00005);
 
     if (!isMarker) {
+      // Адрес ближайшего дома из базы (координаты анкет «привязаны» к
+      // координатам дома, поэтому совпадение по близости надёжно).
+      let title = 'Даймохк';
+      let anchor = selectedPosition;
+      try {
+        const pool = effectiveHouses.filter((h) => !isCenterFallback(h.lat, h.lng));
+        if (pool.length > 0) {
+          let closest = pool[0];
+          let best = Infinity;
+          for (const house of pool) {
+            const dLat = house.lat - selectedPosition.lat;
+            const dLng = house.lng - selectedPosition.lng;
+            const d = dLat * dLat + dLng * dLng;
+            if (d < best) { best = d; closest = house; }
+          }
+          anchor = { lat: closest.lat, lng: closest.lng };
+          title = !closest.isNotHouse && closest.houseNumber
+            ? `${closest.street}, д. ${closest.houseNumber}`
+            : closest.fullAddress;
+        }
+      } catch {
+        // Оставляем заголовок по умолчанию.
+      }
+
+      // Счётчики анкет на этом адресе (markers — видимые анкеты слоя).
+      let countsHtml = '';
+      try {
+        const near = markers.filter(
+          (m) => Math.abs(m.position.lat - anchor.lat) < 0.0002 && Math.abs(m.position.lng - anchor.lng) < 0.0002,
+        );
+        const specialists = near.filter((m) => m.isSpecialist).length;
+        const residents = near.length - specialists;
+        countsHtml = `<br><span style="font-size:11px">Жителей — ${residents} · Специалистов — ${specialists}</span>`;
+      } catch {
+        // Не критично — без счётчиков.
+      }
+
       selectedLayerRef.current = leaflet.circleMarker([selectedPosition.lat, selectedPosition.lng], {
         radius: 7,
         color: '#0f172a',
         fillColor: '#f59e0b',
         fillOpacity: 0.95,
         weight: 3,
-      }).addTo(map).bindPopup('<strong>Выбранное место</strong><br>Координаты сохранены').openPopup();
+      }).addTo(map).bindPopup(`<strong>${escapeHtml(title)}</strong>${countsHtml}`);
     }
-  }, [selectedPosition, markers, isReady]);
+  }, [selectedPosition, markers, isReady, mapLayerMode, effectiveHouses]);
 
   const locateAgain = () => {
     if (!navigator.geolocation || !mapRef.current) {
@@ -566,8 +617,11 @@ export function LeafletMap({
           // Падаем на центр карты, если база адресов недоступна.
         }
         mapRef.current?.setView([focusPosition.lat, focusPosition.lng], 17);
+        lastUserPosRef.current = userPosition;
         userLayerRef.current?.remove();
-        if (leafletRef.current && mapRef.current) {
+        userLayerRef.current = null;
+        // В спутниковом режиме маркеры не рисуем — чистая карта.
+        if (mapLayerModeRef.current !== 'satellite' && leafletRef.current && mapRef.current) {
           userLayerRef.current = leafletRef.current.circleMarker([userPosition.lat, userPosition.lng], {
             radius: 8,
             color: '#2563eb',
@@ -594,7 +648,7 @@ export function LeafletMap({
   }, [locationRequestKey]);
 
   return (
-    <div className={`relative z-0 isolate w-full overflow-hidden rounded-2xl ${className}`}>
+    <div className={`relative z-0 isolate w-full overflow-hidden rounded-2xl ${compactMode ? 'compact-map ' : ''}${className}`}>
       <div ref={containerRef} className="h-full w-full" />
       {showControls && (
         <div className="absolute left-3 right-3 top-3 z-[400] flex max-w-[calc(100%-1.5rem)] flex-wrap items-center justify-between gap-2 rounded-xl bg-white/95 px-3 py-2 text-xs font-semibold text-slate-700 shadow-md backdrop-blur dark:bg-zinc-950/95 dark:text-zinc-300">
