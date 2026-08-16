@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { X, Loader2, Star, MapPin, Clock, Users, CalendarDays } from 'lucide-react';
 import { cacheBustAvatarUrl } from '@/lib/media';
 import { fetchTask, runTaskAction, submitResidentReview, formatTimeLeft } from '@/lib/tasks/client';
+import AttendanceModal from '@/components/tasks/AttendanceModal';
 import {
   taskTotalReward,
   TASK_AUTO_CONFIRM_HOURS,
@@ -32,6 +33,8 @@ export default function TaskDetailModal({
   // Оценка второй стороны после завершения.
   const [ratingValue, setRatingValue] = useState(5);
   const [ratingText, setRatingText] = useState('');
+  // Модалка отметки явки (только для запланированных заданий).
+  const [isAttendanceOpen, setIsAttendanceOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!taskId) return;
@@ -326,6 +329,22 @@ export default function TaskDetailModal({
               </>
             )}
 
+            {/* Запланированное задание закрывается через отметку явки:
+                там же ставятся оценки и бонусы. */}
+            {isAuthor
+              && task.kind === 'scheduled'
+              && ['open', 'in_progress', 'awaiting_confirm'].includes(task.status)
+              && activeParticipants.length > 0 && (
+              <button
+                type="button"
+                disabled={Boolean(busy)}
+                onClick={() => setIsAttendanceOpen(true)}
+                className={`${btn} bg-emerald-600 text-white hover:bg-emerald-700`}
+              >
+                Завершить и отметить явку
+              </button>
+            )}
+
             {isAuthor && ['open', 'in_progress'].includes(task.status) && (
               <button
                 type="button"
@@ -339,6 +358,15 @@ export default function TaskDetailModal({
           </div>
         )}
       </div>
+
+      {isAttendanceOpen && task && (
+        <AttendanceModal
+          task={task}
+          participants={participants}
+          onClose={() => setIsAttendanceOpen(false)}
+          onDone={() => { load(); onChanged(); }}
+        />
+      )}
     </div>
   );
 }

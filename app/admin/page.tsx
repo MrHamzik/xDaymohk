@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { Archive, ArrowLeft, Ban, Check, ChevronDown, Clock3, Eye, EyeOff, FolderOpen, MapPin, Moon, Plus, RotateCcw, Save as SaveIcon, Search, Send, ShieldAlert, Star, Sun, Trash2, Upload, UserCheck, UserRound, X, Pencil } from 'lucide-react';
 import AdminLetterEditorCard from '@/components/AdminLetterEditorCard';
+import AdminFiltersSection from '@/components/admin/AdminFiltersSection';
 import { cacheBustAvatarUrl } from '@/lib/media';
 import Navbar from '@/components/Navbar';
 import BottomNav from '@/components/BottomNav';
@@ -21,7 +22,7 @@ import { SAMASHKI_HOUSE_ADDRESSES, SamashkiHouseAddress, getEffectiveHouseAddres
 import { SAMASHKI_STREETS } from '@/lib/types';
 import { Complaint, NotificationLetterPayload, Profile, UserSummary } from '@/lib/types';
 
-type AdminSection = 'profiles' | 'complaints' | 'users' | 'addresses' | 'letters';
+type AdminSection = 'profiles' | 'complaints' | 'users' | 'addresses' | 'letters' | 'filters';
 type ProfilesSubTab = 'active' | 'pending' | 'hidden';
 
 const CUSTOM_ADDRESSES_KEY = 'samashki-custom-addresses';
@@ -271,7 +272,7 @@ export default function AdminPage() {
     if (typeof window === 'undefined') return 'profiles';
     try {
       const stored = window.localStorage.getItem('samashki-admin-section');
-      if (stored && ['profiles', 'complaints', 'users', 'addresses', 'letters'].includes(stored)) {
+      if (stored && ['profiles', 'complaints', 'users', 'addresses', 'letters', 'filters'].includes(stored)) {
         return stored as AdminSection;
       }
     } catch {}
@@ -1659,6 +1660,7 @@ export default function AdminPage() {
             ['users', L('Пользователи', 'Лелошхой'), people.length],
             ['addresses', L('Адреса', 'Адресаш'), addresses.length],
             ['letters', L('Письма', 'Кехаташ'), 0],
+            ['filters', L('Фильтры', 'Фильтраш'), 0],
           ] as const).map(([section, label, count]) => (
             <button key={section} type="button" onClick={() => setActiveSection(section)} className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition ${activeSection === section ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 dark:text-zinc-400 dark:hover:bg-zinc-800'}`}>{label}<span className={`rounded-full px-1.5 py-0.5 text-[10px] ${activeSection === section ? 'bg-white/20' : 'bg-slate-100 dark:bg-zinc-800'}`}>{count}</span></button>
           ))}
@@ -2423,6 +2425,8 @@ export default function AdminPage() {
 
           </section>
         )}
+
+        {activeSection === 'filters' && <AdminFiltersSection />}
       </main>
 
       <ProfileModal profile={viewProfile} isAdminStatus={viewProfile ? isProfileAdmin(viewProfile) : false} showPending={Boolean(viewProfile?.verificationStatus === 'pending')} isViewerBlocked={false} onClose={() => setViewProfile(null)} onReview={addReview} />

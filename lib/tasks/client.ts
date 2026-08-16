@@ -63,6 +63,19 @@ export async function fetchTask(id: string): Promise<{ task: Task; participants:
   return parse<{ task: Task; participants: TaskParticipant[] }>(response);
 }
 
+/**
+ * Задания, где я исполнитель (вкладка «В работе»).
+ * pendingReview — завершённые, которые я ещё не оценил: по ним в
+ * интерфейсе горит жёлтая метка «ожидает оценки».
+ */
+export async function fetchMyTasks(): Promise<{ tasks: Task[]; pendingReview: string[] }> {
+  const response = await fetch('/api/tasks/mine', {
+    headers: await authHeaders(),
+    cache: 'no-store',
+  });
+  return parse<{ tasks: Task[]; pendingReview: string[] }>(response);
+}
+
 export interface CreateTaskInput {
   isPaid: boolean;
   kind: 'urgent' | 'scheduled';

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Plus, Loader2, Power, MapPin, Search } from 'lucide-react';
+import { ArrowLeft, Plus, Loader2, Power, MapPin, Search, Star } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import SidebarNav from '@/components/SidebarNav';
 import BottomNav from '@/components/BottomNav';
@@ -15,6 +15,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { useProfiles } from '@/components/ProfilesProvider';
 import {
   fetchTasks,
+  fetchMyTasks,
   fetchTaskFilters,
   fetchExecutorStatus,
   setExecutorStatus,
@@ -31,6 +32,10 @@ export default function VayghullakhPage() {
   const { isCurrentUserAdmin } = useProfiles();
 
   const [tasks, setTasks] = useState<Task[]>([]);
+  // Задания, где я исполнитель, приходят отдельным запросом: общая лента
+  // публичная и о моём участии не знает.
+  const [myTasks, setMyTasks] = useState<Task[]>([]);
+  const [pendingReview, setPendingReview] = useState<string[]>([]);
   const [categories, setCategories] = useState<AppFilter[]>([]);
   const [tab, setTab] = useState<FeedTab>('nearby');
   const [category, setCategory] = useState('');
@@ -55,12 +60,21 @@ export default function VayghullakhPage() {
     try {
       const list = await fetchTasks({ paid: true, limit: 100 });
       setTasks(list);
+      if (account) {
+        try {
+          const mine = await fetchMyTasks();
+          setMyTasks(mine.tasks.filter((t) => t.isPaid));
+          setPendingReview(mine.pendingReview);
+        } catch {
+          // не критично: лента уже показана
+        }
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Не удалось загрузить задания');
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [account]);
 
   useEffect(() => {
     load();
@@ -121,9 +135,8 @@ export default function VayghullakhPage() {
     if (tab === 'mine') {
       list = list.filter((t) => t.authorId === account?.id);
     } else if (tab === 'taken') {
-      // «Мои отклики» — заполняется после открытия карточки; на ленте
-      // ориентируемся на то, что задание уже в работе и не наше.
-      list = list.filter((t) => t.authorId !== account?.id && t.status !== 'open');
+      // Реальный список участия — из /api/tasks/mine, а не догадки по статусу.
+      list = myTasks;
     } else if (tab === 'nearby' && position) {
       list = list.filter((t) => typeof t.distanceM === 'number' && t.distanceM <= TASK_NEARBY_RADIUS_M);
     }
@@ -141,7 +154,7 @@ export default function VayghullakhPage() {
       return [...list].sort((a, b) => (a.distanceM ?? 1e9) - (b.distanceM ?? 1e9));
     }
     return list;
-  }, [withDistance, tab, category, query, account?.id, position]);
+  }, [withDistance, myTasks, tab, category, query, account?.id, position]);
 
   return (
     <div className="flex min-h-[100dvh] min-w-0 flex-col overflow-x-hidden bg-slate-50 bg-radial-gradient transition-colors dark:bg-zinc-950">
@@ -212,7 +225,7 @@ export default function VayghullakhPage() {
                 { value: 'nearby', label: 'Близко' },
                 { value: 'all', label: 'Все' },
                 { value: 'mine', label: 'Мои' },
-                { value: 'taken', label: 'В работе' },
+                { value: 'taken', label: 'В работе', count: myTasks.length || undefined },
               ]}
             />
 
@@ -258,6 +271,17 @@ export default function VayghullakhPage() {
             )}
           </div>
 
+          {pendingReview.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setTab('taken')}
+              className="mb-3 flex w-full items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-left text-[11px] font-semibold text-amber-800 transition hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-950/60"
+            >
+              <Star className="h-3.5 w-3.5 shrink-0 fill-amber-400 text-amber-400" />
+              Ожидают вашей оценки: {pendingReview.length} — откройте задание и поставьте оценку
+            </button>
+          )}
+
           {tab === 'nearby' && geoDenied && (
             <p className="mb-3 flex items-start gap-2 rounded-xl bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
               <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
@@ -279,7 +303,12 @@ export default function VayghullakhPage() {
           ) : visibleTasks.length > 0 ? (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {visibleTasks.map((task) => (
-                <TaskCard key={task.id} task={task} onOpen={(t) => setOpenTaskId(t.id)} />
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  needsReview={pendingReview.includes(task.id)}
+                  onOpen={(t) => setOpenTaskId(t.id)}
+                />
               ))}
             </div>
           ) : (

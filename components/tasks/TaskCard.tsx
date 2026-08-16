@@ -7,6 +7,8 @@ import { taskTotalReward, type Task } from '@/lib/types';
 
 interface TaskCardProps {
   task: Task;
+  /** Задание завершено, но я ещё не поставил оценку — жёлтая метка. */
+  needsReview?: boolean;
   onOpen: (task: Task) => void;
 }
 
@@ -25,7 +27,7 @@ const PRIORITY_META = {
   },
 } as const;
 
-export default function TaskCard({ task, onOpen }: TaskCardProps) {
+export default function TaskCard({ task, needsReview = false, onOpen }: TaskCardProps) {
   const priority = PRIORITY_META[task.priority];
   const total = taskTotalReward(task.reward, task.priority);
   const timeLeft = formatTimeLeft(task.kind === 'urgent' ? task.deadlineAt : task.scheduledAt);
@@ -45,7 +47,11 @@ export default function TaskCard({ task, onOpen }: TaskCardProps) {
         }
       }}
       aria-label={`Открыть задание: ${task.title}`}
-      className="group flex cursor-pointer flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm transition hover:border-emerald-300 hover:shadow-md dark:border-zinc-700 dark:bg-zinc-800 dark:hover:border-emerald-800"
+      className={`group flex cursor-pointer flex-col gap-3 rounded-2xl border p-3.5 shadow-sm transition hover:shadow-md ${
+        needsReview
+          ? 'border-amber-300 bg-amber-50/50 hover:border-amber-400 dark:border-amber-800 dark:bg-amber-950/20'
+          : 'border-slate-200 bg-white hover:border-emerald-300 dark:border-zinc-700 dark:bg-zinc-800 dark:hover:border-emerald-800'
+      }`}
     >
       {/* Шапка: по этим цифрам исполнитель решает, стоит ли браться */}
       <div className="flex items-center gap-2.5">
@@ -91,6 +97,12 @@ export default function TaskCard({ task, onOpen }: TaskCardProps) {
       </div>
 
       <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-semibold">
+        {needsReview && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-amber-200 px-2 py-0.5 text-amber-900 dark:bg-amber-900 dark:text-amber-200">
+            <Star className="h-3 w-3 fill-current" />
+            Ожидает оценки
+          </span>
+        )}
         {priority && (
           <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 ${priority.className}`}>
             <priority.Icon className="h-3 w-3" />
