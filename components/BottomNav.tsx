@@ -73,11 +73,14 @@ export default function BottomNav({ onOpenMenu, onOpenCreate }: BottomNavProps) 
           <span className="text-[11px] font-semibold">{t.map}</span>
         </Link>
 
-        {/* 5. Домой */}
+        {/* 5. Домой — главная лежит на "/" (роута /home не существует).
+             Раньше здесь был href="/home": Next.js префетчил несуществующий
+             маршрут, из-за чего в консоли сыпалось GET /home?_rsc=... 404,
+             а сам переход вёл на страницу «не найдено». */}
         <Link
-          href="/home"
+          href="/"
           className={`flex flex-col items-center justify-center rounded-2xl py-1 transition active:scale-95 ${
-            pathname === '/home'
+            pathname === '/'
               ? 'font-bold text-emerald-600 dark:text-emerald-400'
               : 'text-slate-500 hover:text-slate-900 dark:text-zinc-500 dark:hover:text-white'
           }`}

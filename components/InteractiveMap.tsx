@@ -254,6 +254,10 @@ export function LeafletMap({
           return;
         }
 
+        requestPosition();
+      };
+
+      const requestPosition = () => {
         navigator.geolocation.getCurrentPosition(
           (position) => {
             const userPosition = { lat: position.coords.latitude, lng: position.coords.longitude };
@@ -281,8 +285,32 @@ export function LeafletMap({
         );
       };
 
-      if (locateOnLoad) locate();
-      else setLocationStatus('Даймохк');
+      // Геолокацию при загрузке запрашиваем ТОЛЬКО если разрешение уже
+      // выдано ранее. Chrome блокирует источник навсегда, если пользователь
+      // несколько раз проигнорировал автоматический промпт («permission has
+      // been blocked as the user has ignored the permission prompt several
+      // times»), и тогда перестаёт работать даже кнопка «Моё место».
+      // При state === 'prompt' ждём явного клика по «Моё место» — промпт
+      // в ответ на жест пользователя Chrome не штрафует.
+      if (locateOnLoad) {
+        if (navigator.permissions?.query) {
+          navigator.permissions.query({ name: 'geolocation' as PermissionName })
+            .then((status) => {
+              if (cancelled) return;
+              if (status.state === 'granted') locate();
+              else if (status.state === 'denied') setLocationStatus('Доступ к геолокации запрещён');
+              else setLocationStatus('Нажмите «Моё место»');
+            })
+            .catch(() => {
+              // Permissions API недоступен — не рискуем автопромптом.
+              if (!cancelled) setLocationStatus('Нажмите «Моё место»');
+            });
+        } else {
+          setLocationStatus('Нажмите «Моё место»');
+        }
+      } else {
+        setLocationStatus('Даймохк');
+      }
 
     return () => {
       cancelled = true;
@@ -696,9 +724,16 @@ export function LeafletMap({
         // Сообщаем родителю ближайший дом, чтобы он записал адрес в поле
         onSelectRef.current?.(focusPosition, focusAddress);
       },
-      () => {
+      (error) => {
         mapRef.current?.setView([SAMASHKI_CENTER.lat, SAMASHKI_CENTER.lng], 16);
-        setLocationStatus('Показываем Даймохк');
+        // PERMISSION_DENIED (1) — разрешение заблокировано в браузере.
+        // Пишем это прямо, иначе пользователь не поймёт, почему кнопка
+        // «Моё место» молча ничего не делает.
+        setLocationStatus(
+          error?.code === 1
+            ? 'Доступ к геолокации запрещён в браузере'
+            : 'Показываем Даймохк',
+        );
       },
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 },
     );
