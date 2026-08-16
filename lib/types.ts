@@ -70,10 +70,23 @@ export type NotificationType =
   | 'complaint_result'
   // Такси
   | 'taxi_request'
-  | 'taxi_info';
+  | 'taxi_info'
+  // Аренца Темщик / ГIончалла
+  | 'task_taken'
+  | 'task_submitted'
+  | 'task_confirmed'
+  | 'task_auto_confirmed'
+  | 'task_cancel_requested'
+  | 'task_cancelled'
+  | 'task_expired'
+  | 'task_joined'
+  | 'task_excluded'
+  | 'task_reminder'
+  | 'task_rated'
+  | 'task_rate_pending';
 
 /** Категории уведомлений (вкладки в центре уведомлений). */
-export type NotificationCategory = 'system' | 'activity' | 'complaint' | 'taxi';
+export type NotificationCategory = 'system' | 'activity' | 'complaint' | 'taxi' | 'task';
 
 export function notificationCategory(type: NotificationType): NotificationCategory {
   switch (type) {
@@ -87,6 +100,19 @@ export function notificationCategory(type: NotificationType): NotificationCatego
     case 'taxi_request':
     case 'taxi_info':
       return 'taxi';
+    case 'task_taken':
+    case 'task_submitted':
+    case 'task_confirmed':
+    case 'task_auto_confirmed':
+    case 'task_cancel_requested':
+    case 'task_cancelled':
+    case 'task_expired':
+    case 'task_joined':
+    case 'task_excluded':
+    case 'task_reminder':
+    case 'task_rated':
+    case 'task_rate_pending':
+      return 'task';
     default:
       return 'system';
   }
@@ -325,3 +351,161 @@ export const PROFESSION_CATEGORIES = [
   { id: 'agriculture', label: 'Сельское хозяйство', labelCe: 'Юьртбахам', icon: 'Sprout' },
   { id: 'other', label: 'Другое', labelCe: 'Кхидерш', icon: 'Briefcase' },
 ];
+
+// ---------------------------------------------------------------------------
+// «Аренца Темщик» (ВайГIуллакх) и «ГIончалла» (ВайГIо) — движок заданий.
+// Один движок на оба раздела, различаются флагом isPaid.
+// ---------------------------------------------------------------------------
+
+/** urgent — сделать до дедлайна; scheduled — запись на конкретный день. */
+export type TaskKind = 'urgent' | 'scheduled';
+
+/** Надбавка сверх награды за срочность (платит заказчик). */
+export type TaskPriority = 'normal' | 'high' | 'critical';
+
+export type TaskStatus =
+  | 'open'
+  | 'in_progress'
+  | 'awaiting_confirm'
+  | 'completed'
+  | 'cancelled'
+  | 'expired';
+
+/**
+ * Задел под эскроу. Сейчас всегда 'offline' — расчёт вне приложения
+ * (провайдеры безопасной сделки требуют оборот от 800 тыс./мес).
+ */
+export type TaskPaymentStatus = 'offline' | 'pending' | 'held' | 'released' | 'refunded';
+
+export type TaskParticipantStatus =
+  | 'joined'
+  | 'excluded'
+  | 'attended'
+  | 'no_show'
+  | 'done'
+  | 'cancelled';
+
+/** Надбавка за приоритет, доли от награды. */
+export const TASK_PRIORITY_SURCHARGE: Record<TaskPriority, number> = {
+  normal: 0,
+  high: 0.2,
+  critical: 0.5,
+};
+
+/** Сколько заданий одновременно может вести один исполнитель. */
+export const TASK_MAX_ACTIVE_PER_USER = 5;
+
+/** Через сколько после «Выполнил» задание подтверждается само. */
+export const TASK_AUTO_CONFIRM_HOURS = 3;
+
+/** Блокировка заказчика за неподтверждение оплаты. */
+export const TASK_BLOCK_HOURS = 6;
+
+/** Радиус вкладки «Близко», метры. */
+export const TASK_NEARBY_RADIUS_M = 1000;
+
+/** Минимальный возраст исполнителя (закон: подработка с 14 лет). */
+export const TASK_MIN_EXECUTOR_AGE = 14;
+
+/**
+ * Итоговая сумма к оплате за одного исполнителя с учётом приоритета.
+ * Комиссию площадки не берём — заказчик платит только награду и надбавку.
+ */
+export function taskTotalReward(reward: number, priority: TaskPriority): number {
+  const base = Number.isFinite(reward) && reward > 0 ? reward : 0;
+  return Math.round(base * (1 + TASK_PRIORITY_SURCHARGE[priority]));
+}
+
+export interface TaskParticipant {
+  id: string;
+  taskId: string;
+  userId: string;
+  status: TaskParticipantStatus;
+  attended?: boolean | null;
+  bonusPercent: number;
+  joinedAt: string;
+  excludedAt?: string | null;
+  /** Живые данные из user_profiles (подтягиваются вьюхой). */
+  fullName?: string;
+  avatarUrl?: string;
+  rating?: number;
+  tasksDoneCount?: number;
+  accountDays?: number;
+}
+
+export interface Task {
+  id: string;
+  authorId: string;
+  /** true — «Аренца Темщик» (за деньги), false — «ГIончалла» (безвозмездно). */
+  isPaid: boolean;
+  kind: TaskKind;
+  title: string;
+  description: string;
+  category: string;
+  /** Награда ОДНОМУ исполнителю, ₽ (для ГIончалла = 0). */
+  reward: number;
+  priority: TaskPriority;
+  /** Сколько исполнителей нужно (срочное = 1). */
+  slots: number;
+  deadlineAt?: string | null;
+  scheduledAt?: string | null;
+  address: string;
+  lat?: number | null;
+  lng?: number | null;
+  minRating: number;
+  minAccountDays: number;
+  minTasksDone: number;
+  allowNewcomers: boolean;
+  status: TaskStatus;
+  paymentStatus: TaskPaymentStatus;
+  submittedAt?: string | null;
+  completedAt?: string | null;
+  cancelledAt?: string | null;
+  cancelReason?: string | null;
+  isArchived: boolean;
+  createdAt: string;
+
+  /** Шапка карточки: по кому судим о заказчике. */
+  authorName?: string;
+  authorAvatarUrl?: string;
+  authorRating?: number;
+  authorReviewCount?: number;
+  authorTasksCreated?: number;
+  authorAccountDays?: number;
+
+  takenSlots?: number;
+  participants?: TaskParticipant[];
+  /** Расстояние до задания от текущей позиции, метры (считается на клиенте). */
+  distanceM?: number;
+}
+
+/** Отзыв о ЧЕЛОВЕКЕ (не о навыках специалиста — те живут в Review). */
+export interface ResidentReview {
+  id: string;
+  taskId: string;
+  targetId: string;
+  authorId: string;
+  targetRole: 'customer' | 'executor';
+  rating: number;
+  text: string;
+  createdAt: string;
+  authorName?: string;
+  authorAvatarUrl?: string;
+}
+
+/** Тумблер «Активен/Неактивен» в разделе заданий. */
+export interface ExecutorStatus {
+  isActive: boolean;
+  activeUntil?: string | null;
+}
+
+/** Управляемый из админки справочник фильтров. */
+export interface AppFilter {
+  id: string;
+  scope: 'tasks' | 'catalog' | 'map';
+  value: string;
+  labelRu: string;
+  labelCe?: string | null;
+  sortOrder: number;
+  isActive: boolean;
+}
