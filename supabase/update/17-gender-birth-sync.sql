@@ -1,6 +1,8 @@
 -- =============================================================================
--- Даймохк — обновление 17 (v2)
--- Пол и возраст в ЛИЧНОЙ анкете.
+-- Даймохк — обновление 17 (v3)
+-- Пол и возраст в ЛИЧНОЙ анкете. Проверено по живой схеме (supabase/DB.md):
+-- все нужные столбцы существуют; birth_date в user_profiles и profiles
+-- хранится как text (не date) — миграция это учитывает.
 --
 -- Проблема: пол и дата рождения пользователь заполняет на странице профиля
 -- (таблица user_profiles), а личная анкета (profiles, is_personal = true) их
@@ -91,6 +93,10 @@ left join (
   group by owner_id
 ) c on c.owner_id = u.id;
 
+-- DROP сбрасывает гранты вьюхи — возвращаем явно (клиент читает её
+-- ключом authenticated; anon — на случай публичных вызовов через RLS).
+grant select on public.v_users_with_profile_count to anon, authenticated;
+
 -- ---------------------------------------------------------------------------
 -- 2. Триггер: user_profiles.gender/birth_date → личная анкета в profiles.
 --    Источник истины — user_profiles; profiles читается публично, поэтому
@@ -122,7 +128,7 @@ create trigger trg_user_profiles_demographics
 -- ---------------------------------------------------------------------------
 -- 3. ensure_personal_profile(): при создании личной анкеты сразу подтягиваем
 --    пол/дату рождения из user_profiles (signature функции не меняется —
---    grants сохраняются приCREATE OR REPLACE).
+--    grants сохраняются при CREATE OR REPLACE).
 -- ---------------------------------------------------------------------------
 create or replace function public.ensure_personal_profile(
   p_full_name text,
@@ -140,7 +146,10 @@ declare
   v_personal_id text;
   v_row public.profiles;
   v_gender text;
-  v_birth_date date;
+  -- В ЖИВОЙ БД birth_date в обеих таблицах хранится как text (не date),
+  -- подтверждено дампом supabase/DB.md. Держим text, чтобы типы совпадали
+  -- точно: фронтенд пишет/читает строку 'YYYY-MM-DD'.
+  v_birth_date text;
 begin
   if v_user_id is null then
     raise exception 'Not authenticated';
