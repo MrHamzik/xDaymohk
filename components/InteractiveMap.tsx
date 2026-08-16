@@ -68,7 +68,11 @@ export function LeafletMap({
   showProfiles = true,
   showHouses = true,
   showPlaces = true,
-  objectMode = 'profiles',
+  // ВАЖНО: без дефолта. Если objectMode не передан (например, в анкете —
+  // WorkplaceSection), слоями управляют showProfiles/showHouses/showPlaces
+  // независимо друг от друга. Дефолт 'profiles' здесь глушил слои домов и
+  // объектов — карта в анкетах оставалась без маркеров.
+  objectMode,
   placesCategory = '',
   mapLayerMode: controlledMapLayerMode,
   onMapLayerModeChange,

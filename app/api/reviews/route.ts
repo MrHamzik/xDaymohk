@@ -207,6 +207,141 @@ export async function POST(request: Request) {
 }
 
 /**
+ * PATCH — edit a review (text + rating). Only its AUTHOR may edit;
+ * the анкета owner and admins can only delete (POST/DELETE rules).
+ *
+ * Editing a review moves its created_at date to today — the user
+ * asked for the shown date to reflect the last edit. If the rating
+ * changed, profiles.rating / profiles.review_count are recomputed by
+ * recompute_profile_rating() (the same RPC the delete trigger uses,
+ * so the aggregate can't drift).
+ */
+export async function PATCH(request: Request) {
+  const limit = await rateLimit(request, { limit: 20, windowMs: 60_000 });
+  if (!limit.allowed) {
+    return withRateLimitHeaders(
+      NextResponse.json({ error: 'Too many requests' }, { status: 429 }),
+      { ...limit, limit: 20 },
+    );
+  }
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const authorization = request.headers.get('authorization');
+  const accessToken = authorization?.startsWith('Bearer ') ? authorization.slice(7) : '';
+
+  if (!supabaseUrl || !serviceRoleKey || !anonKey) {
+    return NextResponse.json({ error: 'Supabase not configured' }, { status: 503 });
+  }
+  if (!accessToken) {
+    return NextResponse.json({ error: 'Сессия не найдена' }, { status: 401 });
+  }
+
+  let body: { reviewId?: string; rating?: number; text?: string } = {};
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Неверный запрос' }, { status: 400 });
+  }
+
+  const reviewId = String(body.reviewId ?? '').trim();
+  const rating = Number(body.rating);
+  const text = String(body.text ?? '').trim().slice(0, 500);
+  if (!reviewId) {
+    return NextResponse.json({ error: 'reviewId обязателен' }, { status: 400 });
+  }
+  if (!Number.isFinite(rating) || rating < 1 || rating > 5) {
+    return NextResponse.json({ error: 'Оценка должна быть от 1 до 5' }, { status: 400 });
+  }
+
+  // Step 1: verify the caller's bearer JWT.
+  const anon = createClient(supabaseUrl, anonKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const { data: userData, error: userError } = await anon.auth.getUser(accessToken);
+  if (userError || !userData.user) {
+    return NextResponse.json({ error: 'Сессия недействительна' }, { status: 401 });
+  }
+  if (userData.user.email && userData.user.app_metadata?.banned_until) {
+    const bannedUntil = new Date(String(userData.user.app_metadata.banned_until));
+    if (Number.isFinite(bannedUntil.getTime()) && bannedUntil.getTime() > Date.now()) {
+      return NextResponse.json({ error: 'Ваш аккаунт временно заблокирован' }, { status: 403 });
+    }
+  }
+
+  // Step 2: switch to the service-role client and load the review.
+  const admin = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const { data: review, error: reviewError } = await admin
+    .from('reviews')
+    .select('id, profile_id, author_id, rating')
+    .eq('id', reviewId)
+    .maybeSingle();
+  if (reviewError) {
+    return NextResponse.json({ error: reviewError.message }, { status: 500 });
+  }
+  if (!review) {
+    return NextResponse.json({ error: 'Отзыв не найден' }, { status: 404 });
+  }
+
+  // Step 3: authorise — only the author edits their own review.
+  if (String(review.author_id ?? '') !== userData.user.id) {
+    return NextResponse.json({ error: 'Изменять отзыв может только его автор' }, { status: 403 });
+  }
+
+  // Step 4: update; the created_at date moves to today by design.
+  const today = new Date().toISOString().split('T')[0];
+  const { error: updateError } = await admin
+    .from('reviews')
+    .update({ rating, text, created_at: today })
+    .eq('id', reviewId);
+  if (updateError) {
+    return NextResponse.json({ error: updateError.message }, { status: 500 });
+  }
+
+  // Step 5: recompute the aggregate (the stored rating may have changed).
+  const { error: rpcError } = await admin.rpc('recompute_profile_rating', {
+    target_id: review.profile_id,
+  });
+  if (rpcError) {
+    log.warn('recompute_profile_rating failed after review edit:', rpcError.message);
+  }
+  const { data: aggregate } = await admin
+    .from('profiles')
+    .select('rating, review_count')
+    .eq('id', review.profile_id)
+    .maybeSingle();
+
+  // Re-read through v_reviews so the response carries the live author
+  // name / avatar from user_profiles (same shape the loader uses).
+  const { data: liveReview } = await admin
+    .from('v_reviews')
+    .select('id, author_id, author, author_avatar_url, rating, text, created_at')
+    .eq('id', reviewId)
+    .maybeSingle();
+
+  return NextResponse.json({
+    success: true,
+    review: {
+      id: reviewId,
+      profileId: review.profile_id,
+      authorId: userData.user.id,
+      author: liveReview?.author ?? 'Житель Даймохк',
+      authorAvatarUrl: liveReview?.author_avatar_url ?? undefined,
+      rating,
+      text,
+      createdAt: today,
+    },
+    aggregate: {
+      rating: Number(aggregate?.rating ?? 0),
+      reviewCount: Number(aggregate?.review_count ?? 0),
+    },
+  });
+}
+
+/**
  * DELETE — remove a review. Allowed for the review's author, the owner
  * of the анкета it belongs to, and admins.
  *

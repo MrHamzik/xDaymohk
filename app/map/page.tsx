@@ -248,14 +248,16 @@ export default function MapPage() {
               <div className="flex flex-wrap items-center gap-1.5" aria-label="Слои объектов">
                 <span className="text-[11px] font-bold text-slate-400">{t.mapShowLayers}</span>
                 {(() => {
-                  // Счётчики адресов из БД — видно, сколько домов/объектов загружено.
+                  // Счётчики: у «Анкеты» — число точек на карте, у «Дома» и
+                  // «Другие» — сколько адресов загружено из БД. Показываем
+                  // число ТОЛЬКО на активном слое — остальные кнопки чистые.
                   const houseCount = allAddresses.filter((a) => !a.isNotHouse).length;
                   const placeCount = allAddresses.filter((a) => a.isNotHouse).length;
                   return [
-                    ['profiles', t.mapLayerProfiles, null],
+                    ['profiles', t.mapLayerProfiles, filteredProfiles.length],
                     ['houses', t.mapLayerHouses, houseCount],
                     ['places', t.mapLayerPlaces, placeCount],
-                  ] as [MapObjectMode, string, number | null][];
+                  ] as [MapObjectMode, string, number][];
                 })().map(([mode, label, count]) => (
                   <button
                     key={mode}
@@ -270,7 +272,7 @@ export default function MapPage() {
                     }`}
                   >
                     {label}
-                    {count !== null && <span className={`ml-1 rounded-full px-1.5 text-[9px] ${objectMode === mode ? 'bg-white/25' : 'bg-white dark:bg-zinc-700'}`}>{count}</span>}
+                    {objectMode === mode && <span className="ml-1 rounded-full bg-white/25 px-1.5 text-[9px]">{count}</span>}
                   </button>
                 ))}
               </div>

@@ -60,7 +60,7 @@ export async function loadUsersFromSupabase(): Promise<UserSummary[]> {
   // (AdminPage already gates the whole page on isCurrentUserAdmin).
   const { data, error } = await supabase
     .from('v_users_with_profile_count')
-    .select('id, email, full_name, avatar_url, is_admin, is_blocked, profile_count, hidden_count')
+    .select('id, email, full_name, avatar_url, is_admin, is_blocked, profile_count, hidden_count, gender, birth_date')
     .order('created_at', { ascending: false });
   if (error || !data) return [];
   return data
@@ -75,6 +75,12 @@ export async function loadUsersFromSupabase(): Promise<UserSummary[]> {
       isAdmin: Boolean(row.is_admin) && !isDevEmail(row.email),
       isBlocked: Boolean(row.is_blocked),
       profileCount: Number(row.profile_count ?? 0),
+      // Пол/дата рождения (колонки добавлены во вью обновлением
+      // supabase/update/17-gender-birth-sync.sql) — личная анкета берёт их
+      // отсюда с фолбэком на profiles.gender/birth_date (синхронизация
+      // триггером trg_user_profiles_demographics).
+      gender: row.gender === 'male' || row.gender === 'female' ? row.gender : undefined,
+      birthDate: row.birth_date ? String(row.birth_date) : undefined,
     }));
 }
 

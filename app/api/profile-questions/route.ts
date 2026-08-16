@@ -186,6 +186,76 @@ export async function GET(request: Request) {
 }
 
 /**
+ * PATCH — edit a question's text. Only its AUTHOR may edit (like the
+ * reviews PATCH: the анкета owner and admins can only delete).
+ *
+ * Editing moves created_at to today — the user asked for the shown
+ * date to reflect the last edit. The response is re-read through
+ * v_profile_questions so it carries the live author_name / avatar.
+ */
+export async function PATCH(request: Request) {
+  const limited = await rateLimited(request, 20);
+  if (limited) return limited;
+
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    return NextResponse.json({ error: 'Supabase not configured' }, { status: 503 });
+  }
+
+  const caller = await verifyCaller(request);
+  if (caller instanceof NextResponse) return caller;
+
+  let body: { questionId?: string; question?: string } = {};
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Неверный запрос' }, { status: 400 });
+  }
+
+  const questionId = String(body.questionId ?? '').trim();
+  const question = String(body.question ?? '').trim();
+  if (!questionId) {
+    return NextResponse.json({ error: 'questionId обязателен' }, { status: 400 });
+  }
+  if (question.length < 1 || question.length > 500) {
+    return NextResponse.json({ error: 'Вопрос должен быть от 1 до 500 символов' }, { status: 400 });
+  }
+
+  const admin = adminClient();
+
+  const { data: existing, error: fetchError } = await admin
+    .from('profile_questions')
+    .select('id, author_id')
+    .eq('id', questionId)
+    .maybeSingle();
+  if (fetchError) {
+    return NextResponse.json({ error: fetchError.message }, { status: 500 });
+  }
+  if (!existing) {
+    return NextResponse.json({ error: 'Вопрос не найден' }, { status: 404 });
+  }
+  if (String(existing.author_id ?? '') !== caller.id) {
+    return NextResponse.json({ error: 'Изменять вопрос может только его автор' }, { status: 403 });
+  }
+
+  const today = new Date().toISOString().split('T')[0];
+  const { error: updateError } = await admin
+    .from('profile_questions')
+    .update({ question, created_at: today })
+    .eq('id', questionId);
+  if (updateError) {
+    return NextResponse.json({ error: updateError.message }, { status: 500 });
+  }
+
+  const { data: liveQuestion } = await admin
+    .from('v_profile_questions')
+    .select(QUESTION_SELECT)
+    .eq('id', questionId)
+    .maybeSingle();
+
+  return NextResponse.json({ success: true, question: liveQuestion ?? { id: questionId, question, created_at: today } });
+}
+
+/**
  * DELETE — remove a question. Allowed for the question's author, the
  * owner of the анкета it belongs to, and admins.
  */

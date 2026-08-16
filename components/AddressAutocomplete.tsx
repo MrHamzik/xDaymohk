@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { MapPin, Search } from 'lucide-react';
-import { lookupSamashkiAddress, fetchEffectiveHouseAddresses, type SamashkiHouseAddress } from '@/lib/samashki-addresses';
+import { fetchEffectiveHouseAddresses, searchHouseAddresses, type SamashkiHouseAddress } from '@/lib/samashki-addresses';
 
 export interface DbAddressSuggestion {
   displayName: string;
@@ -40,41 +40,23 @@ export default function AddressAutocomplete({ id, value, onChange, onSelect, onF
     return () => { cancelled = true; };
   }, []);
 
-  const dbSuggestions = useMemo<DbAddressSuggestion[]>(() => {
-    const places = houses.filter((h) => h.isNotHouse);
-    const realHouses = houses.filter((h) => !h.isNotHouse);
-    const list: DbAddressSuggestion[] = [
-      ...realHouses.map((h) => ({
-        displayName: h.fullAddress,
-        lat: Number(h.lat),
-        lng: Number(h.lng),
-        isPlace: false,
-      })),
-      ...places.map((h) => ({
-        displayName: h.fullAddress,
-        lat: Number(h.lat),
-        lng: Number(h.lng),
-        isPlace: true,
-      })),
-    ];
-    return list;
-  }, [houses]);
-
   const query = value.trim().toLowerCase();
 
+  // Умный поиск по трём ключам (село, улица, номер дома): запрос бьётся
+  // на токены — «зав 28» или «28 зав» находят «ул. Заводская, д. 28»,
+  // потому что число матчится против номера дома, текст — против слов
+  // улицы. Результат уже отсортирован по релевантности.
   const filtered = useMemo(() => {
     if (query.length < 2) return [];
-    const pool = dbSuggestions.filter((s) => s.displayName.toLowerCase().includes(query));
-    if (pool.length > 0) return pool.slice(0, 12);
-    // fallback: поиск по lookupSamashkiAddress (свежая база с сервера)
-    const houses = lookupSamashkiAddress(value);
-    return houses.map((h) => ({
-      displayName: h.fullAddress,
-      lat: Number(h.lat),
-      lng: Number(h.lng),
-      isPlace: Boolean(h.isNotHouse),
-    })).slice(0, 12);
-  }, [dbSuggestions, query, value]);
+    return searchHouseAddresses(value, houses)
+      .slice(0, 12)
+      .map((h) => ({
+        displayName: h.fullAddress,
+        lat: Number(h.lat),
+        lng: Number(h.lng),
+        isPlace: Boolean(h.isNotHouse),
+      }));
+  }, [houses, query, value]);
 
   return (
     <div className="relative">

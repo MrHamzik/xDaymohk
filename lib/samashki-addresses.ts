@@ -65,17 +65,93 @@ export const SAMASHKI_PLACE_OBJECTS: SamashkiPlaceObject[] = [
   // Теперь админ добавляет такие объекты через админку как "Не дом" -> категория Другое
 ];
 
-export function lookupSamashkiAddress(query: string): SamashkiHouseAddress[] {
+/**
+ * Умный поиск адресов по трём ключам: населённый пункт, улица и номер дома.
+ *
+ * Запрос бьётся на токены (пробелы/запятые/точки). Каждый токен
+ * классифицируется:
+ *   - начинается с цифры («28», «28а», «28/2») → матчится против номера
+ *     дома (префиксное совпадение);
+ *   - служебные слова («ул», «улица», «д», «дом», «с», «г», «даймохк»,
+ *     «самашки») пропускаются — населённый пункт один, они не сужают поиск;
+ *   - остальные текстовые → матчатся против слов улицы (префикс слова,
+ *     затем подстрока) и против названия объектов («Не дом»).
+ *
+ * Связка токенов — AND: «зав 28» и «28 зав» оба находят
+ * «с. Самашки, ул. Заводская, д. 28», потому что «зав» — префикс слова
+ * улицы, а «28» — префикс номера дома. Результаты сортируются по
+ * релевантности (точность номера дома и длина совпавших префиксов улицы).
+ */
+const ADDRESS_TOKEN_SPLIT = /[\s,.;:]+/;
+const ADDRESS_SKIP_TOKENS = new Set([
+  'ул', 'улица', 'д', 'дом', 'с', 'г', 'п', 'пос', 'поселок', 'р-н', 'рн',
+  'даймохк', 'самашки',
+]);
+
+const stripStreetPrefix = (street: string) => street.replace(/^(ул\.?|улица)\s+/i, '');
+
+export function searchHouseAddresses(
+  query: string,
+  pool?: SamashkiHouseAddress[],
+): SamashkiHouseAddress[] {
   const clean = query.trim().toLowerCase();
   if (clean.length < 2) return [];
+  const source = pool ?? getEffectiveHouseAddresses();
 
-  // Search the live list (DB-backed), not the (now empty) seed
-  // dataset, so admin-added houses show up in autocomplete.
-  const pool = getEffectiveHouseAddresses();
-  return pool.filter((item) => (
-    item.fullAddress.toLowerCase().includes(clean)
-    || item.street.toLowerCase().includes(clean)
-  ));
+  const tokens = clean
+    .split(ADDRESS_TOKEN_SPLIT)
+    .filter(Boolean)
+    .filter((token) => !ADDRESS_SKIP_TOKENS.has(token));
+
+  // Запрос целиком из служебных слов («ул», «самашки») — деградируем в
+  // простой substring-поиск, иначе фильтр съест все адреса.
+  if (tokens.length === 0) {
+    return source
+      .filter((item) => item.fullAddress.toLowerCase().includes(clean))
+      .slice(0, 50);
+  }
+
+  const scored: Array<{ item: SamashkiHouseAddress; score: number }> = [];
+  for (const item of source) {
+    const streetLower = item.street.toLowerCase();
+    const streetWords = stripStreetPrefix(streetLower).split(ADDRESS_TOKEN_SPLIT).filter(Boolean);
+    const houseLower = (item.houseNumber ?? '').trim().toLowerCase();
+    const fullLower = item.fullAddress.toLowerCase();
+
+    let score = 0;
+    let allMatch = true;
+    for (const token of tokens) {
+      if (/^\d/.test(token)) {
+        // Числовой токен → номер дома, префиксное совпадение.
+        if (!item.isNotHouse && houseLower.startsWith(token)) {
+          // Чем точнее номер (меньше «хвост»), тем выше ранг.
+          score += 120 - Math.min((houseLower.length - token.length) * 5, 60);
+        } else {
+          allMatch = false;
+          break;
+        }
+      } else if (streetWords.some((word) => word.startsWith(token))) {
+        // Префикс слова улицы — самый сильный текстовый сигнал.
+        score += 80 + token.length * 10;
+      } else if (!item.isNotHouse && streetLower.includes(token)) {
+        // Подстрока в названии улицы.
+        score += 30 + token.length * 5;
+      } else if (item.isNotHouse && fullLower.includes(token)) {
+        // Объект («Не дом»): название/категория лежат в fullAddress.
+        score += 20 + token.length * 3;
+      } else {
+        allMatch = false;
+        break;
+      }
+    }
+    if (allMatch) scored.push({ item, score });
+  }
+  scored.sort((a, b) => b.score - a.score);
+  return scored.map((entry) => entry.item);
+}
+
+export function lookupSamashkiAddress(query: string): SamashkiHouseAddress[] {
+  return searchHouseAddresses(query);
 }
 
 export function findClosestSamashkiHouse(position: { lat: number; lng: number }): SamashkiHouseAddress {

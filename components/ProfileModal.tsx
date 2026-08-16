@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { Ban, ChevronDown, Clock, ExternalLink, Flag, MapPin, MessageSquare, Phone, Send, Star, Trash2, X } from 'lucide-react';
+import { Ban, ChevronDown, Clock, ExternalLink, Flag, MapPin, MessageSquare, Pencil, Phone, Send, Star, Trash2, X } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { useProfiles } from '@/components/ProfilesProvider';
 import { useI18n } from '@/lib/i18n';
@@ -141,6 +141,13 @@ export default function ProfileModal({
   // Local copy of the reviews list so deletions reflect immediately
   // without waiting for a full provider refresh.
   const [localReviews, setLocalReviews] = useState<Review[] | null>(null);
+  // Inline editing state: which review / question is being edited and
+  // the current draft. Editing my own review also re-picks the rating.
+  const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
+  const [editReviewText, setEditReviewText] = useState('');
+  const [editReviewRating, setEditReviewRating] = useState(0);
+  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
+  const [editQuestionText, setEditQuestionText] = useState('');
 
   useEffect(() => {
     setReviewRating(0);
@@ -153,6 +160,8 @@ export default function ProfileModal({
     setCommentDrafts({});
     setReplyTargets({});
     setLocalReviews(null);
+    setEditingReviewId(null);
+    setEditingQuestionId(null);
   }, [profile?.id]);
 
   // Load the latest questions for this profile every time the modal opens —
@@ -429,6 +438,108 @@ export default function ProfileModal({
     }
   };
 
+  /** Open the inline editor for my own review (text + stars). */
+  const startEditReview = (review: Review) => {
+    if (!account || account.id !== review.authorId) return;
+    setEditingQuestionId(null);
+    setEditingReviewId(review.id);
+    setEditReviewText(review.text);
+    setEditReviewRating(review.rating);
+  };
+
+  /** Save the edited review through PATCH /api/reviews. The server moves
+   *  created_at to today, so the date beside the review updates too. */
+  const handleEditReviewSubmit = async (event: React.FormEvent, reviewId: string) => {
+    event.preventDefault();
+    if (!account || busyId) return;
+    if (editReviewRating < 1 || editReviewRating > 5) {
+      setNotice('Поставьте оценку от 1 до 5 звёзд.');
+      return;
+    }
+    const trimmed = editReviewText.trim().slice(0, MAX_REVIEW_TEXT_LENGTH);
+    setBusyId(reviewId);
+    try {
+      const accessToken = await requireSession();
+      const response = await fetch('/api/reviews', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ reviewId, rating: editReviewRating, text: trimmed }),
+      });
+      if (!response.ok) {
+        const result = await response.json().catch(() => null);
+        throw new Error(result?.error ?? 'Не удалось изменить отзыв.');
+      }
+      const result = await response.json();
+      const updated = result.review;
+      setLocalReviews((current) =>
+        (current ?? profile?.reviews ?? []).map((r) => (r.id === reviewId ? {
+          ...r,
+          rating: Number(updated?.rating ?? editReviewRating),
+          text: String(updated?.text ?? trimmed),
+          createdAt: String(updated?.createdAt ?? r.createdAt),
+        } : r)),
+      );
+      setEditingReviewId(null);
+      setNotice('');
+    } catch (submitError) {
+      setNotice(submitError instanceof Error ? submitError.message : 'Не удалось изменить отзыв.');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  /** Open the inline editor for my own question. */
+  const startEditQuestion = (q: { id: string; question: string; author_id?: string }) => {
+    if (!account || account.id !== q.author_id) return;
+    setEditingReviewId(null);
+    setEditingQuestionId(q.id);
+    setEditQuestionText(q.question);
+  };
+
+  /** Save the edited question through PATCH /api/profile-questions. The
+   *  server moves created_at to today, so the date updates too. */
+  const handleEditQuestionSubmit = async (event: React.FormEvent, questionId: string) => {
+    event.preventDefault();
+    if (!account || busyId) return;
+    const trimmed = editQuestionText.trim().slice(0, 500);
+    if (trimmed.length < 1) {
+      setNotice('Введите текст вопроса.');
+      return;
+    }
+    setBusyId(questionId);
+    try {
+      const accessToken = await requireSession();
+      const response = await fetch('/api/profile-questions', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ questionId, question: trimmed }),
+      });
+      if (!response.ok) {
+        const result = await response.json().catch(() => null);
+        throw new Error(result?.error ?? 'Не удалось изменить вопрос.');
+      }
+      const result = await response.json();
+      const updated = result.question;
+      setQuestions((current) => current.map((q) => (q.id === questionId ? {
+        ...q,
+        question: String(updated?.question ?? trimmed),
+        created_at: String(updated?.created_at ?? q.created_at),
+      } : q)));
+      setEditingQuestionId(null);
+      setNotice('');
+    } catch (submitError) {
+      setNotice(submitError instanceof Error ? submitError.message : 'Не удалось изменить вопрос.');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   if (!profile) return null;
 
   const mapAddress = profile.workplaceAddress.toLowerCase().includes('самаш')
@@ -459,6 +570,11 @@ export default function ProfileModal({
       !account.isBlocked &&
       (account.id === authorId || account.id === profile.ownerId || account.isAdmin),
     );
+
+  /** May the viewer EDIT a review / question? Only its author — editing a
+   *  review re-picks the rating, so the анкета owner and admins only delete. */
+  const canEditBy = (authorId?: string) =>
+    Boolean(account && !account.isBlocked && account.id === authorId);
 
   const isPersonal = Boolean(profile.isPersonal);
   const hasPhone = !isPersonal && !profile.hidePhone && Boolean(profile.phone && profile.phone.trim().length > 0);
@@ -700,6 +816,18 @@ export default function ProfileModal({
                             <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
                             {review.rating.toFixed(1)}
                           </span>
+                          {canEditBy(review.authorId) && editingReviewId !== review.id && (
+                            <button
+                              type="button"
+                              onClick={() => startEditReview(review)}
+                              disabled={busyId !== null}
+                              aria-label="Изменить отзыв"
+                              title={t.edit}
+                              className="flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-600 disabled:opacity-40 dark:hover:bg-emerald-950 dark:hover:text-emerald-400"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                          )}
                           {canDeleteBy(review.authorId) && (
                             <button
                               type="button"
@@ -714,7 +842,41 @@ export default function ProfileModal({
                           )}
                         </div>
                       </div>
-                      <p className="mt-1 break-words [overflow-wrap:anywhere] whitespace-pre-wrap text-xs leading-relaxed text-slate-600 dark:text-zinc-400">{review.text}</p>
+                      {editingReviewId === review.id ? (
+                        <form onSubmit={(event) => void handleEditReviewSubmit(event, review.id)} className="mt-2 space-y-2 rounded-xl border border-emerald-100 bg-emerald-50/50 p-2.5 dark:border-zinc-800 dark:bg-zinc-950/40">
+                          <div className="flex items-center gap-1" aria-label="Изменить оценку">
+                            {[1, 2, 3, 4, 5].map((rating) => (
+                              <button
+                                key={rating}
+                                type="button"
+                                onClick={() => setEditReviewRating(rating)}
+                                aria-label={`${rating} из 5`}
+                                className="rounded-lg p-0.5 transition hover:bg-amber-100 dark:hover:bg-amber-100"
+                              >
+                                <Star className={`h-4 w-4 ${rating <= editReviewRating ? 'fill-amber-400 text-amber-400' : 'text-slate-300 dark:text-zinc-600'}`} />
+                              </button>
+                            ))}
+                          </div>
+                          <textarea
+                            rows={2}
+                            maxLength={MAX_REVIEW_TEXT_LENGTH}
+                            value={editReviewText}
+                            onChange={(event) => setEditReviewText(event.target.value)}
+                            placeholder="Расскажите о своём опыте"
+                            className="w-full resize-y break-words rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white"
+                          />
+                          <div className="flex items-center gap-2">
+                            <button type="submit" disabled={busyId === review.id} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-[11px] font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50">
+                              {busyId === review.id ? t.saving : t.save}
+                            </button>
+                            <button type="button" onClick={() => setEditingReviewId(null)} disabled={busyId === review.id} className="rounded-lg bg-slate-100 px-3 py-1.5 text-[11px] font-bold text-slate-600 transition hover:bg-slate-200 disabled:opacity-50 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700">
+                              {t.cancel}
+                            </button>
+                          </div>
+                        </form>
+                      ) : (
+                        <p className="mt-1 break-words [overflow-wrap:anywhere] whitespace-pre-wrap text-xs leading-relaxed text-slate-600 dark:text-zinc-400">{review.text}</p>
+                      )}
                     </article>
                   ))}
                 </div>
@@ -783,6 +945,18 @@ export default function ProfileModal({
                               </div>
                               <div className="flex shrink-0 items-center gap-2">
                                 <time className="text-[10px] font-medium text-slate-400">{formatReviewDate(q.created_at)}</time>
+                                {canEditBy(q.author_id) && editingQuestionId !== q.id && (
+                                  <button
+                                    type="button"
+                                    onClick={() => startEditQuestion(q)}
+                                    disabled={busyId !== null}
+                                    aria-label="Изменить вопрос"
+                                    title={t.edit}
+                                    className="flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-600 disabled:opacity-40 dark:hover:bg-emerald-950 dark:hover:text-emerald-400"
+                                  >
+                                    <Pencil className="h-3.5 w-3.5" />
+                                  </button>
+                                )}
                                 {canDeleteBy(q.author_id) && (
                                   <button
                                     type="button"
@@ -797,7 +971,28 @@ export default function ProfileModal({
                                 )}
                               </div>
                             </div>
-                            <p className="mt-1 break-words [overflow-wrap:anywhere] whitespace-pre-wrap text-xs leading-relaxed text-slate-600 dark:text-zinc-400">{q.question}</p>
+                            {editingQuestionId === q.id ? (
+                              <form onSubmit={(event) => void handleEditQuestionSubmit(event, q.id)} className="mt-2 space-y-2 rounded-xl border border-emerald-100 bg-emerald-50/50 p-2.5 dark:border-zinc-800 dark:bg-zinc-950/40">
+                                <textarea
+                                  rows={2}
+                                  maxLength={500}
+                                  value={editQuestionText}
+                                  onChange={(event) => setEditQuestionText(event.target.value)}
+                                  placeholder="Текст вопроса"
+                                  className="w-full resize-y break-words rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white"
+                                />
+                                <div className="flex items-center gap-2">
+                                  <button type="submit" disabled={busyId === q.id} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-[11px] font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50">
+                                    {busyId === q.id ? t.saving : t.save}
+                                  </button>
+                                  <button type="button" onClick={() => setEditingQuestionId(null)} disabled={busyId === q.id} className="rounded-lg bg-slate-100 px-3 py-1.5 text-[11px] font-bold text-slate-600 transition hover:bg-slate-200 disabled:opacity-50 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700">
+                                    {t.cancel}
+                                  </button>
+                                </div>
+                              </form>
+                            ) : (
+                              <p className="mt-1 break-words [overflow-wrap:anywhere] whitespace-pre-wrap text-xs leading-relaxed text-slate-600 dark:text-zinc-400">{q.question}</p>
+                            )}
 
                             <button
                               type="button"
@@ -1009,11 +1204,11 @@ export default function ProfileModal({
             </section>
           )}
 
-          {/* «Анкеты пользователя» — только в ЛИЧНОЙ анкете (это и есть профиль
-              владельца). Показываем ВСЕ анкеты владельца: личную и специалистов.
-              Текущая (открытая) анкета некликабельна — клик по ней игнорируется,
-              но можно переключаться на любую другую. */}
-          {profile.isPersonal && profile.ownerId && (
+          {/* «Анкеты пользователя» — в ЛЮБОЙ анкете владельца (и личной, и
+              специалиста). Показываем ВСЕ анкеты владельца: личную и
+              специалистов. Текущая (открытая) анкета некликабельна — клик по
+              ней игнорируется, но можно переключаться на любую другую. */}
+          {profile.ownerId && (
             <section className="mt-4">
               <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
                 {language === 'ce' ? 'Лелорхочун анкеташ' : 'Анкеты пользователя'}
