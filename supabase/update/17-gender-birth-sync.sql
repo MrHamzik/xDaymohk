@@ -1,18 +1,21 @@
 -- =============================================================================
--- Даймохк — обновление 17
+-- Даймохк — обновление 17 (v2)
 -- Пол и возраст в ЛИЧНОЙ анкете.
 --
 -- Проблема: пол и дата рождения пользователь заполняет на странице профиля
 -- (таблица user_profiles), а личная анкета (profiles, is_personal = true) их
--- не получала — в карточке раздел «Пол/Возраст» оставался пустым. Кроме того,
--- вью v_users_with_profile_count не отдавало gender/birth_date фронту.
+-- не получала — в карточке раздел «Пол/Возраст» оставался пустым.
 --
 -- Что делает этот файл:
---   1. Пересоздаёт v_users_with_profile_count с колонками gender, birth_date.
---   2. Триггер на user_profiles копирует gender/birth_date в личную анкету
---      (profiles публично читаема "profiles public read" — поэтому пол/возраст
---      в личной анкете видны всем, так задумано дизайном).
---   3. Одноразовый бэкфилл уже существующих личных анкет.
+--   0. ПРОВЕРКА: убеждается, что нужные столбцы существуют. Если нет —
+--      падает с ЧИТАЕМОЙ ошибкой (что именно отсутствует) ДО любых изменений.
+--   1. Пересоздаёт v_users_with_profile_count с gender/birth_date
+--      (DROP + CREATE вместо CREATE OR REPLACE — так не конфликтует
+--      с тем, как вьюха была создана раньше в живой БД).
+--   2. Триггер на user_profiles копирует gender/birth_date в личную анкету.
+--   3. ensure_personal_profile() теперь копирует пол/дату при СОЗДАНИИ
+--      личной анкеты (не только при последующих правках профиля).
+--   4. Одноразовый бэкфилл уже существующих личных анкет.
 --
 -- Запускать ОДИН файл за раз в SQL Editor. Перед запуском: закройте другие
 -- вкладки SQL Editor и остановите dev-сервер / приложение (они держат
@@ -21,12 +24,48 @@
 set lock_timeout = '5s';
 
 -- ---------------------------------------------------------------------------
--- 1. Вью v_users_with_profile_count + gender/birth_date
---    Новые колонки добавляются в КОНЕЦ списка (ограничение CREATE OR REPLACE
---    VIEW в Postgres: менять/переименовывать существующие колонки нельзя,
---    добавлять в конец — можно).
+-- 0. Проверка столбцов (fail-fast, до любых изменений)
 -- ---------------------------------------------------------------------------
-create or replace view public.v_users_with_profile_count
+do $$
+declare
+  missing text := '';
+begin
+  if not exists (select 1 from information_schema.columns
+                 where table_schema = 'public' and table_name = 'user_profiles' and column_name = 'gender')
+    then missing := missing || ' user_profiles.gender;'; end if;
+  if not exists (select 1 from information_schema.columns
+                 where table_schema = 'public' and table_name = 'user_profiles' and column_name = 'birth_date')
+    then missing := missing || ' user_profiles.birth_date;'; end if;
+  if not exists (select 1 from information_schema.columns
+                 where table_schema = 'public' and table_name = 'profiles' and column_name = 'gender')
+    then missing := missing || ' profiles.gender;'; end if;
+  if not exists (select 1 from information_schema.columns
+                 where table_schema = 'public' and table_name = 'profiles' and column_name = 'birth_date')
+    then missing := missing || ' profiles.birth_date;'; end if;
+  if not exists (select 1 from information_schema.columns
+                 where table_schema = 'public' and table_name = 'profiles' and column_name = 'is_personal')
+    then missing := missing || ' profiles.is_personal;'; end if;
+  if not exists (select 1 from information_schema.columns
+                 where table_schema = 'public' and table_name = 'profiles' and column_name = 'owner_id')
+    then missing := missing || ' profiles.owner_id;'; end if;
+
+  if missing <> '' then
+    raise exception 'ОБНОВЛЕНИЕ 17 НЕ ПРИМЕНЕНО. В базе отсутствуют столбцы:% — пришлите этот текст разработчику, схема живой БД отличается от ожидаемой.', missing;
+  end if;
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- 1. Вью v_users_with_profile_count + gender/birth_date.
+--    DROP + CREATE: «create or replace view» падает, если у живой вьюхи
+--    другой набор/порядок колонок; полное пересоздание вьюхи безопасно —
+--    данных в ней нет. Если на вьюху завязан другой объект, DROP упадёт
+--    явно (без cascade ничего лишнего не удалится).
+--    CRUD по ней не делается, только SELECT — гранты Supabase по умолчанию
+--    для public-схемы покрывают anon/authenticated.
+-- ---------------------------------------------------------------------------
+drop view if exists public.v_users_with_profile_count;
+
+create view public.v_users_with_profile_count
   with (security_invoker = true) as
 select
   u.id,
@@ -81,7 +120,83 @@ create trigger trg_user_profiles_demographics
   for each row execute function public.sync_personal_profile_demographics();
 
 -- ---------------------------------------------------------------------------
--- 3. Бэкфилл: переносим пол/дату рождения в уже существующие личные анкеты.
+-- 3. ensure_personal_profile(): при создании личной анкеты сразу подтягиваем
+--    пол/дату рождения из user_profiles (signature функции не меняется —
+--    grants сохраняются приCREATE OR REPLACE).
+-- ---------------------------------------------------------------------------
+create or replace function public.ensure_personal_profile(
+  p_full_name text,
+  p_avatar_url text default '',
+  p_phone text default ''
+)
+returns public.profiles
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_existing public.profiles;
+  v_personal_id text;
+  v_row public.profiles;
+  v_gender text;
+  v_birth_date date;
+begin
+  if v_user_id is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  v_personal_id := 'personal-' || v_user_id::text;
+
+  select * into v_existing
+    from public.profiles
+   where id = v_personal_id;
+  if found then
+    -- Анкета уже есть: заодно дозаполним пол/дату, если они пустые.
+    if v_existing.gender is null or v_existing.birth_date is null then
+      select u.gender, u.birth_date into v_gender, v_birth_date
+        from public.user_profiles u where u.id = v_user_id;
+      update public.profiles
+         set gender = coalesce(v_existing.gender, v_gender),
+             birth_date = coalesce(v_existing.birth_date, v_birth_date)
+       where id = v_personal_id
+      returning * into v_existing;
+    end if;
+    return v_existing;
+  end if;
+
+  select u.gender, u.birth_date into v_gender, v_birth_date
+    from public.user_profiles u where u.id = v_user_id;
+
+  insert into public.profiles (
+    id, owner_id, full_name, avatar_url, is_specialist, is_personal,
+    bio, workplace_address, workplace_coords, phone, hide_phone,
+    same_as_phone_whatsapp, settlement, gender, birth_date
+  ) values (
+    v_personal_id,
+    v_user_id,
+    coalesce(nullif(trim(p_full_name), ''), 'Житель Даймохк'),
+    coalesce(p_avatar_url, ''),
+    false,
+    true,
+    'Житель Даймохк. Личная анкета.',
+    'Даймохк',
+    '{"lat":43.288024,"lng":45.298989}'::jsonb,
+    coalesce(p_phone, ''),
+    true,
+    false,
+    'Даймохк',
+    v_gender,
+    v_birth_date
+  )
+  returning * into v_row;
+
+  return v_row;
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- 4. Бэкфилл: переносим пол/дату рождения в уже существующие личные анкеты.
 -- ---------------------------------------------------------------------------
 update public.profiles p
    set gender = u.gender,
