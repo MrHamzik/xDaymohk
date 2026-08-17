@@ -42,6 +42,8 @@ export default function VayghullakhPage() {
   const [categories, setCategories] = useState<AppFilter[]>([]);
   const [tab, setTab] = useState<FeedTab>('nearby');
   const [category, setCategory] = useState('');
+  const [priorityFilter, setPriorityFilter] = useState('');
+  const [minReward, setMinReward] = useState(0);
   const [query, setQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -146,6 +148,10 @@ export default function VayghullakhPage() {
     }
 
     if (category) list = list.filter((t) => t.category === category);
+    if (priorityFilter) list = list.filter((t) => t.priority === priorityFilter);
+    // Сравниваем с чистой наградой: надбавка за срочность и деньги
+    // на закупку — не доход исполнителя.
+    if (minReward > 0) list = list.filter((t) => t.reward >= minReward);
 
     const q = query.trim().toLowerCase();
     if (q) {
@@ -158,7 +164,7 @@ export default function VayghullakhPage() {
       return [...list].sort((a, b) => (a.distanceM ?? 1e9) - (b.distanceM ?? 1e9));
     }
     return list;
-  }, [withDistance, myTasks, tab, category, query, account?.id, position]);
+  }, [withDistance, myTasks, tab, category, priorityFilter, minReward, query, account?.id, position]);
 
   return (
     <div className="flex min-h-[100dvh] min-w-0 flex-col overflow-x-hidden bg-slate-50 bg-radial-gradient transition-colors dark:bg-zinc-950">
@@ -233,6 +239,10 @@ export default function VayghullakhPage() {
             categories={categories}
             category={category}
             setCategory={setCategory}
+            priority={priorityFilter}
+            setPriority={setPriorityFilter}
+            minReward={minReward}
+            setMinReward={setMinReward}
           />
 
           {pendingReview.length > 0 && (

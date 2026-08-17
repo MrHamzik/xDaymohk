@@ -2,11 +2,11 @@
 
 import {
   Clock, MapPin, Star, Users, Zap, AlertTriangle,
-  CalendarDays, ChevronRight, ShieldCheck,
+  CalendarDays, ChevronRight, ShieldCheck, Wallet,
 } from 'lucide-react';
 import Avatar from '@/components/Avatar';
 import { formatTimeLeft } from '@/lib/tasks/client';
-import { taskTotalReward, type Task } from '@/lib/types';
+import { taskCostBreakdown, type Task } from '@/lib/types';
 
 interface TaskCardProps {
   task: Task;
@@ -48,7 +48,8 @@ const PRIORITY_META = {
  */
 export default function TaskCard({ task, needsReview = false, onOpen }: TaskCardProps) {
   const priority = PRIORITY_META[task.priority];
-  const total = taskTotalReward(task.reward, task.priority);
+  const cost = taskCostBreakdown(task.reward, task.priority, task.purchaseBudget ?? 0);
+  const total = cost.reward + cost.surcharge;
   const timeLeft = formatTimeLeft(task.kind === 'urgent' ? task.deadlineAt : task.scheduledAt);
   const isOverdue = timeLeft === 'просрочено';
   const takenSlots = task.takenSlots ?? 0;
@@ -69,7 +70,7 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
         }
       }}
       aria-label={`Открыть задание: ${task.title}`}
-      className={`smk-card smk-ornament smk-corner group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border bg-white text-slate-900 shadow-sm hover:shadow-lg dark:bg-zinc-800 dark:text-white ${
+      className={`smk-card smk-ornament group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border bg-white text-slate-900 shadow-sm hover:shadow-lg dark:bg-zinc-800 dark:text-white ${
         needsReview
           ? 'border-amber-300/70 hover:border-amber-400 dark:border-amber-800/80'
           : 'border-slate-200/70 hover:border-emerald-300/80 dark:border-zinc-700/80 dark:hover:border-emerald-800'
@@ -189,6 +190,16 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
           >
             <Users className="h-3 w-3" />
             {takenSlots} / {task.slots}
+          </span>
+        )}
+
+        {(task.purchaseBudget ?? 0) > 0 && (
+          <span
+            title="Нужно купить товар на свои деньги — сумма вернётся с наградой"
+            className="inline-flex items-center gap-1 rounded-lg bg-violet-50 px-2 py-1 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300"
+          >
+            <Wallet className="h-3 w-3" />
+            закупка {task.purchaseBudget} ₽
           </span>
         )}
 

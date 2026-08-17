@@ -1722,9 +1722,9 @@ export default function AdminPage() {
                           </div>
                         </div>
                         <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-3 dark:border-zinc-800">
-                          <button type="button" onClick={() => setViewProfile(profile)} className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs font-bold text-emerald-700"><FolderOpen className="h-3.5 w-3.5" />{L('Открыть', 'Схьаделла')}</button>
+                          <button type="button" onClick={() => setViewProfile(profile)} className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs font-bold text-emerald-700 transition hover:bg-emerald-50 dark:border-emerald-900 dark:bg-zinc-900 dark:text-emerald-300 dark:hover:bg-emerald-950/50"><FolderOpen className="h-3.5 w-3.5" />{L('Открыть', 'Схьаделла')}</button>
                           {!profile.isPersonal && (
-                            <button type="button" onClick={() => updateProfile(profile.id, { isHidden: true, isBanned: false })} className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-white px-3 py-2 text-xs font-bold text-amber-700"><EyeOff className="h-3.5 w-3.5" />{L('Скрыть', 'Къайлаяккха')}</button>
+                            <button type="button" onClick={() => updateProfile(profile.id, { isHidden: true, isBanned: false })} className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-white px-3 py-2 text-xs font-bold text-amber-700 transition hover:bg-amber-50 dark:border-amber-900 dark:bg-zinc-900 dark:text-amber-300 dark:hover:bg-amber-950/50"><EyeOff className="h-3.5 w-3.5" />{L('Скрыть', 'Къайлаяккха')}</button>
                           )}
                           {isPending && (
                             <>
@@ -1762,7 +1762,7 @@ export default function AdminPage() {
                         <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-950/60 dark:text-amber-300"><Clock3 className="h-3 w-3" />{L('На проверке', 'Талларан тIехь')}</span>
                       </div>
                       <div className="mt-4 flex flex-wrap gap-2 border-t border-amber-200/60 pt-3">
-                        <button type="button" onClick={() => setViewProfile(profile)} className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs font-bold text-emerald-700"><FolderOpen className="h-3.5 w-3.5" />{L('Открыть', 'Схьаделла')}</button>
+                        <button type="button" onClick={() => setViewProfile(profile)} className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs font-bold text-emerald-700 transition hover:bg-emerald-50 dark:border-emerald-900 dark:bg-zinc-900 dark:text-emerald-300 dark:hover:bg-emerald-950/50"><FolderOpen className="h-3.5 w-3.5" />{L('Открыть', 'Схьаделла')}</button>
                         <button type="button" onClick={() => updateProfile(profile.id, { isVerified: true, verificationStatus: 'verified' })} className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white"><Check className="h-3.5 w-3.5" />{L('Подтвердить', 'ТIечIагIде')}</button>
                         <button type="button" onClick={() => updateProfile(profile.id, { isVerified: false, verificationStatus: 'rejected' })} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-xs font-bold text-slate-700"><X className="h-3.5 w-3.5" />{L('Отклонить', 'ДIаяккха')}</button>
                       </div>
@@ -1802,7 +1802,7 @@ export default function AdminPage() {
                           <EyeOff className="h-5 w-5 shrink-0 text-red-600" />
                         </div>
                         <div className="mt-4 flex flex-wrap gap-2 border-t border-red-200/60 pt-3">
-                          <button type="button" onClick={() => setViewProfile(profile)} className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-bold text-red-700"><FolderOpen className="h-3.5 w-3.5" />{L('Открыть', 'Схьаделла')}</button>
+                          <button type="button" onClick={() => setViewProfile(profile)} className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-bold text-red-700 transition hover:bg-red-50 dark:border-red-900 dark:bg-zinc-900 dark:text-red-300 dark:hover:bg-red-950/50"><FolderOpen className="h-3.5 w-3.5" />{L('Открыть', 'Схьаделла')}</button>
                           <button type="button" onClick={() => updateProfile(profile.id, { isHidden: false })} className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white"><Eye className="h-3.5 w-3.5" />{L('Вернуть в каталог', 'Каталоге юхадаккха')}</button>
                         </div>
                       </div>
@@ -1884,7 +1884,7 @@ export default function AdminPage() {
 
                       {/* Actions */}
                       <div className="flex flex-wrap gap-2 border-t border-slate-100 bg-slate-50/60 p-3 dark:border-zinc-800 dark:bg-zinc-900/40">
-                        <button type="button" onClick={() => setViewProfile(profile)} className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs font-bold text-emerald-700 transition hover:bg-emerald-50 dark:border-emerald-900 dark:bg-zinc-900 dark:text-emerald-400 dark:hover:bg-emerald-950/40">
+                        <button type="button" onClick={() => setViewProfile(profile)} className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs font-bold text-emerald-700 transition hover:bg-emerald-50 dark:border-emerald-900 dark:bg-zinc-900 dark:text-emerald-300 dark:hover:bg-emerald-950/50 transition hover:bg-emerald-50 dark:border-emerald-900 dark:bg-zinc-900 dark:text-emerald-400 dark:hover:bg-emerald-950/40">
                           <FolderOpen className="h-3.5 w-3.5" />{L('Открыть', 'Схьаделла')}
                         </button>
                         <button type="button" onClick={() => { setResolveMode('accept'); setResolveComplaint(complaint); }} className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-700">
@@ -1894,7 +1894,7 @@ export default function AdminPage() {
                           <X className="h-3.5 w-3.5" />{L('Отклонить', 'ДIаяккха')}
                         </button>
                         {!targetIsAdmin && (
-                          <button type="button" onClick={() => updateProfile(profile.id, { isHidden: true, isBanned: false })} className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-white px-3 py-2 text-xs font-bold text-amber-700 transition hover:bg-amber-50 dark:border-amber-900 dark:bg-zinc-900 dark:text-amber-400">
+                          <button type="button" onClick={() => updateProfile(profile.id, { isHidden: true, isBanned: false })} className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-white px-3 py-2 text-xs font-bold text-amber-700 transition hover:bg-amber-50 dark:border-amber-900 dark:bg-zinc-900 dark:text-amber-300 dark:hover:bg-amber-950/50 transition hover:bg-amber-50 dark:border-amber-900 dark:bg-zinc-900 dark:text-amber-400">
                             <EyeOff className="h-3.5 w-3.5" />{L('Скрыть анкету', 'Анкета къайлаяккха')}
                           </button>
                         )}
@@ -1944,7 +1944,7 @@ export default function AdminPage() {
                             {user.isAdmin ? L('Забрать админа', 'Админ дIадаккха') : L('Сделать админом', 'Админ хIотто')}
                           </button>
                         )}
-                        <button type="button" onClick={() => setExpandedUserId(expanded ? null : user.id)} className="rounded-xl p-2 text-emerald-700 transition hover:bg-emerald-50" title="Анкеты пользователя"><UserRound className="h-5 w-5" /></button></div>{expanded && <div className="mt-3 space-y-2 border-t border-slate-100 pt-3 dark:border-zinc-800">{userProfiles.length === 0 ? <p className="text-xs text-slate-500">{L('Анкет нет.', 'Анкеташ бац.')}</p> : userProfiles.map((profile) => { const status = getStatus(profile, users); return <div key={profile.id} className="flex items-center gap-2 rounded-2xl bg-slate-50 p-2.5 dark:bg-zinc-800/60"><div className="min-w-0 flex-1"><p className="truncate text-xs font-bold text-slate-900 dark:text-white">{profile.professionTitle || 'Личная анкета'}</p><span className={`mt-1 inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold ${status.className}`}>{status.icon}{status.label}</span></div><button type="button" onClick={() => setViewProfile(profile)} className="inline-flex items-center gap-1 rounded-xl bg-white px-2.5 py-1.5 text-xs font-bold text-emerald-700 shadow-sm"><FolderOpen className="h-3.5 w-3.5" />{L('Открыть', 'Схьаделла')}</button></div>; })}</div>}</div>; })}</div>
+                        <button type="button" onClick={() => setExpandedUserId(expanded ? null : user.id)} className="rounded-xl p-2 text-emerald-700 transition hover:bg-emerald-50" title="Анкеты пользователя"><UserRound className="h-5 w-5" /></button></div>{expanded && <div className="mt-3 space-y-2 border-t border-slate-100 pt-3 dark:border-zinc-800">{userProfiles.length === 0 ? <p className="text-xs text-slate-500">{L('Анкет нет.', 'Анкеташ бац.')}</p> : userProfiles.map((profile) => { const status = getStatus(profile, users); return <div key={profile.id} className="flex items-center gap-2 rounded-2xl bg-slate-50 p-2.5 dark:bg-zinc-800/60"><div className="min-w-0 flex-1"><p className="truncate text-xs font-bold text-slate-900 dark:text-white">{profile.professionTitle || 'Личная анкета'}</p><span className={`mt-1 inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold ${status.className}`}>{status.icon}{status.label}</span></div><button type="button" onClick={() => setViewProfile(profile)} className="inline-flex items-center gap-1 rounded-xl bg-white px-2.5 py-1.5 text-xs font-bold text-emerald-700 shadow-sm transition hover:bg-emerald-50 dark:bg-zinc-900 dark:text-emerald-300 dark:hover:bg-emerald-950/50"><FolderOpen className="h-3.5 w-3.5" />{L('Открыть', 'Схьаделла')}</button></div>; })}</div>}</div>; })}</div>
           {showUsersPagination && (
             <p className="pt-1 text-center text-[11px] text-slate-400 dark:text-zinc-500">
               {L('Показаны первые 100 из', 'Гойту хьалхара 100')} {tabFilteredUsers.length} {L('пользователей. Уточните поиск.', 'лелошхой. Лахар ма-дарра де.')}

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { X, Loader2, ExternalLink } from 'lucide-react';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 import { createTask, fetchTaskFilters } from '@/lib/tasks/client';
-import { taskTotalReward, type AppFilter, type TaskKind, type TaskPriority } from '@/lib/types';
+import { taskCostBreakdown, TASK_MIN_REWARD, type AppFilter, type TaskKind, type TaskPriority } from '@/lib/types';
 
 interface CreateTaskModalProps {
   isOpen: boolean;
@@ -26,7 +26,8 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('other');
-  const [reward, setReward] = useState('');
+  const [reward, setReward] = useState(String(TASK_MIN_REWARD));
+  const [purchaseBudget, setPurchaseBudget] = useState('');
   const [priority, setPriority] = useState<TaskPriority>('normal');
   const [slots, setSlots] = useState('1');
   const [deadlineAt, setDeadlineAt] = useState('');
@@ -43,9 +44,9 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
   useEffect(() => {
     if (!isOpen) return;
     fetchTaskFilters('tasks').then(setCategories).catch(() => setCategories([]));
-    // Разумные значения по умолчанию: срочное — на 3 часа вперёд,
-    // запланированное — на завтра, чтобы не заполнять руками.
-    const soon = new Date(Date.now() + 3 * 3600_000);
+    // Срочное — через 30 минут (чаще всего «принеси сейчас»),
+    // запланированное — на завтра.
+    const soon = new Date(Date.now() + 30 * 60_000);
     const tomorrow = new Date(Date.now() + 24 * 3600_000);
     setDeadlineAt(toLocalInput(soon));
     setScheduledAt(toLocalInput(tomorrow));
@@ -61,7 +62,10 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
   if (!isOpen) return null;
 
   const rewardValue = Number(reward) || 0;
-  const total = taskTotalReward(rewardValue, priority);
+  const budgetValue = Number(purchaseBudget) || 0;
+  // «Покупки» — единственная категория, где нужен бюджет на товар.
+  const isPurchase = category === 'purchases';
+  const cost = taskCostBreakdown(rewardValue, priority, isPurchase ? budgetValue : 0);
   const slotsValue = Math.max(1, Number(slots) || 1);
 
   const handleSubmit = async () => {
@@ -70,8 +74,8 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
       setError('Опишите задание в заголовке (минимум 3 символа)');
       return;
     }
-    if (isPaid && rewardValue <= 0) {
-      setError('Укажите награду за задание');
+    if (isPaid && rewardValue < TASK_MIN_REWARD) {
+      setError(`Минимальная награда — ${TASK_MIN_REWARD} ₽`);
       return;
     }
 
@@ -84,6 +88,7 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
         description: description.trim(),
         category,
         reward: isPaid ? rewardValue : 0,
+        purchaseBudget: isPaid && isPurchase ? budgetValue : 0,
         priority: isPaid ? priority : 'normal',
         slots: kind === 'scheduled' ? slotsValue : 1,
         // datetime-local отдаёт локальное время — переводим в ISO (UTC).
@@ -100,7 +105,8 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
       // Сбрасываем форму, чтобы следующее открытие было чистым.
       setTitle('');
       setDescription('');
-      setReward('');
+      setReward(String(TASK_MIN_REWARD));
+      setPurchaseBudget('');
       setPriority('normal');
       setSlots('1');
       setAddress('');
@@ -221,16 +227,37 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
                   id="task-reward"
                   type="number"
                   inputMode="numeric"
-                  min={1}
+                  min={TASK_MIN_REWARD}
                   value={reward}
                   onChange={(e) => setReward(e.target.value)}
-                  placeholder="300"
+                  placeholder={String(TASK_MIN_REWARD)}
                   className={fieldClass}
                 />
               </div>
             )}
           </div>
 
+          {/* Бюджет на закупку — только для «Покупок»: исполнитель
+              тратит свои деньги и получает их обратно с наградой. */}
+          {isPaid && isPurchase && (
+            <div className={sectionClass}>
+              <label htmlFor="task-budget" className={labelClass}>Сумма на покупку, ₽</label>
+              <input
+                id="task-budget"
+                type="number"
+                inputMode="numeric"
+                min={0}
+                value={purchaseBudget}
+                onChange={(e) => setPurchaseBudget(e.target.value)}
+                placeholder="1500"
+                className={fieldClass}
+              />
+              <p className="mt-1.5 text-[11px] leading-relaxed text-slate-500 dark:text-zinc-400">
+                Исполнитель купит товар на свои деньги и получит эту сумму обратно
+                вместе с наградой. Укажите, сколько примерно нужно.
+              </p>
+            </div>
+          )}
           {/* Приоритет — надбавка платит заказчик */}
           {isPaid && (
             <div className={sectionClass}>
@@ -255,11 +282,50 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
                   </button>
                 ))}
               </div>
+              {/* Полная разбивка: видно, за что платит заказчик и
+                  сколько на руки получит исполнитель. */}
               {rewardValue > 0 && (
-                <p className="mt-1.5 rounded-lg bg-emerald-50 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
-                  Исполнитель получит {total} ₽
-                  {total !== rewardValue && ` (${rewardValue} ₽ + надбавка за срочность)`}
-                </p>
+                <dl className="mt-2 space-y-1 rounded-xl bg-slate-50 px-3 py-2.5 text-[11px] dark:bg-zinc-800/70">
+                  <div className="flex items-center justify-between">
+                    <dt className="text-slate-500 dark:text-zinc-400">Награда исполнителю</dt>
+                    <dd className="font-bold text-slate-800 dark:text-zinc-200">{cost.reward} ₽</dd>
+                  </div>
+                  {cost.surcharge > 0 && (
+                    <div className="flex items-center justify-between">
+                      <dt className="text-slate-500 dark:text-zinc-400">
+                        Надбавка за срочность
+                      </dt>
+                      <dd className="font-bold text-amber-600 dark:text-amber-400">
+                        +{cost.surcharge} ₽
+                      </dd>
+                    </div>
+                  )}
+                  {cost.budget > 0 && (
+                    <div className="flex items-center justify-between">
+                      <dt className="text-slate-500 dark:text-zinc-400">Возврат за покупку</dt>
+                      <dd className="font-bold text-slate-800 dark:text-zinc-200">
+                        +{cost.budget} ₽
+                      </dd>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between">
+                    <dt className="text-slate-500 dark:text-zinc-400">
+                      Комиссия сервиса оплаты (3,5%)
+                    </dt>
+                    <dd className="font-bold text-slate-800 dark:text-zinc-200">{cost.fee} ₽</dd>
+                  </div>
+                  <div className="mt-1 flex items-center justify-between border-t border-slate-200 pt-1.5 dark:border-zinc-700">
+                    <dt className="font-bold text-slate-700 dark:text-zinc-300">Вы заплатите</dt>
+                    <dd className="text-sm font-extrabold text-emerald-700 dark:text-emerald-400">
+                      {cost.total} ₽
+                    </dd>
+                  </div>
+                  <p className="pt-0.5 text-[10px] text-slate-400">
+                    Исполнитель получит {cost.executorGets} ₽
+                    {cost.budget > 0 && ' (включая возврат за покупку)'}. Налог со своего
+                    дохода он платит сам.
+                  </p>
+                </dl>
               )}
             </div>
           )}

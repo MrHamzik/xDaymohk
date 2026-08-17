@@ -1,26 +1,24 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Loader2, Plus, Trash2, Save } from 'lucide-react';
+import { Loader2, Plus, Trash2, Save, GripVertical, RotateCcw } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import type { AppFilter } from '@/lib/types';
 
-type Scope = 'tasks' | 'catalog' | 'map';
+/**
+ * Раздел «Фильтры» в админке.
+ *
+ * Только «Задания» и «Каталог»: категории объектов карты живут в
+ * разделе «Адреса» → «Поиск и категории», дублировать их здесь нельзя —
+ * получились бы два несогласованных справочника.
+ */
+type Scope = 'tasks' | 'catalog';
 
 const SCOPES: Array<{ value: Scope; label: string; hint: string }> = [
-  { value: 'tasks', label: 'Задания', hint: 'Категории в «Аренца Темщик» и «ГIончалла»' },
+  { value: 'tasks', label: 'Задания', hint: 'Направления в «Аренца Темщик» и «ГIончалла»' },
   { value: 'catalog', label: 'Каталог', hint: 'Сферы деятельности специалистов' },
-  { value: 'map', label: 'Карта', hint: 'Категории объектов «Другое»' },
 ];
 
-/**
- * Админ-раздел «Фильтры»: единое место, где редактируются справочники
- * для заданий, каталога и карты. Раньше категории были захардкожены в
- * коде — любое изменение требовало правки и деплоя.
- *
- * Удаление мягкое (is_active = false): у существующих заданий остаётся
- * ссылка на категорию, и они не должны «потерять» её при чистке.
- */
 export default function AdminFiltersSection() {
   const [scope, setScope] = useState<Scope>('tasks');
   const [filters, setFilters] = useState<AppFilter[]>([]);
@@ -28,6 +26,7 @@ export default function AdminFiltersSection() {
   const [busyId, setBusyId] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [dragId, setDragId] = useState<string | null>(null);
 
   const [newValue, setNewValue] = useState('');
   const [newLabelRu, setNewLabelRu] = useState('');
@@ -37,7 +36,9 @@ export default function AdminFiltersSection() {
     setIsLoading(true);
     setError('');
     try {
-      const response = await fetch(`/api/tasks/filters?scope=${scope}`, { cache: 'no-store' });
+      // all=1 — показываем и отключённые: иначе выключенный фильтр
+      // исчезал из админки и включить его обратно было нельзя.
+      const response = await fetch(`/api/tasks/filters?scope=${scope}&all=1`, { cache: 'no-store' });
       const data = await response.json();
       setFilters(data.filters ?? []);
     } catch {
@@ -57,7 +58,7 @@ export default function AdminFiltersSection() {
     return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
   };
 
-  const save = async (payload: Partial<AppFilter> & { scope: Scope; value: string; labelRu: string }) => {
+  const post = async (payload: Record<string, unknown>) => {
     const response = await fetch('/api/tasks/filters', {
       method: 'POST',
       headers: await authHeaders(),
@@ -70,30 +71,24 @@ export default function AdminFiltersSection() {
   };
 
   const handleAdd = async () => {
-    setError('');
-    setNotice('');
+    setError(''); setNotice('');
     const value = newValue.trim().toLowerCase();
     if (!/^[a-z0-9_-]+$/.test(value)) {
-      setError('Код: только латиница, цифры, дефис и подчёркивание');
+      setError('Код: только латиница, цифры, дефис и подчёркивание. Например: cleaning');
       return;
     }
-    if (!newLabelRu.trim()) {
-      setError('Укажите название');
-      return;
-    }
+    if (!newLabelRu.trim()) { setError('Укажите название'); return; }
+
     setBusyId('new');
     try {
-      await save({
-        scope,
-        value,
+      await post({
+        scope, value,
         labelRu: newLabelRu.trim(),
         labelCe: newLabelCe.trim() || undefined,
         sortOrder: (filters.length + 1) * 10,
         isActive: true,
       });
-      setNewValue('');
-      setNewLabelRu('');
-      setNewLabelCe('');
+      setNewValue(''); setNewLabelRu(''); setNewLabelCe('');
       setNotice('Фильтр добавлен');
       await load();
     } catch (e) {
@@ -103,14 +98,13 @@ export default function AdminFiltersSection() {
     }
   };
 
-  const handleUpdate = async (filter: AppFilter) => {
-    setError('');
-    setNotice('');
+  const handleSave = async (filter: AppFilter) => {
+    setError(''); setNotice('');
     setBusyId(filter.id);
     try {
-      await save({
+      await post({
         id: filter.id,
-        scope: filter.scope as Scope,
+        scope: filter.scope,
         value: filter.value,
         labelRu: filter.labelRu,
         labelCe: filter.labelCe ?? undefined,
@@ -126,20 +120,29 @@ export default function AdminFiltersSection() {
     }
   };
 
-  const handleDelete = async (filter: AppFilter) => {
-    setError('');
-    setNotice('');
+  /** Включение/отключение — та же запись, просто меняем is_active. */
+  const handleToggleActive = async (filter: AppFilter) => {
+    setError(''); setNotice('');
     setBusyId(filter.id);
     try {
-      const response = await fetch(`/api/tasks/filters?id=${encodeURIComponent(filter.id)}`, {
-        method: 'DELETE',
-        headers: await authHeaders(),
-      });
-      if (!response.ok) throw new Error('Не удалось удалить');
-      setNotice('Фильтр отключён');
+      if (filter.isActive) {
+        const response = await fetch(`/api/tasks/filters?id=${encodeURIComponent(filter.id)}`, {
+          method: 'DELETE',
+          headers: await authHeaders(),
+        });
+        if (!response.ok) throw new Error('Не удалось отключить');
+        setNotice('Фильтр отключён — он скрыт от пользователей');
+      } else {
+        await post({
+          id: filter.id, scope: filter.scope, value: filter.value,
+          labelRu: filter.labelRu, labelCe: filter.labelCe ?? undefined,
+          sortOrder: filter.sortOrder, isActive: true,
+        });
+        setNotice('Фильтр включён');
+      }
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось удалить');
+      setError(e instanceof Error ? e.message : 'Не удалось изменить');
     } finally {
       setBusyId('');
     }
@@ -149,14 +152,42 @@ export default function AdminFiltersSection() {
     setFilters((cur) => cur.map((f) => (f.id === id ? { ...f, ...next } : f)));
   };
 
-  const field = 'w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white';
+  /** Перетаскивание: порядок задаётся мышью, поле «номер» не нужно. */
+  const handleDrop = async (targetId: string) => {
+    if (!dragId || dragId === targetId) { setDragId(null); return; }
+    const from = filters.findIndex((f) => f.id === dragId);
+    const to = filters.findIndex((f) => f.id === targetId);
+    if (from < 0 || to < 0) { setDragId(null); return; }
+
+    const next = [...filters];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    setFilters(next);
+    setDragId(null);
+
+    try {
+      const response = await fetch('/api/tasks/filters', {
+        method: 'PATCH',
+        headers: await authHeaders(),
+        body: JSON.stringify({ ids: next.map((f) => f.id) }),
+      });
+      if (!response.ok) throw new Error('Не удалось сохранить порядок');
+      setNotice('Порядок сохранён');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Не удалось сохранить порядок');
+      await load();
+    }
+  };
+
+  const field =
+    'w-full rounded-lg border border-transparent bg-slate-100 px-2.5 py-2 text-xs font-medium text-slate-900 outline-none transition focus:border-emerald-400 focus:bg-white focus:ring-2 focus:ring-emerald-500/25 dark:bg-zinc-800 dark:text-white dark:focus:bg-zinc-900';
 
   return (
     <section className="space-y-4">
       <div>
         <h3 className="text-base font-bold text-slate-900 dark:text-white">Фильтры</h3>
         <p className="text-sm text-slate-500 dark:text-zinc-500">
-          Справочники категорий для заданий, каталога и карты.
+          Справочники категорий. Порядок задаётся перетаскиванием.
         </p>
       </div>
 
@@ -169,7 +200,7 @@ export default function AdminFiltersSection() {
             className={`rounded-xl px-3 py-1.5 text-xs font-bold transition ${
               scope === s.value
                 ? 'bg-emerald-600 text-white'
-                : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400'
+                : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800'
             }`}
           >
             {s.label}
@@ -196,7 +227,7 @@ export default function AdminFiltersSection() {
           <input
             value={newValue}
             onChange={(e) => setNewValue(e.target.value)}
-            placeholder="Код (latin)"
+            placeholder="Код: cleaning"
             aria-label="Код фильтра"
             className={field}
           />
@@ -218,7 +249,7 @@ export default function AdminFiltersSection() {
             type="button"
             onClick={handleAdd}
             disabled={busyId === 'new'}
-            className="flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-emerald-700 disabled:opacity-60"
+            className="flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-700 disabled:opacity-60"
           >
             {busyId === 'new' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
             Добавить
@@ -240,51 +271,67 @@ export default function AdminFiltersSection() {
           {filters.map((filter) => (
             <div
               key={filter.id}
-              className="grid grid-cols-1 items-center gap-2 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 sm:grid-cols-[90px_1fr_1fr_70px_auto]"
+              draggable
+              onDragStart={() => setDragId(filter.id)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={() => handleDrop(filter.id)}
+              className={`flex flex-wrap items-center gap-2 rounded-2xl border bg-white p-2.5 shadow-sm transition dark:bg-zinc-950 ${
+                dragId === filter.id
+                  ? 'border-emerald-400 opacity-60'
+                  : 'border-slate-200 dark:border-zinc-800'
+              } ${filter.isActive ? '' : 'opacity-55'}`}
             >
-              <code className="truncate rounded bg-slate-100 px-1.5 py-1 text-[10px] text-slate-600 dark:bg-zinc-800 dark:text-zinc-400">
+              <span
+                className="cursor-grab text-slate-300 active:cursor-grabbing dark:text-zinc-600"
+                title="Перетащите, чтобы изменить порядок"
+              >
+                <GripVertical className="h-4 w-4" />
+              </span>
+
+              {/* Код — служебный, но нужен для ссылок в URL; показываем
+                  компактно. Внутренний id пользователю не показываем. */}
+              <code className="shrink-0 rounded bg-slate-100 px-1.5 py-1 text-[10px] text-slate-500 dark:bg-zinc-800 dark:text-zinc-400">
                 {filter.value}
               </code>
+
               <input
                 value={filter.labelRu}
                 onChange={(e) => patchLocal(filter.id, { labelRu: e.target.value })}
                 aria-label={`Название ${filter.value}`}
-                className={field}
+                className={`${field} min-w-[8rem] flex-1`}
               />
               <input
                 value={filter.labelCe ?? ''}
                 onChange={(e) => patchLocal(filter.id, { labelCe: e.target.value })}
                 placeholder="Нохчийн"
                 aria-label={`Название на чеченском ${filter.value}`}
-                className={field}
+                className={`${field} min-w-[8rem] flex-1`}
               />
-              <input
-                type="number"
-                value={filter.sortOrder}
-                onChange={(e) => patchLocal(filter.id, { sortOrder: Number(e.target.value) || 0 })}
-                aria-label={`Порядок ${filter.value}`}
-                className={field}
-              />
-              <div className="flex gap-1">
+
+              <div className="flex shrink-0 gap-1">
                 <button
                   type="button"
-                  onClick={() => handleUpdate(filter)}
+                  onClick={() => handleSave(filter)}
                   disabled={busyId === filter.id}
                   title="Сохранить"
                   aria-label={`Сохранить ${filter.value}`}
-                  className="rounded-lg p-2 text-emerald-700 transition hover:bg-emerald-50 disabled:opacity-60 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
+                  className="rounded-lg p-2 text-emerald-700 transition hover:bg-emerald-50 disabled:opacity-60 dark:text-emerald-400 dark:hover:bg-emerald-950/50"
                 >
                   {busyId === filter.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleDelete(filter)}
+                  onClick={() => handleToggleActive(filter)}
                   disabled={busyId === filter.id}
-                  title="Отключить"
-                  aria-label={`Отключить ${filter.value}`}
-                  className="rounded-lg p-2 text-rose-600 transition hover:bg-rose-50 disabled:opacity-60 dark:hover:bg-rose-950/40"
+                  title={filter.isActive ? 'Отключить' : 'Включить'}
+                  aria-label={filter.isActive ? `Отключить ${filter.value}` : `Включить ${filter.value}`}
+                  className={`rounded-lg p-2 transition disabled:opacity-60 ${
+                    filter.isActive
+                      ? 'text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/50'
+                      : 'text-slate-500 hover:bg-slate-100 dark:text-zinc-400 dark:hover:bg-zinc-800'
+                  }`}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  {filter.isActive ? <Trash2 className="h-4 w-4" /> : <RotateCcw className="h-4 w-4" />}
                 </button>
               </div>
             </div>

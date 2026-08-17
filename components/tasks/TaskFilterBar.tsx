@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Filter, ChevronDown, X, MapPin, Layers } from 'lucide-react';
+import { Search, Filter, ChevronDown, X, MapPin, Layers, Zap, Wallet } from 'lucide-react';
 import MapSegmentedControl from '@/components/MapSegmentedControl';
 import { useI18n } from '@/lib/i18n';
 import type { AppFilter } from '@/lib/types';
@@ -15,6 +15,12 @@ interface TaskFilterBarProps {
   categories: AppFilter[];
   category: string;
   setCategory: (value: string) => void;
+  /** Фильтр по срочности: пусто = любая. */
+  priority: string;
+  setPriority: (value: string) => void;
+  /** Минимальная награда ИСПОЛНИТЕЛЮ (без надбавок и закупки), ₽. */
+  minReward: number;
+  setMinReward: (value: number) => void;
   /** Акцентный цвет: emerald для «Аренца Темщик», teal для «ГIончалла». */
   accent?: 'emerald' | 'teal';
 }
@@ -37,13 +43,26 @@ export default function TaskFilterBar({
   categories,
   category,
   setCategory,
+  priority,
+  setPriority,
+  minReward,
+  setMinReward,
   accent = 'emerald',
 }: TaskFilterBarProps) {
   const { t } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
   const [isRegionOpen, setIsRegionOpen] = useState(false);
   const [isSphereOpen, setIsSphereOpen] = useState(true);
-  const activeCount = category ? 1 : 0;
+  const [isPriorityOpen, setIsPriorityOpen] = useState(false);
+  const [isRewardOpen, setIsRewardOpen] = useState(false);
+  const activeCount = (category ? 1 : 0) + (priority ? 1 : 0) + (minReward > 0 ? 1 : 0);
+
+  const resetAll = () => {
+    setCategory('');
+    setPriority('');
+    setMinReward(0);
+    setIsOpen(false);
+  };
 
   const isTeal = accent === 'teal';
   const chipActive = isTeal ? 'bg-teal-600 text-white shadow-sm' : 'bg-emerald-600 text-white shadow-sm';
@@ -123,7 +142,7 @@ export default function TaskFilterBar({
               {activeCount > 0 && (
                 <button
                   type="button"
-                  onClick={() => { setCategory(''); setIsOpen(false); }}
+                  onClick={resetAll}
                   className={`inline-flex items-center gap-1 text-xs font-bold hover:underline ${accentText}`}
                 >
                   <X className="h-3.5 w-3.5" />
@@ -204,6 +223,89 @@ export default function TaskFilterBar({
                         {c.labelRu}
                       </button>
                     ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Секция 3: срочность */}
+              <div className={sectionClass}>
+                <button
+                  type="button"
+                  onClick={() => setIsPriorityOpen((v) => !v)}
+                  className={sectionHeadClass}
+                >
+                  <span className="inline-flex items-center gap-1.5">
+                    <Zap className="h-3.5 w-3.5" />
+                    Срочность
+                  </span>
+                  <ChevronDown className={`h-3.5 w-3.5 transition ${isPriorityOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {isPriorityOpen && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {[
+                      ['', 'Любая'],
+                      ['normal', 'Обычные'],
+                      ['high', '🟡 Приоритет'],
+                      ['critical', '🔴 Критично'],
+                    ].map(([value, label]) => (
+                      <button
+                        key={value || 'any'}
+                        type="button"
+                        onClick={() => setPriority(value)}
+                        className={`rounded-xl px-2.5 py-1.5 text-xs font-bold transition ${
+                          priority === value ? chipActive : chipIdle
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Секция 4: минимальная награда исполнителю */}
+              <div className={sectionClass}>
+                <button
+                  type="button"
+                  onClick={() => setIsRewardOpen((v) => !v)}
+                  className={sectionHeadClass}
+                >
+                  <span className="inline-flex items-center gap-1.5">
+                    <Wallet className="h-3.5 w-3.5" />
+                    Награда от
+                  </span>
+                  <ChevronDown className={`h-3.5 w-3.5 transition ${isRewardOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {isRewardOpen && (
+                  <div className="mt-2">
+                    <div className="mb-1.5 flex items-center justify-between">
+                      <span className="text-[11px] text-slate-500 dark:text-zinc-400">
+                        {minReward > 0 ? `от ${minReward} ₽` : 'любая сумма'}
+                      </span>
+                      {minReward > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setMinReward(0)}
+                          className="text-[10px] font-bold text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200"
+                        >
+                          сбросить
+                        </button>
+                      )}
+                    </div>
+                    <input
+                      type="range"
+                      min={0}
+                      max={5000}
+                      step={50}
+                      value={minReward}
+                      onChange={(e) => setMinReward(Number(e.target.value))}
+                      aria-label="Минимальная награда исполнителю"
+                      className={`w-full ${isTeal ? 'accent-teal-600' : 'accent-emerald-600'}`}
+                    />
+                    <p className="mt-1 text-[10px] leading-relaxed text-slate-400">
+                      Это чистая награда исполнителю — без надбавки за срочность
+                      и без денег на закупку.
+                    </p>
                   </div>
                 )}
               </div>

@@ -11,7 +11,7 @@ import {
 } from '@/lib/tasks/server';
 import { checkTaskContent, moderationMessage } from '@/lib/tasks/moderation';
 import { mapTaskRow } from '@/lib/tasks/map';
-import type { TaskKind, TaskPriority } from '@/lib/types';
+import { TASK_MIN_REWARD, type TaskKind, type TaskPriority } from '@/lib/types';
 
 /** Ограничения полей — чтобы не улетело в БД что попало. */
 const TITLE_MAX = 120;
@@ -151,8 +151,27 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
+  if (isPaid && reward < TASK_MIN_REWARD) {
+    return NextResponse.json(
+      { error: `Минимальная награда — ${TASK_MIN_REWARD} ₽` },
+      { status: 400 },
+    );
+  }
   if (!isPaid && reward !== 0) {
     return NextResponse.json({ error: 'В «ГIончалла» задания без оплаты' }, { status: 400 });
+  }
+
+  // Бюджет на закупку: исполнитель тратит свои деньги и получает их
+  // обратно вместе с наградой. Не доход, поэтому считается отдельно.
+  const purchaseBudget = Math.floor(Number(body.purchaseBudget) || 0);
+  if (!Number.isFinite(purchaseBudget) || purchaseBudget < 0 || purchaseBudget > REWARD_MAX) {
+    return NextResponse.json({ error: 'Некорректная сумма на закупку' }, { status: 400 });
+  }
+  if (purchaseBudget > 0 && !isPaid) {
+    return NextResponse.json(
+      { error: 'Закупка возможна только в оплачиваемых заданиях' },
+      { status: 400 },
+    );
   }
 
   const slots = Math.floor(Number(body.slots) || 1);
@@ -244,6 +263,7 @@ export async function POST(request: Request) {
       description,
       category,
       reward,
+      purchase_budget: purchaseBudget,
       priority,
       slots,
       deadline_at: deadlineAt,

@@ -83,6 +83,7 @@ export interface CreateTaskInput {
   description: string;
   category: string;
   reward: number;
+  purchaseBudget: number;
   priority: 'normal' | 'high' | 'critical';
   slots: number;
   deadlineAt?: string | null;

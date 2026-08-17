@@ -54,7 +54,7 @@ export default function ProfileCard({
       role="button"
       tabIndex={0}
       aria-label={`Открыть ${profile.fullName}`}
-      className="smk-card smk-ornament smk-corner group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-slate-200/70 bg-white text-slate-900 shadow-sm hover:border-emerald-300/80 hover:shadow-lg dark:border-zinc-700/80 dark:bg-zinc-800 dark:text-white"
+      className="smk-card smk-ornament group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-slate-200/70 bg-white text-slate-900 shadow-sm hover:border-emerald-300/80 hover:shadow-lg dark:border-zinc-700/80 dark:bg-zinc-800 dark:text-white"
     >
       {/* Шапка: аватар + имя + статус + стрелка */}
       <div className="flex items-start gap-3 p-3.5 sm:p-4">

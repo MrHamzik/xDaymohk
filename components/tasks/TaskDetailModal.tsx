@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { X, Loader2, Star, MapPin, Clock, Users, CalendarDays, Trash2, ExternalLink } from 'lucide-react';
+import { X, Loader2, Star, MapPin, Clock, Users, CalendarDays, Trash2, ExternalLink, Wallet } from 'lucide-react';
 import Avatar from '@/components/Avatar';
 import { fetchTask, runTaskAction, submitResidentReview, deleteTask, formatTimeLeft } from '@/lib/tasks/client';
 import AttendanceModal from '@/components/tasks/AttendanceModal';
@@ -145,12 +145,18 @@ export default function TaskDetailModal({
             <>
               {/* Заказчик — по этим цифрам судят, браться ли */}
               <div className="flex items-center gap-3 px-4 py-4">
-                <Avatar src={task.authorAvatarUrl} className="h-11 w-11 shrink-0 rounded-xl object-cover" />
+                <div className="h-11 w-11 shrink-0 overflow-hidden rounded-xl bg-slate-100 ring-1 ring-slate-200/70 dark:bg-zinc-950 dark:ring-zinc-700/70">
+                  <Avatar
+                    src={task.authorAvatarUrl}
+                    alt={task.authorName || 'Заказчик'}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold text-slate-900 dark:text-white">
                     {task.authorName || 'Житель Даймохк'}
                   </p>
-                  <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[11px] text-slate-500 dark:text-zinc-400">
+                  <div className="mt-1.5 flex flex-wrap items-center gap-x-2 text-[11px] leading-relaxed text-slate-500 dark:text-zinc-400">
                     <span className="inline-flex items-center gap-0.5 font-bold text-amber-600 dark:text-amber-400">
                       <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
                       {(task.authorRating ?? 0) > 0 ? task.authorRating?.toFixed(1) : 'нет оценок'}
@@ -186,22 +192,43 @@ export default function TaskDetailModal({
                 {task.kind === 'scheduled' && (
                   <InfoRow icon={Users} label="Мест занято" value={`${task.takenSlots ?? 0} / ${task.slots}`} />
                 )}
-                {task.address && <InfoRow icon={MapPin} label="Адрес" value={task.address} />}
+                {(task.purchaseBudget ?? 0) > 0 && (
+                  <InfoRow
+                    icon={Wallet}
+                    label="Купить на сумму"
+                    value={`${task.purchaseBudget} ₽`}
+                  />
+                )}
               </div>
 
-              {/* Как в анкете: быстрый переход к точке на карте */}
-              {typeof task.lat === 'number' && typeof task.lng === 'number' && (
-                <div className="border-t border-slate-100 px-4 py-3 dark:border-zinc-800">
-                  <a
-                    href={`https://yandex.ru/maps/?pt=${task.lng},${task.lat}&z=17&l=map`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 hover:underline dark:text-emerald-400"
-                  >
-                    <MapPin className="h-3.5 w-3.5" />
-                    Открыть на карте
-                    <ExternalLink className="h-3 w-3" />
-                  </a>
+              {/* Адрес отдельным блоком: сам адрес, под ним ссылка на карту —
+                  как в анкете. В сетке он ужимался до одной строки. */}
+              {(task.address || (typeof task.lat === 'number' && typeof task.lng === 'number')) && (
+                <div className="border-t border-slate-100 px-4 py-4 dark:border-zinc-800">
+                  <h3 className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                    Адрес
+                  </h3>
+                  <div className="flex items-start gap-2.5">
+                    <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
+                      <MapPin className="h-3.5 w-3.5" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="break-words text-[13px] font-semibold leading-snug text-slate-800 dark:text-zinc-200">
+                        {task.address || 'Адрес не указан'}
+                      </p>
+                      {typeof task.lat === 'number' && typeof task.lng === 'number' && (
+                        <a
+                          href={`https://yandex.ru/maps/?pt=${task.lng},${task.lat}&z=17&l=map`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:underline dark:text-emerald-400"
+                        >
+                          Открыть на карте
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
 

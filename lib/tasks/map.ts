@@ -15,6 +15,7 @@ export function mapTaskRow(row: Record<string, unknown>) {
     description: row.description,
     category: row.category,
     reward: Number(row.reward ?? 0),
+    purchaseBudget: Number(row.purchase_budget ?? 0),
     priority: row.priority,
     slots: Number(row.slots ?? 1),
     deadlineAt: row.deadline_at,

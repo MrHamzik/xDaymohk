@@ -388,9 +388,46 @@ export type TaskParticipantStatus =
 /** Надбавка за приоритет, доли от награды. */
 export const TASK_PRIORITY_SURCHARGE: Record<TaskPriority, number> = {
   normal: 0,
-  high: 0.2,
-  critical: 0.5,
+  high: 0.1,
+  critical: 0.25,
 };
+
+/** Минимальная награда исполнителю, ₽. */
+export const TASK_MIN_REWARD = 50;
+
+/** Комиссия эквайринга (ЮKassa). Платформа свой процент не берёт. */
+export const TASK_ACQUIRING_FEE = 0.035;
+
+/**
+ * Разбивка стоимости для заказчика.
+ *
+ * reward   — чистая награда исполнителю;
+ * surcharge — надбавка за срочность (её тоже получает исполнитель);
+ * budget   — деньги на закупку (категория «Покупки»): исполнитель
+ *            тратит свои и получает их обратно вместе с наградой;
+ * fee      — комиссия платёжного сервиса;
+ * total    — сколько платит заказчик.
+ */
+export function taskCostBreakdown(
+  reward: number,
+  priority: TaskPriority,
+  purchaseBudget = 0,
+) {
+  const base = Number.isFinite(reward) && reward > 0 ? Math.round(reward) : 0;
+  const budget = Number.isFinite(purchaseBudget) && purchaseBudget > 0 ? Math.round(purchaseBudget) : 0;
+  const surcharge = Math.round(base * TASK_PRIORITY_SURCHARGE[priority]);
+  const executorGets = base + surcharge + budget;
+  const fee = Math.round(executorGets * TASK_ACQUIRING_FEE);
+  return {
+    reward: base,
+    surcharge,
+    budget,
+    /** Сколько всего придёт исполнителю (награда + срочность + закупка). */
+    executorGets,
+    fee,
+    total: executorGets + fee,
+  };
+}
 
 /** Сколько заданий одновременно может вести один исполнитель. */
 export const TASK_MAX_ACTIVE_PER_USER = 5;
@@ -444,6 +481,8 @@ export interface Task {
   category: string;
   /** Награда ОДНОМУ исполнителю, ₽ (для ГIончалла = 0). */
   reward: number;
+  /** Деньги на закупку («Покупки»): исполнитель тратит свои и получает обратно. */
+  purchaseBudget?: number;
   priority: TaskPriority;
   /** Сколько исполнителей нужно (срочное = 1). */
   slots: number;
