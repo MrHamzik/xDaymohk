@@ -101,7 +101,7 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
     let channel: ReturnType<NonNullable<typeof supabase>['channel']> | null = null;
     if (isSupabaseConfigured && supabase) {
       channel = supabase
-        .channel('samashki-live-data')
+        .channel('daymohk-live-data')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
           void refreshRemoteData();
         })
@@ -130,8 +130,8 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
       // user's profiles disappear from the UI on the next render.
       void refreshRemoteData();
     };
-    window.addEventListener('samashki-account-deleted', handleAccountDeleted);
-    return () => window.removeEventListener('samashki-account-deleted', handleAccountDeleted);
+    window.addEventListener('daymohk-account-deleted', handleAccountDeleted);
+    return () => window.removeEventListener('daymohk-account-deleted', handleAccountDeleted);
   }, [refreshRemoteData]);
 
   /**
@@ -229,8 +229,8 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
         void syncAccountToQuestionnaires(detail.account);
       }
     };
-    window.addEventListener('samashki-account-updated', handleAccountUpdated);
-    return () => window.removeEventListener('samashki-account-updated', handleAccountUpdated);
+    window.addEventListener('daymohk-account-updated', handleAccountUpdated);
+    return () => window.removeEventListener('daymohk-account-updated', handleAccountUpdated);
   }, [syncAccountToQuestionnaires]);
 
   useEffect(() => {

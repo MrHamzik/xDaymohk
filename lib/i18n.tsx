@@ -4,7 +4,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 
 export type Language = 'ru' | 'ce';
 
-const LANG_STORAGE_KEY = 'daimokhk-lang';
+const LANG_STORAGE_KEY = 'daymohk-lang';
 
 export const translations = {
   ru: {
@@ -375,6 +375,12 @@ export const translations = {
     taskRatingComment: 'Комментарий (необязательно)',
     taskSendRating: 'Отправить оценку',
     taskRatingSaved: 'Спасибо, ваша оценка сохранена',
+    taskPendingHeading: 'Заявки на рассмотрении',
+    taskPendingMine: 'Ваша заявка отправлена. Заказчик одобрит её — тогда можно приступать.',
+    taskApproveBtn: 'Одобрить',
+    taskDeclineBtn: 'Отклонить',
+    taskWithdrawBtn: 'Отозвать заявку',
+    taskTakeRequestBtn: 'Откликнуться',
     taskPayoutTitle: 'Как передаются деньги',
     taskPayoutNote: 'Приложение не проводит платежи и не хранит ваши деньги. Заказчик передаёт сумму исполнителю напрямую — наличными при встрече или переводом на карту. «Подтвердить» означает, что работа принята и расчёт произведён.',
     taskNobodyToRate: 'Некого оценивать',
@@ -455,6 +461,7 @@ export const translations = {
     reputationAsExecutor: 'как исполнителя',
     reputationCollapse: 'Свернуть',
     reputationShowAll: 'Показать все',
+    reputationNoComments: 'Оценки есть, но без комментариев',
   },
 
   ce: {
@@ -825,6 +832,12 @@ export const translations = {
     taskRatingComment: 'Комментари (эшац)',
     taskSendRating: 'Мах дIабахьийта',
     taskRatingSaved: 'Баркалла, хьан мах дIаяздина',
+    taskPendingHeading: 'Хьоьжуш долу дехарш',
+    taskPendingMine: 'Хьан дехар дIадахьийтина. ТIедиллархочо тIеэцча, болх бан мега.',
+    taskApproveBtn: 'ТIеэца',
+    taskDeclineBtn: 'ТIе ца эца',
+    taskWithdrawBtn: 'Дехар юхадаккха',
+    taskTakeRequestBtn: 'Дехар дIадахьийта',
     taskPayoutTitle: 'Ахча муха дIало',
     taskPayoutNote: 'Приложенино ахча дIа ца оьцу, шен тIехь а ца латто. ТIедиллархочо кхочушдийричунна нийсса дIало — вовшахкхетча куьйгах я картина тIе. «ТIечIагIде» бохург ду: болх тIеэцна а, ахча дIаделла а.',
     taskNobodyToRate: 'Мах хадоран стаг вац',
@@ -905,6 +918,7 @@ export const translations = {
     reputationAsExecutor: 'кхочушдийриг санна',
     reputationCollapse: 'ДIакъовла',
     reputationShowAll: 'Дерриг гайта',
+    reputationNoComments: 'Мах хадийна, амма комментареш яц',
   },
 };
 

@@ -83,7 +83,11 @@ export type NotificationType =
   | 'task_excluded'
   | 'task_reminder'
   | 'task_rated'
-  | 'task_rate_pending';
+  | 'task_rate_pending'
+  // Одобрение исполнителя заказчиком (обновление 27)
+  | 'task_join_request'
+  | 'task_join_approved'
+  | 'task_join_rejected';
 
 /** Категории уведомлений (вкладки в центре уведомлений). */
 export type NotificationCategory = 'system' | 'activity' | 'complaint' | 'taxi' | 'task';
@@ -112,6 +116,9 @@ export function notificationCategory(type: NotificationType): NotificationCatego
     case 'task_reminder':
     case 'task_rated':
     case 'task_rate_pending':
+    case 'task_join_request':
+    case 'task_join_approved':
+    case 'task_join_rejected':
       return 'task';
     default:
       return 'system';
@@ -378,6 +385,8 @@ export type TaskStatus =
 export type TaskPaymentStatus = 'offline' | 'pending' | 'held' | 'released' | 'refunded';
 
 export type TaskParticipantStatus =
+  /** Заявка ждёт одобрения заказчика (только платные задания, обновление 27). */
+  | 'pending'
   | 'joined'
   | 'excluded'
   | 'attended'
@@ -462,6 +471,8 @@ export interface TaskParticipant {
   bonusPercent: number;
   joinedAt: string;
   excludedAt?: string | null;
+  /** Когда заказчик одобрил заявку. null — ещё на рассмотрении. */
+  approvedAt?: string | null;
   /** Живые данные из user_profiles (подтягиваются вьюхой). */
   fullName?: string;
   avatarUrl?: string;

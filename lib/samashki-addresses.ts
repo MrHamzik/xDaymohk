@@ -10,7 +10,7 @@ export interface SamashkiHouseAddress {
   category?: string;
 }
 
-const CUSTOM_KEY = 'samashki-custom-addresses';
+const CUSTOM_KEY = 'daymohk-custom-addresses';
 
 /**
  * The seed dataset (data/samashki-houses.json) was removed: the user

@@ -43,10 +43,17 @@ export default function ResidentReputation({ ownerId }: ResidentReputationProps)
   // пустой секцией у тех, кто ещё не участвовал в заданиях.
   if (!isLoading && (!reviews || reviews.length === 0)) return null;
 
+  // Средний балл и счётчик считаем по ВСЕМ оценкам: молчаливая «пятёрка»
+  // — такой же голос, как и с текстом.
   const average = reviews && reviews.length > 0
     ? Number((reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1))
     : 0;
-  const visible = expanded ? reviews ?? [] : (reviews ?? []).slice(0, 3);
+
+  // А в ленту попадают только отзывы С ТЕКСТОМ. Оценка без комментария
+  // ничего не сообщает читателю: строка «★5 · как исполнителя» и без неё
+  // учтена в среднем, а список из таких пустышек нечитаем.
+  const withText = (reviews ?? []).filter((r) => r.text && r.text.trim().length > 0);
+  const visible = expanded ? withText : withText.slice(0, 3);
 
   return (
     <section className="mt-3 overflow-hidden rounded-2xl border border-slate-100 bg-slate-50/50 dark:border-zinc-800 dark:bg-zinc-950/50">
@@ -73,6 +80,11 @@ export default function ResidentReputation({ ownerId }: ResidentReputationProps)
           </div>
         )}
 
+        {/* Развёрнутый список ограничиваем по высоте и скроллим: отзывов
+            за время может накопиться много, и анкета уезжала бы вниз
+            на несколько экранов. Полоса прокрутки скрыта (.no-scrollbar),
+            как и везде в приложении. */}
+        <div className={expanded ? 'no-scrollbar max-h-72 space-y-2 overflow-y-auto' : 'space-y-2'}>
         {visible.map((review) => (
           <article
             key={review.id}
@@ -103,14 +115,23 @@ export default function ResidentReputation({ ownerId }: ResidentReputationProps)
             </div>
           </article>
         ))}
+        </div>
 
-        {reviews && reviews.length > 3 && (
+        {/* Все оценки без текста — показывать в ленте нечего, но сам факт
+            обратной связи отразить нужно. */}
+        {!isLoading && withText.length === 0 && (reviews?.length ?? 0) > 0 && (
+          <p className="py-1 text-center text-[11px] text-slate-400 dark:text-zinc-500">
+            {t.reputationNoComments}
+          </p>
+        )}
+
+        {withText.length > 3 && (
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
             className="w-full rounded-lg py-1.5 text-[11px] font-bold text-emerald-700 transition hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
           >
-            {expanded ? t.reputationCollapse : `${t.reputationShowAll} (${reviews.length})`}
+            {expanded ? t.reputationCollapse : `${t.reputationShowAll} (${withText.length})`}
           </button>
         )}
       </div>

@@ -32,7 +32,7 @@ export default function MenuProfileCard() {
   const banLabel = isLocked ? banRemainingLabel(account?.bannedUntil, language, now) : null;
 
   const openConsent = () => {
-    window.dispatchEvent(new Event('samashki-open-consent'));
+    window.dispatchEvent(new Event('daymohk-open-consent'));
   };
 
   const cls = `flex w-full items-center gap-3 rounded-2xl p-2.5 text-left transition ${

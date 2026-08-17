@@ -26,8 +26,8 @@ import { Complaint, NotificationLetterPayload, Profile, UserSummary } from '@/li
 type AdminSection = 'profiles' | 'complaints' | 'users' | 'addresses' | 'letters' | 'filters';
 type ProfilesSubTab = 'active' | 'pending' | 'hidden';
 
-const CUSTOM_ADDRESSES_KEY = 'samashki-custom-addresses';
-const CUSTOM_CATEGORIES_KEY = 'samashki-custom-categories';
+const CUSTOM_ADDRESSES_KEY = 'daymohk-custom-addresses';
+const CUSTOM_CATEGORIES_KEY = 'daymohk-custom-categories';
 const DEFAULT_ADDRESS_CATEGORIES = ['Дома','Другое','Автосервис','Магазины','Торговля','Школа','Образование','Мечеть','Администрация','Почта','Спорткомплекс','Здравоохранение'];
 
 function isProfileHidden(profile: Profile) {
@@ -292,7 +292,7 @@ export default function AdminPage() {
   const [activeSection, setActiveSection] = useState<AdminSection>(() => {
     if (typeof window === 'undefined') return 'profiles';
     try {
-      const stored = window.localStorage.getItem('samashki-admin-section');
+      const stored = window.localStorage.getItem('daymohk-admin-section');
       if (stored && ['profiles', 'complaints', 'users', 'addresses', 'letters', 'filters'].includes(stored)) {
         return stored as AdminSection;
       }
@@ -301,7 +301,7 @@ export default function AdminPage() {
   });
 
   useEffect(() => {
-    try { window.localStorage.setItem('samashki-admin-section', activeSection); } catch {}
+    try { window.localStorage.setItem('daymohk-admin-section', activeSection); } catch {}
   }, [activeSection]);
 
   // street suggestions
@@ -371,12 +371,12 @@ export default function AdminPage() {
   // при сворачивании/перезагрузке).
   useEffect(() => {
     try {
-      const raw = localStorage.getItem('samashki-compose-draft');
+      const raw = localStorage.getItem('daymohk-compose-draft');
       if (raw) setComposeForm((f) => ({ ...f, ...JSON.parse(raw) }));
     } catch {}
   }, []);
   useEffect(() => {
-    try { localStorage.setItem('samashki-compose-draft', JSON.stringify(composeForm)); } catch {}
+    try { localStorage.setItem('daymohk-compose-draft', JSON.stringify(composeForm)); } catch {}
   }, [composeForm]);
   const [selectedRecipients, setSelectedRecipients] = useState<Set<string>>(new Set());
   const [recipientSearch, setRecipientSearch] = useState('');
@@ -530,7 +530,7 @@ export default function AdminPage() {
         } else {
           setLetterMsg(`Письмо отправлено: ${d.count} получателям.`);
           // Черновик больше не нужен — очищаем.
-          try { localStorage.removeItem('samashki-compose-draft'); } catch {}
+          try { localStorage.removeItem('daymohk-compose-draft'); } catch {}
           setComposeForm((f) => ({ ...f, title_ru: '', title_ce: '', message_ru: '', message_ce: '' }));
         }
       }

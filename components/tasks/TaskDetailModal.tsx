@@ -83,7 +83,19 @@ export default function TaskDetailModal({
   const isAuthor = Boolean(task && currentUserId && task.authorId === currentUserId);
   const myPart = participants.find((p) => p.userId === currentUserId);
   const isExecutor = Boolean(myPart && ['joined', 'attended', 'done'].includes(myPart.status));
+  // Моя заявка ещё на рассмотрении у заказчика (платные задания).
+  const isPendingMe = myPart?.status === 'pending';
   const activeParticipants = participants.filter((p) => ['joined', 'attended', 'done'].includes(p.status));
+  const pendingParticipants = participants.filter((p) => p.status === 'pending');
+
+  // Исключить можно только до сдачи работы: после «Выполнил» спор
+  // решается кнопкой «Не принято» (сервер это же и проверяет).
+  const canExclude = Boolean(task && ['open', 'in_progress'].includes(task.status));
+
+  // Заказчик закрывает задание «на дату» через отметку явки — там он
+  // уже ставит оценки и бонусы каждому. Показывать ему ещё и общую
+  // форму отзыва значит просить оценить второй раз.
+  const authorRatesViaAttendance = Boolean(task && task.kind === 'scheduled');
   const total = task ? taskTotalReward(task.reward, task.priority) : 0;
 
   const act = async (label: string, fn: () => Promise<void>) => {
@@ -235,6 +247,56 @@ export default function TaskDetailModal({
                 </div>
               )}
 
+              {/* Заявки на рассмотрении — только заказчику */}
+              {isAuthor && pendingParticipants.length > 0 && (
+                <div className="border-t border-slate-100 px-4 py-4 dark:border-zinc-800">
+                  <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-amber-600 dark:text-amber-400">
+                    {t.taskPendingHeading} ({pendingParticipants.length})
+                  </h3>
+                  <div className="space-y-1.5">
+                    {pendingParticipants.map((p) => (
+                      <div
+                        key={p.id}
+                        className="flex items-center gap-2 rounded-xl bg-amber-50/70 p-2.5 dark:bg-amber-950/20"
+                      >
+                        <Avatar src={p.avatarUrl} className="h-8 w-8 shrink-0 rounded-lg object-cover" />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-xs font-bold text-slate-900 dark:text-white">
+                            {p.fullName || t.attendanceResident}
+                          </p>
+                          <p className="text-[10px] text-slate-500 dark:text-zinc-500">
+                            ★ {(p.rating ?? 0) > 0 ? p.rating?.toFixed(1) : '—'} · {t.attendanceDoneCount}: {p.tasksDoneCount ?? 0}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={Boolean(busy)}
+                          onClick={() => act('approve', () => runTaskAction(task.id, 'approve', { userId: p.userId }))}
+                          className="shrink-0 rounded-lg bg-emerald-600 px-2.5 py-1 text-[10px] font-bold text-white transition hover:bg-emerald-700 disabled:opacity-60"
+                        >
+                          {t.taskApproveBtn}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={Boolean(busy)}
+                          onClick={() => act('decline', () => runTaskAction(task.id, 'decline', { userId: p.userId }))}
+                          className="shrink-0 rounded-lg px-2 py-1 text-[10px] font-bold text-rose-600 transition hover:bg-rose-50 disabled:opacity-60 dark:hover:bg-rose-950/40"
+                        >
+                          {t.taskDeclineBtn}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Моя заявка ждёт решения заказчика */}
+              {isPendingMe && (
+                <p className="mx-4 mb-4 rounded-xl bg-amber-50 px-3.5 py-2.5 text-[11px] font-semibold leading-relaxed text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+                  {t.taskPendingMine}
+                </p>
+              )}
+
               {/* Участники: видно, кто взял задание */}
               {activeParticipants.length > 0 && (
                 <div className="border-t border-slate-100 px-4 py-4 dark:border-zinc-800">
@@ -256,7 +318,7 @@ export default function TaskDetailModal({
                             ★ {(p.rating ?? 0) > 0 ? p.rating?.toFixed(1) : '—'} · выполнено: {p.tasksDoneCount ?? 0}
                           </p>
                         </div>
-                        {isAuthor && task.status !== 'completed' && (
+                        {isAuthor && canExclude && (
                           <button
                             type="button"
                             disabled={Boolean(busy)}
@@ -294,14 +356,17 @@ export default function TaskDetailModal({
               )}
 
               {/* Подтверждение вместо исчезающей формы */}
-              {task.status === 'completed' && ratingSubmitted && (
+              {task.status === 'completed' && ratingSubmitted
+                && !(isAuthor && authorRatesViaAttendance) && (
                 <p className="mx-4 mb-4 rounded-2xl bg-emerald-50/70 px-3.5 py-3 text-xs font-bold text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
                   {t.taskRatingSaved}
                 </p>
               )}
 
               {/* Оценка второй стороны после закрытия сделки */}
-              {task.status === 'completed' && !ratingSubmitted && (isAuthor || isExecutor) && (
+              {task.status === 'completed' && !ratingSubmitted
+                && !(isAuthor && authorRatesViaAttendance)
+                && (isAuthor || isExecutor) && (
                 <div className="mx-4 mb-4 rounded-2xl bg-emerald-50/70 p-3.5 dark:bg-emerald-950/30">
                   <h3 className="mb-2 text-xs font-bold text-emerald-900 dark:text-emerald-300">
                     {isAuthor ? t.taskRateExecutor : t.taskRateCustomer}
@@ -365,7 +430,7 @@ export default function TaskDetailModal({
         {/* Действия зависят от роли и статуса */}
         {task && (
           <div className="flex flex-wrap gap-2 border-t border-slate-100 p-4 dark:border-zinc-800">
-            {!isAuthor && !isExecutor && task.status === 'open' && (
+            {!isAuthor && !isExecutor && !isPendingMe && task.status === 'open' && (
               <button
                 type="button"
                 disabled={Boolean(busy)}
@@ -373,7 +438,21 @@ export default function TaskDetailModal({
                 className={`${btn} bg-emerald-600 text-white hover:bg-emerald-700`}
               >
                 {busy === 'take' && <Loader2 className="h-4 w-4 animate-spin" />}
-                {task.kind === 'urgent' ? t.taskTakeBtn : t.taskJoinBtn}
+                {task.isPaid
+                  ? t.taskTakeRequestBtn
+                  : task.kind === 'urgent' ? t.taskTakeBtn : t.taskJoinBtn}
+              </button>
+            )}
+
+            {/* Заявку можно отозвать, пока заказчик не ответил */}
+            {isPendingMe && (
+              <button
+                type="button"
+                disabled={Boolean(busy)}
+                onClick={() => act('leave', () => runTaskAction(task.id, 'leave'))}
+                className={`${btn} border border-slate-200 text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-300`}
+              >
+                {t.taskWithdrawBtn}
               </button>
             )}
 

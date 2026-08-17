@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
-const THEME_STORAGE_KEY = 'samashki-theme';
+const THEME_STORAGE_KEY = 'daymohk-theme';
 
 type Theme = 'light' | 'dark';
 

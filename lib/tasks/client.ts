@@ -109,6 +109,8 @@ export async function createTask(input: CreateTaskInput): Promise<string> {
 
 export type TaskAction =
   | 'take' | 'join' | 'leave' | 'exclude'
+  // Одобрение исполнителя заказчиком на платных заданиях (обновление 27).
+  | 'approve' | 'decline'
   | 'submit' | 'confirm' | 'reject' | 'cancel' | 'attend';
 
 export interface TaskActionPayload {

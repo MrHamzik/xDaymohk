@@ -40,7 +40,7 @@ export function useTasksRealtime(onChange: () => void, enabled = true) {
     };
 
     const channel = supabase
-      .channel('samashki-tasks-feed')
+      .channel('daymohk-tasks-feed')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, schedule)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'task_participants' }, schedule)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'resident_reviews' }, schedule)
@@ -73,7 +73,7 @@ export function useTaskRealtime(taskId: string | null, onChange: () => void) {
     };
 
     const channel = supabase
-      .channel(`samashki-task-${taskId}`)
+      .channel(`daymohk-task-${taskId}`)
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'tasks', filter: `id=eq.${taskId}`,
       }, schedule)

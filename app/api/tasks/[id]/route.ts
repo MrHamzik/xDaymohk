@@ -22,9 +22,11 @@ import { mapTaskRow } from '@/lib/tasks/map';
  * клиент присылает намерение, права и текущий статус проверяются по БД.
  *
  * POST /api/tasks/:id { action }
- *   take     — взять срочное задание (первый нажавший)
+ *   take     — взять срочное задание (на платных — заявка на одобрение)
  *   join     — записаться на запланированное
  *   leave    — отказаться от записи
+ *   approve  — заказчик одобряет заявку (только платные задания)
+ *   decline  — заказчик отклоняет заявку, задание снова открыто
  *   exclude  — заказчик исключает участника (обратно не записаться)
  *   submit   — исполнитель нажал «Выполнил» (пошли 3 часа)
  *   confirm  — заказчик подтвердил (сделка закрыта)
@@ -34,10 +36,13 @@ import { mapTaskRow } from '@/lib/tasks/map';
  */
 
 type Action =
-  | 'take' | 'join' | 'leave' | 'exclude'
+  | 'take' | 'join' | 'leave' | 'approve' | 'decline' | 'exclude'
   | 'submit' | 'confirm' | 'reject' | 'cancel' | 'attend';
 
-const ACTIONS: Action[] = ['take', 'join', 'leave', 'exclude', 'submit', 'confirm', 'reject', 'cancel', 'attend'];
+const ACTIONS: Action[] = [
+  'take', 'join', 'leave', 'approve', 'decline', 'exclude',
+  'submit', 'confirm', 'reject', 'cancel', 'attend',
+];
 
 /** GET /api/tasks/:id — карточка с участниками. */
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
@@ -100,6 +105,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
       bonusPercent: p.bonus_percent,
       joinedAt: p.joined_at,
       excludedAt: p.excluded_at,
+      approvedAt: p.approved_at,
       fullName: p.full_name ?? '',
       avatarUrl: p.avatar_url ?? '',
       rating: Number(p.rating ?? 0),
@@ -298,6 +304,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         return NextResponse.json({ error: 'Все места уже заняты' }, { status: 409 });
       }
 
+      // На ПЛАТНЫХ заданиях заявка сначала уходит заказчику на одобрение
+      // (обновление 27): он выбирает, кому доверить работу, и может
+      // отклонить до начала. В «ГIончалла» помогать может любой —
+      // там заявка сразу становится участием.
+      const needsApproval = Boolean(task.is_paid);
+
       const participantId = existing?.id ?? makeId('tp');
       const { error: upsertError } = await admin
         .from('task_participants')
@@ -305,30 +317,41 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
           id: participantId,
           task_id: id,
           user_id: userId,
-          status: 'joined',
+          status: needsApproval ? 'pending' : 'joined',
           joined_at: new Date().toISOString(),
           excluded_at: null,
+          approved_at: needsApproval ? null : new Date().toISOString(),
         }, { onConflict: 'task_id,user_id' });
       if (upsertError) {
         log.warn('task join failed:', upsertError.message);
         return NextResponse.json({ error: 'Не удалось записаться' }, { status: 500 });
       }
 
-      // Срочное занимает единственное место → сразу «в процессе».
-      if (task.kind === 'urgent') {
+      // Задание уходит «в работу» только после одобрения. Пока заявка на
+      // рассмотрении, оно остаётся открытым — иначе его никто другой не
+      // увидит, а заказчик ещё не решил.
+      if (!needsApproval && task.kind === 'urgent') {
         await admin.from('tasks').update({ status: 'in_progress' }).eq('id', id);
       }
 
       await notifyTaskEvent(admin, {
         recipientId: String(task.author_id),
-        type: task.kind === 'urgent' ? 'task_taken' : 'task_joined',
-        title: task.kind === 'urgent' ? 'Задание взяли' : 'Новая запись на задание',
-        message: `«${task.title}»`,
-        titleCe: task.kind === 'urgent' ? 'ТIедиллар схьаэцна' : 'ТIедилларна керла дIаязвар',
+        type: needsApproval
+          ? 'task_join_request'
+          : task.kind === 'urgent' ? 'task_taken' : 'task_joined',
+        title: needsApproval
+          ? 'Заявка на ваше задание'
+          : task.kind === 'urgent' ? 'Задание взяли' : 'Новая запись на задание',
+        message: needsApproval
+          ? `«${task.title}» — откройте задание и одобрите исполнителя`
+          : `«${task.title}»`,
+        titleCe: needsApproval
+          ? 'Хьан тIедилларна дехар'
+          : task.kind === 'urgent' ? 'ТIедиллар схьаэцна' : 'ТIедилларна керла дIаязвар',
       });
       await touchExecutorActivity(admin, userId);
 
-      return NextResponse.json({ success: true });
+      return NextResponse.json({ success: true, pending: needsApproval });
     }
 
     // ---------------------------------------------------------------
@@ -378,6 +401,99 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     // ---------------------------------------------------------------
     // Заказчик исключает участника
     // ---------------------------------------------------------------
+    // ---------------------------------------------------------------
+    // Заказчик одобряет заявку исполнителя (только платные задания)
+    // ---------------------------------------------------------------
+    case 'approve': {
+      if (!isAuthor && !isAdmin) {
+        return NextResponse.json({ error: 'Только заказчик может одобрить' }, { status: 403 });
+      }
+      const targetUserId = String(body.userId ?? '').trim();
+      if (!targetUserId) {
+        return NextResponse.json({ error: 'Не указан участник' }, { status: 400 });
+      }
+
+      const { data: candidate } = await admin
+        .from('task_participants')
+        .select('id, status')
+        .eq('task_id', id)
+        .eq('user_id', targetUserId)
+        .maybeSingle();
+      if (!candidate || candidate.status !== 'pending') {
+        return NextResponse.json({ error: 'Заявка не найдена' }, { status: 404 });
+      }
+
+      // Свободные места считаем заново: пока заявка ждала, место мог
+      // занять другой одобренный исполнитель.
+      const { count: approved } = await admin
+        .from('task_participants')
+        .select('id', { count: 'exact', head: true })
+        .eq('task_id', id)
+        .in('status', ['joined', 'attended', 'done']);
+      if ((approved ?? 0) >= Number(task.slots ?? 1)) {
+        return NextResponse.json({ error: 'Все места уже заняты' }, { status: 409 });
+      }
+
+      await admin
+        .from('task_participants')
+        .update({ status: 'joined', approved_at: new Date().toISOString() })
+        .eq('id', candidate.id);
+
+      if (task.kind === 'urgent' && task.status === 'open') {
+        await admin.from('tasks').update({ status: 'in_progress' }).eq('id', id);
+      }
+
+      await notifyTaskEvent(admin, {
+        recipientId: targetUserId,
+        type: 'task_join_approved',
+        title: 'Заявка одобрена — можно приступать',
+        message: `«${task.title}»`,
+        titleCe: 'Дехар тIеэцна — болх бан мега',
+      });
+
+      return NextResponse.json({ success: true });
+    }
+
+    // ---------------------------------------------------------------
+    // Заказчик отклоняет заявку: задание снова открыто для других
+    // ---------------------------------------------------------------
+    case 'decline': {
+      if (!isAuthor && !isAdmin) {
+        return NextResponse.json({ error: 'Только заказчик может отклонить заявку' }, { status: 403 });
+      }
+      const targetUserId = String(body.userId ?? '').trim();
+      if (!targetUserId) {
+        return NextResponse.json({ error: 'Не указан участник' }, { status: 400 });
+      }
+
+      const { data: candidate } = await admin
+        .from('task_participants')
+        .select('id, status')
+        .eq('task_id', id)
+        .eq('user_id', targetUserId)
+        .maybeSingle();
+      if (!candidate || candidate.status !== 'pending') {
+        return NextResponse.json({ error: 'Заявка не найдена' }, { status: 404 });
+      }
+
+      // Ставим 'excluded': по требованию заказчика отклонённый не должен
+      // тут же подать заявку повторно. Для остальных задание открыто.
+      await admin
+        .from('task_participants')
+        .update({ status: 'excluded', excluded_at: new Date().toISOString() })
+        .eq('id', candidate.id);
+
+      await notifyTaskEvent(admin, {
+        recipientId: targetUserId,
+        type: 'task_join_rejected',
+        title: 'Заявка отклонена',
+        message: `«${task.title}»`,
+        titleCe: 'Дехар тIе ца эцна',
+      });
+
+      return NextResponse.json({ success: true });
+    }
+
     case 'exclude': {
       if (!isAuthor && !isAdmin) {
         return NextResponse.json({ error: 'Только заказчик может исключать' }, { status: 403 });
@@ -387,11 +503,29 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         return NextResponse.json({ error: 'Не указан участник' }, { status: 400 });
       }
 
+      // Исключать можно только ДО того, как исполнитель сдал работу.
+      // После «Выполнил» спор решается через «Не принято» — иначе
+      // заказчик мог бы забрать выполненную работу и убрать исполнителя.
+      const { data: victim } = await admin
+        .from('task_participants')
+        .select('id, status')
+        .eq('task_id', id)
+        .eq('user_id', targetUserId)
+        .maybeSingle();
+      if (!victim) {
+        return NextResponse.json({ error: 'Участник не найден' }, { status: 404 });
+      }
+      if (!['pending', 'joined'].includes(String(victim.status))) {
+        return NextResponse.json(
+          { error: 'Исполнитель уже сдал работу — используйте «Не принято»' },
+          { status: 409 },
+        );
+      }
+
       const { error: excludeError } = await admin
         .from('task_participants')
         .update({ status: 'excluded', excluded_at: new Date().toISOString() })
-        .eq('task_id', id)
-        .eq('user_id', targetUserId);
+        .eq('id', victim.id);
       if (excludeError) {
         return NextResponse.json({ error: 'Не удалось исключить' }, { status: 500 });
       }
@@ -420,6 +554,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         .eq('task_id', id)
         .eq('user_id', userId)
         .maybeSingle();
+      if (String(participant?.status) === 'pending') {
+        return NextResponse.json(
+          { error: 'Заказчик ещё не одобрил вашу заявку' },
+          { status: 409 },
+        );
+      }
       if (!participant || !['joined', 'attended'].includes(String(participant.status))) {
         return NextResponse.json({ error: 'Вы не исполнитель этого задания' }, { status: 403 });
       }

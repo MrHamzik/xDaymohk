@@ -6,7 +6,7 @@ import { uploadImageIfStorageConfigured } from '@/lib/media';
 import { isAdminEmail } from '@/lib/admin';
 import { AVATAR_PRESETS, UserMasterStatus } from '@/lib/types';
 
-const ACCOUNT_STORAGE_KEY = 'samashki-account';
+const ACCOUNT_STORAGE_KEY = 'daymohk-account';
 
 export interface Account {
   gender?: 'male' | 'female';
@@ -165,7 +165,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       if (!detail?.userId) return;
       setAccount((current) => current && current.id === detail.userId ? { ...current, isBlocked: Boolean(detail.isBlocked) } : current);
     };
-    window.addEventListener('samashki-account-status', handleAccountStatus);
+    window.addEventListener('daymohk-account-status', handleAccountStatus);
 
     const restoreSession = async () => {
       if (isSupabaseConfigured && supabase) {
@@ -212,7 +212,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     if (!supabase || !isSupabaseConfigured) {
       return () => {
         cancelled = true;
-        window.removeEventListener('samashki-account-status', handleAccountStatus);
+        window.removeEventListener('daymohk-account-status', handleAccountStatus);
       };
     }
 
@@ -232,7 +232,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
     return () => {
       cancelled = true;
-      window.removeEventListener('samashki-account-status', handleAccountStatus);
+      window.removeEventListener('daymohk-account-status', handleAccountStatus);
       listener.subscription.unsubscribe();
     };
   }, []);
@@ -301,7 +301,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       }
     }
 
-    window.dispatchEvent(new CustomEvent('samashki-account-updated', { detail: { account: nextAccount } }));
+    window.dispatchEvent(new CustomEvent('daymohk-account-updated', { detail: { account: nextAccount } }));
   }, [account]);
 
   const setMasterStatus = useCallback(async (status: UserMasterStatus) => {
@@ -317,7 +317,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         .eq('id', nextAccount.id);
     }
 
-    window.dispatchEvent(new CustomEvent('samashki-account-updated', { detail: { account: nextAccount } }));
+    window.dispatchEvent(new CustomEvent('daymohk-account-updated', { detail: { account: nextAccount } }));
   }, [account]);
 
   const deleteAccount = useCallback(async () => {
@@ -344,13 +344,13 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     // will refresh the local view on the next postgres_changes
     // event triggered by the server-side deletion.
 
-    window.dispatchEvent(new CustomEvent('samashki-account-deleted', { detail: { ownerId: account.id } }));
+    window.dispatchEvent(new CustomEvent('daymohk-account-deleted', { detail: { ownerId: account.id } }));
     setAccount(null);
     saveLocalAccount(null);
     // Сбрасываем локальные флаги, чтобы при повторной регистрации
     // онбординг (welcome-письмо) показался заново.
     try {
-      window.localStorage.removeItem('samashki-onboarded-v1');
+      window.localStorage.removeItem('daymohk-onboarded-v1');
     } catch {}
   }, [account]);
 

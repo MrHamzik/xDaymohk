@@ -426,8 +426,8 @@ export function LeafletMap({
         const houseIcon = leaflet.divIcon({
           className: 'bg-transparent border-none',
           html: `
-            <div class="samashki-marker-wrapper">
-              <div class="samashki-house-badge light">
+            <div class="daymohk-marker-wrapper">
+              <div class="daymohk-house-badge light">
                 ${escapeHtml(house.houseNumber)}
               </div>
             </div>
@@ -479,8 +479,8 @@ export function LeafletMap({
           const placeIcon = leaflet.divIcon({
             className: 'bg-transparent border-none',
             html: `
-              <div class="samashki-marker-wrapper">
-                <div class="samashki-place-badge light">
+              <div class="daymohk-marker-wrapper">
+                <div class="daymohk-place-badge light">
                   <span class="dot"></span>
                   <span>${escapeHtml(place.category)}</span>
                 </div>
@@ -514,8 +514,8 @@ export function LeafletMap({
           const otherIcon = leaflet.divIcon({
             className: 'bg-transparent border-none',
             html: `
-              <div class="samashki-marker-wrapper">
-                <div class="samashki-place-badge light">
+              <div class="daymohk-marker-wrapper">
+                <div class="daymohk-place-badge light">
                   <span class="dot" style="background:#f59e0b"></span>
                   <span>${escapeHtml(categoryLabel)}</span>
                 </div>
@@ -560,8 +560,8 @@ export function LeafletMap({
           const profileIcon = leaflet.divIcon({
             className: 'bg-transparent border-none',
             html: `
-              <div class="samashki-marker-wrapper">
-                <div class="samashki-profile-badge${isSelected ? ' selected' : ''}"
+              <div class="daymohk-marker-wrapper">
+                <div class="daymohk-profile-badge${isSelected ? ' selected' : ''}"
                      style="background:${statusColor.fill};border-color:#ffffff"></div>
               </div>
             `,

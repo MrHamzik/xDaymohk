@@ -16,9 +16,9 @@
  * ответ до прихода сети и как запасной вариант офлайн.
  */
 
-const CACHE_KEY = 'samashki-map-categories-cache';
+const CACHE_KEY = 'daymohk-map-categories-cache';
 /** Старый ключ админки — читаем для совместимости со старыми браузерами. */
-const LEGACY_KEY = 'samashki-custom-categories';
+const LEGACY_KEY = 'daymohk-custom-categories';
 
 /**
  * Базовый набор на случай, если БД недоступна.

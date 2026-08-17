@@ -67,8 +67,8 @@ export default function SupportBudget() {
 
     const loadBudget = async () => {
       setIsLoading(true);
-      let collected = readLocalNumber(`samashki-support-${monthKey}`);
-      let other = readLocalNumber(`samashki-support-other-${monthKey}`, DEFAULT_OTHER_RUB);
+      let collected = readLocalNumber(`daymohk-support-${monthKey}`);
+      let other = readLocalNumber(`daymohk-support-other-${monthKey}`, DEFAULT_OTHER_RUB);
 
       if (isSupabaseConfigured && supabase) {
         const { data, error } = await supabase
@@ -99,7 +99,7 @@ export default function SupportBudget() {
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) return;
     const channel = supabase
-      .channel('samashki-support-progress')
+      .channel('daymohk-support-progress')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'project_support', filter: `month_key=eq.${monthKey}` }, (payload) => {
         const row = payload.new as { month_key?: string; collected_rub?: number; other_costs_rub?: number };
         if (row.month_key !== monthKey) return;
@@ -136,8 +136,8 @@ export default function SupportBudget() {
         }, { onConflict: 'month_key' });
         if (error) throw new Error(error.message);
       } else {
-        window.localStorage.setItem(`samashki-support-${monthKey}`, String(collectedRub));
-        window.localStorage.setItem(`samashki-support-other-${monthKey}`, String(other));
+        window.localStorage.setItem(`daymohk-support-${monthKey}`, String(collectedRub));
+        window.localStorage.setItem(`daymohk-support-other-${monthKey}`, String(other));
       }
       setOtherCostsRub(other);
       setOtherCostsInput(String(Math.round(other)));

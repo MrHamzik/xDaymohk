@@ -20,12 +20,12 @@ import { useAuth } from '@/components/AuthProvider';
 import { useI18n } from '@/lib/i18n';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
-const ONBOARDED_KEY = 'samashki-onboarded-v1';
+const ONBOARDED_KEY = 'daymohk-onboarded-v1';
 // Флаг «сейчас происходит вход через Google». Хранится в sessionStorage,
 // потому что signInWithOAuth — это полный редирект на Google и обратно:
 // страница перезагружается, useRef сбрасывается, а sessionStorage переживает
 // навигацию в той же вкладке.
-const AUTHING_KEY = 'samashki-onboarding-authing';
+const AUTHING_KEY = 'daymohk-onboarding-authing';
 
 function isValidFullName(name: string): boolean {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -160,8 +160,8 @@ export default function OnboardingModal() {
       setStep('consent');
       setOpen(true);
     };
-    window.addEventListener('samashki-open-consent', handler);
-    return () => window.removeEventListener('samashki-open-consent', handler);
+    window.addEventListener('daymohk-open-consent', handler);
+    return () => window.removeEventListener('daymohk-open-consent', handler);
   }, [account]);
 
   // После появления аккаунта (вход через Google): окно профиля открываем
@@ -258,7 +258,7 @@ export default function OnboardingModal() {
     try {
       // Доп. поля (телеграм/ватсап/био/галочки) — в localStorage пока.
       try {
-        window.localStorage.setItem('samashki-extra-profile', JSON.stringify({
+        window.localStorage.setItem('daymohk-extra-profile', JSON.stringify({
           telegram, whatsapp, whatsappUsePhone, hidePhone, bio,
         }));
       } catch {}

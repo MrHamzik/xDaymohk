@@ -32,7 +32,7 @@ function fromDbRow(row: Record<string, any>): AppNotification {
 }
 
 function localKey(accountId: string) {
-  return `samashki-notifications-${accountId}`;
+  return `daymohk-notifications-${accountId}`;
 }
 
 function readLocal(accountId: string) {
@@ -81,7 +81,7 @@ export default function NotificationsProvider({ children }: { children: React.Re
     if (!account || !supabase || !isSupabaseConfigured) return;
 
     const channel = supabase
-      .channel(`samashki-notifications-${account.id}`)
+      .channel(`daymohk-notifications-${account.id}`)
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
@@ -90,7 +90,7 @@ export default function NotificationsProvider({ children }: { children: React.Re
       }, (payload) => {
         const nextNotification = fromDbRow(payload.new as Record<string, any>);
         if (nextNotification.type === 'user_blocked' || nextNotification.type === 'user_unblocked') {
-          window.dispatchEvent(new CustomEvent('samashki-account-status', { detail: { userId: account.id, isBlocked: nextNotification.type === 'user_blocked' } }));
+          window.dispatchEvent(new CustomEvent('daymohk-account-status', { detail: { userId: account.id, isBlocked: nextNotification.type === 'user_blocked' } }));
         }
         setNotifications((current) => [nextNotification, ...current.filter((item) => item.id !== nextNotification.id)].slice(0, 50));
       })
@@ -158,7 +158,7 @@ export default function NotificationsProvider({ children }: { children: React.Re
 
     if (account?.id === recipientId) {
       if (type === 'user_blocked' || type === 'user_unblocked') {
-        window.dispatchEvent(new CustomEvent('samashki-account-status', { detail: { userId: recipientId, isBlocked: type === 'user_blocked' } }));
+        window.dispatchEvent(new CustomEvent('daymohk-account-status', { detail: { userId: recipientId, isBlocked: type === 'user_blocked' } }));
       }
       setNotifications((current) => [notification, ...current].slice(0, 50));
     }

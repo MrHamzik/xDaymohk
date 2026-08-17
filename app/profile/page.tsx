@@ -203,7 +203,7 @@ export default function ProfilePage() {
           </div>
           <button
             type="button"
-            onClick={() => window.dispatchEvent(new Event('samashki-open-consent'))}
+            onClick={() => window.dispatchEvent(new Event('daymohk-open-consent'))}
             className="rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-700"
           >
             Войти в Даймохк

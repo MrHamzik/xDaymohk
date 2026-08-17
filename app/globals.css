@@ -165,7 +165,7 @@
   filter: contrast(1.25) brightness(1.1);
 }
 
-.samashki-marker-wrapper {
+.daymohk-marker-wrapper {
   transition: opacity 0.3s ease, transform 0.3s ease;
   position: absolute;
   left: -50px;
@@ -178,8 +178,8 @@
   pointer-events: none;
 }
 
-.samashki-house-badge,
-.samashki-place-badge {
+.daymohk-house-badge,
+.daymohk-place-badge {
   pointer-events: auto;
   font-family: inherit;
   font-size: 11px;
@@ -193,56 +193,56 @@
   border: 1px solid rgba(255,255,255,0.2);
 }
 
-.samashki-house-badge {
+.daymohk-house-badge {
   padding: 1px 4px;
   min-width: 18px;
   text-align: center;
 }
 
-.samashki-place-badge {
+.daymohk-place-badge {
   padding: 2px 6px;
   display: inline-flex;
   align-items: center;
   gap: 4px;
 }
 
-.samashki-place-badge .dot {
+.daymohk-place-badge .dot {
   display: inline-block;
   width: 4px;
   height: 4px;
   border-radius: 50%;
 }
 
-.samashki-house-badge.light,
-.samashki-place-badge.light {
+.daymohk-house-badge.light,
+.daymohk-place-badge.light {
   background-color: #ffffff;
   color: #1e293b;
   border-color: #e2e8f0;
 }
-.samashki-place-badge.light .dot {
+.daymohk-place-badge.light .dot {
   background-color: #0284c7;
 }
 
-.samashki-house-badge.hybrid,
-.samashki-place-badge.hybrid {
+.daymohk-house-badge.hybrid,
+.daymohk-place-badge.hybrid {
   background-color: #0f172a;
   color: #fde047;
   border-color: #334155;
 }
-.samashki-place-badge.hybrid .dot {
+.daymohk-place-badge.hybrid .dot {
   background-color: #38bdf8;
 }
 
-.samashki-house-badge:hover,
-.samashki-place-badge:hover,
-.samashki-house-badge:active,
-.samashki-place-badge:active {
+.daymohk-house-badge:hover,
+.daymohk-place-badge:hover,
+.daymohk-house-badge:active,
+.daymohk-place-badge:active {
   transform: scale(1.05);
   z-index: 9999 !important;
   box-shadow: 0 4px 12px rgba(0,0,0,0.5);
 }
 
-.samashki-profile-badge {
+.daymohk-profile-badge {
   width: 16px;
   height: 16px;
   border-radius: 50%;
@@ -251,14 +251,14 @@
   pointer-events: auto;
   box-shadow: 0 1px 4px rgba(0,0,0,0.4);
 }
-.samashki-profile-badge.selected {
+.daymohk-profile-badge.selected {
   width: 22px;
   height: 22px;
   border-width: 3px;
   box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.95);
 }
-.samashki-profile-badge:hover,
-.samashki-profile-badge:active {
+.daymohk-profile-badge:hover,
+.daymohk-profile-badge:active {
   transform: scale(1.15);
   z-index: 9999 !important;
   box-shadow: 0 4px 12px rgba(0,0,0,0.5);
@@ -350,7 +350,7 @@ html.dark .bg-radial-gradient {
     background-color: var(--color-zinc-800);
   }
 }
-.zoomed-out .samashki-marker-wrapper {
+.zoomed-out .daymohk-marker-wrapper {
   opacity: 0;
   pointer-events: none;
   transform: scale(0.5);
@@ -407,8 +407,8 @@ html.dark textarea {
 }
 
 /* Fix house badge in dark to be visible but soft */
-html.dark .samashki-house-badge.light,
-html.dark .samashki-place-badge.light {
+html.dark .daymohk-house-badge.light,
+html.dark .daymohk-place-badge.light {
   background-color: #232327;
   color: #e2e8f0;
   border-color: var(--border-dark-soft);
@@ -419,7 +419,7 @@ html.dark .samashki-place-badge.light {
 html.dark .bg-emerald-600 {
   border-color: var(--border-green-dark);
 }
-html.dark .samashki-profile-badge.selected {
+html.dark .daymohk-profile-badge.selected {
   box-shadow: 0 0 0 3px var(--border-green-dark);
 }
 
