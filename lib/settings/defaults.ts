@@ -22,8 +22,9 @@ import {
 /** Показываем и звучим по умолчанию: звук — только у важного. */
 export const DEFAULT_NOTIFICATION_PREF: NotificationPref = { show: true, sound: false };
 
-/** Звук по умолчанию включён там, где ждут быстрой реакции. */
-const SOUND_ON_BY_DEFAULT: NotificationGroup[] = ['tasks'];
+/** Звук по умолчанию включён там, где ждут быстрой реакции:
+    задание могут перехватить, а такси — уехать. */
+const SOUND_ON_BY_DEFAULT: NotificationGroup[] = ['tasks', 'taxi'];
 
 export function defaultNotificationPrefs(): Record<NotificationGroup, NotificationPref> {
   const result = {} as Record<NotificationGroup, NotificationPref>;
@@ -140,13 +141,22 @@ export const PRESET_THEMES: Record<string, { name: string; isDark: boolean; colo
       accent: '#a78bfa',
       accentSoft: '#ddd4ff',
       accentDeep: '#7c5cf0',
-      ...SEMANTIC,
-      statusFlexible: '#818cf8',
+      // Смысловые цвета уведены в холодную гамму: изумрудный «Работает»
+      // и алый «Админ» из палитры по умолчанию выпадали из фиолетовой
+      // темы как чужие пятна. Оттенки подобраны комплементарно к
+      // фиолетовому — бирюза и пурпур лежат по обе стороны от него.
+      statusActive: '#2dd4bf',      // бирюза — дополнение к фиолетовому
+      statusBreak: '#c084fc',       // светлый пурпур
+      statusFlexible: '#818cf8',    // индиго
+      statusOffline: '#6b6494',     // приглушённый лиловый
+      roleSpecialist: '#2dd4bf',
+      roleAdmin: '#f472b6',         // розовый вместо алого
       roleVerified: '#818cf8',
+      danger: '#fb7185',
       heroFrom: '#6d28d9',
       heroTo: '#4338ca',
       mapCluster: '#7c5cf0',
-      mapHouse: '#a78bfa',
+      mapHouse: '#2dd4bf',
     },
   },
   sunset: {
@@ -163,11 +173,22 @@ export const PRESET_THEMES: Record<string, { name: string; isDark: boolean; colo
       accent: '#f2683c',
       accentSoft: '#ffc9b3',
       accentDeep: '#c2410c',
-      ...SEMANTIC,
+      // Тёплая гамма: холодный изумруд на багровом фоне выглядел
+      // грязным. «Работает» уходит в тёплый лайм, «Проверен» — в
+      // янтарь. Красный остаётся только у опасного действия и админа,
+      // но в более тёмном тоне, чтобы не спорить с оранжевым акцентом.
+      statusActive: '#a3b545',      // тёплый лайм
+      statusBreak: '#fbbf24',       // янтарь
+      statusFlexible: '#d97757',    // терракота
+      statusOffline: '#8a6a63',     // выцветший кирпич
+      roleSpecialist: '#a3b545',
+      roleAdmin: '#dc2626',
+      roleVerified: '#f59e0b',
+      danger: '#e11d48',
       heroFrom: '#b91c1c',
       heroTo: '#ea580c',
       mapCluster: '#c2410c',
-      mapHouse: '#f2683c',
+      mapHouse: '#fbbf24',
     },
   },
 };

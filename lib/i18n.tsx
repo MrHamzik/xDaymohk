@@ -285,7 +285,7 @@ export const translations = {
     settingsSignInRequired: 'Войдите, чтобы настройки сохранялись на всех устройствах',
 
     settingsTasksSection: 'Задания',
-    settingsAutoActive: 'Всегда активен, если в сети',
+    settingsAutoActive: 'Автоактивация статуса Темщика',
     settingsAutoActiveHint: 'Когда вы открываете страницу «Аренца Темщик», статус активности автоматически переключается на «Активен» на 30 минут. Окно продлевается любым действием в разделе.',
     settingsAutoApprove: 'Автоодобрение исполнителя',
     settingsAutoApproveHint: 'Отклик на ваше задание принимается сразу, без вашего подтверждения. Исполнитель сможет приступить немедленно.',
@@ -798,7 +798,7 @@ export const translations = {
     settingsSignInRequired: 'Массо гIирсехь низамаш дIаяздан чугIо',
 
     settingsTasksSection: 'ТIедилларш',
-    settingsAutoActive: 'Сеть тIехь велахь, даима жигара',
+    settingsAutoActive: 'Темщикан хьал ша шех латадар',
     settingsAutoActiveHint: '«Аренца Темщик» агIо схьайиллича, жигаралла ша шех «Жигара» хуьлу 30 минот. Декъехь хIума дича, хан яьржа.',
     settingsAutoApprove: 'Кхочушдийриг ша шех тIеэцар',
     settingsAutoApproveHint: 'Хьан тIедилларна дехар хьаьжна ца Iаш тIеоьцу. Кхочушдийричо цхьана хенахь болх болалур бу.',

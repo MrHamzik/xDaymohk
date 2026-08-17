@@ -605,8 +605,14 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
 
   const isCurrentUserAdmin = Boolean(account?.isAdmin);
   const isProfileAdmin = useCallback(
-    (profile: Profile) => isAdminProfile(profile, account?.isAdmin ? account.id : undefined, users),
-    [account?.id, account?.isAdmin, users],
+    (profile: Profile) => {
+      // Публичная витрина знает про админа даже тогда, когда владельца
+      // нет в users: RLS отдаёт оттуда только свою строку, из-за чего
+      // бейдж «Админ» не показывался на чужих анкетах (обновление 29).
+      if (profile.ownerId && reputation[profile.ownerId]?.isAdmin) return true;
+      return isAdminProfile(profile, account?.isAdmin ? account.id : undefined, users);
+    },
+    [account?.id, account?.isAdmin, users, reputation],
   );
 
   const value = useMemo(

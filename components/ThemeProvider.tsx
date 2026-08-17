@@ -36,36 +36,14 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
     setTheme(getPreferredTheme());
   }, []);
 
+  // DOM НЕ трогаем.
+  //
+  // Раньше класс .dark ставили и здесь, и в SettingsProvider — два
+  // эффекта перетирали друг друга, и переключение светлой/тёмной темы
+  // срабатывало через раз. Теперь этот провайдер только хранит выбор,
+  // а единственный владелец класса — SettingsProvider: он знает ещё и
+  // про пользовательские темы и применяет всё одним проходом.
   useEffect(() => {
-    const root = document.documentElement;
-    const isDark = theme === 'dark';
-
-    // Пользовательская тема (расширенные настройки) сама решает, тёмная
-    // она или светлая, и ставит .dark в SettingsProvider. Если её
-    // выбрали — не вмешиваемся, иначе два эффекта перетирали бы класс
-    // друг друга и тема мигала бы при каждом рендере.
-    //
-    // Важно: кастомная тема действует ТОЛЬКО при advancedMode. Без этой
-    // проверки после выключения расширенного режима класс оставался под
-    // управлением старого themeId и тема «залипала».
-    let hasCustomTheme = false;
-    try {
-      const raw = window.localStorage.getItem('daymohk-settings');
-      const parsed = raw ? JSON.parse(raw) as { themeId?: string; advancedMode?: boolean } : null;
-      hasCustomTheme = Boolean(
-        parsed?.advancedMode
-        && parsed.themeId
-        && parsed.themeId !== 'light'
-        && parsed.themeId !== 'dark',
-      );
-    } catch {
-      hasCustomTheme = false;
-    }
-
-    if (!hasCustomTheme) {
-      root.classList.toggle('dark', isDark);
-      root.style.colorScheme = theme;
-    }
     window.localStorage.setItem(THEME_STORAGE_KEY, theme);
   }, [theme]);
 

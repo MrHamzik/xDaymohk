@@ -161,10 +161,12 @@ export default function SettingsPage() {
                 hint={t.settingsNotificationsHint}
               />
 
-              {/* Шапка колонок: без неё два тумблера в ряд неразличимы */}
-              <div className="mb-1 flex items-center justify-end gap-3 pr-3 text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-zinc-500">
-                <span className="w-11 text-center">{t.settingsColShow}</span>
-                <span className="w-11 text-center">{t.settingsColSound}</span>
+              {/* Шапка колонок: без неё два тумблера в ряд неразличимы.
+                  Ширина и зазор совпадают со строками ниже — иначе
+                  подписи «Показывать» и «Звук» наезжали друг на друга. */}
+              <div className="mb-1 flex items-center justify-end gap-4 pr-3 text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-zinc-500">
+                <span className="w-14 text-center">{t.settingsColShow}</span>
+                <span className="w-14 text-center">{t.settingsColSound}</span>
               </div>
 
               <div className="space-y-1.5">
@@ -184,8 +186,8 @@ export default function SettingsPage() {
                           {groupLabels[group].description}
                         </p>
                       </div>
-                      <div className="flex shrink-0 items-center gap-3">
-                        <span className="flex w-11 justify-center">
+                      <div className="flex shrink-0 items-center gap-4">
+                        <span className="flex w-14 justify-center">
                           <Toggle
                             checked={isLocked ? true : pref.show}
                             disabled={isLocked}
@@ -193,7 +195,7 @@ export default function SettingsPage() {
                             label={`${groupLabels[group].title}: ${t.settingsColShow}`}
                           />
                         </span>
-                        <span className="flex w-11 justify-center">
+                        <span className="flex w-14 justify-center">
                           <Toggle
                             checked={pref.sound}
                             onChange={(next) => setPref(group, { sound: next })}

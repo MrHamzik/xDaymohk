@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Info } from 'lucide-react';
 
 /**
@@ -54,10 +55,45 @@ export function Toggle({
  */
 export function HintMark({ text }: { text: string }) {
   const [isOpen, setIsOpen] = useState(false);
+  const anchorRef = useRef<HTMLButtonElement | null>(null);
+  const [box, setBox] = useState<{ top: number; left: number; width: number } | null>(null);
+
+  /**
+   * Подсказка рендерится порталом в body и позиционируется вручную.
+   *
+   * Абсолютное позиционирование внутри строки не годилось: у родителей
+   * есть overflow-hidden и rounded-*, поэтому широкая подсказка у
+   * правого края уезжала за экран и обрезалась. Портал вне потока
+   * позволяет прижать её к границам окна.
+   */
+  const place = useCallback(() => {
+    const anchor = anchorRef.current;
+    if (!anchor) return;
+    const rect = anchor.getBoundingClientRect();
+    const margin = 12;
+    const width = Math.min(260, window.innerWidth - margin * 2);
+    // Центрируем по значку, затем зажимаем в границы окна.
+    const rawLeft = rect.left + rect.width / 2 - width / 2;
+    const left = Math.max(margin, Math.min(rawLeft, window.innerWidth - width - margin));
+    setBox({ top: rect.bottom + 8, left, width });
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    place();
+    const onScroll = () => place();
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', onScroll);
+    return () => {
+      window.removeEventListener('scroll', onScroll, true);
+      window.removeEventListener('resize', onScroll);
+    };
+  }, [isOpen, place]);
 
   return (
-    <span className="relative inline-flex">
+    <>
       <button
+        ref={anchorRef}
         type="button"
         aria-label={text}
         aria-expanded={isOpen}
@@ -65,20 +101,33 @@ export function HintMark({ text }: { text: string }) {
           event.stopPropagation();
           setIsOpen((value) => !value);
         }}
-        onBlur={() => setIsOpen(false)}
-        className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-slate-200 text-[10px] font-black text-slate-600 transition hover:bg-slate-300 dark:bg-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-600"
+        className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-slate-200 text-[10px] font-black text-slate-600 transition hover:bg-slate-300 dark:bg-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-600"
       >
         !
       </button>
-      {isOpen && (
-        <span
-          role="tooltip"
-          className="absolute bottom-full right-0 z-50 mb-1.5 w-60 rounded-xl bg-slate-900 px-3 py-2 text-[11px] font-medium leading-relaxed text-white shadow-xl dark:bg-zinc-700"
-        >
-          {text}
-        </span>
+
+      {isOpen && box && typeof document !== 'undefined' && createPortal(
+        <>
+          {/* Подложка: клик мимо закрывает. На телефоне это единственный
+              удобный способ убрать подсказку. */}
+          <button
+            type="button"
+            aria-hidden
+            tabIndex={-1}
+            onClick={() => setIsOpen(false)}
+            className="fixed inset-0 z-[95] cursor-default"
+          />
+          <span
+            role="tooltip"
+            style={{ top: box.top, left: box.left, width: box.width }}
+            className="fixed z-[96] rounded-xl bg-slate-900 px-3 py-2 text-[11px] font-medium leading-relaxed text-white shadow-xl dark:bg-zinc-700"
+          >
+            {text}
+          </span>
+        </>,
+        document.body,
       )}
-    </span>
+    </>
   );
 }
 

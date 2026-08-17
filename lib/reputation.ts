@@ -25,6 +25,12 @@ export interface ResidentReputation {
    * undefined / 'auto' — считать по расписанию анкеты.
    */
   statusOverride?: UserMasterStatus;
+  /**
+   * Владелец — администратор. Нужен для бейджа «Админ»: список users
+   * из-за RLS отдаёт только свою строку, поэтому для чужих анкет
+   * признак взять было неоткуда (обновление 29).
+   */
+  isAdmin?: boolean;
 }
 
 /** Значение из БД — свободный text, поэтому сужаем до известных вариантов. */
@@ -42,7 +48,7 @@ export async function fetchResidentReputationMap(
 
   const { data, error } = await supabase
     .from('v_resident_reputation')
-    .select('id, resident_rating, resident_review_count, tasks_done_count, account_days, status_override')
+    .select('id, resident_rating, resident_review_count, tasks_done_count, account_days, status_override, is_admin')
     .in('id', ids);
   if (error || !data) return {};
 
@@ -54,6 +60,7 @@ export async function fetchResidentReputationMap(
       tasksDone: Number(row.tasks_done_count ?? 0),
       accountDays: Number(row.account_days ?? 0),
       statusOverride: normalizeMasterStatus(row.status_override),
+      isAdmin: row.is_admin === true,
     };
   }
   return result;

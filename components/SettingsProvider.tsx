@@ -4,6 +4,7 @@ import {
   createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,
 } from 'react';
 import { useAuth } from '@/components/AuthProvider';
+import { useTheme } from '@/components/ThemeProvider';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import {
   DEFAULT_SETTINGS, normalizeSettings, resolveTheme, settingsFromDb, settingsToDb,
@@ -57,6 +58,8 @@ function writeLocal(settings: UserSettings): void {
  */
 export default function SettingsProvider({ children }: { children: React.ReactNode }) {
   const { account } = useAuth();
+  // Выбор «светлая/тёмная» живёт в ThemeProvider; применяем его здесь.
+  const { isDarkMode } = useTheme();
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
   const [isLoading, setIsLoading] = useState(true);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -87,41 +90,33 @@ export default function SettingsProvider({ children }: { children: React.ReactNo
     return () => { cancelled = true; };
   }, [account?.id]);
 
-  // 3. Оформление.
+  // 3. Оформление — ЕДИНСТВЕННОЕ место, где меняется класс .dark.
   //
-  // Кастомная тема активна ТОЛЬКО в расширенном режиме. Как только
-  // тумблер выключают, оформление обязано вернуться к обычной паре
-  // «светлая/тёмная» — иначе на :root остаются инлайновые переменные
-  // и интерфейс выглядит сломанным.
+  // Раньше им управляли два провайдера сразу, и переключение светлой
+  // и тёмной темы срабатывало через раз: чей эффект отработал вторым,
+  // тот и выигрывал. Теперь ThemeProvider только хранит выбор, а
+  // применяем его здесь — вместе с пользовательскими темами, чтобы
+  // порядок был предсказуемым.
   //
-  // Владение классом .dark разведено: пока тема кастомная, им управляем
-  // мы; в остальных случаях — ThemeProvider. Ниже, при выходе из
-  // кастомной темы, мы синхронизируем класс с системной/сохранённой
-  // темой и больше его не трогаем.
+  // Кастомная тема действует только при advancedMode: выключение
+  // расширенного режима обязано вернуть обычную пару светлая/тёмная.
   const isCustomTheme = settings.advancedMode
     && settings.themeId !== 'light'
     && settings.themeId !== 'dark';
 
   useEffect(() => {
     if (isCustomTheme) {
-      const theme = resolveTheme(settings.themeId, settings.customThemes);
-      applyThemeColors(theme.colors, theme.isDark);
+      const custom = resolveTheme(settings.themeId, settings.customThemes);
+      applyThemeColors(custom.colors, custom.isDark);
       return;
     }
 
-    // Возврат к обычной теме: снимаем свои переменные и восстанавливаем
-    // .dark по сохранённому выбору, а если его нет — по системной теме.
+    // Обычный режим: снимаем инлайновые переменные кастомной темы,
+    // иначе они остаются на :root и перебивают каскад globals.css.
     clearThemeColors();
-    try {
-      const saved = window.localStorage.getItem('daymohk-theme');
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const isDark = saved === 'dark' || (saved !== 'light' && prefersDark);
-      document.documentElement.classList.toggle('dark', isDark);
-      document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
-    } catch {
-      // matchMedia недоступен — оставляем как есть
-    }
-  }, [isCustomTheme, settings.themeId, settings.customThemes]);
+    document.documentElement.classList.toggle('dark', isDarkMode);
+    document.documentElement.style.colorScheme = isDarkMode ? 'dark' : 'light';
+  }, [isCustomTheme, isDarkMode, settings.themeId, settings.customThemes]);
 
   // Типографика не зависит от темы и применяется всегда.
   useEffect(() => {
@@ -143,19 +138,39 @@ export default function SettingsProvider({ children }: { children: React.ReactNo
     }, 600);
   }, [account?.id]);
 
+  /**
+   * Обновление настроек.
+   *
+   * persist() вызывается в эффекте, а НЕ внутри апдейтера setSettings.
+   * Апдейтер обязан быть чистой функцией: React в StrictMode вызывает
+   * его дважды и может выполнить во время рендера. Запись в
+   * localStorage и setTimeout оттуда давали предупреждение
+   * «Cannot update a component while rendering» — тот самый трейс с
+   * dispatchSetState при перетаскивании цвета в редакторе тем.
+   */
+  const pendingSave = useRef<UserSettings | null>(null);
+  const [saveTick, setSaveTick] = useState(0);
+
   const update = useCallback((patch: Partial<UserSettings>) => {
     setSettings((current) => {
       const next = normalizeSettings({ ...current, ...patch });
-      persist(next);
+      pendingSave.current = next;
       return next;
     });
-  }, [persist]);
+    setSaveTick((value) => value + 1);
+  }, []);
 
   const reset = useCallback(() => {
     const next = { ...DEFAULT_SETTINGS };
     setSettings(next);
-    persist(next);
-  }, [persist]);
+    pendingSave.current = next;
+    setSaveTick((value) => value + 1);
+  }, []);
+
+  useEffect(() => {
+    if (saveTick === 0 || !pendingSave.current) return;
+    persist(pendingSave.current);
+  }, [saveTick, persist]);
 
   useEffect(() => () => {
     if (saveTimer.current) clearTimeout(saveTimer.current);
