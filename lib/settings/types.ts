@@ -163,6 +163,13 @@ export interface ThemeColors {
   accentDeep: string;
   /** Опасные действия: «Пожаловаться», «Удалить», ошибки. */
   danger: string;
+  /**
+   * Акцент интерфейса — тот самый зелёный: иконки бокового меню,
+   * ползунки, кнопки «Сохранить», активные вкладки, кольца фокуса.
+   * Подменяет переменные Tailwind --color-emerald-*, поэтому один
+   * ключ перекрашивает все 800+ мест разом.
+   */
+  ui: string;
 
   // ── Специфические ───────────────────────────────────────────────
   /** Статус «Работает». */
@@ -194,7 +201,7 @@ export type ThemeColorGroup = 'global' | 'details' | 'specific';
 
 export const THEME_COLOR_GROUPS: Record<ThemeColorGroup, Array<keyof ThemeColors>> = {
   global: ['bg', 'card', 'cardAlt', 'cardInset', 'cardLine', 'text', 'muted'],
-  details: ['accent', 'accentSoft', 'accentDeep', 'danger'],
+  details: ['accent', 'accentSoft', 'accentDeep', 'ui', 'danger'],
   specific: [
     'statusActive', 'statusBreak', 'statusFlexible', 'statusOffline',
     'roleSpecialist', 'roleAdmin', 'roleVerified',

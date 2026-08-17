@@ -13,7 +13,10 @@ import { UserMasterStatus } from '@/lib/types';
 export default function SettingsControlsBar() {
   const { account, setMasterStatus } = useAuth();
   const { isDarkMode, toggleTheme } = useTheme();
-  const { settings } = useSettings();
+  const { settings, update } = useSettings();
+  // Иконку рисуем по themeId — тому же полю, которое применяет
+  // SettingsProvider. isDarkMode из ThemeProvider отставал на шаг.
+  const isThemeDark = settings.themeId === 'dark';
   const { language, toggleLanguage } = useI18n();
 
   const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false);
@@ -184,16 +187,23 @@ export default function SettingsControlsBar() {
         {settings.advancedMode ? <ThemePickerButton /> : (
         <button
           type="button"
-          onClick={toggleTheme}
-          title={isDarkMode ? 'Тёмная тема (переключить на светлую)' : 'Светлая тема (переключить на тёмную)'}
-          aria-label={isDarkMode ? 'Тёмная тема' : 'Светлая тема'}
+          onClick={() => {
+            // Пишем В ОБА места: settings.themeId — источник истины для
+            // применения (там же живут пользовательские темы), а
+            // toggleTheme сохраняет выбор в daymohk-theme, откуда его
+            // читает первый кадр до загрузки настроек.
+            update({ themeId: isThemeDark ? 'light' : 'dark' });
+            toggleTheme();
+          }}
+          title={isThemeDark ? 'Тёмная тема (переключить на светлую)' : 'Светлая тема (переключить на тёмную)'}
+          aria-label={isThemeDark ? 'Тёмная тема' : 'Светлая тема'}
           className={`flex h-11 w-11 items-center justify-center rounded-xl shadow-sm transition-all active:scale-95 ${
-            isDarkMode
+            isThemeDark
               ? 'bg-sky-500 text-white shadow-sky-500/25 hover:bg-sky-400'
               : 'bg-amber-400 text-amber-950 shadow-amber-400/25 hover:bg-amber-500'
           }`}
         >
-          {isDarkMode ? (
+          {isThemeDark ? (
             <Moon className="h-5 w-5 fill-white text-white" />
           ) : (
             <Sun className="h-5 w-5 fill-amber-950 text-amber-950" />

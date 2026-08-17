@@ -47,6 +47,7 @@ const COLOR_LABELS: Record<keyof ThemeColors, { ru: string; ce: string }> = {
   accent: { ru: 'Акцент', ce: 'Акцент' },
   accentSoft: { ru: 'Акцент светлый', ce: 'Акцент къегина' },
   accentDeep: { ru: 'Акцент тёмный', ce: 'Акцент бодане' },
+  ui: { ru: 'Акцент интерфейса', ce: 'Интерфейсан акцент' },
   danger: { ru: 'Опасное действие', ce: 'Кхерамен гIуллакх' },
 
   statusActive: { ru: 'Статус «Работает»', ce: '«Болх беш ву»' },
@@ -197,22 +198,26 @@ export default function ThemeEditor() {
             const isOpen = openGroup === group;
             return (
               <div key={group} className="rounded-xl bg-white/60 p-2 dark:bg-zinc-900/40">
-                <button
-                  type="button"
-                  onClick={() => setOpenGroup(isOpen ? null : group)}
-                  aria-expanded={isOpen}
-                  className="flex w-full items-center justify-between gap-2 text-left"
-                >
-                  <span className="flex items-center gap-1.5">
-                    <span className="text-[11px] font-bold uppercase tracking-wide text-slate-700 dark:text-zinc-300">
+                {/* HintMark — самостоятельная кнопка, поэтому она НЕ может
+                    лежать внутри кнопки-заголовка: вложенный <button>
+                    невалиден в HTML и ломает гидратацию. Раскладываем
+                    в ряд: кликабельный заголовок + отдельный значок. */}
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setOpenGroup(isOpen ? null : group)}
+                    aria-expanded={isOpen}
+                    className="flex min-w-0 flex-1 items-center justify-between gap-2 text-left"
+                  >
+                    <span className="truncate text-[11px] font-bold uppercase tracking-wide text-slate-700 dark:text-zinc-300">
                       {language === 'ce' ? GROUP_TITLES[group].ce : GROUP_TITLES[group].ru}
                     </span>
-                    <HintMark text={GROUP_TITLES[group].hint} />
-                  </span>
-                  <ChevronDown
-                    className={`h-3.5 w-3.5 shrink-0 text-slate-400 transition ${isOpen ? 'rotate-180' : ''}`}
-                  />
-                </button>
+                    <ChevronDown
+                      className={`h-3.5 w-3.5 shrink-0 text-slate-400 transition ${isOpen ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+                  <HintMark text={GROUP_TITLES[group].hint} />
+                </div>
 
                 {isOpen && (
                   <div className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2">

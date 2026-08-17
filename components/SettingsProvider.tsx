@@ -65,8 +65,14 @@ export default function SettingsProvider({ children }: { children: React.ReactNo
   const saveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // 1. Локальная копия — до сети.
+  //
+  // ВАЖНО: не затираем настройки, если пользователь успел что-то
+  // переключить до окончания загрузки. readLocal() возвращает то, что
+  // было на диске на момент старта, и без слияния перезапись гасила
+  // свежий выбор темы — она «отскакивала» обратно.
   useEffect(() => {
-    setSettings(readLocal());
+    const stored = readLocal();
+    setSettings((current) => (current === DEFAULT_SETTINGS ? stored : current));
     setIsLoading(false);
   }, []);
 
@@ -92,21 +98,35 @@ export default function SettingsProvider({ children }: { children: React.ReactNo
 
   // 3. Оформление — ЕДИНСТВЕННОЕ место, где меняется класс .dark.
   //
-  // Раньше им управляли два провайдера сразу, и переключение светлой
-  // и тёмной темы срабатывало через раз: чей эффект отработал вторым,
-  // тот и выигрывал. Теперь ThemeProvider только хранит выбор, а
-  // применяем его здесь — вместе с пользовательскими темами, чтобы
-  // порядок был предсказуемым.
+  // Источник истины один — settings.themeId. Раньше здесь применялся
+  // isDarkMode из ThemeProvider, а палитра писала в themeId: выбор
+  // «Тёмная» в списке тем не давал ничего, потому что эффект смотрел
+  // не туда. Отсюда и «переключается через раз».
   //
-  // Кастомная тема действует только при advancedMode: выключение
-  // расширенного режима обязано вернуть обычную пару светлая/тёмная.
-  const isCustomTheme = settings.advancedMode
+  // Кнопка солнце/луна теперь тоже пишет в themeId (см.
+  // SettingsControlsBar), так что оба пути ведут в одно место.
+  //
+  // Пока настройки грузятся с диска, DOM не трогаем: иначе на первом
+  // кадре успел бы примениться light из значения по умолчанию и тема
+  // моргала бы при каждой перезагрузке.
+  const custom = isLoading
+    ? null
+    : resolveTheme(settings.themeId, settings.customThemes);
+  const isCustomTheme = Boolean(
+    settings.advancedMode
     && settings.themeId !== 'light'
-    && settings.themeId !== 'dark';
+    && settings.themeId !== 'dark',
+  );
+  // Тёмная основа: у пользовательской темы — её собственный флаг,
+  // у пресета — сам идентификатор.
+  const effectiveDark = isCustomTheme
+    ? Boolean(custom?.isDark)
+    : settings.themeId === 'dark';
 
   useEffect(() => {
-    if (isCustomTheme) {
-      const custom = resolveTheme(settings.themeId, settings.customThemes);
+    if (isLoading) return;
+
+    if (isCustomTheme && custom) {
       applyThemeColors(custom.colors, custom.isDark);
       return;
     }
@@ -114,9 +134,31 @@ export default function SettingsProvider({ children }: { children: React.ReactNo
     // Обычный режим: снимаем инлайновые переменные кастомной темы,
     // иначе они остаются на :root и перебивают каскад globals.css.
     clearThemeColors();
-    document.documentElement.classList.toggle('dark', isDarkMode);
-    document.documentElement.style.colorScheme = isDarkMode ? 'dark' : 'light';
-  }, [isCustomTheme, isDarkMode, settings.themeId, settings.customThemes]);
+    document.documentElement.classList.toggle('dark', effectiveDark);
+    document.documentElement.style.colorScheme = effectiveDark ? 'dark' : 'light';
+    // custom пересоздаётся каждый рендер — в зависимостях держим его
+    // первоисточники, иначе эффект крутился бы бесконечно.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, isCustomTheme, effectiveDark, settings.themeId, settings.customThemes]);
+
+  // Первый вход: themeId ещё не выбирали, берём системную/сохранённую
+  // тему из ThemeProvider, чтобы поведение не изменилось для тех, кто
+  // никогда не открывал настройки.
+  const didSyncInitialTheme = useRef(false);
+  useEffect(() => {
+    if (isLoading || didSyncInitialTheme.current) return;
+    didSyncInitialTheme.current = true;
+    const wanted = isDarkMode ? 'dark' : 'light';
+    // Пишем напрямую: это не действие пользователя, а перенос уже
+    // сохранённого выбора в новое поле. Гонять его через update() и
+    // сохранять на сервер незачем.
+    setSettings((current) => (
+      current.advancedMode || current.themeId === wanted
+        ? current
+        : { ...current, themeId: wanted }
+    ));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading]);
 
   // Типографика не зависит от темы и применяется всегда.
   useEffect(() => {

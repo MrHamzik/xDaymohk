@@ -82,6 +82,7 @@ const SEMANTIC = {
   roleAdmin: '#ef4444',
   roleVerified: '#3b82f6',
   danger: '#f43f5e',
+  ui: '#059669',
 };
 
 export const PRESET_THEMES: Record<string, { name: string; isDark: boolean; colors: ThemeColors }> = {
@@ -140,6 +141,7 @@ export const PRESET_THEMES: Record<string, { name: string; isDark: boolean; colo
       muted: '#9a8fc4',
       accent: '#a78bfa',
       accentSoft: '#ddd4ff',
+      ui: '#7c5cf0',
       accentDeep: '#7c5cf0',
       // Смысловые цвета уведены в холодную гамму: изумрудный «Работает»
       // и алый «Админ» из палитры по умолчанию выпадали из фиолетовой
@@ -172,6 +174,7 @@ export const PRESET_THEMES: Record<string, { name: string; isDark: boolean; colo
       muted: '#c99a94',
       accent: '#f2683c',
       accentSoft: '#ffc9b3',
+      ui: '#ea580c',
       accentDeep: '#c2410c',
       // Тёплая гамма: холодный изумруд на багровом фоне выглядел
       // грязным. «Работает» уходит в тёплый лайм, «Проверен» — в
@@ -239,6 +242,7 @@ export function normalizeColors(raw: unknown, base: ThemeColors): ThemeColors {
     accentSoft: pick('accentSoft'),
     accentDeep: pick('accentDeep'),
     danger: pick('danger'),
+    ui: pick('ui'),
     statusActive: pick('statusActive'),
     statusBreak: pick('statusBreak'),
     statusFlexible: pick('statusFlexible'),

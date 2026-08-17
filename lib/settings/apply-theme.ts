@@ -56,6 +56,11 @@ const MANAGED_PROPERTIES = [
   '--smk-hero-from', '--smk-hero-to',
   '--smk-map-cluster', '--smk-map-house',
   '--smk-danger', '--smk-danger-rgb',
+  // Акцент интерфейса: Tailwind v4 держит палитру в переменных, поэтому
+  // подмена --color-emerald-* перекрашивает все утилиты emerald разом.
+  '--color-emerald-400', '--color-emerald-500', '--color-emerald-600',
+  '--color-emerald-700', '--color-emerald-800',
+  '--color-teal-400', '--color-teal-500', '--color-teal-600',
 ];
 
 export function applyThemeColors(colors: ThemeColors, isDark: boolean): void {
@@ -122,6 +127,20 @@ export function applyThemeColors(colors: ThemeColors, isDark: boolean): void {
 
   set('--smk-danger', colors.danger);
   set('--smk-danger-rgb', hexToRgbChannels(colors.danger));
+
+  // ── Акцент интерфейса (зелёный по умолчанию) ────────────────────
+  // Утилиты вида bg-emerald-600 компилируются в var(--color-emerald-600),
+  // поэтому одним ключом темы перекрашиваются иконки меню, ползунки,
+  // кнопки и кольца фокуса — без правки сотен классов в разметке.
+  set('--color-emerald-600', colors.ui);
+  set('--color-emerald-500', mix(colors.ui, '#ffffff', 0.14));
+  set('--color-emerald-400', mix(colors.ui, '#ffffff', 0.3));
+  set('--color-emerald-700', mix(colors.ui, '#000000', 0.16));
+  set('--color-emerald-800', mix(colors.ui, '#000000', 0.32));
+  // Бирюзовый идёт парой с зелёным в градиентах — держим в той же гамме.
+  set('--color-teal-600', mix(colors.ui, '#000000', 0.08));
+  set('--color-teal-500', mix(colors.ui, '#ffffff', 0.1));
+  set('--color-teal-400', mix(colors.ui, '#ffffff', 0.26));
 
   // ── Главная карточка каталога и карта ───────────────────────────
   set('--smk-hero-from', colors.heroFrom);
