@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ArrowLeft, FileText, LocateFixed, MapPinned, Phone, Users, Star } from 'lucide-react';
 import { cacheBustAvatarUrl } from '@/lib/media';
 import { fetchEffectiveHouseAddresses, type SamashkiHouseAddress } from '@/lib/samashki-addresses';
+import { getMapCategories } from '@/lib/map-categories';
 import InteractiveMap from '@/components/InteractiveMapLazy';
 import MapSegmentedControl from '@/components/MapSegmentedControl';
 import { type MapLayerMode, type MapObjectMode } from '@/components/InteractiveMap';
@@ -67,14 +68,14 @@ export default function MapPage() {
   // домом): панель «Анкеты по адресу» показывает анкеты всех, кто привязан
   // к этому адресу — независимо от того, чья это точка.
   const [selectedAddress, setSelectedAddress] = useState<SamashkiHouseAddress | null>(null);
-  // Список категорий «Других» объектов из загруженных адресов.
-  const placeCategories = useMemo(() => {
-    const cats = new Set<string>();
-    for (const a of allAddresses) {
-      if (a.isNotHouse && a.category) cats.add(a.category);
-    }
-    return Array.from(cats).sort();
-  }, [allAddresses]);
+  // Категории «Других» объектов. Берём общий справочник (базовый набор
+  // + добавленные админом в «Адреса» → «Поиск и категории») и дополняем
+  // теми, что реально встречаются у адресов. Раньше список строился
+  // только из адресов, поэтому до появления объектов был пустым.
+  const placeCategories = useMemo(
+    () => getMapCategories(allAddresses.filter((a) => a.isNotHouse).map((a) => a.category)),
+    [allAddresses],
+  );
 
   useEffect(() => {
     let cancelled = false;

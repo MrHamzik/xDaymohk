@@ -15,6 +15,7 @@ import {
   type ExecutorProfile,
 } from '@/lib/tasks/server';
 import { TASK_AUTO_CONFIRM_HOURS } from '@/lib/types';
+import { mapTaskRow } from '@/lib/tasks/map';
 
 /**
  * Действия над заданием. Все переходы статусов только здесь, на сервере:
@@ -73,6 +74,12 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   }
   if (!task) return NextResponse.json({ error: 'Задание не найдено' }, { status: 404 });
 
+  // ВАЖНО: приводим строку вьюхи к camelCase тем же маппером, что и лента.
+  // Без него наружу уходили author_name / author_avatar_url, а компонент
+  // читает authorName / authorAvatarUrl — поэтому в открытой карточке
+  // показывались запасные «Житель Даймохк» и иконка приложения.
+  const mappedTask = mapTaskRow(task as Record<string, unknown>);
+
   // Читаем через вьюху: прямой JOIN к user_profiles от анонимного
   // клиента режет политика «user_profiles self select» (видна только
   // своя строка), поэтому имена исполнителей не приходили.
@@ -83,7 +90,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     .order('joined_at', { ascending: true });
 
   return NextResponse.json({
-    task,
+    task: mappedTask,
     participants: (participants ?? []).map((p) => ({
       id: p.id,
       taskId: p.task_id,
@@ -139,6 +146,7 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
     return NextResponse.json({ error: 'Не удалось загрузить задание' }, { status: 500 });
   }
   if (!task) return NextResponse.json({ error: 'Задание не найдено' }, { status: 404 });
+
 
   if (String(task.author_id) !== userId && !isAdmin) {
     return NextResponse.json({ error: 'Можно удалять только свои задания' }, { status: 403 });
@@ -211,6 +219,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({ error: 'Не удалось загрузить задание' }, { status: 500 });
   }
   if (!task) return NextResponse.json({ error: 'Задание не найдено' }, { status: 404 });
+
 
   const isAuthor = String(task.author_id) === userId;
 

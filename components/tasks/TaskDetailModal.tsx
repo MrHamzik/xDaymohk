@@ -201,24 +201,24 @@ export default function TaskDetailModal({
                 )}
               </div>
 
-              {/* Адрес отдельным блоком: сам адрес, под ним ссылка на карту —
-                  как в анкете. В сетке он ужимался до одной строки. */}
+              {/* Адрес — точно тот же блок, что в карточке анкеты:
+                  плитка с иконкой, адрес и ссылка «Открыть на карте». */}
               {(task.address || (typeof task.lat === 'number' && typeof task.lng === 'number')) && (
                 <div className="border-t border-slate-100 px-4 py-4 dark:border-zinc-800">
-                  <h3 className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-400">
-                    Адрес
+                  <h3 className="mb-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                    Адресс
                   </h3>
-                  <div className="flex items-start gap-2.5">
-                    <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
-                      <MapPin className="h-3.5 w-3.5" />
-                    </span>
+                  <div className="flex items-start gap-3 rounded-xl border border-slate-100 bg-slate-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-800">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                      <MapPin className="h-4 w-4" />
+                    </div>
                     <div className="min-w-0 flex-1">
-                      <p className="break-words text-[13px] font-semibold leading-snug text-slate-800 dark:text-zinc-200">
+                      <p className="truncate text-xs font-bold text-slate-900 dark:text-white">
                         {task.address || 'Адрес не указан'}
                       </p>
                       {typeof task.lat === 'number' && typeof task.lng === 'number' && (
                         <a
-                          href={`https://yandex.ru/maps/?pt=${task.lng},${task.lat}&z=17&l=map`}
+                          href={`https://yandex.ru/maps/?pt=${task.lng},${task.lat}&z=16&l=map`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:underline dark:text-emerald-400"

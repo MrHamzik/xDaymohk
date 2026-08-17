@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ExternalLink, MapPin } from 'lucide-react';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 import InteractiveMap from '@/components/InteractiveMapLazy';
 import MapSegmentedControl from '@/components/MapSegmentedControl';
 import { type MapLayerMode } from '@/components/InteractiveMap';
 import { findClosestSamashkiHouse, getEffectiveHouseAddresses } from '@/lib/samashki-addresses';
+import { getMapCategories } from '@/lib/map-categories';
 import { MapPosition } from '@/lib/types';
 import { useI18n } from '@/lib/i18n';
 
@@ -32,6 +33,13 @@ export default function WorkplaceSection({
   const [mapLayerMode, setMapLayerMode] = useState<MapLayerMode>('streets');
   const [showHouses, setShowHouses] = useState(true);
   const [showPlaces, setShowPlaces] = useState(true);
+  const [placesCategory, setPlacesCategory] = useState('');
+  // Справочник категорий берём из общего источника, а не из уже
+  // загруженных адресов: иначе список пуст, пока объектов нет.
+  const placeCategories = useMemo(
+    () => getMapCategories(getEffectiveHouseAddresses().filter((a) => a.isNotHouse).map((a) => a.category)),
+    [],
+  );
 
   const handleMapSelect = (position: MapPosition, explicitAddress?: string) => {
     if (explicitAddress) {
@@ -123,6 +131,7 @@ export default function WorkplaceSection({
             showProfiles={false}
             showHouses={showHouses}
             showPlaces={showPlaces}
+            placesCategory={placesCategory}
             mapLayerMode={mapLayerMode}
             onMapLayerModeChange={setMapLayerMode}
             className="h-56 sm:h-72"
@@ -149,6 +158,28 @@ export default function WorkplaceSection({
               ]}
             />
           </div>
+
+          {/* Категории объектов «Другое» — тот же справочник, что и на
+              странице «Карта» (админка → «Адреса» → «Поиск и категории»). */}
+          {showPlaces && placeCategories.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 px-1">
+              <span className="text-[10px] font-bold text-slate-400">Категория:</span>
+              {(['', ...placeCategories]).map((cat) => (
+                <button
+                  key={cat || 'all'}
+                  type="button"
+                  onClick={() => setPlacesCategory(cat)}
+                  className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold transition ${
+                    placesCategory === cat
+                      ? 'bg-emerald-600 text-white'
+                      : 'border border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400'
+                  }`}
+                >
+                  {cat || 'Все'}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
       <AddressAutocomplete
