@@ -351,8 +351,18 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         .eq('id', participant.id);
 
       // Срочное снова открыто для других.
-      if (task.kind === 'urgent' && task.status === 'in_progress') {
-        await admin.from('tasks').update({ status: 'open' }).eq('id', id);
+      // Возвращаем задание в поиск исполнителя. Раньше условие ловило
+      // только 'in_progress', поэтому после нажатия «Выполнил» (статус
+      // awaiting_confirm) исключение участника оставляло задание висеть
+      // в ожидании подтверждения без единого исполнителя — заказчик
+      // больше не мог ни подтвердить, ни отдать задание другому.
+      // submitted_at тоже сбрасываем, иначе таймер автоподтверждения
+      // продолжал идти и закрыл бы задание за исключённого.
+      if (task.kind === 'urgent' && ['in_progress', 'awaiting_confirm'].includes(String(task.status))) {
+        await admin
+          .from('tasks')
+          .update({ status: 'open', submitted_at: null })
+          .eq('id', id);
       }
 
       await notifyTaskEvent(admin, {

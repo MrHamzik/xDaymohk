@@ -1,5 +1,24 @@
 import { Profile, UserMasterStatus, ProfileStatusType } from './types';
 
+/**
+ * Какой режим работы применить к анкете.
+ *
+ * Тумблер «Режим работы» принадлежит ЧЕЛОВЕКУ (user_profiles.status_override)
+ * и обязан действовать на всех его анкетах специалиста — у любого зрителя.
+ * Своё значение (viewerOverride) приоритетнее: применяется мгновенно, не
+ * дожидаясь перезагрузки списка анкет из БД.
+ *
+ * ownerOverride приходит из публичной вьюхи v_resident_reputation
+ * (обновление 26); до неё чужие зрители override вообще не видели.
+ */
+export function resolveOwnerOverride(options: {
+  isOwner: boolean;
+  viewerOverride?: UserMasterStatus;
+  ownerOverride?: UserMasterStatus;
+}): UserMasterStatus | undefined {
+  return options.isOwner ? options.viewerOverride : options.ownerOverride;
+}
+
 export interface WorkingStatusInfo {
   status: ProfileStatusType;
   color: 'emerald' | 'amber' | 'zinc' | 'sky';

@@ -691,7 +691,7 @@ html.dark .smk-price-teal {
   position: relative;
   isolation: isolate;
   border-radius: 1.25rem;
-  border: 1px solid rgb(var(--smk-gold-rgb) / 0.28);
+  border: 1px solid rgb(var(--smk-gold-rgb) / 0.11);
   background: var(--smk-surface);
   transition:
     transform 0.24s cubic-bezier(0.16, 1, 0.3, 1),
@@ -821,7 +821,6 @@ html.dark .smk-rule {
 .smk-field {
   border-radius: 0.75rem;
   background: var(--smk-surface-soft);
-  box-shadow: inset 0 0 0 1px rgb(var(--smk-ink-rgb) / 0.05);
 }
 html.dark .smk-field {
   background: var(--smk-card-inset);

@@ -11,7 +11,7 @@ import { supabase } from '@/lib/supabase';
 import { Certificate, Profile, Review } from '@/lib/types';
 import { calculateAge, formatReviews } from '@/lib/text';
 import ResidentReputation from '@/components/tasks/ResidentReputation';
-import { calculateWorkingStatus } from '@/lib/schedule';
+import { calculateWorkingStatus, resolveOwnerOverride } from '@/lib/schedule';
 import Notice from '@/components/Notice';
 import ProfileBadges, { WorkingStatusBadge } from '@/components/ProfileBadges';
 import { cacheBustAvatarUrl } from '@/lib/media';
@@ -108,7 +108,7 @@ export default function ProfileModal({
 }: ProfileModalProps) {
   const { account } = useAuth();
   const { language, t } = useI18n();
-  const { profiles: allProfiles, users: allUsers, isProfileAdmin, createNotification } = useProfiles();
+  const { profiles: allProfiles, users: allUsers, reputation, isProfileAdmin, createNotification } = useProfiles();
   const [selectedCert, setSelectedCert] = useState<Certificate | null>(null);
   // A user card opened from a name link renders as a nested ProfileModal
   // on top of this one; closing it returns to this анкета instead of
@@ -688,8 +688,14 @@ export default function ProfileModal({
 
         <div className="flex-1 space-y-4 overflow-y-auto p-4 text-xs text-slate-800 dark:text-zinc-300 sm:p-5 no-scrollbar">
           {(() => {
-            const isOwner = Boolean(account && account.id === profile.ownerId);
-            const effectiveOverride = isOwner ? account?.statusOverride : profile.statusOverride;
+            const isOwner = Boolean(account && profile.ownerId && account.id === profile.ownerId);
+            // Режим работы владельца виден всем: берём его из публичной
+            // репутации, а своё значение применяем мгновенно.
+            const effectiveOverride = resolveOwnerOverride({
+              isOwner,
+              viewerOverride: account?.statusOverride,
+              ownerOverride: profile.ownerId ? reputation[profile.ownerId]?.statusOverride : undefined,
+            });
             const statusInfo = calculateWorkingStatus(profile, effectiveOverride);
             return (
               <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-100 bg-slate-50/70 p-3 text-xs dark:border-zinc-800 dark:bg-zinc-800">

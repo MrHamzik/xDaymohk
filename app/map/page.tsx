@@ -25,7 +25,7 @@ import MobileMenuDrawer from '@/components/MobileMenuDrawer';
 import { useAuth } from '@/components/AuthProvider';
 import { useProfiles } from '@/components/ProfilesProvider';
 import { filterProfiles } from '@/lib/profile-filters';
-import { calculateWorkingStatus } from '@/lib/schedule';
+import { calculateWorkingStatus, resolveOwnerOverride } from '@/lib/schedule';
 import { formatReviews } from '@/lib/text';
 import { useI18n } from '@/lib/i18n';
 import { AudienceFilter, Profile } from '@/lib/types';
@@ -42,7 +42,7 @@ const hasRealAddressCoords = (lat: number, lng: number) => {
 };
 
 export default function MapPage() {
-  const { profiles, users, isCurrentUserAdmin, isProfileAdmin, addProfile, updateProfile, addReview, addComplaint } = useProfiles();
+  const { profiles, users, reputation, isCurrentUserAdmin, isProfileAdmin, addProfile, updateProfile, addReview, addComplaint } = useProfiles();
   const { account } = useAuth();
   const { t } = useI18n();
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
@@ -360,7 +360,13 @@ export default function MapPage() {
               onMapLayerModeChange={setMapLayerMode}
               locationRequestKey={locationRequestKey}
               markers={filteredProfiles.map((profile) => {
-                const statusInfo = calculateWorkingStatus(profile, account?.id === profile.ownerId ? account?.statusOverride : profile.statusOverride);
+                // Режим работы владельца действует на всех его анкетах:
+                // чужому зрителю берём его из публичной репутации.
+                const statusInfo = calculateWorkingStatus(profile, resolveOwnerOverride({
+                  isOwner: Boolean(account && profile.ownerId && account.id === profile.ownerId),
+                  viewerOverride: account?.statusOverride,
+                  ownerOverride: profile.ownerId ? reputation[profile.ownerId]?.statusOverride : undefined,
+                }));
                 return {
                   id: profile.id,
                   position: profile.workplaceCoords,

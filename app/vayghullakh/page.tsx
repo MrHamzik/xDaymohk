@@ -97,6 +97,23 @@ export default function VayghullakhPage() {
   // подтвердили) видны без перезахода.
   useTasksRealtime(load);
 
+  // Быстрое создание с кнопки «+»: с другой страницы сюда приходят с
+  // ?create=1 и форма должна открыться сразу. useSearchParams не берём —
+  // он требует Suspense и переводит страницу в динамический рендер;
+  // здесь достаточно один раз прочитать адрес после монтирования.
+  // Флаг из адреса убираем, иначе форма открывалась бы снова при
+  // любом возврате «назад» на эту страницу.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('create') !== '1') return;
+    setIsCreateOpen(true);
+    params.delete('create');
+    const rest = params.toString();
+    router.replace(rest ? `${window.location.pathname}?${rest}` : window.location.pathname);
+  }, [router]);
+
+
   useEffect(() => {
     if (!account) return;
     fetchExecutorStatus()
@@ -142,21 +159,26 @@ export default function VayghullakhPage() {
     ));
   }, [tasks, position]);
 
+  /**
+   * Задания, где я исполнитель и они ещё не закрыты.
+   *
+   * Тот же список идёт и в ленту, и в счётчик на вкладке. Раньше счётчик
+   * брал myTasks.length — полный ответ /api/tasks/mine, куда специально
+   * попадают и завершённые (по ним нужна оценка). Из-за этого на вкладке
+   * висело «4», а внутри после фильтрации не оставалось ничего.
+   */
+  const takenTasks = useMemo(() => myTasks.filter(
+    (t) => !['completed', 'cancelled', 'expired'].includes(t.status)
+      || pendingReview.includes(t.id),
+  ), [myTasks, pendingReview]);
+
   const visibleTasks = useMemo(() => {
     let list = withDistance;
 
     if (tab === 'mine') {
       list = list.filter((t) => t.authorId === account?.id);
     } else if (tab === 'taken') {
-      // Реальный список участия — из /api/tasks/mine, а не догадки по статусу.
-      // Завершённые сюда не попадают: /mine отдаёт и их (для метки
-      // «ожидает оценки»), но во вкладке «В работе» им не место.
-      // Исключение — задания, которые я ещё не оценил: их нужно видеть,
-      // иначе оценку негде поставить.
-      list = myTasks.filter(
-        (t) => !['completed', 'cancelled', 'expired'].includes(t.status)
-          || pendingReview.includes(t.id),
-      );
+      list = takenTasks;
     } else if (tab === 'nearby' && position) {
       list = list.filter((t) => typeof t.distanceM === 'number' && t.distanceM <= TASK_NEARBY_RADIUS_M);
     }
@@ -178,7 +200,7 @@ export default function VayghullakhPage() {
       return [...list].sort((a, b) => (a.distanceM ?? 1e9) - (b.distanceM ?? 1e9));
     }
     return list;
-  }, [withDistance, myTasks, pendingReview, tab, category, priorityFilter, minReward, query, account?.id, position]);
+  }, [withDistance, takenTasks, tab, category, priorityFilter, minReward, query, account?.id, position]);
 
   return (
     <div className="flex min-h-[100dvh] min-w-0 flex-col overflow-x-hidden bg-slate-50 bg-radial-gradient transition-colors dark:bg-zinc-950">
@@ -246,7 +268,7 @@ export default function VayghullakhPage() {
               { value: 'nearby', label: t.tasksTabNearby },
               { value: 'all', label: t.tasksTabAll },
               { value: 'mine', label: t.tasksTabMine },
-              { value: 'taken', label: t.tasksTabTaken, count: myTasks.length || undefined },
+              { value: 'taken', label: t.tasksTabTaken, count: takenTasks.length || undefined },
             ]}
             categories={categories}
             category={category}

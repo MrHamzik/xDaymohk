@@ -56,7 +56,7 @@ export default function CreateActionModal({
   const ringActions = [
     {
       id: 'profile',
-      label: 'Анкета',
+      label: t.createProfileOption2,
       icon: UserPlus,
       angleDeg: -90, // Top (12 o'clock)
       bg: 'bg-emerald-600 text-white shadow-xl shadow-emerald-600/40 hover:bg-emerald-700',
@@ -94,9 +94,11 @@ export default function CreateActionModal({
       bg: 'bg-emerald-700 text-white shadow-xl shadow-emerald-700/40 hover:bg-emerald-800',
       action: () => {
         onClose();
-        // Раздел реализован — ведём на него; колбэк оставлен для
-        // мест, где модалка используется со своим обработчиком.
-        if (onOpenGullaq) onOpenGullaq(); else router.push('/vayghullakh');
+        // «+» — быстрое СОЗДАНИЕ, а не просто переход в раздел.
+        // Если мы уже на странице раздела, она даёт свой колбэк и форма
+        // открывается на месте. С любой другой страницы уходим в раздел
+        // с ?create=1 — там этот флаг сразу открывает форму задания.
+        if (onOpenGullaq) onOpenGullaq(); else router.push('/vayghullakh?create=1');
       },
     },
     {
@@ -107,7 +109,7 @@ export default function CreateActionModal({
       bg: 'bg-rose-500 text-white shadow-xl shadow-rose-500/40 hover:bg-rose-600',
       action: () => {
         onClose();
-        if (onOpenGo) onOpenGo(); else router.push('/vaygo');
+        if (onOpenGo) onOpenGo(); else router.push('/vaygo?create=1');
       },
     },
     {
@@ -131,7 +133,7 @@ export default function CreateActionModal({
         }`}
         role="dialog"
         aria-modal="true"
-        aria-label="Быстрый выбор услуги"
+        aria-label={t.quickCreateAria}
         onClick={onClose}
       >
         {/* Single Center Anchor Container: all circular items are strictly relative to this center */}

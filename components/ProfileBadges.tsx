@@ -1,10 +1,38 @@
 'use client';
 
 import { useAuth } from '@/components/AuthProvider';
+import { useProfiles } from '@/components/ProfilesProvider';
 import { CheckCircle2, Clock3, ShieldAlert, Star } from 'lucide-react';
 import { Profile } from '@/lib/types';
 import { calculateWorkingStatus } from '@/lib/schedule';
 import { useI18n } from '@/lib/i18n';
+
+/**
+ * Режим работы, действующий для этой анкеты.
+ *
+ * Тумблер «Режим работы» в боковом меню принадлежит ЧЕЛОВЕКУ
+ * (user_profiles.status_override) и обязан менять статус сразу на всех
+ * его анкетах специалиста — у любого зрителя, а не только у владельца.
+ *
+ * Раньше здесь было `isOwner ? account.statusOverride : profile.statusOverride`,
+ * но `profiles.status_override` как колонка не существует и в Profile
+ * никогда не заполнялся. Поэтому для всех, кроме владельца, override был
+ * undefined и статус считался только по расписанию — со стороны казалось,
+ * что тумблер вообще ни на что не влияет.
+ *
+ * Теперь для чужого зрителя берём override владельца из публичной вьюхи
+ * v_resident_reputation (обновление 26). Своё значение из account
+ * приоритетнее: оно применяется мгновенно, не дожидаясь перезагрузки
+ * списка анкет.
+ */
+function useEffectiveOverride(profile: Profile) {
+  const { account } = useAuth();
+  const { reputation } = useProfiles();
+
+  const isOwner = Boolean(account && profile.ownerId && account.id === profile.ownerId);
+  if (isOwner) return account?.statusOverride;
+  return profile.ownerId ? reputation[profile.ownerId]?.statusOverride : undefined;
+}
 
 export interface WorkingStatusBadgeProps {
   profile: Profile;
@@ -13,17 +41,10 @@ export interface WorkingStatusBadgeProps {
 
 export function WorkingStatusBadge({ profile, onDarkBackground = false }: WorkingStatusBadgeProps) {
   const { t } = useI18n();
-  const { account } = useAuth();
+  const effectiveOverride = useEffectiveOverride(profile);
   // Only specialists have working hours and real-time open/break/closed status
   if (!profile.isSpecialist) return null;
 
-  // The owner's master "working status" switch in the side menu
-  // only applies when the viewer is the owner of this profile. For
-  // every other viewer we use the profile's own statusOverride
-  // (set on the profile directly) and otherwise fall back to the
-  // automatic schedule.
-  const isOwner = Boolean(account && account.id === profile.ownerId);
-  const effectiveOverride = isOwner ? account?.statusOverride : profile.statusOverride;
   const statusInfo = calculateWorkingStatus(profile, effectiveOverride);
 
   const statusBg = statusInfo.status === 'flexible'
@@ -64,11 +85,9 @@ export function WorkingStatusBadge({ profile, onDarkBackground = false }: Workin
  * чтобы карточка не тратила место на отдельный бейдж или точку.
  */
 export function useWorkingStatusRing(profile: Profile): { className: string; label: string | null } {
-  const { account } = useAuth();
+  const effectiveOverride = useEffectiveOverride(profile);
   if (!profile.isSpecialist) return { className: '', label: null };
 
-  const isOwner = Boolean(account && account.id === profile.ownerId);
-  const effectiveOverride = isOwner ? account?.statusOverride : profile.statusOverride;
   const statusInfo = calculateWorkingStatus(profile, effectiveOverride);
 
   const className = statusInfo.status === 'flexible'

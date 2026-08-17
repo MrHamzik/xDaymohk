@@ -1,6 +1,7 @@
 'use client';
 
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import type { UserMasterStatus } from '@/lib/types';
 
 /**
  * Публичная репутация жителей по заданиям.
@@ -18,6 +19,19 @@ export interface ResidentReputation {
   reviewCount: number;
   tasksDone: number;
   accountDays: number;
+  /**
+   * Режим работы ЧЕЛОВЕКА (тумблер в боковом меню). Применяется ко всем
+   * его анкетам специалиста и виден всем зрителям, а не только владельцу.
+   * undefined / 'auto' — считать по расписанию анкеты.
+   */
+  statusOverride?: UserMasterStatus;
+}
+
+/** Значение из БД — свободный text, поэтому сужаем до известных вариантов. */
+function normalizeMasterStatus(value: unknown): UserMasterStatus | undefined {
+  return value === 'active' || value === 'break' || value === 'offline' || value === 'auto'
+    ? value
+    : undefined;
 }
 
 export async function fetchResidentReputationMap(
@@ -28,7 +42,7 @@ export async function fetchResidentReputationMap(
 
   const { data, error } = await supabase
     .from('v_resident_reputation')
-    .select('id, resident_rating, resident_review_count, tasks_done_count, account_days')
+    .select('id, resident_rating, resident_review_count, tasks_done_count, account_days, status_override')
     .in('id', ids);
   if (error || !data) return {};
 
@@ -39,6 +53,7 @@ export async function fetchResidentReputationMap(
       reviewCount: Number(row.resident_review_count ?? 0),
       tasksDone: Number(row.tasks_done_count ?? 0),
       accountDays: Number(row.account_days ?? 0),
+      statusOverride: normalizeMasterStatus(row.status_override),
     };
   }
   return result;

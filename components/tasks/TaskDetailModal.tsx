@@ -36,6 +36,10 @@ export default function TaskDetailModal({
   // Оценка второй стороны после завершения.
   const [ratingValue, setRatingValue] = useState(5);
   const [ratingText, setRatingText] = useState('');
+  // Оценка отправлена в этой сессии просмотра. Без флага блок оценки
+  // просто исчезал (задание уходило из pendingReview у родителя), и со
+  // стороны это выглядело как «карточка закрылась сама».
+  const [ratingSubmitted, setRatingSubmitted] = useState(false);
   // Модалка отметки явки (только для запланированных заданий).
   const [isAttendanceOpen, setIsAttendanceOpen] = useState(false);
 
@@ -55,6 +59,13 @@ export default function TaskDetailModal({
   }, [taskId, t.taskLoadOneError]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Новое задание — новая форма оценки.
+  useEffect(() => {
+    setRatingSubmitted(false);
+    setRatingValue(5);
+    setRatingText('');
+  }, [taskId]);
 
   // Открытая карточка живая: нажатие «Выполнил» у второй стороны,
   // отметка явки и новый отзыв применяются без перезахода.
@@ -261,14 +272,36 @@ export default function TaskDetailModal({
                 </div>
               )}
 
+              {/* Оплата идёт вне приложения — говорим об этом прямо, иначе
+                  обе стороны ждут, что деньги переведёт сервис. */}
+              {task.isPaid && (isAuthor || isExecutor)
+                && ['open', 'in_progress', 'awaiting_confirm'].includes(task.status) && (
+                <div className="mx-4 mb-4 rounded-2xl bg-sky-50/80 px-3.5 py-3 dark:bg-sky-950/30">
+                  <h3 className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-sky-900 dark:text-sky-300">
+                    <Wallet className="h-3.5 w-3.5" />
+                    {t.taskPayoutTitle}
+                  </h3>
+                  <p className="text-[11px] leading-relaxed text-sky-800/90 dark:text-sky-200/80">
+                    {t.taskPayoutNote}
+                  </p>
+                </div>
+              )}
+
               {task.status === 'awaiting_confirm' && (
                 <p className="mx-4 mb-4 rounded-xl bg-amber-50 px-3.5 py-2.5 text-[11px] font-semibold leading-relaxed text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
                   {t.taskAwaitConfirmNote.replace('{hours}', String(TASK_AUTO_CONFIRM_HOURS))}
                 </p>
               )}
 
+              {/* Подтверждение вместо исчезающей формы */}
+              {task.status === 'completed' && ratingSubmitted && (
+                <p className="mx-4 mb-4 rounded-2xl bg-emerald-50/70 px-3.5 py-3 text-xs font-bold text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
+                  {t.taskRatingSaved}
+                </p>
+              )}
+
               {/* Оценка второй стороны после закрытия сделки */}
-              {task.status === 'completed' && (isAuthor || isExecutor) && (
+              {task.status === 'completed' && !ratingSubmitted && (isAuthor || isExecutor) && (
                 <div className="mx-4 mb-4 rounded-2xl bg-emerald-50/70 p-3.5 dark:bg-emerald-950/30">
                   <h3 className="mb-2 text-xs font-bold text-emerald-900 dark:text-emerald-300">
                     {isAuthor ? t.taskRateExecutor : t.taskRateCustomer}
@@ -306,9 +339,12 @@ export default function TaskDetailModal({
                     onClick={() => {
                       const targetId = isAuthor ? activeParticipants[0]?.userId : task.authorId;
                       if (!targetId) { setError(t.taskNobodyToRate); return; }
-                      act('rate', () => submitResidentReview({
-                        taskId: task.id, targetId, rating: ratingValue, text: ratingText.trim(),
-                      }));
+                      act('rate', async () => {
+                        await submitResidentReview({
+                          taskId: task.id, targetId, rating: ratingValue, text: ratingText.trim(),
+                        });
+                        setRatingSubmitted(true);
+                      });
                     }}
                     className="mt-2 w-full rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-700 disabled:opacity-60"
                   >

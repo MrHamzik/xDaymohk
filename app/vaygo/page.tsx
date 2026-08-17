@@ -76,6 +76,23 @@ export default function VaygoPage() {
   // подтвердили) видны без перезахода.
   useTasksRealtime(load);
 
+  // Быстрое создание с кнопки «+»: с другой страницы сюда приходят с
+  // ?create=1 и форма должна открыться сразу. useSearchParams не берём —
+  // он требует Suspense и переводит страницу в динамический рендер;
+  // здесь достаточно один раз прочитать адрес после монтирования.
+  // Флаг из адреса убираем, иначе форма открывалась бы снова при
+  // любом возврате «назад» на эту страницу.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('create') !== '1') return;
+    setIsCreateOpen(true);
+    params.delete('create');
+    const rest = params.toString();
+    router.replace(rest ? `${window.location.pathname}?${rest}` : window.location.pathname);
+  }, [router]);
+
+
   useEffect(() => {
     if (tab !== 'nearby' || position || geoDenied) return;
     if (!navigator.geolocation) { setGeoDenied(true); return; }
