@@ -99,14 +99,39 @@ export default function TaskDetailModal({
           <h2 className="truncate pr-2 text-sm font-extrabold text-slate-900 dark:text-white">
             {task?.title ?? 'Задание'}
           </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Закрыть"
-            className="shrink-0 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 dark:hover:bg-zinc-800"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <div className="flex shrink-0 items-center gap-1">
+            {/* Удаление — в шапке, а не среди кнопок внизу: там его
+                не находили. Показываем автору всегда; можно ли удалять
+                на самом деле, решает сервер и объясняет причину. */}
+            {isAuthor && (
+              <button
+                type="button"
+                disabled={Boolean(busy)}
+                onClick={() => {
+                  if (!window.confirm('Удалить задание? Его больше не будет в списках.')) return;
+                  act('delete', async () => {
+                    await deleteTask(task!.id);
+                    onClose();
+                  });
+                }}
+                aria-label="Удалить задание"
+                title="Удалить задание"
+                className="rounded-lg p-1.5 text-rose-500 transition hover:bg-rose-50 disabled:opacity-60 dark:text-rose-400 dark:hover:bg-rose-950/40"
+              >
+                {busy === 'delete'
+                  ? <Loader2 className="h-4 w-4 animate-spin" />
+                  : <Trash2 className="h-4 w-4" />}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Закрыть"
+              className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 dark:hover:bg-zinc-800"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
@@ -369,25 +394,6 @@ export default function TaskDetailModal({
               </button>
             )}
 
-            {/* Удаление доступно, пока задание никто не взял: иначе
-                исполнителя нужно предупредить — для этого «Отменить». */}
-            {isAuthor && task.status === 'open' && activeParticipants.length === 0 && (
-              <button
-                type="button"
-                disabled={Boolean(busy)}
-                onClick={() => {
-                  if (!window.confirm('Удалить задание? Его больше не будет в списках.')) return;
-                  act('delete', async () => {
-                    await deleteTask(task.id);
-                    onClose();
-                  });
-                }}
-                className="flex items-center justify-center gap-1.5 rounded-xl bg-rose-50 px-3 py-2.5 text-sm font-bold text-rose-700 transition hover:bg-rose-100 disabled:opacity-60 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-950/70"
-              >
-                {busy === 'delete' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                Удалить
-              </button>
-            )}
           </div>
         )}
       </div>

@@ -1,6 +1,9 @@
 'use client';
 
-import { Clock, MapPin, Star, Users, Zap, AlertTriangle, CalendarDays, ChevronRight } from 'lucide-react';
+import {
+  Clock, MapPin, Star, Users, Zap, AlertTriangle,
+  CalendarDays, ChevronRight, ShieldCheck,
+} from 'lucide-react';
 import Avatar from '@/components/Avatar';
 import { formatTimeLeft } from '@/lib/tasks/client';
 import { taskTotalReward, type Task } from '@/lib/types';
@@ -12,27 +15,36 @@ interface TaskCardProps {
   onOpen: (task: Task) => void;
 }
 
-/** Приоритет: жёлтый — важно, красный — критично. */
+/** Оформление приоритета: цвет «корешка», подпись и иконка. */
 const PRIORITY_META = {
-  normal: null,
+  normal: {
+    label: null,
+    spine: 'bg-slate-200 dark:bg-zinc-700',
+    chip: '',
+    Icon: Clock,
+  },
   high: {
-    label: 'Приоритет',
-    surcharge: '+20%',
-    className: 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300',
+    label: 'Приоритет +20%',
+    spine: 'bg-gradient-to-b from-amber-300 to-amber-500',
+    chip: 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300',
     Icon: Zap,
   },
   critical: {
-    label: 'Критично',
-    surcharge: '+50%',
-    className: 'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300',
+    label: 'Критично +50%',
+    spine: 'bg-gradient-to-b from-rose-400 to-rose-600',
+    chip: 'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300',
     Icon: AlertTriangle,
   },
 } as const;
 
 /**
- * Карточка задания. Оформление повторяет ProfileCard из каталога:
- * секции разделены тонкими линиями (border-t), а не вложенными
- * рамками — так плотнее и читабельнее.
+ * Карточка задания.
+ *
+ * Дизайн строится слоями: «корешок» приоритета слева, едва заметный
+ * вайнахский орнамент фоном, разделители с ромбом вместо сплошных
+ * линий, цена на подложке с внутренней обводкой. Никаких вложенных
+ * рамок — только заливки и линии, поэтому карточка остаётся плотной
+ * и читабельной даже на узком экране.
  */
 export default function TaskCard({ task, needsReview = false, onOpen }: TaskCardProps) {
   const priority = PRIORITY_META[task.priority];
@@ -41,6 +53,9 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
   const isOverdue = timeLeft === 'просрочено';
   const takenSlots = task.takenSlots ?? 0;
   const isFull = takenSlots >= task.slots;
+  const rating = task.authorRating ?? 0;
+  // «Надёжный» — 5+ заданий и рейтинг не ниже 4.5: сигнал исполнителю.
+  const isTrusted = rating >= 4.5 && (task.authorTasksCreated ?? 0) >= 5;
 
   return (
     <article
@@ -54,81 +69,87 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
         }
       }}
       aria-label={`Открыть задание: ${task.title}`}
-      className={`group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border bg-white shadow-sm transition hover:shadow-md dark:bg-zinc-800 ${
+      className={`smk-card smk-ornament smk-corner group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border bg-white text-slate-900 shadow-sm hover:shadow-lg dark:bg-zinc-800 dark:text-white ${
         needsReview
-          ? 'border-amber-300/70 hover:border-amber-400 dark:border-amber-800'
-          : 'border-slate-200/60 hover:border-emerald-300/80 dark:border-zinc-800'
+          ? 'border-amber-300/70 hover:border-amber-400 dark:border-amber-800/80'
+          : 'border-slate-200/70 hover:border-emerald-300/80 dark:border-zinc-700/80 dark:hover:border-emerald-800'
       }`}
     >
-      {/* Полоска приоритета — цветовой акцент без рамки */}
-      {task.priority !== 'normal' && (
-        <div
-          className={`h-1 w-full ${
-            task.priority === 'critical'
-              ? 'bg-gradient-to-r from-rose-400 to-rose-600'
-              : 'bg-gradient-to-r from-amber-300 to-amber-500'
-          }`}
-        />
-      )}
+      {/* Слой 3: «корешок» — цвет говорит о срочности до чтения текста */}
+      <span className={`smk-spine ${priority.spine}`} aria-hidden />
 
-      {/* Шапка: заказчик + награда */}
-      <div className="flex items-start gap-3 p-3.5 sm:p-4">
-        <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-slate-200/60 bg-slate-100 dark:border-zinc-800/60 dark:bg-zinc-950">
-          <Avatar
-            src={task.authorAvatarUrl}
-            alt={task.authorName || 'Заказчик'}
-            className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-          />
+      {/* ── Шапка: заказчик и цена ─────────────────────────────── */}
+      <div className="flex items-start gap-3 py-3.5 pl-4 pr-3.5">
+        <div className="relative shrink-0">
+          <div className="h-11 w-11 overflow-hidden rounded-xl bg-slate-100 ring-1 ring-slate-200/70 dark:bg-zinc-950 dark:ring-zinc-700/70">
+            <Avatar
+              src={task.authorAvatarUrl}
+              alt={task.authorName || 'Заказчик'}
+              className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+            />
+          </div>
+          {isTrusted && (
+            <span
+              title="Надёжный заказчик"
+              className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-white p-0.5 dark:bg-zinc-800"
+            >
+              <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+            </span>
+          )}
         </div>
 
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-sm font-bold text-slate-900 dark:text-white">
+          <h3 className="truncate text-[13px] font-bold leading-tight text-slate-900 dark:text-white">
             {task.authorName || 'Житель Даймохк'}
           </h3>
-          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-slate-500 dark:text-zinc-500">
-            <span className="inline-flex items-center gap-0.5 font-bold text-amber-600 dark:text-amber-400">
+          {/* Слой 5: метаданные с воздухом и ромбами-разделителями */}
+          <div className="smk-meta mt-1.5 flex flex-wrap items-center text-[11px] leading-relaxed text-slate-500 dark:text-zinc-400">
+            <span className="inline-flex items-center gap-1 font-bold text-amber-600 dark:text-amber-400">
               <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-              {(task.authorRating ?? 0) > 0 ? task.authorRating?.toFixed(1) : '—'}
+              {rating > 0 ? rating.toFixed(1) : 'нет оценок'}
             </span>
-            <span className="text-slate-300 dark:text-zinc-700">·</span>
             <span>{task.authorAccountDays ?? 0} дн.</span>
-            <span className="text-slate-300 dark:text-zinc-700">·</span>
-            <span>заданий: {task.authorTasksCreated ?? 0}</span>
+            <span>{task.authorTasksCreated ?? 0} заданий</span>
           </div>
         </div>
 
         {task.isPaid ? (
-          <div className="shrink-0 text-right">
-            <p className="text-base font-extrabold leading-tight text-emerald-600 dark:text-emerald-400">
+          <div className="smk-price shrink-0">
+            <span className="text-[15px] font-extrabold leading-tight text-emerald-700 dark:text-emerald-300">
               {total} ₽
-            </p>
+            </span>
             {total !== task.reward && (
-              <p className="text-[10px] leading-tight text-slate-400 line-through">{task.reward} ₽</p>
+              <span className="text-[9px] font-semibold leading-tight text-emerald-600/60 line-through dark:text-emerald-400/50">
+                {task.reward} ₽
+              </span>
             )}
           </div>
         ) : (
-          <span className="shrink-0 rounded-lg bg-teal-50 px-2 py-1 text-[10px] font-extrabold text-teal-700 dark:bg-teal-950/50 dark:text-teal-300">
-            ГIончалла
+          <span className="smk-price smk-price-teal shrink-0 text-[11px] font-extrabold text-teal-700 dark:text-teal-300">
+            Садака
           </span>
         )}
       </div>
 
-      <div className="border-t border-slate-100 dark:border-zinc-800/70" />
+      {/* Слой 2: разделитель с ромбом */}
+      <div className="smk-divider mx-4" />
 
-      {/* Суть задания */}
-      <div className="px-3.5 py-3 sm:px-4">
-        <h4 className="line-clamp-2 text-sm font-bold leading-5 text-slate-900 dark:text-white">
+      {/* ── Суть задания ───────────────────────────────────────── */}
+      <div className="px-4 py-3">
+        <h4 className="line-clamp-2 text-sm font-bold leading-snug text-slate-900 dark:text-white">
           {task.title}
         </h4>
         {task.description && (
-          <p className="mt-1 line-clamp-2 break-words text-xs leading-5 text-slate-600 dark:text-zinc-400">
+          <p className="mt-1.5 line-clamp-2 break-words text-xs leading-relaxed text-slate-600 dark:text-zinc-400">
             {task.description}
           </p>
         )}
       </div>
 
-      {/* Метки */}
-      <div className="mt-auto flex flex-wrap items-center gap-1.5 px-3.5 pb-3 text-[10px] font-bold sm:px-4">
+      <div className="smk-divider mx-4" />
+
+      {/* ── Метки ──────────────────────────────────────────────── */}
+      <div className="mt-auto flex flex-wrap items-center gap-1.5 px-4 py-3 text-[10px] font-bold">
         {needsReview && (
           <span className="inline-flex items-center gap-1 rounded-lg bg-amber-100 px-2 py-1 text-amber-900 dark:bg-amber-900/60 dark:text-amber-200">
             <Star className="h-3 w-3 fill-current" />
@@ -136,20 +157,24 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
           </span>
         )}
 
-        {priority && (
-          <span className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 ${priority.className}`}>
+        {priority.label && (
+          <span className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 ${priority.chip}`}>
             <priority.Icon className="h-3 w-3" />
-            {priority.label} {priority.surcharge}
+            {priority.label}
           </span>
         )}
 
         <span
-          className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 ${
+          className={`inline-flex items-center gap-1.5 rounded-lg px-2 py-1 ${
             isOverdue
               ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300'
               : 'bg-slate-100 text-slate-600 dark:bg-zinc-700/70 dark:text-zinc-300'
           }`}
         >
+          {/* Слой 7: пульсирующая точка у «горящих» заданий */}
+          {task.priority === 'critical' && !isOverdue && (
+            <span className="smk-urgent-dot h-1.5 w-1.5 rounded-full bg-rose-500" aria-hidden />
+          )}
           {task.kind === 'scheduled' ? <CalendarDays className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
           {timeLeft || '—'}
         </span>
@@ -175,8 +200,8 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
         )}
       </div>
 
-      {/* Подвал: адрес + стрелка */}
-      <div className="flex items-center justify-between gap-2 border-t border-slate-100 bg-slate-50/70 px-3.5 py-2.5 dark:border-zinc-800 dark:bg-zinc-900/50 sm:px-4">
+      {/* ── Подвал: адрес и стрелка ────────────────────────────── */}
+      <div className="flex items-center justify-between gap-2 border-t border-slate-100 bg-slate-50/60 py-2.5 pl-4 pr-3.5 dark:border-zinc-700/60 dark:bg-zinc-900/40">
         <span className="flex min-w-0 items-center gap-1.5 text-[11px] text-slate-500 dark:text-zinc-400">
           <MapPin className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
           <span className="truncate">{task.address || 'Адрес не указан'}</span>

@@ -54,11 +54,11 @@ export default function ProfileCard({
       role="button"
       tabIndex={0}
       aria-label={`Открыть ${profile.fullName}`}
-      className="group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-sm transition hover:border-emerald-300/80 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-800"
+      className="smk-card smk-ornament smk-corner group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-slate-200/70 bg-white text-slate-900 shadow-sm hover:border-emerald-300/80 hover:shadow-lg dark:border-zinc-700/80 dark:bg-zinc-800 dark:text-white"
     >
       {/* Шапка: аватар + имя + статус + стрелка */}
       <div className="flex items-start gap-3 p-3.5 sm:p-4">
-        <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-slate-200/60 bg-slate-100 dark:border-zinc-800/60 dark:bg-zinc-950">
+        <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-slate-100 ring-1 ring-slate-200/70 dark:bg-zinc-950 dark:ring-zinc-700/70">
           <Image
             src={cacheBustAvatarUrl(profile.avatarUrl)}
             alt={profile.fullName}
@@ -76,7 +76,7 @@ export default function ProfileCard({
             </h3>
             <WorkingStatusBadge profile={profile} />
           </div>
-          <div className="mt-0.5">
+          <div className="mt-1.5">
             <ProfileBadges profile={profile} adminStatus={profileIsAdmin} showPending={showPending} />
           </div>
 
@@ -90,18 +90,18 @@ export default function ProfileCard({
         <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-emerald-500 dark:text-zinc-600" />
       </div>
 
-      {/* Разделитель */}
-      <div className="border-t border-slate-100 dark:border-zinc-800/70" />
+      {/* Разделитель с ромбом — единый мотив с карточками заданий */}
+      <div className="smk-divider mx-3.5 sm:mx-4" />
 
       {/* Описание */}
       {profile.bio && (
-        <p className="line-clamp-2 px-3.5 py-2.5 break-words [overflow-wrap:anywhere] whitespace-pre-wrap text-xs leading-5 text-slate-600 dark:text-zinc-400 sm:px-4">
+        <p className="line-clamp-2 px-3.5 py-3 break-words [overflow-wrap:anywhere] whitespace-pre-wrap text-xs leading-relaxed text-slate-600 dark:text-zinc-400 sm:px-4">
           {profile.bio}
         </p>
       )}
 
       {/* Инфо-строка: рейтинг, возраст/пол, адрес */}
-      <div className="mt-auto space-y-1.5 px-3.5 pb-3 text-xs text-slate-500 dark:text-zinc-400 sm:px-4">
+      <div className="mt-auto space-y-2 px-3.5 pb-3.5 pt-0.5 text-xs text-slate-500 dark:text-zinc-400 sm:px-4">
         {(profile.isSpecialist && profile.rating > 0) && (
           <div className="flex items-center gap-1">
             <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
