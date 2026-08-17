@@ -121,7 +121,7 @@ export default function SettingsControlsBar() {
         </button>
 
         {isStatusMenuOpen && (
-          <div className="absolute left-0 top-full z-[100] mt-2 w-64 overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl dark:border-zinc-800 dark:bg-zinc-950">
+          <div className="smk-solid absolute left-0 top-full z-[100] mt-2 w-64 overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl dark:border-zinc-800 dark:bg-zinc-950">
             <div className="border-b border-slate-100 px-3 py-2.5 dark:border-zinc-800">
               <p className="text-xs font-bold text-slate-900 dark:text-white">
                 {language === 'ce' ? 'Болхан раж' : 'Режим работы'}

@@ -226,7 +226,9 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
       </div>
 
       {/* ── Подвал: адрес и стрелка ────────────────────────────── */}
-      <div className="flex items-center justify-between gap-2 border-t border-slate-100 py-2.5 pl-4 pr-3.5 dark:border-white/5">
+      {/* Подвал на подложке — как у карточки анкеты: раньше адрес висел
+          на голом полотне за тонкой линией и читался как обрезок. */}
+      <div className="smk-card-foot flex items-center justify-between gap-2 py-2.5 pl-4 pr-3.5">
         <span className="flex min-w-0 items-center gap-1.5 text-[11px] text-slate-500 dark:text-zinc-400">
           <MapPin className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
           <span className="truncate">{task.address || t.taskAddressMissing}</span>

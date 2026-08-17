@@ -60,7 +60,7 @@ export default function ThemePickerButton() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-52 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-zinc-700 dark:bg-zinc-900">
+        <div className="smk-solid absolute right-0 top-full z-50 mt-2 w-52 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-zinc-700 dark:bg-zinc-900">
           <div className="max-h-72 overflow-y-auto p-1.5 no-scrollbar">
             {options.map((option) => (
               <button

@@ -698,11 +698,25 @@ export default function ProfileModal({
             });
             const statusInfo = calculateWorkingStatus(profile, effectiveOverride);
             return (
-              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-100 bg-slate-50/70 p-3 text-xs dark:border-zinc-800 dark:bg-zinc-800">
+              <div className="smk-sheet-row flex flex-wrap items-center justify-between gap-2 p-3 text-xs">
                 <div className="flex items-center gap-2">
-                  <span className={`h-2.5 w-2.5 rounded-full ${statusInfo.status === 'break' ? 'bg-amber-500' : statusInfo.status === 'offline' ? 'bg-zinc-400' : 'bg-emerald-500'}`} />
-                  <span className="font-bold text-slate-900 dark:text-white">{statusInfo.label}</span>
-                  {statusInfo.details && <span className="text-slate-500 dark:text-zinc-500">· {statusInfo.details}</span>}
+                  {/* Точка статуса — та же, что на карточке анкеты */}
+                  <span
+                    className={`smk-status-dot smk-status-dot--${statusInfo.status}`}
+                    aria-hidden
+                  />
+                  {/* Короткая подпись без details: рядом уже стоит
+                      расписание, и пара «Сейчас закрыто · Откроется в
+                      09:00» повторяла то же самое другими словами. */}
+                  <span className="font-bold text-slate-900 dark:text-white">
+                    {statusInfo.status === 'break'
+                      ? t.statusBreak
+                      : statusInfo.status === 'offline'
+                      ? t.statusOffline
+                      : statusInfo.status === 'flexible'
+                      ? t.statusFlexible
+                      : t.statusActive}
+                  </span>
                 </div>
                 {profile.isSpecialist && profile.workDays && profile.workDays.length > 0 && (
                   <div className="flex items-center gap-1 text-slate-500 dark:text-zinc-500">
@@ -760,7 +774,7 @@ export default function ProfileModal({
             </section>
           )}
 
-          <p className="break-words [overflow-wrap:anywhere] whitespace-pre-wrap rounded-xl border border-slate-100 bg-slate-50/70 p-3 text-xs leading-relaxed text-slate-700 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-400">
+          <p className="break-words [overflow-wrap:anywhere] whitespace-pre-wrap smk-sheet-row p-3 text-xs leading-relaxed text-slate-700 dark:text-zinc-400">
             {profile.bio}
           </p>
 
@@ -793,7 +807,7 @@ export default function ProfileModal({
           })()}
 
           {profile.isSpecialist && (
-            <section className="bg-slate-50/50 dark:bg-zinc-950/50 rounded-2xl overflow-hidden border border-slate-100 dark:border-zinc-800">
+            <section className="smk-sheet-row overflow-hidden">
               <div className="smk-sheet-section flex">
                 <button type="button" onClick={() => setActiveTab('reviews')} className={`flex-1 border-b-2 py-3 text-[11px] font-bold transition ${activeTab === 'reviews' ? 'border-emerald-500 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400' : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-zinc-500 dark:hover:text-zinc-300'}`}>ОТЗЫВЫ ({displayReviewCount})</button>
                 <button type="button" onClick={() => setActiveTab('questions')} className={`flex-1 border-b-2 py-3 text-[11px] font-bold transition ${activeTab === 'questions' ? 'border-emerald-500 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400' : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-zinc-500 dark:hover:text-zinc-300'}`}>ВОПРОСЫ ({questions.length})</button>
@@ -806,7 +820,7 @@ export default function ProfileModal({
                     {displayReviews.length > 0 ? (
                       <div className="space-y-2">
                         {displayReviews.map((review) => (
-                    <article key={review.id} className="rounded-xl border border-slate-100 bg-slate-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-800">
+                    <article key={review.id} className="smk-sheet-row p-3">
                                             <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-2 min-w-0">
                           <div className="h-6 w-6 shrink-0 rounded-full bg-slate-200 dark:bg-zinc-700 overflow-hidden flex items-center justify-center">
@@ -858,7 +872,7 @@ export default function ProfileModal({
                         </div>
                       </div>
                       {editingReviewId === review.id ? (
-                        <form onSubmit={(event) => void handleEditReviewSubmit(event, review.id)} className="mt-2 space-y-2 rounded-xl border border-emerald-100 bg-emerald-50/50 p-2.5 dark:border-zinc-800 dark:bg-zinc-950/40">
+                        <form onSubmit={(event) => void handleEditReviewSubmit(event, review.id)} className="mt-2 space-y-2 rounded-xl smk-sheet-row p-2.5">
                           <div className="flex items-center gap-1" aria-label="Изменить оценку">
                             {[1, 2, 3, 4, 5].map((rating) => (
                               <button
@@ -939,7 +953,7 @@ export default function ProfileModal({
                     {questions.length > 0 ? (
                       <div className="space-y-2">
                         {questions.map((q) => (
-                          <article key={q.id} className="rounded-xl border border-slate-100 bg-slate-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-800">
+                          <article key={q.id} className="smk-sheet-row p-3">
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex min-w-0 items-center gap-2">
                                 <div className="h-6 w-6 shrink-0 overflow-hidden rounded-full bg-slate-200 dark:bg-zinc-700 flex items-center justify-center">
@@ -987,7 +1001,7 @@ export default function ProfileModal({
                               </div>
                             </div>
                             {editingQuestionId === q.id ? (
-                              <form onSubmit={(event) => void handleEditQuestionSubmit(event, q.id)} className="mt-2 space-y-2 rounded-xl border border-emerald-100 bg-emerald-50/50 p-2.5 dark:border-zinc-800 dark:bg-zinc-950/40">
+                              <form onSubmit={(event) => void handleEditQuestionSubmit(event, q.id)} className="mt-2 space-y-2 rounded-xl smk-sheet-row p-2.5">
                                 <textarea
                                   rows={2}
                                   maxLength={500}
@@ -1021,7 +1035,7 @@ export default function ProfileModal({
                             </button>
 
                             {expandedQuestion === q.id && (
-                              <div className="mt-2 space-y-2 rounded-lg border border-slate-100 bg-white/60 p-2.5 dark:border-zinc-800 dark:bg-zinc-950/40">
+                              <div className="mt-2 space-y-2 rounded-lg smk-sheet-row p-2.5">
                                 {commentsLoading === q.id ? (
                                   <p className="text-[10px] text-slate-400">Загружаем обсуждение…</p>
                                 ) : (commentsByQuestion[q.id] ?? []).length > 0 ? (
@@ -1290,7 +1304,7 @@ export default function ProfileModal({
 
           <section>
             <h3 className="mb-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Адресс</h3>
-            <div className="flex items-start gap-3 rounded-xl border border-slate-100 bg-slate-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-800">
+            <div className="flex items-start gap-3 smk-sheet-row p-3">
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
                 <MapPin className="h-4 w-4" />
               </div>
@@ -1320,7 +1334,7 @@ export default function ProfileModal({
                     key={cert.id}
                     type="button"
                     onClick={() => setSelectedCert(cert)}
-                    className="group rounded-xl border border-slate-100 bg-slate-50/70 p-2 text-left transition hover:border-emerald-300 dark:border-zinc-800 dark:bg-zinc-800"
+                    className="group smk-sheet-row p-2 text-left transition hover:brightness-95 dark:hover:brightness-110"
                   >
                     <div className="relative mb-1.5 h-24 w-full overflow-hidden rounded-lg bg-slate-200 dark:bg-zinc-800">
                       <Image

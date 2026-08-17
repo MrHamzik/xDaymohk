@@ -412,12 +412,14 @@ html.dark .shadow-sm {
   box-shadow: 0 2px 8px rgba(0,0,0,0.28), 0 1px 3px rgba(0,0,0,0.22);
 }
 
-html.dark .rounded-3xl:not(.site-bottom-nav):not(.site-bottom-nav *),
-html.dark .rounded-2xl:not(.site-bottom-nav):not(.site-bottom-nav *) {
-  border-width: 1px;
-  border-style: solid;
-  border-color: var(--border-dark-soft);
-}
+/* Раньше здесь любому элементу с rounded-2xl/3xl принудительно
+   добавлялась рамка. Скругление — это форма, а не признак карточки:
+   под правило попадали блоки без фона («По этому адресу анкет не
+   найдено»), секции «О проекте», «Кибла», «Чёрный список» — они
+   получали обводку вокруг пустоты и выглядели грязно.
+
+   Поверхности рисуют себя сами: .smk-lux, .smk-panel, .smk-sheet-row.
+   Тем, кому рамка нужна, ставят её классом в разметке. */
 
 /* Ensure inputs in dark have soft border not harsh */
 html.dark input,
@@ -1051,6 +1053,15 @@ html.smk-glass aside > div {
 
 /* Модальные окна: фон под ними и так затемнён подложкой, поэтому
    стекло держим плотнее — иначе текст формы читается плохо. */
+/* Выпадающие меню шапки (выбор темы, режим работы) и центр уведомлений
+   тоже держим непрозрачными: это плотные списки текста, сквозь которые
+   просвечивал контент страницы. Помечаются классом .smk-solid. */
+html.smk-glass .smk-solid {
+  background-color: var(--smk-card-a) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
 /* Модальные окна НЕПРОЗРАЧНЫ даже в стеклянной теме: в них читают и
    заполняют формы, а сквозной фон мешает — текст ложится поверх
    случайного контента. Стекло остаётся у подложки вокруг окна. */

@@ -116,7 +116,7 @@ export default function WorkplaceSection({
           {/* Слои карты вынесены НАД картой — единый сегмент-стиль как на
               странице «Карта» */}
           <div className="flex items-center gap-1.5 pt-1">
-            <span className="text-[10px] font-bold text-slate-400">{t.showLabel}</span>
+            <span className="smk-sheet-label">{t.showLabel}</span>
             <MapSegmentedControl
               ariaLabel="Тип карты"
               active={[mapLayerMode]}
@@ -141,7 +141,7 @@ export default function WorkplaceSection({
             className="h-56 sm:h-72"
           />
           <div className="flex items-center gap-1.5 px-1">
-            <span className="text-[10px] font-bold text-slate-400">{t.showLabel}</span>
+            <span className="smk-sheet-label">{t.showLabel}</span>
             {/* Независимые переключатели (можно включить оба) в том же
                 сегмент-стиле. */}
             <MapSegmentedControl

@@ -88,7 +88,7 @@ export default function NotificationCenter() {
       {/* Fullscreen Notification Window */}
       {isOpen && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed inset-0 z-[100] flex h-[100dvh] w-full flex-col bg-white p-4 shadow-2xl dark:bg-zinc-950 sm:p-6"
+          className="smk-solid fixed inset-0 z-[100] flex h-[100dvh] w-full flex-col bg-white p-4 shadow-2xl dark:bg-zinc-950 sm:p-6"
           role="dialog"
           aria-modal="true"
           aria-label={language === 'ce' ? 'Хаамаш' : 'Уведомления'}

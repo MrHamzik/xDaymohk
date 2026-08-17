@@ -311,7 +311,7 @@ export default function MapPage() {
               })}
             </div>
           ) : (
-            <p className="rounded-2xl border border-dashed border-slate-300 p-4 text-center text-sm text-slate-500 dark:border-zinc-700 dark:text-zinc-500">
+            <p className="smk-sheet-row p-4 text-center text-sm text-slate-500 dark:text-zinc-500">
               {selectedAddress ? 'По этому адресу анкет не найдено.' : 'Выберите точку анкеты на карте.'}
             </p>
           )}
@@ -421,7 +421,7 @@ export default function MapPage() {
                 </div>
               )}
 
-              <p className="text-[11px] text-slate-400">{t.mapClearHint}</p>
+              <p className="smk-sheet-label">{t.mapClearHint}</p>
             </div>
           </section>
 
