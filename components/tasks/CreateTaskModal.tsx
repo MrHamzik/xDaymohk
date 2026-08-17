@@ -128,9 +128,9 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
   // Поля с мягкой заливкой вместо голых рамок: так форма читается
   // плотнее и совпадает по духу с карточками каталога.
   const fieldClass = 'w-full rounded-xl border border-transparent bg-slate-100/80 px-3.5 py-3 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:bg-white focus:ring-2 focus:ring-emerald-500/30 dark:bg-zinc-800 dark:text-white dark:placeholder:text-zinc-500 dark:focus:bg-zinc-800';
-  const labelClass = 'mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-zinc-400';
+  const labelClass = 'smk-sheet-label mb-1.5 block';
   // Секция: заголовок + разделитель сверху, без вложенных рамок.
-  const sectionClass = 'space-y-3 border-t border-slate-100 px-4 py-4 dark:border-zinc-800';
+  const sectionClass = 'smk-sheet-section space-y-3 px-4 py-4';
 
   return (
     <div
@@ -141,10 +141,10 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
       onClick={onClose}
     >
       <div
-        className="flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl dark:bg-zinc-900 sm:rounded-3xl"
+        className="smk-sheet flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl shadow-2xl sm:rounded-3xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 dark:border-zinc-800">
+        <div className="smk-sheet-head flex items-center justify-between px-4 pb-3 pt-4">
           <h2 id="create-task-title" className="text-sm font-extrabold text-slate-900 dark:text-white">
             {isPaid ? t.taskCreateTitlePaid : t.taskCreateTitleFree}
           </h2>
@@ -460,7 +460,7 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
           )}
         </div>
 
-        <div className="flex gap-2 border-t border-slate-100 p-4 dark:border-zinc-800">
+        <div className="smk-sheet-section smk-sheet-foot flex gap-2 p-4">
           <button
             type="button"
             onClick={onClose}

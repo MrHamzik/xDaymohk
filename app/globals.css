@@ -878,6 +878,74 @@ html.smk-themed .bg-white {
   background-color: var(--smk-card-a);
 }
 
+/* --- Внутренности модальных окон --------------------------------------------
+   Раньше подписи «Когда», «Мест занято», «Записались» красились
+   классом text-slate-400, а он не входит в текстовые слоты темы —
+   поэтому внутри открытой карточки оформление «пропадало».
+   Эти три класса собирают повторяющиеся элементы модалок в одном
+   месте и читают переменные темы. */
+.smk-sheet-label {
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.3;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--smk-muted, #94a3b8);
+}
+.smk-sheet-section {
+  border-top: 1px solid var(--smk-hairline, rgb(15 23 42 / 0.06));
+}
+/* Строка «подпись — значение» внутри карточки задания. */
+.smk-sheet-row {
+  border-radius: 0.75rem;
+  background: var(--smk-card-inset, #f8fafc);
+}
+
+/* Подвал карточки: заметно отделён от полотна, как и просили —
+   раньше он был чуть темнее, потом стал сливаться. */
+.smk-card-foot {
+  background: var(--smk-panel, #f1f5f9);
+  border-top: 1px solid var(--smk-hairline, rgb(15 23 42 / 0.06));
+}
+
+/* --- Полотно модального окна ------------------------------------------------
+   Окна открываются снизу на телефоне и по центру на широком экране.
+   Три вещи, которых не хватало:
+     1) «ручка» сверху — подсказывает, что лист тянется/закрывается;
+     2) липкая шапка, чтобы заголовок и крестик не уезжали при прокрутке;
+     3) отступ снизу под системную панель жестов (safe-area). */
+.smk-sheet {
+  background: var(--smk-card-a, #ffffff);
+}
+.smk-sheet-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--smk-card-a, #ffffff);
+}
+.smk-sheet-head::before {
+  content: '';
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  width: 2.25rem;
+  height: 4px;
+  border-radius: 9999px;
+  transform: translateX(-50%);
+  background: var(--smk-hairline-strong, rgb(15 23 42 / 0.12));
+}
+@media (min-width: 640px) {
+  /* На широком экране лист не тянут — «ручка» там лишняя. */
+  .smk-sheet-head::before { display: none; }
+}
+.smk-sheet-foot {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: var(--smk-card-a, #ffffff);
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
 /* --- Панели бокового меню ----------------------------------------------------
    Мини-профиль, виджет времени намаза и панель четырёх иконок — это
    один тип поверхности, поэтому у них общий класс и общий слот темы.
@@ -983,10 +1051,13 @@ html.smk-glass aside > div {
 
 /* Модальные окна: фон под ними и так затемнён подложкой, поэтому
    стекло держим плотнее — иначе текст формы читается плохо. */
+/* Модальные окна НЕПРОЗРАЧНЫ даже в стеклянной теме: в них читают и
+   заполняют формы, а сквозной фон мешает — текст ложится поверх
+   случайного контента. Стекло остаётся у подложки вокруг окна. */
 html.smk-glass [role="dialog"] > div {
-  background-color: color-mix(in srgb, var(--smk-card-a) 82%, transparent) !important;
-  backdrop-filter: blur(20px) saturate(140%);
-  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  background-color: var(--smk-card-a) !important;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 /* Узор-лучи на стекле превращается в грязь: убираем. */

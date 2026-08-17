@@ -639,8 +639,8 @@ export default function ProfileModal({
     <>
       <div className="fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/80 p-0 backdrop-blur-md sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label={`Анкета ${profile.fullName}`}>
       {notice && <Notice message={notice} type="error" onClose={() => setNotice('')} />}
-      <div className="flex max-h-[90vh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl transition-colors dark:bg-zinc-950 sm:max-w-2xl sm:rounded-2xl border border-slate-200/50 dark:border-zinc-800">
-        <div className="relative shrink-0 border-b border-slate-100 bg-white p-4 text-slate-900 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white sm:p-5">
+      <div className="smk-sheet flex max-h-[90vh] w-full flex-col overflow-hidden rounded-t-2xl shadow-2xl transition-colors sm:max-w-2xl sm:rounded-2xl border border-slate-200/50 dark:border-zinc-800">
+        <div className="smk-sheet-head relative shrink-0 p-4 text-slate-900 dark:text-white sm:p-5">
           <button
             onClick={onClose}
             aria-label="Закрыть анкету"
@@ -794,7 +794,7 @@ export default function ProfileModal({
 
           {profile.isSpecialist && (
             <section className="bg-slate-50/50 dark:bg-zinc-950/50 rounded-2xl overflow-hidden border border-slate-100 dark:border-zinc-800">
-              <div className="flex border-b border-slate-100 dark:border-zinc-800">
+              <div className="smk-sheet-section flex">
                 <button type="button" onClick={() => setActiveTab('reviews')} className={`flex-1 border-b-2 py-3 text-[11px] font-bold transition ${activeTab === 'reviews' ? 'border-emerald-500 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400' : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-zinc-500 dark:hover:text-zinc-300'}`}>ОТЗЫВЫ ({displayReviewCount})</button>
                 <button type="button" onClick={() => setActiveTab('questions')} className={`flex-1 border-b-2 py-3 text-[11px] font-bold transition ${activeTab === 'questions' ? 'border-emerald-500 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400' : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-zinc-500 dark:hover:text-zinc-300'}`}>ВОПРОСЫ ({questions.length})</button>
                 <button type="button" onClick={() => setActiveTab('ratings')} className={`flex-1 border-b-2 py-3 text-[11px] font-bold transition ${activeTab === 'ratings' ? 'border-emerald-500 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400' : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-zinc-500 dark:hover:text-zinc-300'}`}>ОЦЕНКИ</button>
@@ -1354,7 +1354,7 @@ export default function ProfileModal({
         </div>
 
         {hasAnyContact && (
-          <div className="flex shrink-0 items-center gap-2.5 border-t border-slate-100 bg-slate-50/90 p-3 dark:border-zinc-800 dark:bg-zinc-800">
+          <div className="smk-sheet-section smk-sheet-foot flex shrink-0 items-center gap-2.5 p-3">
             {!isViewerBlocked && hasPhone && (
               <button
                 onClick={handleCall}

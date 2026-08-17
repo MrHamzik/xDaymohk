@@ -232,12 +232,12 @@ export default function ProfileCard({
       </div>
 
       {/* ── Подвал: документы · действие ────────────────────────── */}
-      <div className={`mt-auto flex items-center justify-between gap-2 border-t border-slate-100 px-3.5 dark:border-white/5 ${
+      <div className={`smk-card-foot mt-auto flex items-center justify-between gap-2 px-3.5 ${
         hasAction ? 'py-2' : 'py-1.5'
       }`}>
         <div className="min-w-0">
           {profile.certificates.length > 0 ? (
-            <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-500 dark:text-zinc-400">
+            <span className="inline-flex min-w-0 items-center gap-1.5 whitespace-nowrap text-[11px] font-bold text-slate-500 dark:text-zinc-400">
               <Award className="smk-ico h-3.5 w-3.5" />
               {t.cardDocuments}: {profile.certificates.length}
             </span>

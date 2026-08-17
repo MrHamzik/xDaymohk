@@ -130,10 +130,10 @@ export default function TaskDetailModal({
       onClick={onClose}
     >
       <div
-        className="flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl dark:bg-zinc-900 sm:rounded-3xl"
+        className="smk-sheet flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl shadow-2xl sm:rounded-3xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 dark:border-zinc-800">
+        <div className="smk-sheet-head flex items-center justify-between px-4 pb-3 pt-4">
           <h2 className="truncate pr-2 text-sm font-extrabold text-slate-900 dark:text-white">
             {task?.title ?? t.taskDetailTitle}
           </h2>
@@ -188,8 +188,8 @@ export default function TaskDetailModal({
               </div>
 
               {task.description && (
-                <div className="border-t border-slate-100 px-4 py-4 dark:border-zinc-800">
-                  <h3 className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                <div className="smk-sheet-section px-4 py-4">
+                  <h3 className="smk-sheet-label mb-1.5">
                     {t.taskDetailsHeading}
                   </h3>
                   <p className="whitespace-pre-wrap break-words text-[13px] leading-relaxed text-slate-700 dark:text-zinc-300">
@@ -198,7 +198,7 @@ export default function TaskDetailModal({
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-2 border-t border-slate-100 px-4 py-4 text-[11px] dark:border-zinc-800">
+              <div className="smk-sheet-section grid grid-cols-2 gap-2 px-4 py-4 text-[11px]">
                 <InfoRow
                   icon={task.kind === 'scheduled' ? CalendarDays : Clock}
                   label={task.kind === 'scheduled' ? t.taskWhenLabel : t.taskTimeLeftLabel}
@@ -221,8 +221,8 @@ export default function TaskDetailModal({
               {/* Адрес — точно тот же блок, что в карточке анкеты:
                   плитка с иконкой, адрес и ссылка «Открыть на карте». */}
               {(task.address || (typeof task.lat === 'number' && typeof task.lng === 'number')) && (
-                <div className="border-t border-slate-100 px-4 py-4 dark:border-zinc-800">
-                  <h3 className="mb-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                <div className="smk-sheet-section px-4 py-4">
+                  <h3 className="smk-sheet-label mb-1.5">
                     {t.taskAddressHeading}
                   </h3>
                   <div className="flex items-start gap-3 rounded-xl border border-slate-100 bg-slate-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-800">
@@ -251,7 +251,7 @@ export default function TaskDetailModal({
 
               {/* Заявки на рассмотрении — только заказчику */}
               {isAuthor && pendingParticipants.length > 0 && (
-                <div className="border-t border-slate-100 px-4 py-4 dark:border-zinc-800">
+                <div className="smk-sheet-section px-4 py-4">
                   <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-amber-600 dark:text-amber-400">
                     {t.taskPendingHeading} ({pendingParticipants.length})
                   </h3>
@@ -301,15 +301,15 @@ export default function TaskDetailModal({
 
               {/* Участники: видно, кто взял задание */}
               {activeParticipants.length > 0 && (
-                <div className="border-t border-slate-100 px-4 py-4 dark:border-zinc-800">
-                  <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-400">
+                <div className="smk-sheet-section px-4 py-4">
+                  <h3 className="smk-sheet-label mb-2">
                     {task.kind === 'urgent' ? t.taskExecutorHeading : `${t.taskJoinedHeading} (${activeParticipants.length})`}
                   </h3>
                   <div className="space-y-1.5">
                     {activeParticipants.map((p) => (
                       <div
                         key={p.id}
-                        className="flex items-center gap-2 rounded-xl bg-slate-50 p-2.5 dark:bg-zinc-800/60"
+                        className="smk-sheet-row flex items-center gap-2 p-2.5"
                       >
                         <Avatar src={p.avatarUrl} className="h-8 w-8 shrink-0 rounded-lg object-cover" />
                         <div className="min-w-0 flex-1">
@@ -431,7 +431,7 @@ export default function TaskDetailModal({
 
         {/* Действия зависят от роли и статуса */}
         {task && (
-          <div className="flex flex-wrap gap-2 border-t border-slate-100 p-4 dark:border-zinc-800">
+          <div className="smk-sheet-section smk-sheet-foot flex flex-wrap gap-2 p-4">
             {!isAuthor && !isExecutor && !isPendingMe && task.status === 'open' && (
               <button
                 type="button"
@@ -583,8 +583,8 @@ function InfoRow({
   // Одна строка: подпись слева, значение справа. Двухэтажный вариант
   // разрывал короткие пары вроде «Осталось · 2 ч» без пользы.
   return (
-    <div className="flex items-center justify-between gap-2 rounded-xl bg-slate-50 px-2.5 py-2 dark:bg-zinc-800/60">
-      <span className="flex shrink-0 items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">
+    <div className="smk-sheet-row flex items-center justify-between gap-2 px-2.5 py-2">
+      <span className="smk-sheet-label flex shrink-0 items-center gap-1">
         <Icon className="h-3 w-3" />
         {label}
       </span>

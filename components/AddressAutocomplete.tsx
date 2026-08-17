@@ -61,7 +61,7 @@ export default function AddressAutocomplete({ id, value, onChange, onSelect, onF
   return (
     <div className="relative">
       <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        <Search className="smk-ico pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
         <input
           id={id}
           required

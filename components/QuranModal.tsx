@@ -69,7 +69,7 @@ export default function QuranModal({ isOpen, onClose }: QuranModalProps) {
         {/* Search */}
         <div className="border-b border-slate-100 bg-slate-50 p-3 dark:border-zinc-800 dark:bg-zinc-800/60">
           <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="smk-ico pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}

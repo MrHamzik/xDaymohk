@@ -118,10 +118,10 @@ export default function AttendanceModal({
       onClick={onClose}
     >
       <div
-        className="flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl dark:bg-zinc-900 sm:rounded-3xl"
+        className="smk-sheet flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl shadow-2xl sm:rounded-3xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 dark:border-zinc-800">
+        <div className="smk-sheet-head flex items-center justify-between px-4 pb-3 pt-4">
           <div className="min-w-0">
             <h2 id="attendance-title" className="truncate text-sm font-extrabold text-slate-900 dark:text-white">
               {t.attendanceTitle}
@@ -255,7 +255,7 @@ export default function AttendanceModal({
           )}
         </div>
 
-        <div className="border-t border-slate-100 p-4 dark:border-zinc-800">
+        <div className="smk-sheet-section smk-sheet-foot p-4">
           {task.isPaid && (
             <div className="mb-2 flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-xs dark:bg-zinc-800/60">
               <span className="font-semibold text-slate-600 dark:text-zinc-400">

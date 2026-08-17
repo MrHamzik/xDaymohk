@@ -143,7 +143,7 @@ export default function SearchFilter({
     <div className="mb-4 space-y-2">
       {/* Search Input Bar */}
       <div className="relative">
-        <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+        <span className="smk-ico pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
           <Search className="h-4 w-4" />
         </span>
         <input
