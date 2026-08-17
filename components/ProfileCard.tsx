@@ -6,10 +6,10 @@ import {
   Flag, MapPin, Star, VenusAndMars,
 } from 'lucide-react';
 import { Profile } from '@/lib/types';
-import { calculateAge, formatDisplayName, formatReviews } from '@/lib/text';
+import { calculateAge, formatReviews } from '@/lib/text';
 import { useI18n } from '@/lib/i18n';
 import { useProfiles } from '@/components/ProfilesProvider';
-import ProfileBadges, { WorkingStatusDot } from '@/components/ProfileBadges';
+import ProfileBadges, { useWorkingStatusRing } from '@/components/ProfileBadges';
 import { cacheBustAvatarUrl } from '@/lib/media';
 
 interface ProfileCardProps {
@@ -74,6 +74,9 @@ export default function ProfileCard({
   // «средний год» давало ошибку ±1 год.
   const age = calculateAge(profile.birthDate);
 
+  // Рабочий статус специалиста показываем цветом кольца аватара.
+  const statusRing = useWorkingStatusRing(profile);
+
   // Какой рейтинг показывать в шапке: у специалиста — профессиональный,
   // у жителя — репутация по заданиям.
   const headRating = profile.isSpecialist ? profile.rating : residentRating;
@@ -96,10 +99,16 @@ export default function ProfileCard({
       aria-label={`Открыть ${profile.fullName}`}
       className="smk-lux group flex h-full cursor-pointer flex-col overflow-hidden text-slate-900 dark:text-white"
     >
-      {/* ── Шапка: аватар · имя · рейтинг ───────────────────────── */}
-      <div className="flex items-center gap-3 p-4 sm:gap-3.5">
-        <div className="relative shrink-0">
-          <div className="smk-ring h-12 w-12 sm:h-14 sm:w-14">
+      {/* ── Шапка: аватар · имя · рейтинг ─────────────────────────
+             Рабочий статус — цвет кольца вокруг аватара, отдельной
+             строки под него не нужно. */}
+      <div className="flex items-center gap-3 px-3.5 pb-2.5 pt-3">
+        <div className="shrink-0">
+          <div
+            className={`smk-ring h-11 w-11 sm:h-12 sm:w-12 ${statusRing.className}`}
+            title={statusRing.label ?? undefined}
+            aria-label={statusRing.label ?? undefined}
+          >
             <Image
               src={cacheBustAvatarUrl(profile.avatarUrl)}
               alt={profile.fullName}
@@ -108,20 +117,18 @@ export default function ProfileCard({
               className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
             />
           </div>
-          {/* Точка статуса — как на референсе «цвета стиль» */}
-          <WorkingStatusDot profile={profile} />
         </div>
 
         <div className="min-w-0 flex-1">
-          <h3 className="smk-title truncate text-lg font-bold leading-tight sm:text-xl">
-            <span className="sm:hidden">{formatDisplayName(profile.fullName, true)}</span>
-            <span className="hidden sm:inline">{profile.fullName}</span>
+          {/* Имя пишем полностью, без сокращений; не влезло — обрезаем */}
+          <h3 className="smk-title truncate text-base font-bold leading-tight sm:text-lg">
+            {profile.fullName}
           </h3>
 
           {showHeadRating && (
-            <div className="mt-1 flex items-baseline gap-1.5">
+            <div className="mt-0.5 flex items-baseline gap-1.5">
               <Star className="h-4 w-4 shrink-0 translate-y-0.5 smk-star" />
-              <span className="smk-rating-value text-base font-extrabold">
+              <span className="smk-rating-value text-sm font-extrabold">
                 {headRating.toFixed(1)}
               </span>
               <span className="truncate text-[11px] text-slate-500 dark:text-zinc-400">
@@ -131,23 +138,21 @@ export default function ProfileCard({
               </span>
             </div>
           )}
-
-          <div className="mt-1.5">
-            <ProfileBadges profile={profile} adminStatus={profileIsAdmin} showPending={showPending} />
-          </div>
         </div>
 
-        <ChevronRight className="h-5 w-5 shrink-0 self-start smk-arrow" />
+        <ChevronRight className="h-5 w-5 shrink-0 self-center smk-arrow" />
       </div>
 
       {/* Золотой разделитель, затухающий к краям */}
-      <hr className="smk-rule mx-4" />
+      <hr className="smk-rule mx-3.5" />
 
-      {/* ── Строки данных: каждая на своей подложке ─────────────
-             Без подложек текст сливался с полотном карточки. */}
-      <div className="space-y-2 px-4 py-3.5 text-sm">
+      {/* ── Строки данных ───────────────────────────────────────── */}
+      <div className="space-y-1.5 px-3.5 py-2.5 text-sm">
+        {/* Первая строка под линией — роли и статусы */}
+        <ProfileBadges profile={profile} adminStatus={profileIsAdmin} showPending={showPending} />
+
         {profile.isSpecialist && profile.professionTitle && (
-          <div className="smk-field flex items-start gap-2.5 px-3 py-2">
+          <div className="smk-field flex items-start gap-2.5 px-2.5 py-1.5">
             <Briefcase className="smk-ico mt-0.5 h-4 w-4" />
             <p className="line-clamp-2 font-bold leading-snug text-emerald-700 dark:text-emerald-400">
               {profile.professionTitle}
@@ -156,7 +161,7 @@ export default function ProfileCard({
         )}
 
         {profile.bio && (
-          <div className="smk-field flex items-start gap-2.5 px-3 py-2">
+          <div className="smk-field flex items-start gap-2.5 px-2.5 py-1.5">
             <FileText className="smk-ico mt-0.5 h-4 w-4" />
             <p className="line-clamp-2 break-words [overflow-wrap:anywhere] leading-snug text-slate-700 dark:text-zinc-200">
               {profile.bio}
@@ -164,21 +169,21 @@ export default function ProfileCard({
           </div>
         )}
 
-        {/* Возраст и пол — одна подложка, разделённая тонкой линией */}
+        {/* Возраст и пол — всегда в один ряд */}
         {(age !== null || profile.gender) && (
-          <div className="smk-field smk-field-split grid grid-cols-1 sm:grid-cols-2 sm:divide-x sm:divide-transparent">
+          <div className="smk-field flex items-center gap-2 px-2.5 py-1.5">
             {age !== null && (
-              <span className="flex items-center gap-2.5 px-3 py-2 text-slate-600 dark:text-zinc-300">
+              <span className="flex min-w-0 items-center gap-1.5 text-slate-600 dark:text-zinc-300">
                 <CalendarDays className="smk-ico h-4 w-4" />
                 <span className="text-slate-400 dark:text-zinc-500">{t.ageLabel}:</span>
                 <span className="font-semibold">{age}</span>
               </span>
             )}
+            {age !== null && profile.gender && <span className="smk-sep" aria-hidden />}
             {profile.gender && (
-              <span className="flex items-center gap-2.5 px-3 py-2 text-slate-600 dark:text-zinc-300">
+              <span className="flex min-w-0 items-center gap-1.5 text-slate-600 dark:text-zinc-300">
                 <VenusAndMars className="smk-ico h-4 w-4" />
-                <span className="text-slate-400 dark:text-zinc-500">{t.genderLabel}:</span>
-                <span className="font-semibold">
+                <span className="truncate font-semibold">
                   {profile.gender === 'male' ? t.genderMale : t.genderFemale}
                 </span>
               </span>
@@ -187,10 +192,10 @@ export default function ProfileCard({
         )}
 
         {profile.workplaceAddress && (
-          <div className="smk-field flex items-start gap-2.5 px-3 py-2">
+          <div className="smk-field flex items-start gap-2.5 px-2.5 py-1.5">
             {/* Булавка зелёная — единственный цветной акцент в блоке */}
             <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
-            <span className="break-words leading-snug text-slate-700 dark:text-zinc-200">
+            <span className="line-clamp-2 break-words leading-snug text-slate-700 dark:text-zinc-200">
               {profile.workplaceAddress}
             </span>
           </div>
@@ -198,8 +203,8 @@ export default function ProfileCard({
       </div>
 
       {/* ── Подвал: документы · действие ────────────────────────── */}
-      <div className={`smk-foot mt-auto flex items-center justify-between gap-2 px-4 ${
-        hasAction ? 'py-2.5' : 'py-2'
+      <div className={`smk-foot mt-auto flex items-center justify-between gap-2 px-3.5 ${
+        hasAction ? 'py-2' : 'py-1.5'
       }`}>
         <div className="min-w-0">
           {profile.certificates.length > 0 ? (

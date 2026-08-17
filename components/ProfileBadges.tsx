@@ -56,36 +56,33 @@ export function WorkingStatusBadge({ profile, onDarkBackground = false }: Workin
 }
 
 /**
- * Точка рабочего статуса поверх аватара (референс «цвета стиль»):
- * зелёная — работает, жёлтая — перерыв, серая — не работает,
- * голубая — произвольный график.
+ * Рабочий статус как ЦВЕТ КОЛЬЦА вокруг аватара:
+ * зелёное — работает, жёлтое — перерыв, голубое — произвольный график,
+ * серое — не работает.
  *
- * Переиспользует расчёт из WorkingStatusBadge, но без подписи:
- * в шапке карточки текстовый бейдж рядом с именем не помещался.
+ * Возвращает класс-модификатор для .smk-ring и подпись для title/aria,
+ * чтобы карточка не тратила место на отдельный бейдж или точку.
  */
-export function WorkingStatusDot({ profile }: { profile: Profile }) {
+export function useWorkingStatusRing(profile: Profile): { className: string; label: string | null } {
   const { account } = useAuth();
-  if (!profile.isSpecialist) return null;
+  if (!profile.isSpecialist) return { className: '', label: null };
 
   const isOwner = Boolean(account && account.id === profile.ownerId);
   const effectiveOverride = isOwner ? account?.statusOverride : profile.statusOverride;
   const statusInfo = calculateWorkingStatus(profile, effectiveOverride);
 
-  const dotBg = statusInfo.status === 'flexible'
-    ? 'bg-sky-500'
+  const className = statusInfo.status === 'flexible'
+    ? 'smk-ring-flexible'
     : statusInfo.status === 'break'
-    ? 'bg-amber-500'
+    ? 'smk-ring-break'
     : statusInfo.status === 'offline'
-    ? 'bg-zinc-400'
-    : 'bg-emerald-500';
+    ? 'smk-ring-offline'
+    : 'smk-ring-active';
 
-  return (
-    <span
-      title={`${statusInfo.label}${statusInfo.details ? ` (${statusInfo.details})` : ''}`}
-      aria-label={statusInfo.label}
-      className={`smk-dot ${dotBg}`}
-    />
-  );
+  return {
+    className,
+    label: `${statusInfo.label}${statusInfo.details ? ` (${statusInfo.details})` : ''}`,
+  };
 }
 
 interface ProfileBadgesProps {

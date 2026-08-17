@@ -717,6 +717,28 @@ html.dark .smk-ring {
   background: linear-gradient(140deg, #3f3f46, #27272a);
   box-shadow: 0 0 12px -4px rgb(0 0 0 / 0.8);
 }
+
+/* Рабочий статус специалиста — цвет кольца вокруг аватара.
+   Зелёное — работает, жёлтое — перерыв, голубое — произвольный график,
+   серое — не работает. Так статус не занимает отдельную строку. */
+.smk-ring-active   { background: linear-gradient(140deg, #34d399, #059669); }
+.smk-ring-break    { background: linear-gradient(140deg, #fbbf24, #d97706); }
+.smk-ring-flexible { background: linear-gradient(140deg, #38bdf8, #0284c7); }
+.smk-ring-offline  { background: linear-gradient(140deg, #d4d4d8, #a1a1aa); }
+html.dark .smk-ring-active   { background: linear-gradient(140deg, #34d399, #047857); box-shadow: 0 0 12px -5px #10b981; }
+html.dark .smk-ring-break    { background: linear-gradient(140deg, #fbbf24, #b45309); box-shadow: 0 0 12px -5px #f59e0b; }
+html.dark .smk-ring-flexible { background: linear-gradient(140deg, #38bdf8, #0369a1); box-shadow: 0 0 12px -5px #0ea5e9; }
+html.dark .smk-ring-offline  { background: linear-gradient(140deg, #71717a, #3f3f46); box-shadow: none; }
+
+/* Вертикальный разделитель внутри строки данных (возраст · пол) */
+.smk-sep {
+  display: inline-block;
+  align-self: stretch;
+  width: 1px;
+  min-height: 1rem;
+  background: rgb(15 23 42 / 0.12);
+}
+html.dark .smk-sep { background: rgb(255 255 255 / 0.12); }
 .smk-ring > * {
   border-radius: 9999px;
   display: block;
@@ -771,7 +793,7 @@ html.dark .smk-field-split > * + * {
 
 /* --- Иконка строки данных --------------------------------------------------- */
 .smk-ico {
-  color: var(--smk-gold-deep);
+  color: var(--smk-gold);
   flex: none;
 }
 html.dark .smk-ico { color: var(--smk-muted-bright); }
@@ -789,7 +811,7 @@ html.dark .smk-foot {
 /* Текст и иконка всегда белые: на золотом градиенте тёмная надпись
    читалась плохо. В тёмной теме кнопка нейтрально-серая. */
 .smk-btn-gold {
-  background: linear-gradient(100deg, var(--smk-gold-deep), var(--smk-gold));
+  background: linear-gradient(100deg, var(--smk-gold), #f0b429);
   color: #ffffff;
   font-weight: 700;
   border-radius: 0.75rem;
@@ -803,27 +825,15 @@ html.dark .smk-btn-gold {
 .smk-btn-gold:hover { filter: brightness(1.08); }
 .smk-btn-gold:active { transform: scale(0.98); }
 
-/* --- Точка статуса на аватаре ----------------------------------------------- */
-.smk-dot {
-  position: absolute;
-  right: -1px;
-  top: -1px;
-  height: 0.7rem;
-  width: 0.7rem;
-  border-radius: 9999px;
-  border: 2px solid #ffffff;
-}
-html.dark .smk-dot { border-color: var(--smk-card-a); }
-
 /* --- Звезда рейтинга и акцент стрелки ---------------------------------------
    Звезда золотая в обеих темах — так она и на синем референсе. А вот
    служебные элементы (стрелка, ховер) в тёмной теме уходят в сталь,
    иначе на синем полотне появляется случайный жёлтый. */
-.smk-star { color: #d4af5f; fill: #d4af5f; }
-.smk-rating-value { color: var(--smk-gold-deep); }
+.smk-star { color: #f0b429; fill: #f0b429; }
+.smk-rating-value { color: #b8860b; }
 html.dark .smk-rating-value { color: #e4e4e7; }
 
 .smk-arrow { color: rgb(203 213 225); transition: color 0.2s ease, transform 0.2s ease; }
 html.dark .smk-arrow { color: rgb(71 85 105); }
-.group:hover .smk-arrow { color: var(--smk-gold-deep); transform: translateX(2px); }
+.group:hover .smk-arrow { color: var(--smk-gold); transform: translateX(2px); }
 html.dark .group:hover .smk-arrow { color: var(--smk-muted-bright); }
