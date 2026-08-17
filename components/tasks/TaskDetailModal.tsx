@@ -186,7 +186,7 @@ export default function TaskDetailModal({
               <div className="grid grid-cols-2 gap-2 border-t border-slate-100 px-4 py-4 text-[11px] dark:border-zinc-800">
                 <InfoRow
                   icon={task.kind === 'scheduled' ? CalendarDays : Clock}
-                  label={task.kind === 'scheduled' ? 'Дата работ' : 'Сделать до'}
+                  label={task.kind === 'scheduled' ? 'Начало через' : 'Осталось'}
                   value={formatTimeLeft(task.kind === 'scheduled' ? task.scheduledAt : task.deadlineAt) || '—'}
                 />
                 {task.kind === 'scheduled' && (
@@ -446,13 +446,15 @@ function InfoRow({
   label: string;
   value: string;
 }) {
+  // Одна строка: подпись слева, значение справа. Двухэтажный вариант
+  // разрывал короткие пары вроде «Осталось · 2 ч» без пользы.
   return (
-    <div className="rounded-xl bg-slate-50 p-2.5 dark:bg-zinc-800/60">
-      <p className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">
+    <div className="flex items-center justify-between gap-2 rounded-xl bg-slate-50 px-2.5 py-2 dark:bg-zinc-800/60">
+      <span className="flex shrink-0 items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">
         <Icon className="h-3 w-3" />
         {label}
-      </p>
-      <p className="mt-0.5 truncate text-xs font-semibold text-slate-800 dark:text-zinc-200">{value}</p>
+      </span>
+      <span className="truncate text-xs font-bold text-slate-800 dark:text-zinc-200">{value}</span>
     </div>
   );
 }

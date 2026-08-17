@@ -54,6 +54,9 @@ export default function TaskFilterBar({
   const [isRegionOpen, setIsRegionOpen] = useState(false);
   const [isSphereOpen, setIsSphereOpen] = useState(true);
   const [isPriorityOpen, setIsPriorityOpen] = useState(false);
+  // Село пока одно, поэтому чекбоксы региона визуальные — как в каталоге.
+  const [regionAll, setRegionAll] = useState(true);
+  const [regionSamashki, setRegionSamashki] = useState(true);
   const [isRewardOpen, setIsRewardOpen] = useState(false);
   const activeCount = (category ? 1 : 0) + (priority ? 1 : 0) + (minReward > 0 ? 1 : 0);
 
@@ -67,13 +70,13 @@ export default function TaskFilterBar({
   const isTeal = accent === 'teal';
   // Размеры, скругления и заливки один в один как в SearchFilter
   // каталога: круглые чипы, px-3 py-1.5, font-semibold.
+  // Размеры и скругления один в один как у чипов региона в каталоге:
+  // rounded-xl, px-2.5 py-1.5, font-bold, shadow-sm.
   const chipBase =
-    'flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition';
-  const chipActive = isTeal
-    ? 'bg-teal-600 text-white'
-    : 'bg-emerald-600 text-white';
+    'flex cursor-pointer items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs font-bold shadow-sm transition';
+  const chipActive = isTeal ? 'bg-teal-600 text-white' : 'bg-emerald-600 text-white';
   const chipIdle =
-    'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700';
+    'bg-white text-slate-900 hover:bg-slate-50 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700';
   const accentText = isTeal ? 'text-teal-600 dark:text-teal-400' : 'text-emerald-600 dark:text-emerald-400';
 
   const sectionClass =
@@ -159,7 +162,8 @@ export default function TaskFilterBar({
             </div>
 
             <div className="space-y-2.5">
-              {/* Секция 1: Область и населённый пункт — как в каталоге */}
+              {/* Секция 1: Область и населённый пункт.
+                  Разметка скопирована из SearchFilter каталога один в один. */}
               <div className={sectionClass}>
                 <button
                   type="button"
@@ -180,13 +184,31 @@ export default function TaskFilterBar({
                       </span>
                     </div>
                     <div className="grid flex flex-wrap gap-2">
-                      <span className={`${chipBase} text-white ${isTeal ? 'bg-teal-600' : 'bg-emerald-600'}`}>
+                      <label className={`flex cursor-pointer items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs font-bold text-white shadow-sm ${
+                        isTeal ? 'bg-teal-600' : 'bg-emerald-600'
+                      }`}>
+                        <input
+                          type="checkbox"
+                          checked={regionAll}
+                          onChange={(e) => setRegionAll(e.target.checked)}
+                          className="h-3.5 w-3.5 rounded text-white focus:ring-emerald-500"
+                        />
                         <MapPin className="h-3.5 w-3.5" />
+                        {t.filterRegionAll}
+                      </label>
+                      <label className="flex cursor-pointer items-center gap-2 rounded-xl bg-white px-2.5 py-1.5 text-xs font-bold text-slate-900 shadow-sm dark:bg-zinc-800 dark:text-white">
+                        <input
+                          type="checkbox"
+                          checked={regionSamashki}
+                          onChange={(e) => setRegionSamashki(e.target.checked)}
+                          className="h-3.5 w-3.5 rounded text-emerald-600 focus:ring-emerald-500"
+                        />
+                        <MapPin className={`h-3.5 w-3.5 ${accentText}`} />
                         {t.filterRegionSamashki}
-                      </span>
-                      <span className="flex items-center gap-2 px-3 py-1.5 text-xs text-slate-400 dark:text-zinc-500">
-                        {t.filterRegionOthers}
-                      </span>
+                      </label>
+                      <div className="flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs text-slate-400 dark:text-zinc-500">
+                        <span>{t.filterRegionOthers}</span>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -206,7 +228,7 @@ export default function TaskFilterBar({
                   <ChevronDown className={`h-3.5 w-3.5 transition ${isSphereOpen ? 'rotate-180' : ''}`} />
                 </button>
                 {isSphereOpen && (
-                  <div className="mt-2 flex flex-wrap gap-2">
+                  <div className="mt-2 grid flex flex-wrap gap-2">
                     <button
                       type="button"
                       onClick={() => setCategory('')}
@@ -242,7 +264,7 @@ export default function TaskFilterBar({
                   <ChevronDown className={`h-3.5 w-3.5 transition ${isPriorityOpen ? 'rotate-180' : ''}`} />
                 </button>
                 {isPriorityOpen && (
-                  <div className="mt-2 flex flex-wrap gap-2">
+                  <div className="mt-2 grid flex flex-wrap gap-2">
                     {[
                       ['', 'Любая'],
                       ['normal', 'Обычные'],

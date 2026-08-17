@@ -13,9 +13,10 @@ import { makeId } from '@/lib/tasks/server';
  * Чтение публичное (фильтры видит любой), запись — только админ.
  */
 
-// 'map' сознательно исключён: категории объектов карты редактируются
-// в разделе «Адреса» → «Поиск и категории», дублировать их здесь нельзя.
-const SCOPES = ['tasks', 'catalog'] as const;
+// 'map' — категории объектов карты. Раньше они жили в localStorage
+// админки, то есть были видны только на одном устройстве; теперь общий
+// справочник в БД (миграция 22).
+const SCOPES = ['tasks', 'catalog', 'map'] as const;
 type Scope = (typeof SCOPES)[number];
 
 export async function GET(request: Request) {

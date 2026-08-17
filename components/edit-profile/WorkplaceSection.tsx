@@ -1,13 +1,13 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ExternalLink, MapPin } from 'lucide-react';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 import InteractiveMap from '@/components/InteractiveMapLazy';
 import MapSegmentedControl from '@/components/MapSegmentedControl';
 import { type MapLayerMode } from '@/components/InteractiveMap';
 import { findClosestSamashkiHouse, getEffectiveHouseAddresses } from '@/lib/samashki-addresses';
-import { getMapCategories } from '@/lib/map-categories';
+import { getMapCategories, fetchMapCategories } from '@/lib/map-categories';
 import { MapPosition } from '@/lib/types';
 import { useI18n } from '@/lib/i18n';
 
@@ -36,10 +36,14 @@ export default function WorkplaceSection({
   const [placesCategory, setPlacesCategory] = useState('');
   // Справочник категорий берём из общего источника, а не из уже
   // загруженных адресов: иначе список пуст, пока объектов нет.
-  const placeCategories = useMemo(
-    () => getMapCategories(getEffectiveHouseAddresses().filter((a) => a.isNotHouse).map((a) => a.category)),
-    [],
-  );
+  const [placeCategories, setPlaceCategories] = useState<string[]>(() => getMapCategories());
+  useEffect(() => {
+    let cancelled = false;
+    const used = getEffectiveHouseAddresses().filter((a) => a.isNotHouse).map((a) => a.category);
+    setPlaceCategories(getMapCategories(used));
+    fetchMapCategories(used).then((list) => { if (!cancelled) setPlaceCategories(list); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   const handleMapSelect = (position: MapPosition, explicitAddress?: string) => {
     if (explicitAddress) {
@@ -161,23 +165,24 @@ export default function WorkplaceSection({
 
           {/* Категории объектов «Другое» — тот же справочник, что и на
               странице «Карта» (админка → «Адреса» → «Поиск и категории»). */}
+          {/* Категории «Другое» — общий справочник из БД
+              (админка → «Фильтры» → «Карта»). */}
           {showPlaces && placeCategories.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1.5 px-1">
-              <span className="text-[10px] font-bold text-slate-400">Категория:</span>
-              {(['', ...placeCategories]).map((cat) => (
-                <button
-                  key={cat || 'all'}
-                  type="button"
-                  onClick={() => setPlacesCategory(cat)}
-                  className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold transition ${
-                    placesCategory === cat
-                      ? 'bg-emerald-600 text-white'
-                      : 'border border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400'
-                  }`}
-                >
-                  {cat || 'Все'}
-                </button>
-              ))}
+            <div className="flex flex-wrap items-center gap-2 px-1">
+              <label htmlFor="workplace-place-category" className="text-[10px] font-bold text-slate-400">
+                Категория:
+              </label>
+              <select
+                id="workplace-place-category"
+                value={placesCategory}
+                onChange={(e) => setPlacesCategory(e.target.value)}
+                className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-bold text-slate-700 outline-none transition focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+              >
+                <option value="">Все категории</option>
+                {placeCategories.map((cat) => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
             </div>
           )}
         </div>

@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { ArrowLeft, FileText, LocateFixed, MapPinned, Phone, Users, Star } from 'lucide-react';
 import { cacheBustAvatarUrl } from '@/lib/media';
 import { fetchEffectiveHouseAddresses, type SamashkiHouseAddress } from '@/lib/samashki-addresses';
-import { getMapCategories } from '@/lib/map-categories';
+import { getMapCategories, fetchMapCategories } from '@/lib/map-categories';
 import InteractiveMap from '@/components/InteractiveMapLazy';
 import MapSegmentedControl from '@/components/MapSegmentedControl';
 import { type MapLayerMode, type MapObjectMode } from '@/components/InteractiveMap';
@@ -72,10 +72,16 @@ export default function MapPage() {
   // + добавленные админом в «Адреса» → «Поиск и категории») и дополняем
   // теми, что реально встречаются у адресов. Раньше список строился
   // только из адресов, поэтому до появления объектов был пустым.
-  const placeCategories = useMemo(
-    () => getMapCategories(allAddresses.filter((a) => a.isNotHouse).map((a) => a.category)),
-    [allAddresses],
-  );
+  const [placeCategories, setPlaceCategories] = useState<string[]>(() => getMapCategories());
+  useEffect(() => {
+    // Справочник общий и живёт в БД (app_filters, scope='map'):
+    // getMapCategories() отдаёт кэш мгновенно, fetch — актуальный список.
+    let cancelled = false;
+    const used = allAddresses.filter((a) => a.isNotHouse).map((a) => a.category);
+    setPlaceCategories(getMapCategories(used));
+    fetchMapCategories(used).then((list) => { if (!cancelled) setPlaceCategories(list); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [allAddresses]);
 
   useEffect(() => {
     let cancelled = false;
@@ -389,22 +395,23 @@ export default function MapPage() {
 
               {/* Фильтр категорий для слоя «Другое» (как в админке) */}
               {objectMode === 'places' && (
-                <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                  <span className="text-[11px] font-bold text-slate-400">Категория:</span>
-                  {(['', ...placeCategories]).map((cat) => (
-                    <button
-                      key={cat || 'all'}
-                      type="button"
-                      onClick={() => setPlacesCategory(cat)}
-                      className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold transition ${
-                        placesCategory === cat
-                          ? 'bg-emerald-600 text-white'
-                          : 'border border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-500'
-                      }`}
-                    >
-                      {cat || 'Все'}
-                    </button>
-                  ))}
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <label htmlFor="map-place-category" className="text-[11px] font-bold text-slate-400">
+                    Категория:
+                  </label>
+                  {/* Выпадающий список: категорий могут быть десятки,
+                      набор кнопок занимал бы несколько строк. */}
+                  <select
+                    id="map-place-category"
+                    value={placesCategory}
+                    onChange={(e) => setPlacesCategory(e.target.value)}
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-bold text-slate-700 outline-none transition focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                  >
+                    <option value="">Все категории</option>
+                    {placeCategories.map((cat) => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
                 </div>
               )}
 

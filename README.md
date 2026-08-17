@@ -70,6 +70,8 @@ npm run dev
 | 18 | `supabase/update/18-tasks.sql` | **Аренца Темщик / ГIончалла**: задания, участники, рейтинг жителей, фильтры |
 | 19 | `supabase/update/19-tasks-cron.sql` | Автообслуживание заданий (pg_cron): автоподтверждение 3 ч, просрочка, напоминания |
 | 20 | `supabase/update/20-tasks-feed-fix.sql` | **Фикс пустой ленты**: вьюхи заданий с `security_invoker = false` |
+| 21 | `supabase/update/21-tasks-purchase-budget.sql` | Бюджет закупки для «Покупок» |
+| 22 | `supabase/update/22-map-categories.sql` | Категории карты из localStorage → БД |
 
 > 💡 **pg_cron (шаг 11)** — рекомендую включить: письма доставляются сами,
 > без ручной кнопки.
