@@ -67,8 +67,7 @@ function applyRamp(
 
 /** Все переменные, которыми управляет пользовательская тема. */
 const MANAGED_PROPERTIES = [
-  '--background', '--foreground', '--surface', '--surface-card', '--surface-subtle',
-  '--border-subtle', '--border-dark-soft', '--border-dark-card',
+  '--background', '--foreground', '--border-dark-soft',
   '--smk-card-a', '--smk-card-b', '--smk-card-line', '--smk-card-inset',
   '--smk-muted', '--smk-muted-bright', '--smk-surface', '--smk-surface-soft',
   '--smk-gold', '--smk-gold-soft', '--smk-gold-deep', '--smk-gold-rgb',
@@ -79,9 +78,8 @@ const MANAGED_PROPERTIES = [
   '--smk-status-flexible', '--smk-status-flexible-deep',
   '--smk-status-offline', '--smk-status-offline-deep',
   '--smk-role-specialist', '--smk-role-admin', '--smk-role-verified',
-  '--smk-hero-from', '--smk-hero-to',
-  '--smk-map-cluster', '--smk-map-house',
-  '--smk-danger', '--smk-danger-rgb',
+  '--smk-map-cluster',
+  '--smk-danger-rgb',
   // Акцент интерфейса: Tailwind v4 держит палитру в переменных, поэтому
   // подмена --color-emerald-* перекрашивает все утилиты emerald разом.
   // Нужна ВСЯ шкала: светлые 50/100 идут на подложки бейджей
@@ -100,7 +98,7 @@ const MANAGED_PROPERTIES = [
   '--color-green-600', '--color-green-700', '--color-green-800',
   '--color-green-900', '--color-green-950',
   // Семантические переменные проекта, завязанные на зелёный.
-  '--primary', '--primary-hover', '--status-active', '--border-green-dark',
+  '--border-green-dark',
   '--smk-hero-gradient',
 ];
 
@@ -134,15 +132,10 @@ export function applyThemeColors(
   // ── Семантические слоты: именно они рисуют фон и текст страницы ──
   set('--background', colors.bg);
   set('--foreground', colors.text);
-  set('--surface', colors.card);
-  set('--surface-card', colors.card);
-  set('--surface-subtle', colors.cardAlt);
-  set('--border-subtle', colors.cardLine);
   // Границы — утопленные: линия ТЕМНЕЕ карточки, а не светлее.
   // Светлая рамка на тёмном полотне выглядит дешёвой обводкой, поэтому
   // берём cardLine из палитры (он и задуман как «обводка темнее фона»).
   set('--border-dark-soft', colors.cardLine);
-  set('--border-dark-card', colors.cardLine);
 
   // ── Источники, на которые ссылаются утилиты zinc ────────────────
   set('--color-zinc-950', colors.bg);
@@ -186,7 +179,6 @@ export function applyThemeColors(
   set('--smk-role-admin', colors.roleAdmin);
   set('--smk-role-verified', colors.roleVerified);
 
-  set('--smk-danger', colors.danger);
   set('--smk-danger-rgb', hexToRgbChannels(colors.danger));
 
   // ── Акцент интерфейса (зелёный по умолчанию) ────────────────────
@@ -205,9 +197,6 @@ export function applyThemeColors(
   applyRamp(set, 'green', colors.ui);
 
   // Семантические переменные проекта, завязанные на зелёный.
-  set('--primary', colors.ui);
-  set('--primary-hover', mix(colors.ui, '#000000', 0.16));
-  set('--status-active', colors.statusActive);
   set('--border-green-dark', mix(colors.ui, '#000000', 0.34));
   set(
     '--smk-hero-gradient',
@@ -215,10 +204,7 @@ export function applyThemeColors(
   );
 
   // ── Главная карточка каталога и карта ───────────────────────────
-  set('--smk-hero-from', colors.heroFrom);
-  set('--smk-hero-to', colors.heroTo);
   set('--smk-map-cluster', colors.mapCluster);
-  set('--smk-map-house', colors.mapHouse);
 }
 
 /**

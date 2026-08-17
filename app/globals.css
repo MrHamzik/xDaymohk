@@ -18,46 +18,32 @@
 }
 
 @layer base {
+  /* Только то, что действительно используется.
+     Удалены: --surface / --surface-card / --surface-subtle,
+     --primary / --primary-hover, --status-active / --status-break /
+     --status-offline, --theme-sun / --theme-moon, --notify-orange,
+     --radius-2xl / --radius-3xl, --border-subtle. Ни одну из них ни
+     один селектор не читал, но тема исправно их перекрашивала —
+     впустую. Цвета статусов живут в --smk-status-*, скругления — в
+     утилитах Tailwind. */
   :root {
     --background: #f8fafc;
-    --surface: #ffffff;
-    --surface-card: #ffffff;
-    --surface-subtle: #f1f5f9;
     --foreground: #0f172a;
-    --primary: #059669;
-    --primary-hover: #047857;
-    --status-active: #059669;
-    --status-break: #f59e0b;
-    --status-offline: #52525b;
-    --theme-sun: #f59e0b;
-    --theme-moon: #0284c7;
-    --notify-orange: #f97316;
-    --border-subtle: rgba(226, 232, 240, 0.75);
     --radius-xl: 0.75rem;
-    --radius-2xl: 1rem;
-    --radius-3xl: 1.5rem;
     color-scheme: light;
   }
 
   /* 25% Darker, disciplined dark theme: #0e1015 canvas, #14161d cards/surfaces, #1e212b borders */
   html.dark {
     --background: var(--color-zinc-950);
-    --surface: var(--color-zinc-800);
-    --surface-card: var(--color-zinc-800);
-    --surface-subtle: var(--color-zinc-900);
     --foreground: #fafafa;
-    /* Не наследуем от zinc-700: та ступень теперь отвечает за видимые
-       элементы (тумблер, чипы), а граница должна быть утопленной. */
-    --border-subtle: #121215;
     /* Обводки в тёмной теме намеренно ТЁМНЫЕ — «утопленные»: линия
        темнее карточки, а не светлее. Светлая рамка на тёмном полотне
-       выглядит дешёвой обводкой, поэтому здесь мы отступаем в сторону
-       фона, а не текста. Прежнее rgb(28 28 31) давало контраст 1.00 к
-       карточке (линии не было вовсе) — берём чуть глубже. */
+       выглядит дешёвой обводкой, поэтому отступаем в сторону фона, а
+       не текста. Прежнее rgb(28 28 31) давало контраст 1.00 к карточке
+       (линии не было вовсе) — берём чуть глубже. */
     --border-dark-soft: #121215;
-    --border-dark-card: #0f0f12;
     --border-green-dark: #2b7a64;
-    --status-offline: #52525b;
     color-scheme: dark;
   }
 
@@ -709,25 +695,19 @@ html.dark .smk-price-teal {
      альфой через rgb(var(--smk-*-rgb) / a). */
   --smk-light-rgb: 255 255 255;
   --smk-shadow-rgb: 0 0 0;
-  --smk-ink-rgb: 15 23 42;
 
-  /* --- Цвета рабочего статуса (кольцо аватара) --------------------------- */
+  /* --- Цвета рабочего статуса (кольцо аватара) ---------------------------
+     Только base и -deep: варианты -dark и -glow остались от прежней
+     версии колец и ни одним селектором не читались. Свечение теперь
+     строится из base через color-mix. */
   --smk-status-active: #34d399;
   --smk-status-active-deep: #059669;
-  --smk-status-active-dark: #047857;
-  --smk-status-active-glow: #10b981;
   --smk-status-break: #fbbf24;
   --smk-status-break-deep: #d97706;
-  --smk-status-break-dark: #b45309;
-  --smk-status-break-glow: #f59e0b;
   --smk-status-flexible: #38bdf8;
   --smk-status-flexible-deep: #0284c7;
-  --smk-status-flexible-dark: #0369a1;
-  --smk-status-flexible-glow: #0ea5e9;
   --smk-status-offline: #d4d4d8;
   --smk-status-offline-deep: #a1a1aa;
-  --smk-status-offline-dark-a: #71717a;
-  --smk-status-offline-dark-b: #3f3f46;
 }
 
 /* --- Полотно карточки ------------------------------------------------------ */
@@ -835,18 +815,15 @@ html.dark .smk-ring-offline  { box-shadow: none; }
    пользовались раньше; пользовательская тема подменяет их на :root.
    Объявлены здесь, чтобы var() не падал в тему без этих ключей. */
 :root {
-  --smk-status-active: #10b981;
-  --smk-status-break: #f59e0b;
-  --smk-status-flexible: #0ea5e9;
-  --smk-status-offline: #a1a1aa;
+  /* Статусы объявлены выше — здесь только роли и карта, чтобы не
+     держать два конкурирующих набора одних и тех же ключей.
+     --smk-danger / --smk-hero-from / --smk-hero-to / --smk-map-house
+     удалены: их никто не читал (опасное действие рисуется утилитами
+     rose-*, градиент шапки — через --smk-hero-gradient). */
   --smk-role-specialist: #10b981;
   --smk-role-admin: #ef4444;
   --smk-role-verified: #3b82f6;
-  --smk-danger: #f43f5e;
-  --smk-hero-from: #059669;
-  --smk-hero-to: #14b8a6;
   --smk-map-cluster: #059669;
-  --smk-map-house: #f59e0b;
 }
 
 /* Бейдж роли: заливка выводится из одного цвета прозрачностью, поэтому

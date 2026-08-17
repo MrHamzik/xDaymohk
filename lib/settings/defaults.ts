@@ -132,89 +132,78 @@ export const PRESET_THEMES: Record<
     },
   },
   /**
-   * Космос — фиолетовая база, но НЕ монохром.
+   * Космос — глубокий космический синий.
    *
-   * В светлой и тёмной темах работают два независимых цвета: золото
-   * (акцент карточек, звезда) и зелёный (интерфейс: меню, кнопки).
-   * Первая версия «Космоса» красила и то и другое в один фиолетовый —
-   * глаз не за что зацепить, всё сливается.
-   *
-   * Здесь триада: фиолетовый (интерфейс) + циан (акцент, лежит
-   * напротив по кругу) + розовый (тревожное и роли). Статусы разнесены
-   * по трём разным тонам, чтобы «работает» и «перерыв» различались
-   * не только положением.
-   */
-  /**
-   * Космос — построен по цветовому кругу: база синий (225°), отход
-   * ±30° даёт голубой 195° и фиолетовый 255°, дальше пурпур 280°.
-   * Раньше оттенки подбирались на глаз, и половина палитры лежала
-   * в одном фиолетовом секторе.
+   * Круг RYB: база синий 240°, отход ±30° даёт звёздно-голубой 210°
+   * (акцент) и индиго-фиолет 270° (интерфейс). Фон намеренно очень
+   * тёмный и слегка синий, а не серый: «космос» — это глубина, поэтому
+   * светлота полотна опущена до 5 %, насыщенность сохранена. Серые
+   * здесь тоже синеватые — нейтрального серого в теме нет.
    */
   space: {
     name: 'Космос',
     isDark: true,
     colors: {
-      bg: '#0e0c18',
-      card: '#191727',
-      cardAlt: '#131120',
-      cardLine: '#0a0912',
-      cardInset: '#272438',
-      text: '#eeecfa',
-      muted: '#948eb8',
-      // Акцент — голубой: холодный край семьи, контраст к фиолетовому.
-      accent: '#42b2d7',
-      accentSoft: '#b8e4f2',
-      accentDeep: '#2a7fa0',
-      // Интерфейс — фиолетовый (отход +30 от базы).
-      ui: '#7a54d4',
-      statusActive: '#3bc2ce',   // циан
-      statusBreak: '#d9a441',    // единственный тёплый
-      statusFlexible: '#3945d0', // индиго — база круга
-      statusOffline: '#5f5a7d',
-      roleSpecialist: '#3bc2ce',
-      roleAdmin: '#ac61d1',      // пурпур
-      roleVerified: '#3945d0',
+      bg: '#080712',
+      card: '#121127',
+      cardAlt: '#0d0c1d',
+      cardLine: '#06050f',
+      cardInset: '#1e1d39',
+      text: '#ebedfa',
+      muted: '#898ab3',
+      accent: '#4cacf0',
+      accentSoft: '#bfe0fb',
+      accentDeep: '#2a6fa8',
+      ui: '#6552e0',
+      statusActive: '#3fc9b0',
+      statusBreak: '#e0a63c',
+      statusFlexible: '#4cacf0',
+      statusOffline: '#565578',
+      roleSpecialist: '#3fc9b0',
+      roleAdmin: '#c265e8',
+      roleVerified: '#6552e0',
       danger: '#e05575',
-      heroFrom: '#3d2a8f',
-      heroTo: '#2a7fa0',
-      mapCluster: '#7a54d4',
-      mapHouse: '#42b2d7',
+      heroFrom: '#2a1f78',
+      heroTo: '#2a6fa8',
+      mapCluster: '#6552e0',
+      mapHouse: '#4cacf0',
     },
   },
   /**
-   * Закат — тёплая половина круга: база красный (0°), отход ±30° даёт
-   * розовый 330° и оранжевый 30°, дальше золото 42°. Алые и багровые
-   * тона, как и просили, но собранные по правилу, а не наугад.
+   * Закат — цвета настоящего заката, а не абстрактный «красный».
+   *
+   * Круг RYB: база красный 5°, отход ±30° даёт закатный алый 8°
+   * (интерфейс) и солнечное золото 38° (акцент), плюс розовая дымка
+   * 335° у второстепенных ролей. Полотно — тёплый винный сумрак:
+   * то, во что окрашивается небо сразу после захода солнца.
    */
   sunset: {
     name: 'Закат',
     isDark: true,
     colors: {
-      bg: '#190b0e',
-      card: '#281519',
-      cardAlt: '#1f1013',
-      cardLine: '#12080a',
-      cardInset: '#3a2227',
-      text: '#ffeef1',
-      muted: '#c2919b',
-      // Акцент — золото: классическая пара к алому.
-      accent: '#eeb32b',
-      accentSoft: '#fbe3a4',
-      accentDeep: '#b8801a',
-      // Интерфейс — кармин (база круга).
-      ui: '#db243c',
-      statusActive: '#e77823',   // оранжевый, тёплый край
-      statusBreak: '#eeb32b',    // золото
-      statusFlexible: '#3fa8b5', // единственный холодный
-      statusOffline: '#8a5f66',
-      roleSpecialist: '#e77823',
-      roleAdmin: '#db4382',      // роза
-      roleVerified: '#eeb32b',
-      danger: '#e24932',
-      heroFrom: '#9c1730',
-      heroTo: '#e77823',
-      mapCluster: '#db243c',
-      mapHouse: '#eeb32b',
+      bg: '#1a0a0f',
+      card: '#2d161b',
+      cardAlt: '#240f15',
+      cardLine: '#12070a',
+      cardInset: '#3f2228',
+      text: '#fbf2e9',
+      muted: '#ba988c',
+      accent: '#f6ae31',
+      accentSoft: '#fcdfa8',
+      accentDeep: '#ad421f',
+      ui: '#e5472e',
+      statusActive: '#e58c2b',
+      statusBreak: '#f6ae31',
+      statusFlexible: '#3f9fa8',
+      statusOffline: '#8a6259',
+      roleSpecialist: '#e58c2b',
+      roleAdmin: '#e0537f',
+      roleVerified: '#f6ae31',
+      danger: '#e5472e',
+      heroFrom: '#8f1f2e',
+      heroTo: '#e58c2b',
+      mapCluster: '#e5472e',
+      mapHouse: '#f6ae31',
     },
   },
   /**
@@ -338,80 +327,80 @@ export const PRESET_THEMES: Record<
     },
   },
   /**
-   * Природа — построена по цветовому кругу RYB.
+   * Природа — СВЕТЛАЯ тема: небесная и позитивная.
    *
-   * База — зелёный (130° в HSL), от него отход на ±30°: салатовый 100°
-   * и бирюза 160°, плюс голубой 195° как дальний холодный акцент.
-   * Насыщенность и светлота подобраны так, чтобы соседние оттенки
-   * различались, но читались как одна семья.
+   * Круг RYB: база зелёный 130° (интерфейс — лист), отход даёт
+   * небесно-голубой 195° (акцент). Прошлая версия была тёмной с
+   * кислотным салатом; здесь светлота поднята, насыщенность снижена —
+   * получается свет и воздух, а не неон.
+   *
+   * Белый и серые остались, но с зелёным подтоном: чистого #f5f5f5
+   * в теме нет, иначе она распадается на «зелёные пятна на сером».
    */
   nature: {
     name: 'Природа',
-    isDark: true,
+    isDark: false,
     colors: {
-      bg: '#0d1712',
-      card: '#16221c',
-      cardAlt: '#111c16',
-      cardLine: '#0a120e',
-      cardInset: '#213029',
-      text: '#e8f5ee',
-      muted: '#8aa89a',
-      // Акцент — бирюза (холодный край семьи).
-      accent: '#37ae97',
-      accentSoft: '#a7e0d4',
-      accentDeep: '#25806e',
-      // Интерфейс — лист (база круга).
-      ui: '#389f49',
-      statusActive: '#68c639',   // салат, тёплый край
-      statusBreak: '#d9a441',    // единственный тёплый: контраст к зелени
-      statusFlexible: '#3ea8cc', // голубой
-      statusOffline: '#5d7a6d',
-      roleSpecialist: '#68c639',
-      roleAdmin: '#d96a5a',
-      roleVerified: '#3ea8cc',
-      danger: '#d9564a',
-      heroFrom: '#1f6b45',
-      heroTo: '#2f8f86',
-      mapCluster: '#389f49',
-      mapHouse: '#37ae97',
+      bg: '#f5faf7',
+      card: '#ffffff',
+      cardAlt: '#fbfefc',
+      cardLine: '#d3e3da',
+      cardInset: '#eff6f2',
+      text: '#264033',
+      muted: '#5c7a6b',
+      accent: '#2b91b6',
+      accentSoft: '#cee9f3',
+      accentDeep: '#216883',
+      ui: '#2c8c4c',
+      statusActive: '#2c964f',
+      statusBreak: '#dc9518',
+      statusFlexible: '#2d97be',
+      statusOffline: '#94a89c',
+      roleSpecialist: '#2c8c4c',
+      roleAdmin: '#c2564e',
+      roleVerified: '#2b91b6',
+      danger: '#c2564e',
+      heroFrom: '#2c8c4c',
+      heroTo: '#2b91b6',
+      mapCluster: '#2c8c4c',
+      mapHouse: '#2b91b6',
     },
   },
   /**
-   * Янтарь — тёплая половина того же круга.
+   * Янтарь — СВЕТЛАЯ тема: тёплая и солнечная.
    *
-   * База — жёлтый (50°), отход ±30°: оранжевая охра 28° и лимонный 74°.
-   * Холодных тонов почти нет — только «произвольный график», иначе все
-   * четыре статуса слились бы в один медовый градиент.
+   * Круг RYB: база жёлтый 50°, отход ±30° даёт охру 28° (интерфейс) и
+   * лимонно-оливковый 80° (статус «работает»); акцент — золото 45°.
+   * Полотно кремовое: белый с жёлтым подтоном, чтобы тёплые акценты
+   * не выглядели наклейками на холодной бумаге.
    */
   amber: {
     name: 'Янтарь',
-    isDark: true,
+    isDark: false,
     colors: {
-      bg: '#18130c',
-      card: '#231d15',
-      cardAlt: '#1c170f',
-      cardLine: '#120e08',
-      cardInset: '#312a21',
-      text: '#fdf3e3',
-      muted: '#b09a7c',
-      // Акцент — золото (сердце семьи).
-      accent: '#f1c927',
-      accentSoft: '#fbe9a8',
-      accentDeep: '#b8901a',
-      // Интерфейс — охра: темнее акцента, не спорит с ним.
-      ui: '#da741b',
-      statusActive: '#aacf30',   // лимон, холодный край
-      statusBreak: '#eda71d',    // янтарь
-      statusFlexible: '#4bb3c4', // единственный холодный
-      statusOffline: '#7d6b52',
-      roleSpecialist: '#aacf30',
-      roleAdmin: '#e0553c',
-      roleVerified: '#f1c927',
-      danger: '#e0553c',
-      heroFrom: '#a34e10',
-      heroTo: '#e0a020',
-      mapCluster: '#da741b',
-      mapHouse: '#f1c927',
+      bg: '#fcf9f3',
+      card: '#ffffff',
+      cardAlt: '#fffdf9',
+      cardLine: '#eadfcd',
+      cardInset: '#f9f5eb',
+      text: '#423324',
+      muted: '#7e6e58',
+      accent: '#dda90e',
+      accentSoft: '#faedc6',
+      accentDeep: '#9c6911',
+      ui: '#c86a19',
+      statusActive: '#6c8c2c',
+      statusBreak: '#d89b0e',
+      statusFlexible: '#3490b2',
+      statusOffline: '#a59c8d',
+      roleSpecialist: '#6c8c2c',
+      roleAdmin: '#c25a3c',
+      roleVerified: '#c86a19',
+      danger: '#c25a3c',
+      heroFrom: '#c86a19',
+      heroTo: '#dda90e',
+      mapCluster: '#c86a19',
+      mapHouse: '#dda90e',
     },
   },
 };
