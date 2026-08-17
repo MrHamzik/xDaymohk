@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Star, Loader2, Handshake } from 'lucide-react';
 import Avatar from '@/components/Avatar';
+import { useI18n } from '@/lib/i18n';
 import { fetchResidentReviews } from '@/lib/tasks/client';
 import type { ResidentReview } from '@/lib/types';
 
@@ -20,6 +21,7 @@ interface ResidentReputationProps {
  * Поэтому и данные разные: здесь resident_reviews, там reviews.
  */
 export default function ResidentReputation({ ownerId }: ResidentReputationProps) {
+  const { t } = useI18n();
   const [reviews, setReviews] = useState<ResidentReview[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -51,7 +53,7 @@ export default function ResidentReputation({ ownerId }: ResidentReputationProps)
       <div className="flex items-center justify-between gap-2 border-b border-slate-100 px-3 py-2.5 dark:border-zinc-800">
         <h3 className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-zinc-400">
           <Handshake className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-          Репутация в заданиях
+          {t.reputationTitle}
         </h3>
         {reviews && reviews.length > 0 && (
           <span className="flex shrink-0 items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-extrabold text-amber-700 dark:bg-amber-950/50 dark:text-amber-300">
@@ -81,7 +83,7 @@ export default function ResidentReputation({ ownerId }: ResidentReputationProps)
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
                   <p className="truncate text-[11px] font-bold text-slate-900 dark:text-white">
-                    {review.authorName || 'Житель Даймохк'}
+                    {review.authorName || t.taskCustomerDefault}
                   </p>
                   <span className="flex shrink-0 items-center gap-0.5 text-[11px] font-bold text-amber-600 dark:text-amber-400">
                     <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
@@ -90,7 +92,7 @@ export default function ResidentReputation({ ownerId }: ResidentReputationProps)
                 </div>
                 {/* Роль показывает, в каком качестве человека оценили */}
                 <p className="text-[10px] text-slate-400">
-                  {review.targetRole === 'customer' ? 'как заказчика' : 'как исполнителя'}
+                  {review.targetRole === 'customer' ? t.reputationAsCustomer : t.reputationAsExecutor}
                 </p>
                 {review.text && (
                   <p className="mt-1 break-words text-[11px] leading-relaxed text-slate-600 dark:text-zinc-400">
@@ -108,7 +110,7 @@ export default function ResidentReputation({ ownerId }: ResidentReputationProps)
             onClick={() => setExpanded((v) => !v)}
             className="w-full rounded-lg py-1.5 text-[11px] font-bold text-emerald-700 transition hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
           >
-            {expanded ? 'Свернуть' : `Показать все (${reviews.length})`}
+            {expanded ? t.reputationCollapse : `${t.reputationShowAll} (${reviews.length})`}
           </button>
         )}
       </div>

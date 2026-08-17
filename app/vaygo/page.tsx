@@ -15,6 +15,7 @@ import TaskDetailModal from '@/components/tasks/TaskDetailModal';
 import TaskFilterBar from '@/components/tasks/TaskFilterBar';
 import { useAuth } from '@/components/AuthProvider';
 import { useProfiles } from '@/components/ProfilesProvider';
+import { useI18n } from '@/lib/i18n';
 import {
   fetchTasks,
   fetchTaskFilters,
@@ -32,6 +33,7 @@ type FeedTab = 'nearby' | 'all' | 'mine';
  * без требований к возрасту исполнителя (помогать может любой).
  */
 export default function VaygoPage() {
+  const { t } = useI18n();
   const { account } = useAuth();
   const { isCurrentUserAdmin } = useProfiles();
   const router = useRouter();
@@ -58,11 +60,11 @@ export default function VaygoPage() {
     try {
       setTasks(await fetchTasks({ paid: false, limit: 100 }));
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось загрузить');
+      setError(e instanceof Error ? e.message : t.tasksLoadError);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [t.tasksLoadError]);
 
   useEffect(() => {
     load();
@@ -130,7 +132,7 @@ export default function VaygoPage() {
           <div className="mb-4 flex items-center gap-3">
             <Link
               href="/catalog"
-              aria-label="Назад"
+              aria-label={t.tasksBack}
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -138,10 +140,10 @@ export default function VaygoPage() {
             <div className="min-w-0 flex-1">
               <h2 className="flex items-center gap-2 text-lg font-extrabold text-slate-900 dark:text-white">
                 <HandHeart className="h-5 w-5 shrink-0 text-teal-600 dark:text-teal-400" />
-                ГIончалла
+                {t.tasksGoTitle}
               </h2>
               <p className="truncate text-sm text-slate-500 dark:text-zinc-500">
-                Безвозмездная помощь — садака за савваб
+                {t.tasksGoSubtitle}
               </p>
             </div>
           </div>
@@ -152,9 +154,9 @@ export default function VaygoPage() {
             tab={tab}
             setTab={(v) => setTab(v as FeedTab)}
             tabs={[
-              { value: 'nearby', label: 'Близко' },
-              { value: 'all', label: 'Все' },
-              { value: 'mine', label: 'Мои' },
+              { value: 'nearby', label: t.tasksTabNearby },
+              { value: 'all', label: t.tasksTabAll },
+              { value: 'mine', label: t.tasksTabMine },
             ]}
             categories={categories}
             category={category}
@@ -185,10 +187,10 @@ export default function VaygoPage() {
           ) : (
             <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center dark:border-zinc-700">
               <p className="text-sm font-semibold text-slate-600 dark:text-zinc-400">
-                Просьб о помощи пока нет
+                {t.tasksEmptyGo}
               </p>
               <p className="mt-1 text-xs text-slate-400">
-                «Кто поможет брату своему — тому поможет Аллах»
+                {t.tasksEmptyGoHint}
               </p>
             </div>
           )}

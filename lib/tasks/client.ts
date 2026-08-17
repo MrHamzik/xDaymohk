@@ -220,19 +220,41 @@ export function distanceMeters(
 }
 
 /** «через 2 ч 15 мин» / «просрочено» — подпись дедлайна на карточке. */
-export function formatTimeLeft(iso?: string | null): string {
+/**
+ * Подписи единиц времени. Функция чистая и вызывается вне React, поэтому
+ * язык приходит параметром, а не из useI18n: иначе пришлось бы тянуть
+ * хук в утилиту и терять возможность звать её из тестов.
+ */
+export interface TimeLeftLabels {
+  overdue: string;
+  min: string;
+  hour: string;
+  day: string;
+}
+
+const RU_TIME_LABELS: TimeLeftLabels = {
+  overdue: 'просрочено',
+  min: 'мин',
+  hour: 'ч',
+  day: 'дн',
+};
+
+export function formatTimeLeft(
+  iso?: string | null,
+  labels: TimeLeftLabels = RU_TIME_LABELS,
+): string {
   if (!iso) return '';
   const target = new Date(iso).getTime();
   if (!Number.isFinite(target)) return '';
   const diff = target - Date.now();
-  if (diff <= 0) return 'просрочено';
+  if (diff <= 0) return labels.overdue;
   const minutes = Math.floor(diff / 60_000);
-  if (minutes < 60) return `${minutes} мин`;
+  if (minutes < 60) return `${minutes} ${labels.min}`;
   const hours = Math.floor(minutes / 60);
   if (hours < 24) {
     const rest = minutes % 60;
-    return rest ? `${hours} ч ${rest} мин` : `${hours} ч`;
+    return rest ? `${hours} ${labels.hour} ${rest} ${labels.min}` : `${hours} ${labels.hour}`;
   }
   const days = Math.floor(hours / 24);
-  return `${days} дн`;
+  return `${days} ${labels.day}`;
 }

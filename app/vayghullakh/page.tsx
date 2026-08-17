@@ -15,6 +15,7 @@ import TaskDetailModal from '@/components/tasks/TaskDetailModal';
 import TaskFilterBar from '@/components/tasks/TaskFilterBar';
 import { useAuth } from '@/components/AuthProvider';
 import { useProfiles } from '@/components/ProfilesProvider';
+import { useI18n } from '@/lib/i18n';
 import {
   fetchTasks,
   fetchMyTasks,
@@ -31,6 +32,7 @@ import { useTasksRealtime } from '@/lib/tasks/realtime';
 type FeedTab = 'nearby' | 'all' | 'mine' | 'taken';
 
 export default function VayghullakhPage() {
+  const { t } = useI18n();
   const { account } = useAuth();
   const { isCurrentUserAdmin } = useProfiles();
   const router = useRouter();
@@ -77,11 +79,11 @@ export default function VayghullakhPage() {
         }
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось загрузить задания');
+      setError(e instanceof Error ? e.message : t.tasksLoadError);
     } finally {
       setIsLoading(false);
     }
-  }, [account]);
+  }, [account, t.tasksLoadError]);
 
   useEffect(() => {
     load();
@@ -124,7 +126,7 @@ export default function VayghullakhPage() {
       const s = await fetchExecutorStatus();
       setActiveExecutors(s.activeExecutors);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось изменить статус');
+      setError(e instanceof Error ? e.message : t.tasksStatusError);
     } finally {
       setIsTogglingStatus(false);
     }
@@ -193,15 +195,15 @@ export default function VayghullakhPage() {
           <div className="mb-4 flex items-center gap-3">
             <Link
               href="/catalog"
-              aria-label="Назад"
+              aria-label={t.tasksBack}
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400"
             >
               <ArrowLeft className="h-4 w-4" />
             </Link>
             <div className="min-w-0 flex-1">
-              <h2 className="text-lg font-extrabold text-slate-900 dark:text-white">Аренца Темщик</h2>
+              <h2 className="text-lg font-extrabold text-slate-900 dark:text-white">{t.tasksGullaqTitle}</h2>
               <p className="truncate text-sm text-slate-500 dark:text-zinc-500">
-                Задания за вознаграждение · активны: {activeExecutors}
+                {t.tasksGullaqSubtitle} · {t.tasksActiveExecutors}: {activeExecutors}
               </p>
             </div>
           </div>
@@ -211,12 +213,10 @@ export default function VayghullakhPage() {
             <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-zinc-700 dark:bg-zinc-800">
               <div className="min-w-0">
                 <p className="text-sm font-bold text-slate-900 dark:text-white">
-                  {isActive ? 'Вы активны' : 'Вы неактивны'}
+                  {isActive ? t.tasksYouActive : t.tasksYouInactive}
                 </p>
                 <p className="text-[11px] text-slate-500 dark:text-zinc-500">
-                  {isActive
-                    ? 'Вы видите задания и можете их брать'
-                    : 'Включите, чтобы брать задания'}
+                  {isActive ? t.tasksActiveHint : t.tasksInactiveHint}
                 </p>
               </div>
               <button
@@ -232,7 +232,7 @@ export default function VayghullakhPage() {
                 }`}
               >
                 {isTogglingStatus ? <Loader2 className="h-4 w-4 animate-spin" /> : <Power className="h-4 w-4" />}
-                {isActive ? 'Активен' : 'Включить'}
+                {isActive ? t.tasksActiveBtn : t.tasksActivateBtn}
               </button>
             </div>
           )}
@@ -243,10 +243,10 @@ export default function VayghullakhPage() {
             tab={tab}
             setTab={(v) => setTab(v as FeedTab)}
             tabs={[
-              { value: 'nearby', label: 'Близко' },
-              { value: 'all', label: 'Все' },
-              { value: 'mine', label: 'Мои' },
-              { value: 'taken', label: 'В работе', count: myTasks.length || undefined },
+              { value: 'nearby', label: t.tasksTabNearby },
+              { value: 'all', label: t.tasksTabAll },
+              { value: 'mine', label: t.tasksTabMine },
+              { value: 'taken', label: t.tasksTabTaken, count: myTasks.length || undefined },
             ]}
             categories={categories}
             category={category}
@@ -264,15 +264,14 @@ export default function VayghullakhPage() {
               className="mb-3 flex w-full items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-left text-[11px] font-semibold text-amber-800 transition hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-950/60"
             >
               <Star className="h-3.5 w-3.5 shrink-0 fill-amber-400 text-amber-400" />
-              Ожидают вашей оценки: {pendingReview.length} — откройте задание и поставьте оценку
+              {t.tasksPendingReview}: {pendingReview.length} — {t.tasksPendingReviewHint}
             </button>
           )}
 
           {tab === 'nearby' && geoDenied && (
             <p className="mb-3 flex items-start gap-2 rounded-xl bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
               <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              Геолокация недоступна — показываем все задания. Разрешите доступ, чтобы
-              видеть задания в радиусе 1 км.
+              {t.tasksGeoDenied}
             </p>
           )}
 
@@ -300,10 +299,10 @@ export default function VayghullakhPage() {
           ) : (
             <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center dark:border-zinc-700">
               <p className="text-sm font-semibold text-slate-600 dark:text-zinc-400">
-                {tab === 'nearby' ? 'Рядом заданий нет' : 'Заданий пока нет'}
+                {tab === 'nearby' ? t.tasksEmptyNearby : t.tasksEmpty}
               </p>
               <p className="mt-1 text-xs text-slate-400">
-                Создайте первое — его увидят жители Даймохк.
+                {t.tasksEmptyHint}
               </p>
             </div>
           )}

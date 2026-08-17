@@ -49,7 +49,7 @@ export default function TaskFilterBar({
   setMinReward,
   accent = 'emerald',
 }: TaskFilterBarProps) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
   const [isRegionOpen, setIsRegionOpen] = useState(false);
   const [isSphereOpen, setIsSphereOpen] = useState(true);
@@ -89,7 +89,7 @@ export default function TaskFilterBar({
     <div className="mb-4 space-y-2">
       {/* Вкладки ленты */}
       <MapSegmentedControl
-        ariaLabel="Лента заданий"
+        ariaLabel={t.tasksFeedAria}
         active={[tab]}
         onSelect={setTab}
         options={tabs.map((item) => ({ value: item.value, label: item.label, count: item.count }))}
@@ -105,8 +105,8 @@ export default function TaskFilterBar({
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Поиск по заданиям…"
-          aria-label="Поиск по заданиям"
+          placeholder={t.tasksSearchPlaceholder}
+          aria-label={t.tasksSearchPlaceholder}
           className="w-full rounded-xl border border-slate-200/60 bg-white py-2.5 pl-9.5 pr-20 text-xs text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white dark:placeholder:text-zinc-400 sm:text-sm"
         />
         {query && (
@@ -115,7 +115,7 @@ export default function TaskFilterBar({
             onClick={() => setQuery('')}
             className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-xs font-semibold text-slate-400 transition hover:text-slate-600 dark:hover:text-zinc-200"
           >
-            Сбросить
+            {t.reset}
           </button>
         )}
       </div>
@@ -130,7 +130,7 @@ export default function TaskFilterBar({
         >
           <span className="inline-flex items-center gap-2">
             <Filter className={`h-3.5 w-3.5 ${accentText}`} />
-            Фильтры заданий
+            {t.tasksFilterButton}
             {activeCount > 0 && (
               <span className={`rounded-full px-2 py-0.5 text-[10px] font-black text-white ${
                 isTeal ? 'bg-teal-600' : 'bg-emerald-600'
@@ -223,7 +223,7 @@ export default function TaskFilterBar({
                 >
                   <span className="inline-flex items-center gap-1.5">
                     <Wallet className="h-3.5 w-3.5" />
-                    Награда от
+                    {t.tasksRewardFrom}
                   </span>
                   <ChevronDown className={`h-3.5 w-3.5 transition ${isRewardOpen ? 'rotate-180' : ''}`} />
                 </button>
@@ -231,7 +231,7 @@ export default function TaskFilterBar({
                   <div className="mt-2">
                     <div className="mb-1.5 flex items-center justify-between">
                       <span className="text-[11px] text-slate-500 dark:text-zinc-400">
-                        {minReward > 0 ? `от ${minReward} ₽` : 'любая сумма'}
+                        {minReward > 0 ? `${t.tasksRewardFromPrefix} ${minReward} ₽` : t.tasksRewardAny}
                       </span>
                       {minReward > 0 && (
                         <button
@@ -239,7 +239,7 @@ export default function TaskFilterBar({
                           onClick={() => setMinReward(0)}
                           className="text-[10px] font-bold text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200"
                         >
-                          сбросить
+                          {t.reset}
                         </button>
                       )}
                     </div>
@@ -250,12 +250,11 @@ export default function TaskFilterBar({
                       step={50}
                       value={minReward}
                       onChange={(e) => setMinReward(Number(e.target.value))}
-                      aria-label="Минимальная награда исполнителю"
+                      aria-label={t.tasksRewardAria}
                       className={`w-full ${isTeal ? 'accent-teal-600' : 'accent-emerald-600'}`}
                     />
                     <p className="mt-1 text-[10px] leading-relaxed text-slate-400">
-                      Это чистая награда исполнителю — без надбавки за срочность
-                      и без денег на закупку.
+                      {t.tasksRewardHint}
                     </p>
                   </div>
                 )}
@@ -269,17 +268,17 @@ export default function TaskFilterBar({
                 >
                   <span className="inline-flex items-center gap-1.5">
                     <Zap className="h-3.5 w-3.5" />
-                    Срочность
+                    {t.tasksUrgency}
                   </span>
                   <ChevronDown className={`h-3.5 w-3.5 transition ${isPriorityOpen ? 'rotate-180' : ''}`} />
                 </button>
                 {isPriorityOpen && (
                   <div className="mt-2 grid flex flex-wrap gap-2">
                     {[
-                      ['', 'Любая'],
-                      ['normal', 'Обычные'],
-                      ['high', '🟡 Приоритет'],
-                      ['critical', '🔴 Критично'],
+                      ['', t.tasksUrgencyAny],
+                      ['normal', t.tasksUrgencyNormal],
+                      ['high', `🟡 ${t.tasksUrgencyHigh}`],
+                      ['critical', `🔴 ${t.tasksUrgencyCritical}`],
                     ].map(([value, label]) => (
                       <button
                         key={value || 'any'}
@@ -303,7 +302,7 @@ export default function TaskFilterBar({
                 >
                   <span className="inline-flex items-center gap-1.5">
                     <Layers className="h-3.5 w-3.5" />
-                    Направление и сфера
+                    {t.tasksSphere}
                   </span>
                   <ChevronDown className={`h-3.5 w-3.5 transition ${isSphereOpen ? 'rotate-180' : ''}`} />
                 </button>
@@ -314,7 +313,7 @@ export default function TaskFilterBar({
                       onClick={() => setCategory('')}
                       className={`${chipBase} min-w-0 ${category === '' ? chipActive : chipIdle}`}
                     >
-                      <span className="truncate">Все</span>
+                      <span className="truncate">{t.tasksSphereAll}</span>
                     </button>
                     {categories.map((c) => (
                       <button
@@ -323,7 +322,10 @@ export default function TaskFilterBar({
                         onClick={() => setCategory(c.value)}
                         className={`${chipBase} min-w-0 ${category === c.value ? chipActive : chipIdle}`}
                       >
-                        <span className="truncate">{c.labelRu}</span>
+                        {/* Чеченская подпись, если админ её задал; иначе русская */}
+                        <span className="truncate">
+                          {(language === 'ce' && c.labelCe) || c.labelRu}
+                        </span>
                       </button>
                     ))}
                   </div>

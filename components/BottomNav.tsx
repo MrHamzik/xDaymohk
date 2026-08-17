@@ -73,7 +73,7 @@ export default function BottomNav({ onOpenMenu, onOpenCreate }: BottomNavProps) 
           <span className="text-[11px] font-semibold">{t.map}</span>
         </Link>
 
-        {/* 5. Домой — главная лежит на "/" (роута /home не существует).
+        {/* 5. Главная — лежит на "/" (роута /home не существует).
              Раньше здесь был href="/home": Next.js префетчил несуществующий
              маршрут, из-за чего в консоли сыпалось GET /home?_rsc=... 404,
              а сам переход вёл на страницу «не найдено». */}
@@ -88,7 +88,7 @@ export default function BottomNav({ onOpenMenu, onOpenCreate }: BottomNavProps) 
           <div className="mb-0.5 h-5 w-5 flex items-center justify-center">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
           </div>
-          <span className="text-[11px] font-semibold">Домой</span>
+          <span className="text-[11px] font-semibold">{t.navMain}</span>
         </Link>
       </div>
     </nav>

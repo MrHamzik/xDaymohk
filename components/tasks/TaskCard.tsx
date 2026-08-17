@@ -5,8 +5,9 @@ import {
   CalendarDays, ChevronRight, ShieldCheck, Wallet,
 } from 'lucide-react';
 import Avatar from '@/components/Avatar';
+import { useI18n } from '@/lib/i18n';
 import { formatTimeLeft } from '@/lib/tasks/client';
-import { taskCostBreakdown, type Task } from '@/lib/types';
+import { taskCostBreakdown, TASK_PRIORITY_SURCHARGE, type Task } from '@/lib/types';
 
 interface TaskCardProps {
   task: Task;
@@ -15,22 +16,22 @@ interface TaskCardProps {
   onOpen: (task: Task) => void;
 }
 
-/** Оформление приоритета: цвет «корешка», подпись и иконка. */
+/** Оформление приоритета: цвет «корешка», чипа и иконка.
+ *  Подпись берётся из словаря — здесь только визуал, иначе строка
+ *  «Приоритет +20%» осталась бы непереводимой и разъезжалась бы
+ *  с реальным процентом из TASK_PRIORITY_SURCHARGE. */
 const PRIORITY_META = {
   normal: {
-    label: null,
     spine: 'bg-slate-200 dark:bg-zinc-700',
     chip: '',
     Icon: Clock,
   },
   high: {
-    label: 'Приоритет +20%',
     spine: 'bg-gradient-to-b from-amber-300 to-amber-500',
     chip: 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300',
     Icon: Zap,
   },
   critical: {
-    label: 'Критично +50%',
     spine: 'bg-gradient-to-b from-rose-400 to-rose-600',
     chip: 'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300',
     Icon: AlertTriangle,
@@ -47,11 +48,26 @@ const PRIORITY_META = {
  * и читабельной даже на узком экране.
  */
 export default function TaskCard({ task, needsReview = false, onOpen }: TaskCardProps) {
+  const { t } = useI18n();
   const priority = PRIORITY_META[task.priority];
+  // Процент надбавки берём из единого источника, чтобы подпись на
+  // карточке не расходилась с расчётом стоимости.
+  const surchargePercent = Math.round(TASK_PRIORITY_SURCHARGE[task.priority] * 100);
+  const priorityLabel = task.priority === 'high'
+    ? `${t.tasksUrgencyHigh} +${surchargePercent}%`
+    : task.priority === 'critical'
+    ? `${t.tasksUrgencyCritical} +${surchargePercent}%`
+    : null;
   const cost = taskCostBreakdown(task.reward, task.priority, task.purchaseBudget ?? 0);
   const total = cost.reward + cost.surcharge;
-  const timeLeft = formatTimeLeft(task.kind === 'urgent' ? task.deadlineAt : task.scheduledAt);
-  const isOverdue = timeLeft === 'просрочено';
+  const timeLabels = {
+    overdue: t.timeOverdue, min: t.timeMin, hour: t.timeHour, day: t.timeDay,
+  };
+  const timeLeft = formatTimeLeft(
+    task.kind === 'urgent' ? task.deadlineAt : task.scheduledAt,
+    timeLabels,
+  );
+  const isOverdue = timeLeft === t.timeOverdue;
   const takenSlots = task.takenSlots ?? 0;
   const isFull = takenSlots >= task.slots;
   const rating = task.authorRating ?? 0;
@@ -69,7 +85,7 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
           onOpen(task);
         }
       }}
-      aria-label={`Открыть задание: ${task.title}`}
+      aria-label={`${t.taskOpenAria}: ${task.title}`}
       className={`smk-lux group flex h-full cursor-pointer flex-col overflow-hidden text-slate-900 dark:text-white ${
         needsReview ? 'ring-1 ring-amber-300/70 dark:ring-amber-700/60' : ''
       }`}
@@ -83,13 +99,13 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
           <div className="smk-ring h-11 w-11">
             <Avatar
               src={task.authorAvatarUrl}
-              alt={task.authorName || 'Заказчик'}
+              alt={task.authorName || t.taskCustomerFallback}
               className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
             />
           </div>
           {isTrusted && (
             <span
-              title="Надёжный заказчик"
+              title={t.taskTrusted}
               className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-white p-0.5 dark:bg-zinc-800"
             >
               <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
@@ -99,16 +115,16 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
 
         <div className="min-w-0 flex-1">
           <h3 className="smk-title truncate text-base font-bold leading-tight text-slate-900 dark:text-white">
-            {task.authorName || 'Житель Даймохк'}
+            {task.authorName || t.taskCustomerDefault}
           </h3>
           {/* Слой 5: метаданные с воздухом и ромбами-разделителями */}
           <div className="smk-meta mt-1.5 flex flex-wrap items-center text-[11px] leading-relaxed text-slate-500 dark:text-zinc-400">
             <span className="inline-flex items-center gap-1 font-bold text-amber-600 dark:text-amber-400">
               <Star className="h-3 w-3 smk-star" />
-              {rating > 0 ? rating.toFixed(1) : 'нет оценок'}
+              {rating > 0 ? rating.toFixed(1) : t.taskNoRatings}
             </span>
-            <span>{task.authorAccountDays ?? 0} дн.</span>
-            <span>{task.authorTasksCreated ?? 0} заданий</span>
+            <span>{task.authorAccountDays ?? 0} {t.taskDaysShort}</span>
+            <span>{task.authorTasksCreated ?? 0} {t.taskTasksWord}</span>
           </div>
         </div>
 
@@ -125,7 +141,7 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
           </div>
         ) : (
           <span className="smk-price smk-price-teal shrink-0 text-[11px] font-extrabold text-teal-700 dark:text-teal-300">
-            Садака
+            {t.taskSadaka}
           </span>
         )}
       </div>
@@ -152,14 +168,14 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
         {needsReview && (
           <span className="inline-flex items-center gap-1 rounded-lg bg-amber-100 px-2 py-1 text-amber-900 dark:bg-amber-900/60 dark:text-amber-200">
             <Star className="h-3 w-3 fill-current" />
-            Ожидает оценки
+            {t.taskAwaitingReview}
           </span>
         )}
 
-        {priority.label && (
+        {priorityLabel && (
           <span className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 ${priority.chip}`}>
             <priority.Icon className="h-3 w-3" />
-            {priority.label}
+            {priorityLabel}
           </span>
         )}
 
@@ -193,11 +209,11 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
 
         {(task.purchaseBudget ?? 0) > 0 && (
           <span
-            title="Нужно купить товар на свои деньги — сумма вернётся с наградой"
+            title={t.taskPurchaseTip}
             className="inline-flex items-center gap-1 rounded-lg bg-violet-50 px-2 py-1 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300"
           >
             <Wallet className="h-3 w-3" />
-            закупка {task.purchaseBudget} ₽
+            {t.taskPurchaseShort} {task.purchaseBudget} ₽
           </span>
         )}
 
@@ -213,7 +229,7 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
       <div className="smk-foot flex items-center justify-between gap-2 py-2.5 pl-4 pr-3.5">
         <span className="flex min-w-0 items-center gap-1.5 text-[11px] text-slate-500 dark:text-zinc-400">
           <MapPin className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
-          <span className="truncate">{task.address || 'Адрес не указан'}</span>
+          <span className="truncate">{task.address || t.taskAddressMissing}</span>
         </span>
         <ChevronRight className="h-4 w-4 shrink-0 smk-arrow" />
       </div>

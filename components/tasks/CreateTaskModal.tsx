@@ -3,8 +3,12 @@
 import { useEffect, useState } from 'react';
 import { X, Loader2, ExternalLink } from 'lucide-react';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
+import { useI18n } from '@/lib/i18n';
 import { createTask, fetchTaskFilters } from '@/lib/tasks/client';
-import { taskCostBreakdown, TASK_MIN_REWARD, type AppFilter, type TaskKind, type TaskPriority } from '@/lib/types';
+import {
+  taskCostBreakdown, TASK_MIN_REWARD, TASK_PRIORITY_SURCHARGE,
+  type AppFilter, type TaskKind, type TaskPriority,
+} from '@/lib/types';
 
 interface CreateTaskModalProps {
   isOpen: boolean;
@@ -21,6 +25,7 @@ function toLocalInput(date: Date): string {
 }
 
 export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: CreateTaskModalProps) {
+  const { t, language } = useI18n();
   const [categories, setCategories] = useState<AppFilter[]>([]);
   const [kind, setKind] = useState<TaskKind>('urgent');
   const [title, setTitle] = useState('');
@@ -71,11 +76,11 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
   const handleSubmit = async () => {
     setError('');
     if (title.trim().length < 3) {
-      setError('Опишите задание в заголовке (минимум 3 символа)');
+      setError(t.taskTitleTooShort);
       return;
     }
     if (isPaid && rewardValue < TASK_MIN_REWARD) {
-      setError(`Минимальная награда — ${TASK_MIN_REWARD} ₽`);
+      setError(t.taskRewardTooLow.replace('{amount}', String(TASK_MIN_REWARD)));
       return;
     }
 
@@ -114,7 +119,7 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
       onCreated();
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось создать задание');
+      setError(e instanceof Error ? e.message : t.taskCreateError);
     } finally {
       setIsSaving(false);
     }
@@ -141,12 +146,12 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
       >
         <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 dark:border-zinc-800">
           <h2 id="create-task-title" className="text-sm font-extrabold text-slate-900 dark:text-white">
-            {isPaid ? 'Новое задание — Аренца Темщик' : 'Новая помощь — ГIончалла'}
+            {isPaid ? t.taskCreateTitlePaid : t.taskCreateTitleFree}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Закрыть"
+            aria-label={t.close}
             className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 dark:hover:bg-zinc-800"
           >
             <X className="h-4 w-4" />
@@ -156,9 +161,9 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
         <div className="min-h-0 flex-1 overflow-y-auto">
           {/* Тип задания */}
           <div className="px-4 pb-4 pt-4">
-          <span className={labelClass}>Тип задания</span>
+          <span className={labelClass}>{t.taskKindLabel}</span>
           <div className="flex items-center gap-1 rounded-xl bg-slate-100 p-1 dark:bg-zinc-800" role="tablist">
-            {([['urgent', 'Срочное'], ['scheduled', 'На дату']] as [TaskKind, string][]).map(([value, label]) => (
+            {([['urgent', t.taskKindUrgent], ['scheduled', t.taskKindScheduled]] as [TaskKind, string][]).map(([value, label]) => (
               <button
                 key={value}
                 type="button"
@@ -179,26 +184,26 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
 
           <div className={sectionClass}>
             <div>
-            <label htmlFor="task-title" className={labelClass}>Что нужно сделать *</label>
+            <label htmlFor="task-title" className={labelClass}>{t.taskWhatToDo}</label>
             <input
               id="task-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               maxLength={120}
-              placeholder="Например: купить хлеб и молоко"
+              placeholder={t.taskWhatToDoPlaceholder}
               className={fieldClass}
             />
             </div>
 
             <div>
-            <label htmlFor="task-desc" className={labelClass}>Подробности</label>
+            <label htmlFor="task-desc" className={labelClass}>{t.taskDetailsLabel}</label>
             <textarea
               id="task-desc"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               maxLength={2000}
               rows={3}
-              placeholder="Уточните детали: что именно, куда принести, особые пожелания"
+              placeholder={t.taskDetailsPlaceholder}
               className={`${fieldClass} resize-none`}
             />
             </div>
@@ -206,23 +211,25 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
 
           <div className={`${sectionClass} grid grid-cols-2 gap-3`}>
             <div>
-              <label htmlFor="task-category" className={labelClass}>Категория</label>
+              <label htmlFor="task-category" className={labelClass}>{t.taskCategoryLabel}</label>
               <select
                 id="task-category"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
                 className={fieldClass}
               >
-                {categories.length === 0 && <option value="other">Другое</option>}
+                {categories.length === 0 && <option value="other">{t.taskCategoryOther}</option>}
                 {categories.map((c) => (
-                  <option key={c.id} value={c.value}>{c.labelRu}</option>
+                  <option key={c.id} value={c.value}>
+                    {(language === 'ce' && c.labelCe) || c.labelRu}
+                  </option>
                 ))}
               </select>
             </div>
 
             {isPaid && (
               <div>
-                <label htmlFor="task-reward" className={labelClass}>Награда, ₽ *</label>
+                <label htmlFor="task-reward" className={labelClass}>{t.taskRewardLabel}</label>
                 <input
                   id="task-reward"
                   type="number"
@@ -241,7 +248,7 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
               тратит свои деньги и получает их обратно с наградой. */}
           {isPaid && isPurchase && (
             <div className={sectionClass}>
-              <label htmlFor="task-budget" className={labelClass}>Сумма на покупку, ₽</label>
+              <label htmlFor="task-budget" className={labelClass}>{t.taskBudgetLabel}</label>
               <input
                 id="task-budget"
                 type="number"
@@ -253,20 +260,21 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
                 className={fieldClass}
               />
               <p className="mt-1.5 text-[11px] leading-relaxed text-slate-500 dark:text-zinc-400">
-                Исполнитель купит товар на свои деньги и получит эту сумму обратно
-                вместе с наградой. Укажите, сколько примерно нужно.
+                {t.taskBudgetHint}
               </p>
             </div>
           )}
           {/* Приоритет — надбавка платит заказчик */}
           {isPaid && (
             <div className={sectionClass}>
-              <span className={labelClass}>Срочность</span>
+              <span className={labelClass}>{t.tasksUrgency}</span>
               <div className="flex items-center gap-1 rounded-xl bg-slate-100 p-1 dark:bg-zinc-800">
+                {/* Проценты считаем из TASK_PRIORITY_SURCHARGE: раньше здесь
+                    были зашитые «+20%/+50%», не совпадавшие с расчётом. */}
                 {([
-                  ['normal', 'Обычно'],
-                  ['high', '🟡 +20%'],
-                  ['critical', '🔴 +50%'],
+                  ['normal', t.taskUrgencyNormalShort],
+                  ['high', `🟡 +${Math.round(TASK_PRIORITY_SURCHARGE.high * 100)}%`],
+                  ['critical', `🔴 +${Math.round(TASK_PRIORITY_SURCHARGE.critical * 100)}%`],
                 ] as [TaskPriority, string][]).map(([value, label]) => (
                   <button
                     key={value}
@@ -287,13 +295,13 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
               {rewardValue > 0 && (
                 <dl className="mt-2 space-y-1 rounded-xl bg-slate-50 px-3 py-2.5 text-[11px] dark:bg-zinc-800/70">
                   <div className="flex items-center justify-between">
-                    <dt className="text-slate-500 dark:text-zinc-400">Награда исполнителю</dt>
+                    <dt className="text-slate-500 dark:text-zinc-400">{t.taskCostReward}</dt>
                     <dd className="font-bold text-slate-800 dark:text-zinc-200">{cost.reward} ₽</dd>
                   </div>
                   {cost.surcharge > 0 && (
                     <div className="flex items-center justify-between">
                       <dt className="text-slate-500 dark:text-zinc-400">
-                        Надбавка за срочность
+                        {t.taskCostSurcharge}
                       </dt>
                       <dd className="font-bold text-amber-600 dark:text-amber-400">
                         +{cost.surcharge} ₽
@@ -302,7 +310,7 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
                   )}
                   {cost.budget > 0 && (
                     <div className="flex items-center justify-between">
-                      <dt className="text-slate-500 dark:text-zinc-400">Возврат за покупку</dt>
+                      <dt className="text-slate-500 dark:text-zinc-400">{t.taskCostBudget}</dt>
                       <dd className="font-bold text-slate-800 dark:text-zinc-200">
                         +{cost.budget} ₽
                       </dd>
@@ -310,20 +318,19 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
                   )}
                   <div className="flex items-center justify-between">
                     <dt className="text-slate-500 dark:text-zinc-400">
-                      Комиссия сервиса оплаты (3,5%)
+                      {t.taskCostFee}
                     </dt>
                     <dd className="font-bold text-slate-800 dark:text-zinc-200">{cost.fee} ₽</dd>
                   </div>
                   <div className="mt-1 flex items-center justify-between border-t border-slate-200 pt-1.5 dark:border-zinc-700">
-                    <dt className="font-bold text-slate-700 dark:text-zinc-300">Вы заплатите</dt>
+                    <dt className="font-bold text-slate-700 dark:text-zinc-300">{t.taskCostTotal}</dt>
                     <dd className="text-sm font-extrabold text-emerald-700 dark:text-emerald-400">
                       {cost.total} ₽
                     </dd>
                   </div>
                   <p className="pt-0.5 text-[10px] text-slate-400">
-                    Исполнитель получит {cost.executorGets} ₽
-                    {cost.budget > 0 && ' (включая возврат за покупку)'}. Налог со своего
-                    дохода он платит сам.
+                    {t.taskCostExecutorGets} {cost.executorGets} ₽
+                    {cost.budget > 0 && ` ${t.taskCostBudgetIncluded}`}. {t.taskCostTaxNote}
                   </p>
                 </dl>
               )}
@@ -332,7 +339,7 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
 
           {kind === 'urgent' ? (
             <div className={sectionClass}>
-              <label htmlFor="task-deadline" className={labelClass}>Сделать до *</label>
+              <label htmlFor="task-deadline" className={labelClass}>{t.taskDeadlineLabel}</label>
               <input
                 id="task-deadline"
                 type="datetime-local"
@@ -344,7 +351,7 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
           ) : (
             <div className={`${sectionClass} grid grid-cols-2 gap-3`}>
               <div>
-                <label htmlFor="task-scheduled" className={labelClass}>Дата и время *</label>
+                <label htmlFor="task-scheduled" className={labelClass}>{t.taskScheduledLabel}</label>
                 <input
                   id="task-scheduled"
                   type="datetime-local"
@@ -354,7 +361,7 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
                 />
               </div>
               <div>
-                <label htmlFor="task-slots" className={labelClass}>Сколько человек</label>
+                <label htmlFor="task-slots" className={labelClass}>{t.taskSlotsLabel}</label>
                 <input
                   id="task-slots"
                   type="number"
@@ -371,7 +378,7 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
 
           <div className={sectionClass}>
             <div className="flex items-center justify-between gap-2">
-              <label htmlFor="task-address" className={labelClass}>Адрес</label>
+              <label htmlFor="task-address" className={labelClass}>{t.taskAddressLabel}</label>
               {/* Как в анкете: ссылка появляется, когда координаты выбраны */}
               {coords && (
                 <a
@@ -380,7 +387,7 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
                   rel="noopener noreferrer"
                   className="mb-1.5 inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:underline dark:text-emerald-400"
                 >
-                  Открыть на карте
+                  {t.openOnMap}
                   <ExternalLink className="h-3 w-3" />
                 </a>
               )}
@@ -399,12 +406,12 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
           {/* Требования: кого пускать на задание */}
           <details className={sectionClass}>
             <summary className="cursor-pointer text-[11px] font-bold uppercase tracking-wide text-slate-500 marker:text-emerald-500 dark:text-zinc-400">
-              Требования к исполнителю
+              {t.taskRequirements}
             </summary>
             <div className="mt-3 space-y-3">
               <div className="grid grid-cols-3 gap-2">
                 <div>
-                  <label htmlFor="task-min-rating" className={labelClass}>Рейтинг</label>
+                  <label htmlFor="task-min-rating" className={labelClass}>{t.taskMinRating}</label>
                   <input
                     id="task-min-rating" type="number" min={0} max={5} step={0.5}
                     value={minRating} onChange={(e) => setMinRating(e.target.value)}
@@ -412,7 +419,7 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
                   />
                 </div>
                 <div>
-                  <label htmlFor="task-min-days" className={labelClass}>Дней в сети</label>
+                  <label htmlFor="task-min-days" className={labelClass}>{t.taskMinDays}</label>
                   <input
                     id="task-min-days" type="number" min={0}
                     value={minAccountDays} onChange={(e) => setMinAccountDays(e.target.value)}
@@ -420,7 +427,7 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
                   />
                 </div>
                 <div>
-                  <label htmlFor="task-min-done" className={labelClass}>Заданий</label>
+                  <label htmlFor="task-min-done" className={labelClass}>{t.taskMinTasks}</label>
                   <input
                     id="task-min-done" type="number" min={0}
                     value={minTasksDone} onChange={(e) => setMinTasksDone(e.target.value)}
@@ -436,9 +443,9 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
                   className="mt-0.5 h-4 w-4 rounded accent-emerald-600"
                 />
                 <span>
-                  <span className="font-bold text-slate-800 dark:text-zinc-200">Показывать новичкам</span>
+                  <span className="font-bold text-slate-800 dark:text-zinc-200">{t.taskAllowNewcomers}</span>
                   <br />
-                  Без этого люди без выполненных заданий не смогут взять задание.
+                  {t.taskAllowNewcomersHint}
                 </span>
               </label>
             </div>
@@ -459,7 +466,7 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
             onClick={onClose}
             className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
           >
-            Отмена
+            {t.cancel}
           </button>
           <button
             type="button"
@@ -468,7 +475,7 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
             className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:opacity-60"
           >
             {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
-            Опубликовать
+            {t.taskPublishBtn}
           </button>
         </div>
       </div>

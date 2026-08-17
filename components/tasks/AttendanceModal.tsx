@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { X, Loader2, Star, Check, UserX } from 'lucide-react';
 import Avatar from '@/components/Avatar';
+import { useI18n } from '@/lib/i18n';
 import { runTaskAction, submitResidentReview } from '@/lib/tasks/client';
 import { taskTotalReward, type Task, type TaskParticipant } from '@/lib/types';
 
@@ -34,6 +35,7 @@ export default function AttendanceModal({
   onClose,
   onDone,
 }: AttendanceModalProps) {
+  const { t } = useI18n();
   const [rows, setRows] = useState<Record<string, Row>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
@@ -101,7 +103,7 @@ export default function AttendanceModal({
       onDone();
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось сохранить');
+      setError(e instanceof Error ? e.message : t.attendanceSaveError);
     } finally {
       setIsSaving(false);
     }
@@ -122,14 +124,14 @@ export default function AttendanceModal({
         <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 dark:border-zinc-800">
           <div className="min-w-0">
             <h2 id="attendance-title" className="truncate text-sm font-extrabold text-slate-900 dark:text-white">
-              Завершение задания
+              {t.attendanceTitle}
             </h2>
             <p className="truncate text-[11px] text-slate-500 dark:text-zinc-500">{task.title}</p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Закрыть"
+            aria-label={t.close}
             className="shrink-0 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 dark:hover:bg-zinc-800"
           >
             <X className="h-4 w-4" />
@@ -138,13 +140,12 @@ export default function AttendanceModal({
 
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
           <p className="rounded-xl bg-slate-50 px-3 py-2 text-[11px] text-slate-600 dark:bg-zinc-800/60 dark:text-zinc-400">
-            Отметьте, кто пришёл, поставьте оценку и при желании добавьте бонус.
-            Неотмеченные получат «неявку» — это отразится на их рейтинге.
+            {t.attendanceHint}
           </p>
 
           {active.length === 0 && (
             <p className="py-6 text-center text-sm text-slate-500 dark:text-zinc-400">
-              На задание никто не записался.
+              {t.attendanceNobody}
             </p>
           )}
 
@@ -163,10 +164,10 @@ export default function AttendanceModal({
                   <Avatar src={p.avatarUrl} className="h-9 w-9 shrink-0 rounded-xl object-cover" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-xs font-bold text-slate-900 dark:text-white">
-                      {p.fullName || 'Житель'}
+                      {p.fullName || t.attendanceResident}
                     </p>
                     <p className="text-[10px] text-slate-500 dark:text-zinc-500">
-                      ★ {(p.rating ?? 0) > 0 ? p.rating?.toFixed(1) : '—'} · выполнено: {p.tasksDoneCount ?? 0}
+                      ★ {(p.rating ?? 0) > 0 ? p.rating?.toFixed(1) : '—'} · {t.attendanceDoneCount}: {p.tasksDoneCount ?? 0}
                     </p>
                   </div>
                   <button
@@ -181,7 +182,7 @@ export default function AttendanceModal({
                     }`}
                   >
                     {row.attended ? <Check className="h-3.5 w-3.5" /> : <UserX className="h-3.5 w-3.5" />}
-                    {row.attended ? 'Пришёл' : 'Не пришёл'}
+                    {row.attended ? t.attendanceCame : t.attendanceMissed}
                   </button>
                 </div>
 
@@ -189,14 +190,14 @@ export default function AttendanceModal({
                   <div className="mt-3 space-y-2 border-t border-emerald-200/60 pt-2.5 dark:border-emerald-900/60">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
-                        Оценка
+                        {t.attendanceRating}
                       </span>
                       <div className="flex gap-0.5">
                         {[1, 2, 3, 4, 5].map((star) => (
                           <button
                             key={star}
                             type="button"
-                            aria-label={`${star} звёзд`}
+                            aria-label={`${star} ${t.taskStarsAria}`}
                             onClick={() => patch(p.userId, { rating: star })}
                           >
                             <Star
@@ -215,7 +216,7 @@ export default function AttendanceModal({
                       <div>
                         <div className="flex items-center justify-between">
                           <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
-                            Бонус +{row.bonusPercent}%
+                            {t.attendanceBonus} +{row.bonusPercent}%
                           </span>
                           <span className="text-xs font-extrabold text-emerald-700 dark:text-emerald-400">
                             {Math.round(base * (1 + row.bonusPercent / 100))} ₽
@@ -228,7 +229,7 @@ export default function AttendanceModal({
                           step={5}
                           value={row.bonusPercent}
                           onChange={(e) => patch(p.userId, { bonusPercent: Number(e.target.value) })}
-                          aria-label={`Бонус для ${p.fullName || 'исполнителя'}`}
+                          aria-label={`${t.attendanceBonusAria}: ${p.fullName || ''}`.trim()}
                           className="mt-1 w-full accent-emerald-600"
                         />
                       </div>
@@ -238,7 +239,7 @@ export default function AttendanceModal({
                       value={row.text}
                       onChange={(e) => patch(p.userId, { text: e.target.value })}
                       maxLength={500}
-                      placeholder="Комментарий (необязательно)"
+                      placeholder={t.taskRatingComment}
                       className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
                     />
                   </div>
@@ -258,10 +259,10 @@ export default function AttendanceModal({
           {task.isPaid && (
             <div className="mb-2 flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-xs dark:bg-zinc-800/60">
               <span className="font-semibold text-slate-600 dark:text-zinc-400">
-                Пришло {attendedCount} из {active.length}
+                {t.attendanceCameCount} {attendedCount} {t.attendanceOf} {active.length}
               </span>
               <span className="font-extrabold text-emerald-700 dark:text-emerald-400">
-                К выплате: {totalPayout} ₽
+                {t.attendancePayout}: {totalPayout} ₽
               </span>
             </div>
           )}
@@ -271,7 +272,7 @@ export default function AttendanceModal({
               onClick={onClose}
               className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
             >
-              Отмена
+              {t.cancel}
             </button>
             <button
               type="button"
@@ -280,7 +281,7 @@ export default function AttendanceModal({
               className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:opacity-60"
             >
               {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
-              Завершить
+              {t.attendanceFinishBtn}
             </button>
           </div>
         </div>

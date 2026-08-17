@@ -6,7 +6,7 @@ import {
   Flag, MapPin, Star, VenusAndMars,
 } from 'lucide-react';
 import { Profile } from '@/lib/types';
-import { calculateAge, formatReviews } from '@/lib/text';
+import { calculateAge, formatCount, formatReviews } from '@/lib/text';
 import { useI18n } from '@/lib/i18n';
 import { useProfiles } from '@/components/ProfilesProvider';
 import ProfileBadges, { useWorkingStatusRing } from '@/components/ProfileBadges';
@@ -96,7 +96,7 @@ export default function ProfileCard({
       }}
       role="button"
       tabIndex={0}
-      aria-label={`Открыть ${profile.fullName}`}
+      aria-label={`${t.open} ${profile.fullName}`}
       className="smk-lux group flex h-full cursor-pointer flex-col overflow-hidden text-slate-900 dark:text-white"
     >
       {/* ── Шапка: аватар · имя · рейтинг ─────────────────────────
@@ -132,9 +132,9 @@ export default function ProfileCard({
                 {headRating.toFixed(1)}
               </span>
               <span className="truncate text-[11px] text-slate-500 dark:text-zinc-400">
-                {profile.isSpecialist ? formatReviews(headCount) : `${headCount} оцен${
-                  headCount === 1 ? 'ка' : headCount < 5 ? 'ки' : 'ок'
-                }`}
+                {profile.isSpecialist
+                  ? formatReviews(headCount)
+                  : formatCount(headCount, t.cardRatingOne, t.cardRatingFew, t.cardRatingMany)}
               </span>
             </div>
           )}
@@ -210,7 +210,7 @@ export default function ProfileCard({
           {profile.certificates.length > 0 ? (
             <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-500 dark:text-zinc-400">
               <Award className="smk-ico h-3.5 w-3.5" />
-              Документы: {profile.certificates.length}
+              {t.cardDocuments}: {profile.certificates.length}
             </span>
           ) : (
             <span aria-hidden>&nbsp;</span>
@@ -228,7 +228,7 @@ export default function ProfileCard({
               className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl bg-red-50 px-3 py-1.5 text-[11px] font-bold text-red-600 transition hover:bg-red-100 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-950/70"
             >
               <Ban className="h-3.5 w-3.5 shrink-0" />
-              Заблокировать
+              {t.cardBlock}
             </button>
           ) : !isOwnProfile && !profile.isVerified && profile.verificationStatus !== 'verified' && onReport ? (
             <button
@@ -238,10 +238,10 @@ export default function ProfileCard({
                 onReport(profile);
               }}
               className="smk-btn-gold inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap px-3.5 py-1.5 text-[11px]"
-              aria-label="Пожаловаться на анкету"
+              aria-label={t.cardReportAria}
             >
               <Flag className="h-3.5 w-3.5 shrink-0" />
-              Пожаловаться
+              {t.cardReport}
             </button>
           ) : null}
         </div>

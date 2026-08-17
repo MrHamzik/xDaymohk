@@ -5,6 +5,7 @@ import { X, Loader2, Star, MapPin, Clock, Users, CalendarDays, Trash2, ExternalL
 import Avatar from '@/components/Avatar';
 import { fetchTask, runTaskAction, submitResidentReview, deleteTask, formatTimeLeft } from '@/lib/tasks/client';
 import AttendanceModal from '@/components/tasks/AttendanceModal';
+import { useI18n } from '@/lib/i18n';
 import { useTaskRealtime } from '@/lib/tasks/realtime';
 import {
   taskTotalReward,
@@ -26,6 +27,7 @@ export default function TaskDetailModal({
   onClose,
   onChanged,
 }: TaskDetailModalProps) {
+  const { t } = useI18n();
   const [task, setTask] = useState<Task | null>(null);
   const [participants, setParticipants] = useState<TaskParticipant[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -46,11 +48,11 @@ export default function TaskDetailModal({
       setTask(data.task);
       setParticipants(data.participants ?? []);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось загрузить задание');
+      setError(e instanceof Error ? e.message : t.taskLoadOneError);
     } finally {
       setIsLoading(false);
     }
-  }, [taskId]);
+  }, [taskId, t.taskLoadOneError]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -81,10 +83,15 @@ export default function TaskDetailModal({
       await load();
       onChanged();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось выполнить действие');
+      setError(e instanceof Error ? e.message : t.taskActionError);
     } finally {
       setBusy('');
     }
+  };
+
+  // Подписи единиц времени для formatTimeLeft (функция вне React).
+  const timeLabels = {
+    overdue: t.timeOverdue, min: t.timeMin, hour: t.timeHour, day: t.timeDay,
   };
 
   const btn = 'flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition disabled:opacity-60';
@@ -102,13 +109,13 @@ export default function TaskDetailModal({
       >
         <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 dark:border-zinc-800">
           <h2 className="truncate pr-2 text-sm font-extrabold text-slate-900 dark:text-white">
-            {task?.title ?? 'Задание'}
+            {task?.title ?? t.taskDetailTitle}
           </h2>
           <div className="flex shrink-0 items-center gap-1">
             <button
               type="button"
               onClick={onClose}
-              aria-label="Закрыть"
+              aria-label={t.close}
               className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 dark:hover:bg-zinc-800"
             >
               <X className="h-4 w-4" />
@@ -130,21 +137,21 @@ export default function TaskDetailModal({
                 <div className="h-11 w-11 shrink-0 overflow-hidden rounded-xl bg-slate-100 ring-1 ring-slate-200/70 dark:bg-zinc-950 dark:ring-zinc-700/70">
                   <Avatar
                     src={task.authorAvatarUrl}
-                    alt={task.authorName || 'Заказчик'}
+                    alt={task.authorName || t.taskCustomerFallback}
                     className="h-full w-full object-cover"
                   />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold text-slate-900 dark:text-white">
-                    {task.authorName || 'Житель Даймохк'}
+                    {task.authorName || t.taskCustomerDefault}
                   </p>
                   <div className="mt-1.5 flex flex-wrap items-center gap-x-2 text-[11px] leading-relaxed text-slate-500 dark:text-zinc-400">
                     <span className="inline-flex items-center gap-0.5 font-bold text-amber-600 dark:text-amber-400">
                       <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                      {(task.authorRating ?? 0) > 0 ? task.authorRating?.toFixed(1) : 'нет оценок'}
+                      {(task.authorRating ?? 0) > 0 ? task.authorRating?.toFixed(1) : t.taskNoRatings}
                     </span>
-                    <span>· {task.authorAccountDays ?? 0} дн. в сети</span>
-                    <span>· заданий: {task.authorTasksCreated ?? 0}</span>
+                    <span>· {task.authorAccountDays ?? 0} {t.taskDaysOnline}</span>
+                    <span>· {t.taskCreatedWord}: {task.authorTasksCreated ?? 0}</span>
                   </div>
                 </div>
                 {task.isPaid && (
@@ -157,7 +164,7 @@ export default function TaskDetailModal({
               {task.description && (
                 <div className="border-t border-slate-100 px-4 py-4 dark:border-zinc-800">
                   <h3 className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-400">
-                    Подробности
+                    {t.taskDetailsHeading}
                   </h3>
                   <p className="whitespace-pre-wrap break-words text-[13px] leading-relaxed text-slate-700 dark:text-zinc-300">
                     {task.description}
@@ -168,16 +175,19 @@ export default function TaskDetailModal({
               <div className="grid grid-cols-2 gap-2 border-t border-slate-100 px-4 py-4 text-[11px] dark:border-zinc-800">
                 <InfoRow
                   icon={task.kind === 'scheduled' ? CalendarDays : Clock}
-                  label={task.kind === 'scheduled' ? 'Начало через' : 'Осталось'}
-                  value={formatTimeLeft(task.kind === 'scheduled' ? task.scheduledAt : task.deadlineAt) || '—'}
+                  label={task.kind === 'scheduled' ? t.taskStartsIn : t.taskTimeLeftLabel}
+                  value={formatTimeLeft(
+                    task.kind === 'scheduled' ? task.scheduledAt : task.deadlineAt,
+                    timeLabels,
+                  ) || '—'}
                 />
                 {task.kind === 'scheduled' && (
-                  <InfoRow icon={Users} label="Мест занято" value={`${task.takenSlots ?? 0} / ${task.slots}`} />
+                  <InfoRow icon={Users} label={t.taskSlotsTaken} value={`${task.takenSlots ?? 0} / ${task.slots}`} />
                 )}
                 {(task.purchaseBudget ?? 0) > 0 && (
                   <InfoRow
                     icon={Wallet}
-                    label="Купить на сумму"
+                    label={t.taskBuyFor}
                     value={`${task.purchaseBudget} ₽`}
                   />
                 )}
@@ -188,7 +198,7 @@ export default function TaskDetailModal({
               {(task.address || (typeof task.lat === 'number' && typeof task.lng === 'number')) && (
                 <div className="border-t border-slate-100 px-4 py-4 dark:border-zinc-800">
                   <h3 className="mb-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
-                    Адресс
+                    {t.taskAddressHeading}
                   </h3>
                   <div className="flex items-start gap-3 rounded-xl border border-slate-100 bg-slate-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-800">
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
@@ -196,7 +206,7 @@ export default function TaskDetailModal({
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-xs font-bold text-slate-900 dark:text-white">
-                        {task.address || 'Адрес не указан'}
+                        {task.address || t.taskAddressMissing}
                       </p>
                       {typeof task.lat === 'number' && typeof task.lng === 'number' && (
                         <a
@@ -205,7 +215,7 @@ export default function TaskDetailModal({
                           rel="noopener noreferrer"
                           className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:underline dark:text-emerald-400"
                         >
-                          Открыть на карте
+                          {t.openOnMap}
                           <ExternalLink className="h-3 w-3" />
                         </a>
                       )}
@@ -218,7 +228,7 @@ export default function TaskDetailModal({
               {activeParticipants.length > 0 && (
                 <div className="border-t border-slate-100 px-4 py-4 dark:border-zinc-800">
                   <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-400">
-                    {task.kind === 'urgent' ? 'Исполнитель' : `Записались (${activeParticipants.length})`}
+                    {task.kind === 'urgent' ? t.taskExecutorHeading : `${t.taskJoinedHeading} (${activeParticipants.length})`}
                   </h3>
                   <div className="space-y-1.5">
                     {activeParticipants.map((p) => (
@@ -229,7 +239,7 @@ export default function TaskDetailModal({
                         <Avatar src={p.avatarUrl} className="h-8 w-8 shrink-0 rounded-lg object-cover" />
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-xs font-bold text-slate-900 dark:text-white">
-                            {p.fullName || 'Житель'}
+                            {p.fullName || t.attendanceResident}
                           </p>
                           <p className="text-[10px] text-slate-500 dark:text-zinc-500">
                             ★ {(p.rating ?? 0) > 0 ? p.rating?.toFixed(1) : '—'} · выполнено: {p.tasksDoneCount ?? 0}
@@ -242,7 +252,7 @@ export default function TaskDetailModal({
                             onClick={() => act('exclude', () => runTaskAction(task.id, 'exclude', { userId: p.userId }))}
                             className="shrink-0 rounded-lg px-2 py-1 text-[10px] font-bold text-rose-600 transition hover:bg-rose-50 dark:hover:bg-rose-950/40"
                           >
-                            Исключить
+                            {t.taskExcludeBtn}
                           </button>
                         )}
                       </div>
@@ -253,8 +263,7 @@ export default function TaskDetailModal({
 
               {task.status === 'awaiting_confirm' && (
                 <p className="mx-4 mb-4 rounded-xl bg-amber-50 px-3.5 py-2.5 text-[11px] font-semibold leading-relaxed text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
-                  Исполнитель отметил работу выполненной. Если не подтвердить за {TASK_AUTO_CONFIRM_HOURS} ч,
-                  задание закроется автоматически, а создание новых будет заблокировано.
+                  {t.taskAwaitConfirmNote.replace('{hours}', String(TASK_AUTO_CONFIRM_HOURS))}
                 </p>
               )}
 
@@ -262,14 +271,14 @@ export default function TaskDetailModal({
               {task.status === 'completed' && (isAuthor || isExecutor) && (
                 <div className="mx-4 mb-4 rounded-2xl bg-emerald-50/70 p-3.5 dark:bg-emerald-950/30">
                   <h3 className="mb-2 text-xs font-bold text-emerald-900 dark:text-emerald-300">
-                    {isAuthor ? 'Оцените исполнителя' : 'Оцените заказчика'}
+                    {isAuthor ? t.taskRateExecutor : t.taskRateCustomer}
                   </h3>
                   <div className="mb-2 flex gap-1">
                     {[1, 2, 3, 4, 5].map((star) => (
                       <button
                         key={star}
                         type="button"
-                        aria-label={`${star} звёзд`}
+                        aria-label={`${star} ${t.taskStarsAria}`}
                         onClick={() => setRatingValue(star)}
                         className="p-0.5"
                       >
@@ -288,7 +297,7 @@ export default function TaskDetailModal({
                     onChange={(e) => setRatingText(e.target.value)}
                     rows={2}
                     maxLength={500}
-                    placeholder="Комментарий (необязательно)"
+                    placeholder={t.taskRatingComment}
                     className="w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
                   />
                   <button
@@ -296,14 +305,14 @@ export default function TaskDetailModal({
                     disabled={Boolean(busy)}
                     onClick={() => {
                       const targetId = isAuthor ? activeParticipants[0]?.userId : task.authorId;
-                      if (!targetId) { setError('Некого оценивать'); return; }
+                      if (!targetId) { setError(t.taskNobodyToRate); return; }
                       act('rate', () => submitResidentReview({
                         taskId: task.id, targetId, rating: ratingValue, text: ratingText.trim(),
                       }));
                     }}
                     className="mt-2 w-full rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-700 disabled:opacity-60"
                   >
-                    Отправить оценку
+                    {t.taskSendRating}
                   </button>
                 </div>
               )}
@@ -328,7 +337,7 @@ export default function TaskDetailModal({
                 className={`${btn} bg-emerald-600 text-white hover:bg-emerald-700`}
               >
                 {busy === 'take' && <Loader2 className="h-4 w-4 animate-spin" />}
-                {task.kind === 'urgent' ? 'Взять задание' : 'Записаться'}
+                {task.kind === 'urgent' ? t.taskTakeBtn : t.taskJoinBtn}
               </button>
             )}
 
@@ -341,7 +350,7 @@ export default function TaskDetailModal({
                   className={`${btn} bg-emerald-600 text-white hover:bg-emerald-700`}
                 >
                   {busy === 'submit' && <Loader2 className="h-4 w-4 animate-spin" />}
-                  Выполнил
+                  {t.taskSubmitBtn}
                 </button>
                 <button
                   type="button"
@@ -349,7 +358,7 @@ export default function TaskDetailModal({
                   onClick={() => act('leave', () => runTaskAction(task.id, 'leave'))}
                   className={`${btn} border border-slate-200 text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-300`}
                 >
-                  Отказаться
+                  {t.taskLeaveBtn}
                 </button>
               </>
             )}
@@ -363,7 +372,7 @@ export default function TaskDetailModal({
                   className={`${btn} bg-emerald-600 text-white hover:bg-emerald-700`}
                 >
                   {busy === 'confirm' && <Loader2 className="h-4 w-4 animate-spin" />}
-                  Подтвердить
+                  {t.taskConfirmBtn}
                 </button>
                 <button
                   type="button"
@@ -371,7 +380,7 @@ export default function TaskDetailModal({
                   onClick={() => act('reject', () => runTaskAction(task.id, 'reject'))}
                   className={`${btn} border border-rose-200 text-rose-700 hover:bg-rose-50 dark:border-rose-900 dark:text-rose-300`}
                 >
-                  Не принято
+                  {t.taskRejectBtn}
                 </button>
               </>
             )}
@@ -388,7 +397,7 @@ export default function TaskDetailModal({
                 onClick={() => setIsAttendanceOpen(true)}
                 className={`${btn} bg-emerald-600 text-white hover:bg-emerald-700`}
               >
-                Завершить и отметить явку
+                {t.taskFinishAttendanceBtn}
               </button>
             )}
 
@@ -404,14 +413,14 @@ export default function TaskDetailModal({
                   disabled={Boolean(busy)}
                   onClick={() => {
                     if (canDelete) {
-                      if (!window.confirm('Удалить задание? Его больше не будет в списках.')) return;
+                      if (!window.confirm(t.taskDeleteConfirm)) return;
                       act('delete', async () => {
                         await deleteTask(task.id);
                         onClose();
                       });
                       return;
                     }
-                    if (!window.confirm('Отменить задание? Исполнитель получит уведомление.')) return;
+                    if (!window.confirm(t.taskCancelConfirm)) return;
                     act('cancel', () => runTaskAction(task.id, 'cancel'));
                   }}
                   className={`${btn} bg-rose-50 text-rose-700 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-950/70`}
@@ -419,7 +428,7 @@ export default function TaskDetailModal({
                   {busy === 'delete' || busy === 'cancel'
                     ? <Loader2 className="h-4 w-4 animate-spin" />
                     : <Trash2 className="h-4 w-4" />}
-                  {canDelete ? 'Удалить задание' : 'Отменить задание'}
+                  {canDelete ? t.taskDeleteBtn : t.taskCancelBtn}
                 </button>
               );
             })()}
