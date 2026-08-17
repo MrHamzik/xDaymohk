@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import {
-  Award, Ban, CalendarDays, ChevronRight, FileText,
+  Award, Ban, Briefcase, CalendarDays, ChevronRight, FileText,
   Flag, MapPin, Star, VenusAndMars,
 } from 'lucide-react';
 import { Profile } from '@/lib/types';
@@ -120,8 +120,8 @@ export default function ProfileCard({
 
           {showHeadRating && (
             <div className="mt-1 flex items-baseline gap-1.5">
-              <Star className="h-4 w-4 shrink-0 translate-y-0.5 fill-[#d4af5f] text-[#d4af5f]" />
-              <span className="text-base font-extrabold text-[#a8823a] dark:text-[#d4af5f]">
+              <Star className="h-4 w-4 shrink-0 translate-y-0.5 smk-star" />
+              <span className="smk-rating-value text-base font-extrabold">
                 {headRating.toFixed(1)}
               </span>
               <span className="truncate text-[11px] text-slate-500 dark:text-zinc-400">
@@ -137,22 +137,26 @@ export default function ProfileCard({
           </div>
         </div>
 
-        <ChevronRight className="h-5 w-5 shrink-0 self-start text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-[#d4af5f] dark:text-zinc-600" />
+        <ChevronRight className="h-5 w-5 shrink-0 self-start smk-arrow" />
       </div>
 
       {/* Золотой разделитель, затухающий к краям */}
       <hr className="smk-rule mx-4" />
 
-      {/* ── Строки данных с иконками ────────────────────────────── */}
-      <div className="space-y-2.5 px-4 py-3.5 text-sm">
+      {/* ── Строки данных: каждая на своей подложке ─────────────
+             Без подложек текст сливался с полотном карточки. */}
+      <div className="space-y-2 px-4 py-3.5 text-sm">
         {profile.isSpecialist && profile.professionTitle && (
-          <p className="line-clamp-2 font-semibold leading-snug text-emerald-700 dark:text-emerald-400">
-            {profile.professionTitle}
-          </p>
+          <div className="smk-field flex items-start gap-2.5 px-3 py-2">
+            <Briefcase className="smk-ico mt-0.5 h-4 w-4" />
+            <p className="line-clamp-2 font-bold leading-snug text-emerald-700 dark:text-emerald-400">
+              {profile.professionTitle}
+            </p>
+          </div>
         )}
 
         {profile.bio && (
-          <div className="flex items-start gap-2.5">
+          <div className="smk-field flex items-start gap-2.5 px-3 py-2">
             <FileText className="smk-ico mt-0.5 h-4 w-4" />
             <p className="line-clamp-2 break-words [overflow-wrap:anywhere] leading-snug text-slate-700 dark:text-zinc-200">
               {profile.bio}
@@ -160,25 +164,30 @@ export default function ProfileCard({
           </div>
         )}
 
+        {/* Возраст и пол — одна подложка, разделённая тонкой линией */}
         {(age !== null || profile.gender) && (
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-slate-500 dark:text-zinc-400">
+          <div className="smk-field smk-field-split grid grid-cols-1 sm:grid-cols-2 sm:divide-x sm:divide-transparent">
             {age !== null && (
-              <span className="flex items-center gap-2">
+              <span className="flex items-center gap-2.5 px-3 py-2 text-slate-600 dark:text-zinc-300">
                 <CalendarDays className="smk-ico h-4 w-4" />
-                {t.ageLabel}: {age}
+                <span className="text-slate-400 dark:text-zinc-500">{t.ageLabel}:</span>
+                <span className="font-semibold">{age}</span>
               </span>
             )}
             {profile.gender && (
-              <span className="flex items-center gap-2">
+              <span className="flex items-center gap-2.5 px-3 py-2 text-slate-600 dark:text-zinc-300">
                 <VenusAndMars className="smk-ico h-4 w-4" />
-                {t.genderLabel}: {profile.gender === 'male' ? t.genderMale : t.genderFemale}
+                <span className="text-slate-400 dark:text-zinc-500">{t.genderLabel}:</span>
+                <span className="font-semibold">
+                  {profile.gender === 'male' ? t.genderMale : t.genderFemale}
+                </span>
               </span>
             )}
           </div>
         )}
 
         {profile.workplaceAddress && (
-          <div className="flex items-start gap-2.5">
+          <div className="smk-field flex items-start gap-2.5 px-3 py-2">
             {/* Булавка зелёная — единственный цветной акцент в блоке */}
             <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
             <span className="break-words leading-snug text-slate-700 dark:text-zinc-200">

@@ -104,7 +104,7 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
           {/* Слой 5: метаданные с воздухом и ромбами-разделителями */}
           <div className="smk-meta mt-1.5 flex flex-wrap items-center text-[11px] leading-relaxed text-slate-500 dark:text-zinc-400">
             <span className="inline-flex items-center gap-1 font-bold text-amber-600 dark:text-amber-400">
-              <Star className="h-3 w-3 fill-[#d4af5f] text-[#d4af5f]" />
+              <Star className="h-3 w-3 smk-star" />
               {rating > 0 ? rating.toFixed(1) : 'нет оценок'}
             </span>
             <span>{task.authorAccountDays ?? 0} дн.</span>
@@ -215,7 +215,7 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
           <MapPin className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
           <span className="truncate">{task.address || 'Адрес не указан'}</span>
         </span>
-        <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-[#d4af5f] dark:text-zinc-600" />
+        <ChevronRight className="h-4 w-4 shrink-0 smk-arrow" />
       </div>
     </article>
   );
