@@ -16,6 +16,7 @@ import TaskFilterBar from '@/components/tasks/TaskFilterBar';
 import { useAuth } from '@/components/AuthProvider';
 import { useProfiles } from '@/components/ProfilesProvider';
 import { useI18n } from '@/lib/i18n';
+import { useSettings } from '@/components/SettingsProvider';
 import {
   fetchTasks,
   fetchMyTasks,
@@ -33,6 +34,7 @@ type FeedTab = 'nearby' | 'all' | 'mine' | 'taken';
 
 export default function VayghullakhPage() {
   const { t } = useI18n();
+  const { settings } = useSettings();
   const { account } = useAuth();
   const { isCurrentUserAdmin } = useProfiles();
   const router = useRouter();
@@ -117,9 +119,26 @@ export default function VayghullakhPage() {
   useEffect(() => {
     if (!account) return;
     fetchExecutorStatus()
-      .then((s) => { setIsActive(s.isActive); setActiveExecutors(s.activeExecutors); })
+      .then(async (s) => {
+        setActiveExecutors(s.activeExecutors);
+        // «Всегда Активен, если в сети»: открытие раздела включает
+        // статус на те же 30 минут, что и ручной тумблер. Окно
+        // продлевается любым действием — отдельного таймера не нужно.
+        if (!s.isActive && settings.autoActiveOnOpen) {
+          try {
+            await setExecutorStatus(true);
+            setIsActive(true);
+            const fresh = await fetchExecutorStatus();
+            setActiveExecutors(fresh.activeExecutors);
+            return;
+          } catch {
+            // не критично: человек включит тумблер вручную
+          }
+        }
+        setIsActive(s.isActive);
+      })
       .catch(() => {});
-  }, [account]);
+  }, [account, settings.autoActiveOnOpen]);
 
   // Геолокация только по требованию вкладки «Близко»: браузер наказывает
   // за автоматические запросы, поэтому просим при явном выборе вкладки.

@@ -40,8 +40,23 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
     const root = document.documentElement;
     const isDark = theme === 'dark';
 
-    root.classList.toggle('dark', isDark);
-    root.style.colorScheme = theme;
+    // Пользовательская тема (расширенные настройки) сама решает, тёмная
+    // она или светлая, и ставит .dark в SettingsProvider. Если её
+    // выбрали — не вмешиваемся, иначе два эффекта перетирали бы класс
+    // друг друга и тема мигала бы при каждом рендере.
+    let hasCustomTheme = false;
+    try {
+      const raw = window.localStorage.getItem('daymohk-settings');
+      const themeId = raw ? (JSON.parse(raw) as { themeId?: string }).themeId : undefined;
+      hasCustomTheme = Boolean(themeId && themeId !== 'light' && themeId !== 'dark');
+    } catch {
+      hasCustomTheme = false;
+    }
+
+    if (!hasCustomTheme) {
+      root.classList.toggle('dark', isDark);
+      root.style.colorScheme = theme;
+    }
     window.localStorage.setItem(THEME_STORAGE_KEY, theme);
   }, [theme]);
 

@@ -61,8 +61,11 @@
 
   body {
     color: var(--foreground);
-    font-family: 'Manrope', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    font-size: 13px; /* 20% reduced font size */
+    /* Семейство и базовый кегль вынесены в переменные: расширенные
+       настройки подменяют их на :root, не переписывая правила.
+       Значения по умолчанию — ровно те, что были до настроек. */
+    font-family: var(--smk-font-family, 'Manrope', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
+    font-size: var(--smk-font-size-base, 13px); /* 20% reduced font size */
     line-height: 1.4;
     -webkit-tap-highlight-color: transparent;
     text-rendering: optimizeLegibility;

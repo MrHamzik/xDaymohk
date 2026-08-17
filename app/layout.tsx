@@ -4,6 +4,7 @@ import ThemeProvider from '@/components/ThemeProvider';
 import AuthProvider from '@/components/AuthProvider';
 import ProfilesProvider from '@/components/ProfilesProvider';
 import NotificationsProvider from '@/components/NotificationsProvider';
+import SettingsProvider from '@/components/SettingsProvider';
 import OnboardingModal from '@/components/OnboardingModal';
 import { I18nProvider } from '@/lib/i18n';
 import SidebarNav from '@/components/SidebarNav';
@@ -62,12 +63,17 @@ export default function RootLayout({
         <I18nProvider>
           <ThemeProvider>
             <AuthProvider>
-              <NotificationsProvider>
-                <ProfilesProvider>
-                  {children}
-                  <OnboardingModal />
-                </ProfilesProvider>
-              </NotificationsProvider>
+              {/* Настройки идут после AuthProvider: серверная копия
+                  читается по account.id. Тема из localStorage
+                  применяется раньше, чем придёт ответ сервера. */}
+              <SettingsProvider>
+                <NotificationsProvider>
+                  <ProfilesProvider>
+                    {children}
+                    <OnboardingModal />
+                  </ProfilesProvider>
+                </NotificationsProvider>
+              </SettingsProvider>
             </AuthProvider>
           </ThemeProvider>
         </I18nProvider>

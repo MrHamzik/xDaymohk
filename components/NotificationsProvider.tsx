@@ -4,6 +4,10 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { useAuth } from '@/components/AuthProvider';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { AppNotification, NotificationType } from '@/lib/types';
+import { useSettings } from '@/components/SettingsProvider';
+import { notificationGroup } from '@/lib/settings/types';
+import { prefFor } from '@/lib/settings/defaults';
+import { playNotificationSound } from '@/lib/settings/sound';
 
 interface NotificationsContextValue {
   notifications: AppNotification[];
@@ -46,6 +50,7 @@ function readLocal(accountId: string) {
 
 export default function NotificationsProvider({ children }: { children: React.ReactNode }) {
   const { account } = useAuth();
+  const { settings } = useSettings();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
   useEffect(() => {
@@ -89,6 +94,11 @@ export default function NotificationsProvider({ children }: { children: React.Re
         filter: `recipient_id=eq.${account.id}`,
       }, (payload) => {
         const nextNotification = fromDbRow(payload.new as Record<string, any>);
+        // Звук по группе из настроек. Сервер уже отфильтровал скрытые
+        // группы (обновление 28), здесь решается только «звучать ли».
+        if (prefFor(settings, notificationGroup(nextNotification.type)).sound) {
+          playNotificationSound();
+        }
         if (nextNotification.type === 'user_blocked' || nextNotification.type === 'user_unblocked') {
           window.dispatchEvent(new CustomEvent('daymohk-account-status', { detail: { userId: account.id, isBlocked: nextNotification.type === 'user_blocked' } }));
         }
@@ -99,7 +109,7 @@ export default function NotificationsProvider({ children }: { children: React.Re
     return () => {
       void supabase?.removeChannel(channel);
     };
-  }, [account?.id]);
+  }, [account?.id, settings]);
 
   useEffect(() => {
     if (!account) return;

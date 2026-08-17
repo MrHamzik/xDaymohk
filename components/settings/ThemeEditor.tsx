@@ -1,0 +1,261 @@
+'use client';
+
+import { useState } from 'react';
+import { Check, Palette, Plus, Trash2 } from 'lucide-react';
+import { useSettings } from '@/components/SettingsProvider';
+import { PRESET_THEMES, normalizeColors } from '@/lib/settings/defaults';
+import { MAX_CUSTOM_THEMES, type CustomTheme, type ThemeColors } from '@/lib/settings/types';
+import { useI18n } from '@/lib/i18n';
+import { SectionTitle } from '@/components/settings/SettingsPrimitives';
+
+/** Подписи слотов палитры: пользователь не обязан знать про --smk-*. */
+const COLOR_FIELDS: Array<{ key: keyof ThemeColors; ru: string; ce: string }> = [
+  { key: 'bg', ru: 'Фон страницы', ce: 'АгIонан букъ' },
+  { key: 'card', ru: 'Карточка', ce: 'Карточка' },
+  { key: 'cardAlt', ru: 'Карточка (низ)', ce: 'Карточка (бухахь)' },
+  { key: 'cardLine', ru: 'Обводка', ce: 'Йоза' },
+  { key: 'cardInset', ru: 'Подложка строк', ce: 'МогIанийн бухъ' },
+  { key: 'text', ru: 'Текст', ce: 'Йоза' },
+  { key: 'muted', ru: 'Приглушённый текст', ce: 'Дайина йоза' },
+  { key: 'accent', ru: 'Акцент', ce: 'Акцент' },
+  { key: 'accentSoft', ru: 'Акцент светлый', ce: 'Акцент къегина' },
+  { key: 'accentDeep', ru: 'Акцент тёмный', ce: 'Акцент бодане' },
+];
+
+function makeId(): string {
+  return `t-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+}
+
+/**
+ * Выбор и редактирование тем.
+ *
+ * Готовые темы не редактируются — их можно только взять за основу
+ * («Создать свою»). Иначе пользователь сломал бы светлую тему и не
+ * смог бы к ней вернуться.
+ */
+export default function ThemeEditor() {
+  const { t, language } = useI18n();
+  const { settings, update } = useSettings();
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const editing = settings.customThemes.find((theme) => theme.id === editingId) ?? null;
+  const canAddMore = settings.customThemes.length < MAX_CUSTOM_THEMES;
+
+  const selectTheme = (themeId: string) => update({ themeId });
+
+  const createTheme = () => {
+    if (!canAddMore) return;
+    // За основу берём текущую тему: правки идут от того, что человек
+    // уже видит, а не от случайной палитры.
+    const base = settings.themeId.startsWith('custom:')
+      ? settings.customThemes.find((x) => `custom:${x.id}` === settings.themeId)
+      : undefined;
+    const source = base
+      ? { isDark: base.isDark, colors: base.colors }
+      : PRESET_THEMES[settings.themeId] ?? PRESET_THEMES.dark;
+
+    const created: CustomTheme = {
+      id: makeId(),
+      name: `${t.settingsThemeMine} ${settings.customThemes.length + 1}`,
+      isDark: source.isDark,
+      colors: { ...source.colors },
+    };
+    update({
+      customThemes: [...settings.customThemes, created],
+      themeId: `custom:${created.id}`,
+    });
+    setEditingId(created.id);
+  };
+
+  const patchTheme = (id: string, patch: Partial<CustomTheme>) => {
+    update({
+      customThemes: settings.customThemes.map((theme) =>
+        theme.id === id ? { ...theme, ...patch } : theme),
+    });
+  };
+
+  const removeTheme = (id: string) => {
+    const rest = settings.customThemes.filter((theme) => theme.id !== id);
+    update({
+      customThemes: rest,
+      // Удалили активную — возвращаемся к тёмной, иначе ссылка повиснет.
+      themeId: settings.themeId === `custom:${id}` ? 'dark' : settings.themeId,
+    });
+    if (editingId === id) setEditingId(null);
+  };
+
+  return (
+    <section>
+      <SectionTitle title={t.settingsThemes} hint={t.settingsThemesHint} />
+
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        {Object.entries(PRESET_THEMES).map(([id, theme]) => (
+          <ThemeCard
+            key={id}
+            name={language === 'ce' ? theme.name : theme.name}
+            colors={theme.colors}
+            isSelected={settings.themeId === id}
+            onSelect={() => selectTheme(id)}
+          />
+        ))}
+
+        {settings.customThemes.map((theme) => (
+          <ThemeCard
+            key={theme.id}
+            name={theme.name}
+            colors={theme.colors}
+            isSelected={settings.themeId === `custom:${theme.id}`}
+            onSelect={() => selectTheme(`custom:${theme.id}`)}
+            onEdit={() => setEditingId(editingId === theme.id ? null : theme.id)}
+            onDelete={() => removeTheme(theme.id)}
+          />
+        ))}
+
+        {canAddMore && (
+          <button
+            type="button"
+            onClick={createTheme}
+            className="flex min-h-[76px] flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-slate-300 text-[11px] font-bold text-slate-500 transition hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800/60"
+          >
+            <Plus className="h-4 w-4" />
+            {t.settingsThemeCreate}
+          </button>
+        )}
+      </div>
+
+      <p className="mt-1.5 text-[10px] text-slate-400 dark:text-zinc-500">
+        {t.settingsThemeLimit}: {settings.customThemes.length} / {MAX_CUSTOM_THEMES}
+      </p>
+
+      {editing && (
+        <div className="smk-field mt-3 space-y-3 p-3">
+          <div className="flex items-center gap-2">
+            <input
+              value={editing.name}
+              onChange={(e) => patchTheme(editing.id, { name: e.target.value.slice(0, 40) })}
+              maxLength={40}
+              aria-label={t.settingsThemeName}
+              className="min-w-0 flex-1 rounded-lg bg-white px-2.5 py-1.5 text-xs font-bold text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:bg-zinc-800 dark:text-white"
+            />
+            <label className="flex shrink-0 cursor-pointer items-center gap-1.5 text-[11px] font-bold text-slate-600 dark:text-zinc-300">
+              <input
+                type="checkbox"
+                checked={editing.isDark}
+                onChange={(e) => patchTheme(editing.id, { isDark: e.target.checked })}
+                className="h-3.5 w-3.5 rounded accent-emerald-600"
+              />
+              {t.settingsThemeDark}
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+            {COLOR_FIELDS.map((field) => (
+              <label
+                key={field.key}
+                className="flex items-center justify-between gap-2 rounded-lg bg-white px-2.5 py-1.5 dark:bg-zinc-800"
+              >
+                <span className="truncate text-[11px] font-semibold text-slate-600 dark:text-zinc-300">
+                  {language === 'ce' ? field.ce : field.ru}
+                </span>
+                <input
+                  type="color"
+                  value={editing.colors[field.key]}
+                  onChange={(e) => patchTheme(editing.id, {
+                    colors: normalizeColors(
+                      { ...editing.colors, [field.key]: e.target.value },
+                      editing.colors,
+                    ),
+                  })}
+                  aria-label={language === 'ce' ? field.ce : field.ru}
+                  className="h-6 w-10 shrink-0 cursor-pointer rounded border-0 bg-transparent p-0"
+                />
+              </label>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setEditingId(null)}
+            className="w-full rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-700"
+          >
+            {t.settingsThemeDone}
+          </button>
+        </div>
+      )}
+    </section>
+  );
+}
+
+/** Плитка темы: превью из четырёх цветов, выбор, правка, удаление. */
+function ThemeCard({
+  name,
+  colors,
+  isSelected,
+  onSelect,
+  onEdit,
+  onDelete,
+}: {
+  name: string;
+  colors: ThemeColors;
+  isSelected: boolean;
+  onSelect: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
+}) {
+  return (
+    <div
+      className={`relative overflow-hidden rounded-xl p-2 transition ${
+        isSelected
+          ? 'ring-2 ring-emerald-500'
+          : 'ring-1 ring-slate-200 hover:ring-slate-300 dark:ring-zinc-700 dark:hover:ring-zinc-600'
+      }`}
+      style={{ background: colors.bg }}
+    >
+      <button type="button" onClick={onSelect} className="block w-full text-left">
+        <span className="mb-1.5 flex gap-1">
+          {[colors.card, colors.accent, colors.accentDeep, colors.muted].map((color, index) => (
+            <span
+              key={index}
+              className="h-4 flex-1 rounded"
+              style={{ background: color }}
+              aria-hidden
+            />
+          ))}
+        </span>
+        <span
+          className="block truncate text-[11px] font-bold"
+          style={{ color: colors.text }}
+        >
+          {name}
+        </span>
+      </button>
+
+      <div className="mt-1 flex items-center gap-1">
+        {isSelected && (
+          <Check className="h-3.5 w-3.5 shrink-0" style={{ color: colors.accent }} />
+        )}
+        {onEdit && (
+          <button
+            type="button"
+            onClick={onEdit}
+            aria-label="Изменить тему"
+            className="rounded p-0.5 transition hover:opacity-70"
+            style={{ color: colors.muted }}
+          >
+            <Palette className="h-3.5 w-3.5" />
+          </button>
+        )}
+        {onDelete && (
+          <button
+            type="button"
+            onClick={onDelete}
+            aria-label="Удалить тему"
+            className="ml-auto rounded p-0.5 text-rose-500 transition hover:opacity-70"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}

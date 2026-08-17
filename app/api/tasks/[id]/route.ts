@@ -308,7 +308,20 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       // (обновление 27): он выбирает, кому доверить работу, и может
       // отклонить до начала. В «ГIончалла» помогать может любой —
       // там заявка сразу становится участием.
-      const needsApproval = Boolean(task.is_paid);
+      //
+      // Заказчик может включить «Автоодобрение исполнителя» в настройках
+      // (обновление 28) — тогда отклик принимается сразу, как раньше.
+      // Настройку читаем с сервера: клиент на это влиять не должен.
+      let autoApprove = false;
+      if (task.is_paid) {
+        const { data: authorSettings } = await admin
+          .from('user_settings')
+          .select('auto_approve_executor')
+          .eq('user_id', String(task.author_id))
+          .maybeSingle();
+        autoApprove = authorSettings?.auto_approve_executor === true;
+      }
+      const needsApproval = Boolean(task.is_paid) && !autoApprove;
 
       const participantId = existing?.id ?? makeId('tp');
       const { error: upsertError } = await admin

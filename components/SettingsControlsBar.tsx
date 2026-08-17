@@ -6,11 +6,14 @@ import { useAuth } from '@/components/AuthProvider';
 import { useTheme } from '@/components/ThemeProvider';
 import { useI18n } from '@/lib/i18n';
 import NotificationCenter from '@/components/NotificationCenter';
+import ThemePickerButton from '@/components/settings/ThemePickerButton';
+import { useSettings } from '@/components/SettingsProvider';
 import { UserMasterStatus } from '@/lib/types';
 
 export default function SettingsControlsBar() {
   const { account, setMasterStatus } = useAuth();
   const { isDarkMode, toggleTheme } = useTheme();
+  const { settings } = useSettings();
   const { language, toggleLanguage } = useI18n();
 
   const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false);
@@ -173,8 +176,12 @@ export default function SettingsControlsBar() {
         <NotificationCenter />
       </div>
 
-      {/* 4. Theme Button */}
+      {/* 4. Theme Button
+             В расширенном режиме простой переключатель «светлая/тёмная»
+             заменяется палитрой: тем больше двух, и перебор по нажатию
+             стал бы неудобным. */}
       <div className="flex-1 flex justify-center">
+        {settings.advancedMode ? <ThemePickerButton /> : (
         <button
           type="button"
           onClick={toggleTheme}
@@ -192,6 +199,7 @@ export default function SettingsControlsBar() {
             <Sun className="h-5 w-5 fill-amber-950 text-amber-950" />
           )}
         </button>
+        )}
       </div>
 
     </div>

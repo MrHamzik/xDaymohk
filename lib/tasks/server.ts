@@ -9,7 +9,8 @@
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
-import { TASK_MIN_EXECUTOR_AGE, TASK_MAX_ACTIVE_PER_USER } from '@/lib/types';
+import { TASK_MIN_EXECUTOR_AGE, TASK_MAX_ACTIVE_PER_USER, type NotificationType } from '@/lib/types';
+import { notificationGroup } from '@/lib/settings/types';
 import { calculateAge } from '@/lib/text';
 import { log } from '@/lib/logger';
 
@@ -199,9 +200,21 @@ interface NotifyInput {
 /**
  * Уведомление под service-role. Ошибка доставки НЕ роняет основную
  * операцию: задание важнее, чем запись в колокольчике.
+ *
+ * Уважает настройки получателя (обновление 28): если человек отключил
+ * группу «Задания», запись вообще не создаётся. Фильтровать на клиенте
+ * было нельзя — БД копила бы невидимый мусор, а счётчик непрочитанных
+ * показывал бы то, чего пользователь никогда не увидит.
  */
 export async function notifyTaskEvent(admin: SupabaseClient, input: NotifyInput): Promise<void> {
   try {
+    // Группу берём из типа. Ошибку чтения настроек трактуем как
+    // «показывать»: молчащее уведомление хуже лишнего.
+    const group = notificationGroup(input.type as NotificationType);
+    const { data: allowed, error: prefError } = await admin
+      .rpc('notifications_enabled', { target: input.recipientId, group_key: group });
+    if (!prefError && allowed === false) return;
+
     const id = `ntf-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const { error } = await admin.from('notifications').insert({
       id,
