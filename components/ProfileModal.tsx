@@ -1378,7 +1378,7 @@ export default function ProfileModal({
                 onClick={handleTelegram}
                 aria-label="Открыть Telegram"
                 title="Telegram"
-                className="rounded-xl bg-slate-900 p-2.5 text-white transition hover:bg-slate-800 dark:bg-zinc-800 active:scale-95"
+                className="rounded-xl bg-[#229ED9] p-2.5 text-white transition hover:brightness-110 active:scale-95"
               >
                 <Send className="h-4 w-4" />
               </button>

@@ -200,7 +200,10 @@ export interface ThemeColors {
 export type ThemeColorGroup = 'global' | 'details' | 'specific';
 
 export const THEME_COLOR_GROUPS: Record<ThemeColorGroup, Array<keyof ThemeColors>> = {
-  global: ['bg', 'card', 'cardAlt', 'cardInset', 'cardLine', 'text', 'muted'],
+  // cardAlt в редакторе не показываем: он даёт лишь нижнюю точку
+  // градиента карточки и визуально неотличим от card. Значение
+  // выводится автоматически при сохранении темы.
+  global: ['bg', 'card', 'cardInset', 'cardLine', 'text', 'muted'],
   details: ['accent', 'accentSoft', 'accentDeep', 'ui', 'danger'],
   specific: [
     'statusActive', 'statusBreak', 'statusFlexible', 'statusOffline',

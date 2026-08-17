@@ -35,19 +35,19 @@ const GROUP_TITLES: Record<ThemeColorGroup, { ru: string; ce: string; hint: stri
   },
 };
 
-const COLOR_LABELS: Record<keyof ThemeColors, { ru: string; ce: string }> = {
-  bg: { ru: 'Фон страницы', ce: 'АгIонан букъ' },
-  card: { ru: 'Карточка', ce: 'Карточка' },
-  cardAlt: { ru: 'Карточка (низ)', ce: 'Карточка (бухахь)' },
+/** Подписи только для слотов, показанных в редакторе (cardAlt скрыт). */
+const COLOR_LABELS: Partial<Record<keyof ThemeColors, { ru: string; ce: string }>> = {
+  bg: { ru: 'Фон страницы и панелей', ce: 'АгIонан а, панелийн а букъ' },
+  card: { ru: 'Карточки, шапка, поля', ce: 'Карточкаш, корта, меттигаш' },
   cardInset: { ru: 'Подложка строк', ce: 'МогIанийн бухъ' },
   cardLine: { ru: 'Обводка', ce: 'Йоза' },
-  text: { ru: 'Текст', ce: 'Йоза' },
-  muted: { ru: 'Приглушённый текст', ce: 'Дайина йоза' },
+  text: { ru: 'Основной текст', ce: 'Коьрта йоза' },
+  muted: { ru: 'Второстепенный текст и иконки', ce: 'ШолгIа йоза а, гIирсаш а' },
 
-  accent: { ru: 'Акцент', ce: 'Акцент' },
-  accentSoft: { ru: 'Акцент светлый', ce: 'Акцент къегина' },
-  accentDeep: { ru: 'Акцент тёмный', ce: 'Акцент бодане' },
-  ui: { ru: 'Акцент интерфейса', ce: 'Интерфейсан акцент' },
+  accent: { ru: 'Золотой акцент (звезда, рамки)', ce: 'Деши акцент' },
+  accentSoft: { ru: 'Золотой светлый', ce: 'Деши къегина' },
+  accentDeep: { ru: 'Золотой тёмный', ce: 'Деши бодане' },
+  ui: { ru: 'Главный цвет (кнопки, меню)', ce: 'Коьрта бос (кнопкаш, меню)' },
   danger: { ru: 'Опасное действие', ce: 'Кхерамен гIуллакх' },
 
   statusActive: { ru: 'Статус «Работает»', ce: '«Болх беш ву»' },
@@ -62,6 +62,18 @@ const COLOR_LABELS: Record<keyof ThemeColors, { ru: string; ce: string }> = {
   mapCluster: { ru: 'Кластеры на карте', ce: 'Картин кластераш' },
   mapHouse: { ru: 'Дома на карте', ce: 'Картин цIенош' },
 };
+
+/** Смешивание цветов — для производных значений (нижняя точка градиента). */
+function mixHex(hex: string, target: string, amount: number): string {
+  const from = hex.replace('#', '');
+  const to = target.replace('#', '');
+  const channel = (index: number) => {
+    const a = parseInt(from.slice(index * 2, index * 2 + 2), 16);
+    const b = parseInt(to.slice(index * 2, index * 2 + 2), 16);
+    return Math.round(a + (b - a) * amount).toString(16).padStart(2, '0');
+  };
+  return `#${channel(0)}${channel(1)}${channel(2)}`;
+}
 
 function makeId(): string {
   return `t-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
@@ -239,18 +251,29 @@ export default function ThemeEditor() {
                         className="flex items-center justify-between gap-2 rounded-lg bg-white px-2.5 py-1.5 dark:bg-zinc-800"
                       >
                         <span className="truncate text-[11px] font-semibold text-slate-600 dark:text-zinc-300">
-                          {language === 'ce' ? COLOR_LABELS[key].ce : COLOR_LABELS[key].ru}
+                          {language === 'ce' ? COLOR_LABELS[key]?.ce : COLOR_LABELS[key]?.ru}
                         </span>
                         <input
                           type="color"
                           value={editing.colors[key]}
-                          onChange={(e) => patchTheme(editing.id, {
-                            colors: normalizeColors(
-                              { ...editing.colors, [key]: e.target.value },
-                              editing.colors,
-                            ),
-                          })}
-                          aria-label={language === 'ce' ? COLOR_LABELS[key].ce : COLOR_LABELS[key].ru}
+                          onChange={(e) => {
+                            const next = { ...editing.colors, [key]: e.target.value };
+                            // cardAlt — нижняя точка градиента карточки.
+                            // Его нет в редакторе, поэтому держим его
+                            // сцепленным с card, иначе при смене карточки
+                            // снизу оставался бы цвет от прошлой темы.
+                            if (key === 'card') {
+                              next.cardAlt = mixHex(
+                                e.target.value,
+                                editing.isDark ? '#000000' : '#ffffff',
+                                0.16,
+                              );
+                            }
+                            patchTheme(editing.id, {
+                              colors: normalizeColors(next, editing.colors),
+                            });
+                          }}
+                          aria-label={language === 'ce' ? COLOR_LABELS[key]?.ce : COLOR_LABELS[key]?.ru}
                           className="h-6 w-10 shrink-0 cursor-pointer rounded border-0 bg-transparent p-0"
                         />
                       </label>

@@ -106,6 +106,8 @@ const MANAGED_PROPERTIES = [
   '--smk-gold', '--smk-gold-soft', '--smk-gold-deep', '--smk-gold-rgb',
   '--smk-hairline', '--smk-hairline-strong',
   '--color-zinc-950', '--color-zinc-900', '--color-zinc-800', '--color-zinc-700',
+  '--color-zinc-100', '--color-zinc-200', '--color-zinc-300',
+  '--color-zinc-400', '--color-zinc-500', '--color-zinc-600',
   '--smk-status-active', '--smk-status-active-deep',
   '--smk-status-break', '--smk-status-break-deep',
   '--smk-status-flexible', '--smk-status-flexible-deep',
@@ -134,7 +136,9 @@ const MANAGED_PROPERTIES = [
   // подложки, текст, границы. Без её подмены светлые темы оставались
   // «цветными пятнами на холодном сером», а белый — чисто белым.
   '--color-slate-50', '--color-slate-100', '--color-slate-200',
-  '--color-slate-300', '--color-slate-400',
+  '--color-slate-300', '--color-slate-400', '--color-slate-500',
+  '--color-slate-600', '--color-slate-700', '--color-slate-800',
+  '--color-slate-900',
   // Семантические переменные проекта, завязанные на зелёный.
   '--border-green-dark',
   '--smk-hero-gradient',
@@ -178,10 +182,39 @@ export function applyThemeColors(
   set('--border-dark-soft', colors.cardLine);
 
   // ── Источники, на которые ссылаются утилиты zinc ────────────────
+  // Нейтральная шкала zinc в разметке используется ПО СМЫСЛУ, а не по
+  // номеру: 950 и 900 — это фоны панелей (мини-профиль, виджет намаза,
+  // выпадающие списки), 800 — карточки и поля, 700 — границы и тумблер.
+  //
+  // Поэтому 900 привязан к фону, а не к «карточке (низ)»: раньше он
+  // получал cardAlt, и слот «Карточка (низ)» красил панели бокового
+  // меню — пользователь справедливо не понимал, где этот цвет вообще
+  // применяется.
   set('--color-zinc-950', colors.bg);
-  set('--color-zinc-900', colors.cardAlt);
+  set('--color-zinc-900', mix(colors.bg, colors.card, 0.45));
   set('--color-zinc-800', colors.card);
   set('--color-zinc-700', surfaceStep);
+
+  // Текстовые ступени. Разметка пишет dark:text-zinc-300/400 для
+  // приглушённых подписей — до этого они оставались стандартно-серыми,
+  // и слот «Приглушённый текст» не давал видимого эффекта.
+  if (isDark) {
+    set('--color-zinc-100', mix(colors.text, colors.card, 0.04));
+    set('--color-zinc-200', mix(colors.text, colors.card, 0.12));
+    set('--color-zinc-300', mix(colors.text, colors.muted, 0.45));
+    set('--color-zinc-400', colors.muted);
+    set('--color-zinc-500', mix(colors.muted, colors.card, 0.3));
+    set('--color-zinc-600', mix(colors.muted, colors.card, 0.55));
+  }
+
+  // Светлые темы пишут текст через slate-500…900.
+  if (!isDark) {
+    set('--color-slate-500', colors.muted);
+    set('--color-slate-600', mix(colors.muted, colors.text, 0.35));
+    set('--color-slate-700', mix(colors.muted, colors.text, 0.6));
+    set('--color-slate-800', mix(colors.muted, colors.text, 0.82));
+    set('--color-slate-900', colors.text);
+  }
 
   // ── Карточка ────────────────────────────────────────────────────
   set('--smk-card-a', colors.card);
@@ -189,7 +222,11 @@ export function applyThemeColors(
   set('--smk-card-line', colors.cardLine);
   set('--smk-card-inset', colors.cardInset);
   set('--smk-muted', colors.muted);
-  set('--smk-muted-bright', colors.text);
+  // Яркая версия ПРИГЛУШЁННОГО, а не основной текст. Через эту
+  // переменную красятся иконки строк, звезда рейтинга и стрелка
+  // карточки — привязав её к colors.text, мы делали так, что слот
+  // «Текст» менял иконки, а не текст.
+  set('--smk-muted-bright', mix(colors.muted, colors.text, 0.45));
   set('--smk-surface', colors.card);
   set('--smk-surface-soft', colors.cardInset);
 
