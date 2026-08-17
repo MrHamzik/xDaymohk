@@ -3,11 +3,19 @@ import { FONT_FAMILIES, type FontFamilyId, type ThemeColors } from '@/lib/settin
 /**
  * Применение темы и шрифта к документу.
  *
- * Работает через CSS-переменные на :root, а не через подмену классов
- * Tailwind: класс .dark остаётся единственным переключателем «тёмная /
- * светлая» для всех dark:-утилит, которых в проекте сотни. Тема лишь
- * подставляет другие значения в те же слоты --smk-*, поэтому вёрстка
- * не может «разъехаться» — меняются только цвета.
+ * Почему именно так
+ * -----------------
+ * Первая версия подменяла только --color-zinc-* и --smk-*. Это давало
+ * «слой поверх тёмной темы»: семантические переменные --background и
+ * --foreground объявлены ДВАЖДЫ — в :root (светлые значения) и в
+ * html.dark (через var(--color-zinc-*)). Светлая кастомная тема не
+ * получает класс .dark, поэтому её фон брался из :root и подмена
+ * --color-zinc-950 не доходила до страницы.
+ *
+ * Теперь выставляем сами семантические слоты (--background,
+ * --foreground, --surface*), а не их источники. Инлайновый стиль на
+ * :root по специфичности бьёт оба блока, поэтому результат одинаков
+ * и для светлой, и для тёмной основы.
  */
 
 /** #rrggbb → "r g b" для rgb(var(--x) / a). */
@@ -19,57 +27,121 @@ function hexToRgbChannels(hex: string): string {
   return `${r} ${g} ${b}`;
 }
 
+/** Смешивает цвет с белым/чёрным — для производных оттенков. */
+function mix(hex: string, target: '#ffffff' | '#000000', amount: number): string {
+  const from = hex.replace('#', '');
+  const to = target.replace('#', '');
+  const channel = (index: number) => {
+    const a = parseInt(from.slice(index * 2, index * 2 + 2), 16);
+    const b = parseInt(to.slice(index * 2, index * 2 + 2), 16);
+    return Math.round(a + (b - a) * amount).toString(16).padStart(2, '0');
+  };
+  return `#${channel(0)}${channel(1)}${channel(2)}`;
+}
+
+/** Все переменные, которыми управляет пользовательская тема. */
+const MANAGED_PROPERTIES = [
+  '--background', '--foreground', '--surface', '--surface-card', '--surface-subtle',
+  '--border-subtle', '--border-dark-soft', '--border-dark-card',
+  '--smk-card-a', '--smk-card-b', '--smk-card-line', '--smk-card-inset',
+  '--smk-muted', '--smk-muted-bright', '--smk-surface', '--smk-surface-soft',
+  '--smk-gold', '--smk-gold-soft', '--smk-gold-deep', '--smk-gold-rgb',
+  '--smk-hairline', '--smk-hairline-strong',
+  '--color-zinc-950', '--color-zinc-900', '--color-zinc-800', '--color-zinc-700',
+  '--smk-status-active', '--smk-status-active-deep',
+  '--smk-status-break', '--smk-status-break-deep',
+  '--smk-status-flexible', '--smk-status-flexible-deep',
+  '--smk-status-offline', '--smk-status-offline-deep',
+  '--smk-role-specialist', '--smk-role-admin', '--smk-role-verified',
+  '--smk-hero-from', '--smk-hero-to',
+  '--smk-map-cluster', '--smk-map-house',
+  '--smk-danger', '--smk-danger-rgb',
+];
+
 export function applyThemeColors(colors: ThemeColors, isDark: boolean): void {
   if (typeof document === 'undefined') return;
   const root = document.documentElement;
+  const set = (name: string, value: string) => root.style.setProperty(name, value);
 
+  // Класс .dark по-прежнему нужен: на нём держатся сотни dark:-утилит
+  // Tailwind, переписать их темой невозможно.
   root.classList.toggle('dark', isDark);
   root.style.colorScheme = isDark ? 'dark' : 'light';
 
-  // Слоты карточки — те же имена, что в globals.css.
-  root.style.setProperty('--smk-card-a', colors.card);
-  root.style.setProperty('--smk-card-b', colors.cardAlt);
-  root.style.setProperty('--smk-card-line', colors.cardLine);
-  root.style.setProperty('--smk-card-inset', colors.cardInset);
-  root.style.setProperty('--smk-muted', colors.muted);
-  root.style.setProperty('--smk-muted-bright', colors.text);
-  root.style.setProperty('--smk-surface', colors.card);
+  // ── Семантические слоты: именно они рисуют фон и текст страницы ──
+  set('--background', colors.bg);
+  set('--foreground', colors.text);
+  set('--surface', colors.card);
+  set('--surface-card', colors.card);
+  set('--surface-subtle', colors.cardAlt);
+  set('--border-subtle', colors.cardLine);
+  set('--border-dark-soft', colors.cardLine);
+  set('--border-dark-card', colors.cardLine);
 
-  // Акцент: и как hex, и как каналы — прозрачные блики берут второй.
-  root.style.setProperty('--smk-gold', colors.accent);
-  root.style.setProperty('--smk-gold-soft', colors.accentSoft);
-  root.style.setProperty('--smk-gold-deep', colors.accentDeep);
-  root.style.setProperty('--smk-gold-rgb', hexToRgbChannels(colors.accent));
+  // ── Источники, на которые ссылаются утилиты zinc ────────────────
+  set('--color-zinc-950', colors.bg);
+  set('--color-zinc-900', colors.cardAlt);
+  set('--color-zinc-800', colors.card);
+  set('--color-zinc-700', colors.cardInset);
 
-  // Фон страницы: зинки-переменные использует и фон body, и радиальный
-  // градиент, поэтому правим их, а не добавляем ещё один слой.
-  root.style.setProperty('--color-zinc-950', colors.bg);
-  root.style.setProperty('--color-zinc-900', colors.cardAlt);
-  root.style.setProperty('--color-zinc-800', colors.card);
-  root.style.setProperty('--color-zinc-700', colors.cardInset);
+  // ── Карточка ────────────────────────────────────────────────────
+  set('--smk-card-a', colors.card);
+  set('--smk-card-b', colors.cardAlt);
+  set('--smk-card-line', colors.cardLine);
+  set('--smk-card-inset', colors.cardInset);
+  set('--smk-muted', colors.muted);
+  set('--smk-muted-bright', colors.text);
+  set('--smk-surface', colors.card);
+  set('--smk-surface-soft', colors.cardInset);
 
-  root.style.setProperty('--smk-theme-bg', colors.bg);
-  root.style.setProperty('--smk-theme-text', colors.text);
+  // Волосяные линии выводим из основы: на тёмной теме нужен белый
+  // штрих, на светлой — чёрный, иначе разделители пропадают.
+  const hair = isDark ? '255 255 255' : '15 23 42';
+  set('--smk-hairline', `rgb(${hair} / 0.08)`);
+  set('--smk-hairline-strong', `rgb(${hair} / 0.16)`);
+
+  // ── Акцент ──────────────────────────────────────────────────────
+  set('--smk-gold', colors.accent);
+  set('--smk-gold-soft', colors.accentSoft);
+  set('--smk-gold-deep', colors.accentDeep);
+  set('--smk-gold-rgb', hexToRgbChannels(colors.accent));
+
+  // ── Статусы и роли ──────────────────────────────────────────────
+  set('--smk-status-active', colors.statusActive);
+  set('--smk-status-active-deep', mix(colors.statusActive, '#000000', 0.28));
+  set('--smk-status-break', colors.statusBreak);
+  set('--smk-status-break-deep', mix(colors.statusBreak, '#000000', 0.28));
+  set('--smk-status-flexible', colors.statusFlexible);
+  set('--smk-status-flexible-deep', mix(colors.statusFlexible, '#000000', 0.28));
+  set('--smk-status-offline', colors.statusOffline);
+  set('--smk-status-offline-deep', mix(colors.statusOffline, '#000000', 0.28));
+
+  set('--smk-role-specialist', colors.roleSpecialist);
+  set('--smk-role-admin', colors.roleAdmin);
+  set('--smk-role-verified', colors.roleVerified);
+
+  set('--smk-danger', colors.danger);
+  set('--smk-danger-rgb', hexToRgbChannels(colors.danger));
+
+  // ── Главная карточка каталога и карта ───────────────────────────
+  set('--smk-hero-from', colors.heroFrom);
+  set('--smk-hero-to', colors.heroTo);
+  set('--smk-map-cluster', colors.mapCluster);
+  set('--smk-map-house', colors.mapHouse);
 }
 
 /**
- * Сброс инлайновых переменных.
+ * Снятие инлайновых переменных.
  *
- * Нужен при возврате к светлой/тёмной теме: без него значения
- * пользовательской темы остались бы висеть на :root и перебивали бы
- * каскад из globals.css.
+ * Нужно при возврате к светлой/тёмной теме: без этого значения
+ * пользовательской темы остаются на :root и перебивают каскад из
+ * globals.css — именно отсюда брались «глюки» после выключения
+ * расширенного режима.
  */
 export function clearThemeColors(): void {
   if (typeof document === 'undefined') return;
   const root = document.documentElement;
-  const properties = [
-    '--smk-card-a', '--smk-card-b', '--smk-card-line', '--smk-card-inset',
-    '--smk-muted', '--smk-muted-bright', '--smk-surface',
-    '--smk-gold', '--smk-gold-soft', '--smk-gold-deep', '--smk-gold-rgb',
-    '--color-zinc-950', '--color-zinc-900', '--color-zinc-800', '--color-zinc-700',
-    '--smk-theme-bg', '--smk-theme-text',
-  ];
-  for (const property of properties) root.style.removeProperty(property);
+  for (const property of MANAGED_PROPERTIES) root.style.removeProperty(property);
 }
 
 /** Базовый кегль body до масштабирования (см. globals.css). */

@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import Avatar from '@/components/Avatar';
 import { useI18n } from '@/lib/i18n';
-import { formatTimeLeft } from '@/lib/tasks/client';
+import { formatTimeLeft, formatTaskDateTime } from '@/lib/tasks/client';
 import { taskCostBreakdown, TASK_PRIORITY_SURCHARGE, type Task } from '@/lib/types';
 
 interface TaskCardProps {
@@ -63,10 +63,10 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
   const timeLabels = {
     overdue: t.timeOverdue, min: t.timeMin, hour: t.timeHour, day: t.timeDay,
   };
-  const timeLeft = formatTimeLeft(
-    task.kind === 'urgent' ? task.deadlineAt : task.scheduledAt,
-    timeLabels,
-  );
+  // «На дату» — конкретный день и час; срочное — обратный отсчёт.
+  const timeLeft = task.kind === 'scheduled'
+    ? formatTaskDateTime(task.scheduledAt)
+    : formatTimeLeft(task.deadlineAt, timeLabels);
   const isOverdue = timeLeft === t.timeOverdue;
   const takenSlots = task.takenSlots ?? 0;
   const isFull = takenSlots >= task.slots;
@@ -86,7 +86,7 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
         }
       }}
       aria-label={`${t.taskOpenAria}: ${task.title}`}
-      className={`smk-lux group flex h-full cursor-pointer flex-col overflow-hidden text-slate-900 dark:text-white ${
+      className={`smk-lux smk-rays smk-enter group flex h-full cursor-pointer flex-col overflow-hidden text-slate-900 dark:text-white ${
         needsReview ? 'ring-1 ring-amber-300/70 dark:ring-amber-700/60' : ''
       }`}
     >
@@ -226,7 +226,7 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
       </div>
 
       {/* ── Подвал: адрес и стрелка ────────────────────────────── */}
-      <div className="smk-foot flex items-center justify-between gap-2 py-2.5 pl-4 pr-3.5">
+      <div className="flex items-center justify-between gap-2 border-t border-slate-100 py-2.5 pl-4 pr-3.5 dark:border-white/5">
         <span className="flex min-w-0 items-center gap-1.5 text-[11px] text-slate-500 dark:text-zinc-400">
           <MapPin className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
           <span className="truncate">{task.address || t.taskAddressMissing}</span>

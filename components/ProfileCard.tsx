@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import {
-  Award, Ban, Briefcase, CalendarDays, ChevronRight, FileText,
+  Award, Ban, Briefcase, BriefcaseBusiness, CalendarDays, ChevronRight, FileText,
   Flag, MapPin, Star, VenusAndMars,
 } from 'lucide-react';
 import { Profile } from '@/lib/types';
@@ -97,7 +97,7 @@ export default function ProfileCard({
       role="button"
       tabIndex={0}
       aria-label={`${t.open} ${profile.fullName}`}
-      className="smk-lux group flex h-full cursor-pointer flex-col overflow-hidden text-slate-900 dark:text-white"
+      className="smk-lux smk-rays smk-enter group flex h-full cursor-pointer flex-col overflow-hidden text-slate-900 dark:text-white"
     >
       {/* ── Шапка: аватар · имя · рейтинг ─────────────────────────
              Рабочий статус — цвет кольца вокруг аватара, отдельной
@@ -169,26 +169,55 @@ export default function ProfileCard({
           </div>
         )}
 
-        {/* Возраст и пол — всегда в один ряд */}
-        {(age !== null || profile.gender) && (
-          <div className="smk-field flex items-center gap-2 px-2.5 py-1.5">
-            {age !== null && (
-              <span className="flex min-w-0 items-center gap-1.5 text-slate-600 dark:text-zinc-300">
-                <CalendarDays className="smk-ico h-4 w-4" />
-                <span className="text-slate-400 dark:text-zinc-500">{t.ageLabel}:</span>
-                <span className="font-semibold">{age}</span>
-              </span>
-            )}
-            {age !== null && profile.gender && <span className="smk-sep" aria-hidden />}
-            {profile.gender && (
-              <span className="flex min-w-0 items-center gap-1.5 text-slate-600 dark:text-zinc-300">
-                <VenusAndMars className="smk-ico h-4 w-4" />
-                <span className="truncate font-semibold">
-                  {profile.gender === 'male' ? t.genderMale : t.genderFemale}
+        {/* У специалиста — стаж и рабочий статус: возраст мастера
+            клиенту неинтересен, а «сколько лет в деле» и «работает ли
+            сейчас» решают, звонить или нет.
+            У жителя остаются возраст и пол. */}
+        {profile.isSpecialist ? (
+          (profile.experience || statusRing.status) && (
+            <div className="smk-field flex items-center gap-2 px-2.5 py-1.5">
+              {profile.experience && (
+                <span className="flex min-w-0 items-center gap-1.5 text-slate-600 dark:text-zinc-300">
+                  <BriefcaseBusiness className="smk-ico h-4 w-4" />
+                  <span className="text-slate-400 dark:text-zinc-500">{t.experienceLabel}:</span>
+                  <span className="truncate font-semibold">{profile.experience}</span>
                 </span>
-              </span>
-            )}
-          </div>
+              )}
+              {profile.experience && statusRing.status && <span className="smk-sep" aria-hidden />}
+              {statusRing.status && (
+                <span className="flex min-w-0 items-center gap-1.5 text-slate-600 dark:text-zinc-300">
+                  {/* Точка пульсирует только у «живых» статусов —
+                      мигающий «выходной» выглядел бы как ошибка. */}
+                  <span
+                    className={`smk-status-dot smk-status-dot--${statusRing.status}`}
+                    aria-hidden
+                  />
+                  <span className="truncate font-semibold">{statusRing.shortLabel}</span>
+                </span>
+              )}
+            </div>
+          )
+        ) : (
+          (age !== null || profile.gender) && (
+            <div className="smk-field flex items-center gap-2 px-2.5 py-1.5">
+              {age !== null && (
+                <span className="flex min-w-0 items-center gap-1.5 text-slate-600 dark:text-zinc-300">
+                  <CalendarDays className="smk-ico h-4 w-4" />
+                  <span className="text-slate-400 dark:text-zinc-500">{t.ageLabel}:</span>
+                  <span className="font-semibold">{age}</span>
+                </span>
+              )}
+              {age !== null && profile.gender && <span className="smk-sep" aria-hidden />}
+              {profile.gender && (
+                <span className="flex min-w-0 items-center gap-1.5 text-slate-600 dark:text-zinc-300">
+                  <VenusAndMars className="smk-ico h-4 w-4" />
+                  <span className="truncate font-semibold">
+                    {profile.gender === 'male' ? t.genderMale : t.genderFemale}
+                  </span>
+                </span>
+              )}
+            </div>
+          )
         )}
 
         {profile.workplaceAddress && (
@@ -203,7 +232,7 @@ export default function ProfileCard({
       </div>
 
       {/* ── Подвал: документы · действие ────────────────────────── */}
-      <div className={`smk-foot mt-auto flex items-center justify-between gap-2 px-3.5 ${
+      <div className={`mt-auto flex items-center justify-between gap-2 border-t border-slate-100 px-3.5 dark:border-white/5 ${
         hasAction ? 'py-2' : 'py-1.5'
       }`}>
         <div className="min-w-0">
@@ -237,7 +266,7 @@ export default function ProfileCard({
                 event.stopPropagation();
                 onReport(profile);
               }}
-              className="smk-btn-gold inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap px-3.5 py-1.5 text-[11px]"
+              className="smk-btn-gold smk-shine inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap px-3.5 py-1.5 text-[11px]"
               aria-label={t.cardReportAria}
             >
               <Flag className="h-3.5 w-3.5 shrink-0" />

@@ -92,23 +92,53 @@ export interface NotificationPref {
   sound: boolean;
 }
 
-/** Семейства шрифтов, доступные в расширенном режиме. */
-export type FontFamilyId = 'manrope' | 'inter' | 'georgia' | 'system';
+/**
+ * Семейства шрифтов, доступные в расширенном режиме.
+ *
+ * Обязательное условие — поддержка кириллицы: половина «красивых»
+ * веб-шрифтов её не покрывает, и текст рассыпался бы на квадраты.
+ * Все перечисленные либо системные, либо уже подключены в globals.css.
+ */
+export type FontFamilyId =
+  | 'manrope' | 'inter' | 'rubik' | 'montserrat' | 'jost' | 'onest'
+  | 'pt-serif' | 'georgia' | 'literata'
+  | 'roboto-mono' | 'system';
 
 export const FONT_FAMILIES: Record<FontFamilyId, string> = {
+  // Без засечек
   manrope: "'Manrope', 'Inter', system-ui, sans-serif",
   inter: "'Inter', 'Manrope', system-ui, sans-serif",
+  rubik: "'Rubik', 'Manrope', system-ui, sans-serif",
+  montserrat: "'Montserrat', 'Manrope', system-ui, sans-serif",
+  jost: "'Jost', 'Manrope', system-ui, sans-serif",
+  onest: "'Onest', 'Manrope', system-ui, sans-serif",
+  // С засечками
+  'pt-serif': "'PT Serif', Georgia, serif",
   georgia: "Georgia, 'Times New Roman', serif",
+  literata: "'Literata', Georgia, serif",
+  // Моноширинный
+  'roboto-mono': "'Roboto Mono', ui-monospace, monospace",
+  // Системный
   system: "system-ui, -apple-system, 'Segoe UI', sans-serif",
 };
 
 /**
  * Цвета пользовательской темы.
  *
- * Полная палитра, как и просили: правится всё, что видно на экране.
+ * Разбиты на три группы по смыслу, а не по алфавиту — в редакторе они
+ * так и показываются:
+ *
+ *  1. Глобальные   — полотно, карточки, обводки, текст. То, что задаёт
+ *                    общее впечатление от темы.
+ *  2. Детали       — акценты: кнопки, иконки, звёзды, опасные действия.
+ *  3. Специфические— смысловые цвета, которые нельзя выводить из
+ *                    акцента: статусы работы, роли, шапка каталога,
+ *                    объекты на карте.
+ *
  * Ключи совпадают с CSS-переменными --smk-* и подставляются в :root.
  */
 export interface ThemeColors {
+  // ── Глобальные ──────────────────────────────────────────────────
   /** Фон страницы. */
   bg: string;
   /** Полотно карточки. */
@@ -123,13 +153,54 @@ export interface ThemeColors {
   text: string;
   /** Приглушённый текст. */
   muted: string;
-  /** Акцент: кнопки, активные элементы. */
+
+  // ── Детали ──────────────────────────────────────────────────────
+  /** Акцент: кнопки, активные элементы, звезда рейтинга. */
   accent: string;
   /** Мягкий оттенок акцента. */
   accentSoft: string;
   /** Тёмный оттенок акцента. */
   accentDeep: string;
+  /** Опасные действия: «Пожаловаться», «Удалить», ошибки. */
+  danger: string;
+
+  // ── Специфические ───────────────────────────────────────────────
+  /** Статус «Работает». */
+  statusActive: string;
+  /** Статус «На перерыве». */
+  statusBreak: string;
+  /** Статус «Произвольный график». */
+  statusFlexible: string;
+  /** Статус «Не работает». */
+  statusOffline: string;
+  /** Бейдж «Специалист». */
+  roleSpecialist: string;
+  /** Бейдж «Админ». */
+  roleAdmin: string;
+  /** Бейдж «Проверен». */
+  roleVerified: string;
+  /** Главная карточка каталога — начало градиента. */
+  heroFrom: string;
+  /** Главная карточка каталога — конец градиента. */
+  heroTo: string;
+  /** Кластеры на карте. */
+  mapCluster: string;
+  /** Метки домов на карте. */
+  mapHouse: string;
 }
+
+/** Группы палитры для редактора тем. */
+export type ThemeColorGroup = 'global' | 'details' | 'specific';
+
+export const THEME_COLOR_GROUPS: Record<ThemeColorGroup, Array<keyof ThemeColors>> = {
+  global: ['bg', 'card', 'cardAlt', 'cardInset', 'cardLine', 'text', 'muted'],
+  details: ['accent', 'accentSoft', 'accentDeep', 'danger'],
+  specific: [
+    'statusActive', 'statusBreak', 'statusFlexible', 'statusOffline',
+    'roleSpecialist', 'roleAdmin', 'roleVerified',
+    'heroFrom', 'heroTo', 'mapCluster', 'mapHouse',
+  ],
+};
 
 export interface CustomTheme {
   /** Стабильный идентификатор, ссылка из themeId как 'custom:<id>'. */

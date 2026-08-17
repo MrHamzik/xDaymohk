@@ -268,6 +268,47 @@ export function isExecutorActive(row: { is_active?: boolean; active_until?: stri
   return Number.isFinite(until) && until > Date.now();
 }
 
+/**
+ * Дата и время встречи для уведомлений.
+ *
+ * Для заданий «на дату» относительное «через 3 дня» бесполезно:
+ * исполнителю нужно записать конкретный день и час. Формат — местный,
+ * Europe/Moscow (село живёт по московскому времени), без года:
+ * задания дальше чем на год вперёд не создают.
+ */
+export function formatTaskMoment(iso?: string | null): string {
+  if (!iso) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat('ru-RU', {
+    timeZone: 'Europe/Moscow',
+    day: 'numeric',
+    month: 'long',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+}
+
+/**
+ * Текст «куда и когда» для уведомления об одобрении.
+ * Пустые части пропускаем: у срочных заданий адрес может быть не указан.
+ */
+export function buildMeetingLine(task: {
+  kind?: string;
+  address?: string | null;
+  scheduled_at?: string | null;
+  deadline_at?: string | null;
+}): string {
+  const address = String(task.address ?? '').trim();
+  const moment = formatTaskMoment(
+    task.kind === 'scheduled' ? task.scheduled_at : task.deadline_at,
+  );
+  const parts: string[] = [];
+  if (address) parts.push(`приходите по адресу: ${address}`);
+  if (moment) parts.push(`${address ? 'к ' : 'нужно быть к '}${moment}`);
+  return parts.join(' ');
+}
+
 /** Генератор id в стиле проекта (`task-…`, `tp-…`, `rr-…`). */
 export function makeId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;

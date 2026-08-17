@@ -18,7 +18,8 @@ import { useProfiles } from '@/components/ProfilesProvider';
 import { useSettings } from '@/components/SettingsProvider';
 import { prefFor } from '@/lib/settings/defaults';
 import {
-  LOCKED_NOTIFICATION_GROUPS, NOTIFICATION_GROUPS, type FontFamilyId, type NotificationGroup,
+  FONT_FAMILIES, LOCKED_NOTIFICATION_GROUPS, NOTIFICATION_GROUPS,
+  type FontFamilyId, type NotificationGroup,
 } from '@/lib/settings/types';
 import { useI18n } from '@/lib/i18n';
 
@@ -48,11 +49,35 @@ export default function SettingsPage() {
     system: { title: t.settingsGroupSystem, description: t.settingsGroupSystemDesc },
   };
 
-  const fontOptions: Array<{ id: FontFamilyId; label: string }> = [
-    { id: 'manrope', label: t.settingsFontManrope },
-    { id: 'inter', label: t.settingsFontInter },
-    { id: 'georgia', label: t.settingsFontGeorgia },
-    { id: 'system', label: t.settingsFontSystem },
+  // Сгруппированы по начертанию: выбирать «шрифт с засечками» проще,
+  // чем вспоминать, чем Literata отличается от Jost. Все с кириллицей.
+  const fontGroups: Array<{ label: string; options: Array<{ id: FontFamilyId; label: string }> }> = [
+    {
+      label: t.settingsFontSans,
+      options: [
+        { id: 'manrope', label: 'Manrope' },
+        { id: 'inter', label: 'Inter' },
+        { id: 'rubik', label: 'Rubik' },
+        { id: 'montserrat', label: 'Montserrat' },
+        { id: 'jost', label: 'Jost' },
+        { id: 'onest', label: 'Onest' },
+      ],
+    },
+    {
+      label: t.settingsFontSerif,
+      options: [
+        { id: 'pt-serif', label: 'PT Serif' },
+        { id: 'literata', label: 'Literata' },
+        { id: 'georgia', label: 'Georgia' },
+      ],
+    },
+    {
+      label: t.settingsFontMono,
+      options: [
+        { id: 'roboto-mono', label: 'Roboto Mono' },
+        { id: 'system', label: t.settingsFontSystem },
+      ],
+    },
   ];
 
   const setPref = (group: NotificationGroup, patch: { show?: boolean; sound?: boolean }) => {
@@ -240,10 +265,23 @@ export default function SettingsPage() {
                         onChange={(e) => update({ fontFamily: e.target.value as FontFamilyId })}
                         className="w-full rounded-lg bg-white px-2.5 py-2 text-xs font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:bg-zinc-800 dark:text-white"
                       >
-                        {fontOptions.map((option) => (
-                          <option key={option.id} value={option.id}>{option.label}</option>
+                        {fontGroups.map((group) => (
+                          <optgroup key={group.label} label={group.label}>
+                            {group.options.map((option) => (
+                              <option key={option.id} value={option.id}>{option.label}</option>
+                            ))}
+                          </optgroup>
                         ))}
                       </select>
+
+                      {/* Живой образец: выбирать шрифт вслепую по названию
+                          бессмысленно, нужно видеть кириллицу. */}
+                      <p
+                        className="mt-2 rounded-lg bg-white px-2.5 py-2 text-xs leading-relaxed text-slate-700 dark:bg-zinc-800 dark:text-zinc-300"
+                        style={{ fontFamily: FONT_FAMILIES[settings.fontFamily] }}
+                      >
+                        {t.settingsFontSample}
+                      </p>
                     </div>
                   </section>
                 </div>

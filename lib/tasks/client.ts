@@ -241,6 +241,26 @@ const RU_TIME_LABELS: TimeLeftLabels = {
   day: 'дн',
 };
 
+/**
+ * Дата и время начала для заданий «на дату».
+ *
+ * Обратный отсчёт («через 3 дня») там бесполезен: исполнителю нужен
+ * конкретный день и час, чтобы прийти вовремя. Время местное —
+ * Europe/Moscow, село живёт по нему.
+ */
+export function formatTaskDateTime(iso?: string | null): string {
+  if (!iso) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat('ru-RU', {
+    timeZone: 'Europe/Moscow',
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+}
+
 export function formatTimeLeft(
   iso?: string | null,
   labels: TimeLeftLabels = RU_TIME_LABELS,

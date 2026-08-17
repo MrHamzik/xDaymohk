@@ -1,26 +1,66 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, Palette, Plus, Trash2 } from 'lucide-react';
+import { Check, ChevronDown, Palette, Plus, Trash2 } from 'lucide-react';
 import { useSettings } from '@/components/SettingsProvider';
 import { PRESET_THEMES, normalizeColors } from '@/lib/settings/defaults';
-import { MAX_CUSTOM_THEMES, type CustomTheme, type ThemeColors } from '@/lib/settings/types';
+import {
+  MAX_CUSTOM_THEMES, THEME_COLOR_GROUPS,
+  type CustomTheme, type ThemeColorGroup, type ThemeColors,
+} from '@/lib/settings/types';
 import { useI18n } from '@/lib/i18n';
-import { SectionTitle } from '@/components/settings/SettingsPrimitives';
+import { HintMark, SectionTitle } from '@/components/settings/SettingsPrimitives';
 
-/** Подписи слотов палитры: пользователь не обязан знать про --smk-*. */
-const COLOR_FIELDS: Array<{ key: keyof ThemeColors; ru: string; ce: string }> = [
-  { key: 'bg', ru: 'Фон страницы', ce: 'АгIонан букъ' },
-  { key: 'card', ru: 'Карточка', ce: 'Карточка' },
-  { key: 'cardAlt', ru: 'Карточка (низ)', ce: 'Карточка (бухахь)' },
-  { key: 'cardLine', ru: 'Обводка', ce: 'Йоза' },
-  { key: 'cardInset', ru: 'Подложка строк', ce: 'МогIанийн бухъ' },
-  { key: 'text', ru: 'Текст', ce: 'Йоза' },
-  { key: 'muted', ru: 'Приглушённый текст', ce: 'Дайина йоза' },
-  { key: 'accent', ru: 'Акцент', ce: 'Акцент' },
-  { key: 'accentSoft', ru: 'Акцент светлый', ce: 'Акцент къегина' },
-  { key: 'accentDeep', ru: 'Акцент тёмный', ce: 'Акцент бодане' },
-];
+/**
+ * Подписи слотов палитры, разложенные по трём группам.
+ *
+ * Пользователь не обязан знать про --smk-*: подпись описывает, ЧТО
+ * поменяется на экране, а не как называется переменная.
+ */
+const GROUP_TITLES: Record<ThemeColorGroup, { ru: string; ce: string; hint: string }> = {
+  global: {
+    ru: 'Глобальные',
+    ce: 'Дерригенна',
+    hint: 'Фон страницы, карточки, обводки и текст — то, что задаёт общее впечатление.',
+  },
+  details: {
+    ru: 'Детали',
+    ce: 'Къастамаш',
+    hint: 'Акценты: кнопки, иконки, звезда рейтинга и опасные действия.',
+  },
+  specific: {
+    ru: 'Специфические',
+    ce: 'Къаьсттина',
+    hint: 'Смысловые цвета: статусы работы, роли, шапка каталога и объекты на карте.',
+  },
+};
+
+const COLOR_LABELS: Record<keyof ThemeColors, { ru: string; ce: string }> = {
+  bg: { ru: 'Фон страницы', ce: 'АгIонан букъ' },
+  card: { ru: 'Карточка', ce: 'Карточка' },
+  cardAlt: { ru: 'Карточка (низ)', ce: 'Карточка (бухахь)' },
+  cardInset: { ru: 'Подложка строк', ce: 'МогIанийн бухъ' },
+  cardLine: { ru: 'Обводка', ce: 'Йоза' },
+  text: { ru: 'Текст', ce: 'Йоза' },
+  muted: { ru: 'Приглушённый текст', ce: 'Дайина йоза' },
+
+  accent: { ru: 'Акцент', ce: 'Акцент' },
+  accentSoft: { ru: 'Акцент светлый', ce: 'Акцент къегина' },
+  accentDeep: { ru: 'Акцент тёмный', ce: 'Акцент бодане' },
+  danger: { ru: 'Опасное действие', ce: 'Кхерамен гIуллакх' },
+
+  statusActive: { ru: 'Статус «Работает»', ce: '«Болх беш ву»' },
+  statusBreak: { ru: 'Статус «Перерыв»', ce: '«Сацар»' },
+  statusFlexible: { ru: 'Статус «Произвольный»', ce: '«Мукъа график»' },
+  statusOffline: { ru: 'Статус «Не работает»', ce: '«Болх ца бо»' },
+  roleSpecialist: { ru: 'Бейдж «Специалист»', ce: '«Говзанча»' },
+  roleAdmin: { ru: 'Бейдж «Админ»', ce: '«Админ»' },
+  roleVerified: { ru: 'Бейдж «Проверен»', ce: '«ТIечIагIдина»' },
+  heroFrom: { ru: 'Шапка каталога (начало)', ce: 'МогIаман корта (юьхь)' },
+  heroTo: { ru: 'Шапка каталога (конец)', ce: 'МогIаман корта (чаккхе)' },
+  mapCluster: { ru: 'Кластеры на карте', ce: 'Картин кластераш' },
+  mapHouse: { ru: 'Дома на карте', ce: 'Картин цIенош' },
+};
 
 function makeId(): string {
   return `t-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
@@ -37,6 +77,9 @@ export default function ThemeEditor() {
   const { t, language } = useI18n();
   const { settings, update } = useSettings();
   const [editingId, setEditingId] = useState<string | null>(null);
+  // Раскрыта одна группа за раз: 22 поля сразу — стена, в которой
+  // ничего не найти.
+  const [openGroup, setOpenGroup] = useState<ThemeColorGroup | null>('global');
 
   const editing = settings.customThemes.find((theme) => theme.id === editingId) ?? null;
   const canAddMore = settings.customThemes.length < MAX_CUSTOM_THEMES;
@@ -148,30 +191,58 @@ export default function ThemeEditor() {
             </label>
           </div>
 
-          <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
-            {COLOR_FIELDS.map((field) => (
-              <label
-                key={field.key}
-                className="flex items-center justify-between gap-2 rounded-lg bg-white px-2.5 py-1.5 dark:bg-zinc-800"
-              >
-                <span className="truncate text-[11px] font-semibold text-slate-600 dark:text-zinc-300">
-                  {language === 'ce' ? field.ce : field.ru}
-                </span>
-                <input
-                  type="color"
-                  value={editing.colors[field.key]}
-                  onChange={(e) => patchTheme(editing.id, {
-                    colors: normalizeColors(
-                      { ...editing.colors, [field.key]: e.target.value },
-                      editing.colors,
-                    ),
-                  })}
-                  aria-label={language === 'ce' ? field.ce : field.ru}
-                  className="h-6 w-10 shrink-0 cursor-pointer rounded border-0 bg-transparent p-0"
-                />
-              </label>
-            ))}
-          </div>
+          {/* Три группы: правки по смыслу, а не сплошной список из 22
+              полей, в котором невозможно найти нужное. */}
+          {(Object.keys(THEME_COLOR_GROUPS) as ThemeColorGroup[]).map((group) => {
+            const isOpen = openGroup === group;
+            return (
+              <div key={group} className="rounded-xl bg-white/60 p-2 dark:bg-zinc-900/40">
+                <button
+                  type="button"
+                  onClick={() => setOpenGroup(isOpen ? null : group)}
+                  aria-expanded={isOpen}
+                  className="flex w-full items-center justify-between gap-2 text-left"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-bold uppercase tracking-wide text-slate-700 dark:text-zinc-300">
+                      {language === 'ce' ? GROUP_TITLES[group].ce : GROUP_TITLES[group].ru}
+                    </span>
+                    <HintMark text={GROUP_TITLES[group].hint} />
+                  </span>
+                  <ChevronDown
+                    className={`h-3.5 w-3.5 shrink-0 text-slate-400 transition ${isOpen ? 'rotate-180' : ''}`}
+                  />
+                </button>
+
+                {isOpen && (
+                  <div className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                    {THEME_COLOR_GROUPS[group].map((key) => (
+                      <label
+                        key={key}
+                        className="flex items-center justify-between gap-2 rounded-lg bg-white px-2.5 py-1.5 dark:bg-zinc-800"
+                      >
+                        <span className="truncate text-[11px] font-semibold text-slate-600 dark:text-zinc-300">
+                          {language === 'ce' ? COLOR_LABELS[key].ce : COLOR_LABELS[key].ru}
+                        </span>
+                        <input
+                          type="color"
+                          value={editing.colors[key]}
+                          onChange={(e) => patchTheme(editing.id, {
+                            colors: normalizeColors(
+                              { ...editing.colors, [key]: e.target.value },
+                              editing.colors,
+                            ),
+                          })}
+                          aria-label={language === 'ce' ? COLOR_LABELS[key].ce : COLOR_LABELS[key].ru}
+                          className="h-6 w-10 shrink-0 cursor-pointer rounded border-0 bg-transparent p-0"
+                        />
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
 
           <button
             type="button"

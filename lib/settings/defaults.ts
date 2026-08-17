@@ -1,4 +1,5 @@
 import {
+  FONT_FAMILIES,
   MAX_CUSTOM_THEMES,
   NOTIFICATION_GROUPS,
   type CustomTheme,
@@ -70,6 +71,18 @@ export function prefFor(
    вёрстку: меняются только значения переменных.
    =========================================================================== */
 
+/** Общие смысловые цвета: одинаковы во всех пресетах, но правятся в своих темах. */
+const SEMANTIC = {
+  statusActive: '#10b981',
+  statusBreak: '#f59e0b',
+  statusFlexible: '#0ea5e9',
+  statusOffline: '#a1a1aa',
+  roleSpecialist: '#10b981',
+  roleAdmin: '#ef4444',
+  roleVerified: '#3b82f6',
+  danger: '#f43f5e',
+};
+
 export const PRESET_THEMES: Record<string, { name: string; isDark: boolean; colors: ThemeColors }> = {
   light: {
     name: 'Светлая',
@@ -85,6 +98,11 @@ export const PRESET_THEMES: Record<string, { name: string; isDark: boolean; colo
       accent: '#ffae00',
       accentSoft: '#ffedc4',
       accentDeep: '#ffcd6d',
+      ...SEMANTIC,
+      heroFrom: '#059669',
+      heroTo: '#14b8a6',
+      mapCluster: '#059669',
+      mapHouse: '#f59e0b',
     },
   },
   dark: {
@@ -101,6 +119,11 @@ export const PRESET_THEMES: Record<string, { name: string; isDark: boolean; colo
       accent: '#ffae00',
       accentSoft: '#ffedc4',
       accentDeep: '#ffcd6d',
+      ...SEMANTIC,
+      heroFrom: '#047857',
+      heroTo: '#0f766e',
+      mapCluster: '#059669',
+      mapHouse: '#f59e0b',
     },
   },
   space: {
@@ -117,6 +140,13 @@ export const PRESET_THEMES: Record<string, { name: string; isDark: boolean; colo
       accent: '#a78bfa',
       accentSoft: '#ddd4ff',
       accentDeep: '#7c5cf0',
+      ...SEMANTIC,
+      statusFlexible: '#818cf8',
+      roleVerified: '#818cf8',
+      heroFrom: '#6d28d9',
+      heroTo: '#4338ca',
+      mapCluster: '#7c5cf0',
+      mapHouse: '#a78bfa',
     },
   },
   sunset: {
@@ -133,6 +163,11 @@ export const PRESET_THEMES: Record<string, { name: string; isDark: boolean; colo
       accent: '#f2683c',
       accentSoft: '#ffc9b3',
       accentDeep: '#c2410c',
+      ...SEMANTIC,
+      heroFrom: '#b91c1c',
+      heroTo: '#ea580c',
+      mapCluster: '#c2410c',
+      mapHouse: '#f2683c',
     },
   },
 };
@@ -170,17 +205,30 @@ function safeColor(value: unknown, fallback: string): string {
 
 export function normalizeColors(raw: unknown, base: ThemeColors): ThemeColors {
   const input = (raw ?? {}) as Partial<Record<keyof ThemeColors, unknown>>;
+  const pick = (key: keyof ThemeColors) => safeColor(input[key], base[key]);
   return {
-    bg: safeColor(input.bg, base.bg),
-    card: safeColor(input.card, base.card),
-    cardAlt: safeColor(input.cardAlt, base.cardAlt),
-    cardLine: safeColor(input.cardLine, base.cardLine),
-    cardInset: safeColor(input.cardInset, base.cardInset),
-    text: safeColor(input.text, base.text),
-    muted: safeColor(input.muted, base.muted),
-    accent: safeColor(input.accent, base.accent),
-    accentSoft: safeColor(input.accentSoft, base.accentSoft),
-    accentDeep: safeColor(input.accentDeep, base.accentDeep),
+    bg: pick('bg'),
+    card: pick('card'),
+    cardAlt: pick('cardAlt'),
+    cardLine: pick('cardLine'),
+    cardInset: pick('cardInset'),
+    text: pick('text'),
+    muted: pick('muted'),
+    accent: pick('accent'),
+    accentSoft: pick('accentSoft'),
+    accentDeep: pick('accentDeep'),
+    danger: pick('danger'),
+    statusActive: pick('statusActive'),
+    statusBreak: pick('statusBreak'),
+    statusFlexible: pick('statusFlexible'),
+    statusOffline: pick('statusOffline'),
+    roleSpecialist: pick('roleSpecialist'),
+    roleAdmin: pick('roleAdmin'),
+    roleVerified: pick('roleVerified'),
+    heroFrom: pick('heroFrom'),
+    heroTo: pick('heroTo'),
+    mapCluster: pick('mapCluster'),
+    mapHouse: pick('mapHouse'),
   };
 }
 
@@ -218,8 +266,8 @@ function normalizePrefs(raw: unknown): Partial<Record<NotificationGroup, Notific
 }
 
 function normalizeFontFamily(raw: unknown): FontFamilyId {
-  return raw === 'inter' || raw === 'georgia' || raw === 'system' || raw === 'manrope'
-    ? raw
+  return typeof raw === 'string' && raw in FONT_FAMILIES
+    ? (raw as FontFamilyId)
     : 'manrope';
 }
 

@@ -1,4 +1,8 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+/* Шрифты для расширенных настроек. Все с поддержкой кириллицы —
+   иначе интерфейс рассыпался бы на квадраты. Manrope грузится всегда
+   (основной), остальные — только начертания, реально используемые
+   в интерфейсе, чтобы не тянуть лишние килобайты. */
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&family=Rubik:wght@400;500;600;700;800&family=Montserrat:wght@400;500;600;700;800&family=Jost:wght@400;500;600;700&family=Onest:wght@400;500;600;700;800&family=PT+Serif:wght@400;700&family=Literata:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;700&display=swap');
 @import "tailwindcss";
 @import "leaflet/dist/leaflet.css";
 @import "leaflet.markercluster/dist/MarkerCluster.css";
@@ -455,7 +459,11 @@ html.dark .bg-emerald-600.border-slate-200 {
   font-weight: 800;
   font-family: inherit;
   line-height: 1;
-  box-shadow: 0 1px 6px -1px rgba(15, 23, 42, 0.25);
+  /* Обводка цветом темы: в пользовательских темах кластеры иначе
+     оставались бы серыми пятнами на перекрашенной карте. */
+  box-shadow:
+    0 0 0 2px var(--smk-map-cluster, transparent),
+    0 1px 6px -1px rgba(15, 23, 42, 0.25);
 }
 .smk-cluster-small div { font-size: 10px; }
 .smk-cluster-medium div { font-size: 11px; }
@@ -697,9 +705,8 @@ html.dark .smk-price-teal {
   border: 1px solid rgb(var(--smk-gold-rgb) / 0.11);
   background: var(--smk-surface);
   transition:
-    transform 0.24s cubic-bezier(0.16, 1, 0.3, 1),
-    box-shadow 0.24s ease,
-    border-color 0.24s ease;
+    box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.28s ease;
 }
 html.dark .smk-lux {
   /* Обводка того же синего, что и карточка, только темнее */
@@ -709,25 +716,37 @@ html.dark .smk-lux {
     0 1px 0 0 rgb(var(--smk-light-rgb) / 0.05) inset,
     0 18px 40px -24px rgb(var(--smk-shadow-rgb) / 0.85);
 }
+/* Ховер меняет ТОЛЬКО свечение и обводку.
+   translateY здесь был причиной «подёргивания»: сдвиг всей карточки
+   заставлял браузер переверстывать текст внутри, и строки возраста,
+   пола и описания дрожали на каждом нажатии. Свечение и цвет рамки
+   композитятся на GPU и layout не трогают. */
 @media (hover: hover) {
   .smk-lux:hover {
-    transform: translateY(-2px);
-    border-color: rgb(var(--smk-gold-rgb) / 0.5);
+    border-color: rgb(var(--smk-gold-rgb) / 0.45);
+    box-shadow:
+      0 0 0 1px rgb(var(--smk-gold-rgb) / 0.10),
+      0 10px 30px -18px rgb(var(--smk-gold-rgb) / 0.45);
   }
   html.dark .smk-lux:hover {
-    border-color: rgb(var(--smk-light-rgb) / 0.22);
+    border-color: rgb(var(--smk-light-rgb) / 0.18);
+    box-shadow:
+      0 1px 0 0 rgb(var(--smk-light-rgb) / 0.06) inset,
+      0 0 0 1px rgb(var(--smk-gold-rgb) / 0.14),
+      0 18px 44px -22px rgb(var(--smk-shadow-rgb) / 0.9),
+      0 0 26px -14px rgb(var(--smk-gold-rgb) / 0.5);
   }
 }
-.smk-lux:active { transform: translateY(0); }
 @media (prefers-reduced-motion: reduce) {
   .smk-lux { transition: none; }
-  .smk-lux:hover { transform: none; }
 }
 
 /* --- Диагональные лучи ------------------------------------------------------
-   В светлой теме золотые, в тёмной — холодные стальные: жёлтые штрихи
-   на синем полотне выглядели инородно. */
-.smk-lux::before {
+   ТОЛЬКО для карточек: узор — приём карточной вёрстки, на сплошных
+   панелях (настройки, формы) он превращается в грязь. Поэтому лучи
+   вынесены в отдельный класс .smk-rays, а не висят на каждом .smk-lux.
+   В светлой теме золотые, в тёмной — холодные стальные. */
+.smk-rays::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -740,7 +759,7 @@ html.dark .smk-lux {
     linear-gradient(112deg, transparent 61.4%, rgb(var(--smk-gold-rgb) / 0.10) 61.6%, transparent 61.9%),
     linear-gradient(58deg,  transparent 79.4%, rgb(var(--smk-gold-rgb) / 0.07) 79.6%, transparent 79.9%);
 }
-html.dark .smk-lux::before {
+html.dark .smk-rays::before {
   background-image:
     linear-gradient(74deg,  transparent 48.6%, rgb(var(--smk-light-rgb) / 0.10) 48.8%, transparent 49.1%),
     linear-gradient(112deg, transparent 61.4%, rgb(var(--smk-light-rgb) / 0.06) 61.6%, transparent 61.9%),
@@ -773,10 +792,145 @@ html.dark .smk-ring {
 .smk-ring-break    { background: linear-gradient(140deg, var(--smk-status-break), var(--smk-status-break-deep)); }
 .smk-ring-flexible { background: linear-gradient(140deg, var(--smk-status-flexible), var(--smk-status-flexible-deep)); }
 .smk-ring-offline  { background: linear-gradient(140deg, var(--smk-status-offline), var(--smk-status-offline-deep)); }
-html.dark .smk-ring-active   { background: linear-gradient(140deg, var(--smk-status-active), var(--smk-status-active-dark)); box-shadow: 0 0 12px -5px var(--smk-status-active-glow); }
-html.dark .smk-ring-break    { background: linear-gradient(140deg, var(--smk-status-break), var(--smk-status-break-dark)); box-shadow: 0 0 12px -5px var(--smk-status-break-glow); }
-html.dark .smk-ring-flexible { background: linear-gradient(140deg, var(--smk-status-flexible), var(--smk-status-flexible-dark)); box-shadow: 0 0 12px -5px var(--smk-status-flexible-glow); }
-html.dark .smk-ring-offline  { background: linear-gradient(140deg, var(--smk-status-offline-dark-a), var(--smk-status-offline-dark-b)); box-shadow: none; }
+html.dark .smk-ring-active   { box-shadow: 0 0 16px -5px var(--smk-status-active); }
+html.dark .smk-ring-break    { box-shadow: 0 0 16px -5px var(--smk-status-break); }
+html.dark .smk-ring-flexible { box-shadow: 0 0 16px -5px var(--smk-status-flexible); }
+html.dark .smk-ring-offline  { box-shadow: none; }
+
+/* --- Роли и смысловые цвета -------------------------------------------------
+   Значения по умолчанию совпадают с палитрой Tailwind, которой бейджи
+   пользовались раньше; пользовательская тема подменяет их на :root.
+   Объявлены здесь, чтобы var() не падал в тему без этих ключей. */
+:root {
+  --smk-status-active: #10b981;
+  --smk-status-break: #f59e0b;
+  --smk-status-flexible: #0ea5e9;
+  --smk-status-offline: #a1a1aa;
+  --smk-role-specialist: #10b981;
+  --smk-role-admin: #ef4444;
+  --smk-role-verified: #3b82f6;
+  --smk-danger: #f43f5e;
+  --smk-hero-from: #059669;
+  --smk-hero-to: #14b8a6;
+  --smk-map-cluster: #059669;
+  --smk-map-house: #f59e0b;
+}
+
+/* Бейдж роли: заливка выводится из одного цвета прозрачностью, поэтому
+   тема меняет один ключ, а не три оттенка. */
+.smk-role {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 0.375rem;
+  padding: 0.125rem 0.375rem;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--smk-role-color);
+  background: color-mix(in srgb, var(--smk-role-color) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--smk-role-color) 34%, transparent);
+}
+.smk-role--specialist { --smk-role-color: var(--smk-role-specialist); }
+.smk-role--admin      { --smk-role-color: var(--smk-role-admin); }
+.smk-role--verified   { --smk-role-color: var(--smk-role-verified); }
+.smk-role--pending    { --smk-role-color: var(--smk-muted, #94a3b8); }
+
+/* --- Точка рабочего статуса в строке данных ---------------------------------
+   Пульсирует только у «живых» статусов: мигающий выходной читался бы
+   как ошибка, а не как информация. Анимируем box-shadow и opacity —
+   они не вызывают перевёрстку, в отличие от width/height. */
+.smk-status-dot {
+  position: relative;
+  display: inline-block;
+  height: 0.5rem;
+  width: 0.5rem;
+  flex: none;
+  border-radius: 9999px;
+  background: var(--smk-status-offline);
+}
+.smk-status-dot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: inherit;
+  opacity: 0;
+}
+.smk-status-dot--active   { background: var(--smk-status-active); }
+.smk-status-dot--break    { background: var(--smk-status-break); }
+.smk-status-dot--flexible { background: var(--smk-status-flexible); }
+.smk-status-dot--offline  { background: var(--smk-status-offline); }
+
+.smk-status-dot--active::after,
+.smk-status-dot--break::after {
+  animation: smk-ping 1.9s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+.smk-status-dot--active { box-shadow: 0 0 8px -1px var(--smk-status-active); }
+.smk-status-dot--break  { box-shadow: 0 0 8px -1px var(--smk-status-break); }
+.smk-status-dot--flexible { box-shadow: 0 0 8px -2px var(--smk-status-flexible); }
+
+@keyframes smk-ping {
+  0%   { transform: scale(1);   opacity: 0.65; }
+  70%  { transform: scale(2.4); opacity: 0; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .smk-status-dot::after { animation: none; }
+}
+
+/* --- Мягкое свечение аватара по статусу -------------------------------------
+   Кольцо уже цветное; ореол добавляет глубины, но только у активных —
+   иначе «не работает» светился бы наравне с «работает». */
+.smk-ring-active   { box-shadow: 0 0 14px -6px var(--smk-status-active); }
+.smk-ring-break    { box-shadow: 0 0 14px -6px var(--smk-status-break); }
+.smk-ring-flexible { box-shadow: 0 0 14px -6px var(--smk-status-flexible); }
+
+/* --- Появление карточек в ленте ---------------------------------------------
+   Короткое, без сдвига по вертикали: длинные «выезды» на списке из
+   30 карточек выглядят как тормоза. */
+@keyframes smk-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.smk-enter {
+  animation: smk-fade-in 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .smk-enter { animation: none; }
+}
+
+/* --- Пробегающий блик по акценту --------------------------------------------
+   Используется на золотой кнопке: даёт «дорогое» ощущение без
+   постоянной анимации — блик идёт только при наведении. */
+.smk-shine {
+  position: relative;
+  overflow: hidden;
+}
+.smk-shine::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    transparent 20%,
+    rgb(var(--smk-light-rgb) / 0.35) 45%,
+    transparent 70%
+  );
+  transform: translateX(-120%);
+}
+@media (hover: hover) {
+  .smk-shine:hover::after {
+    animation: smk-sweep 0.7s ease-out;
+  }
+}
+@keyframes smk-sweep {
+  to { transform: translateX(120%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .smk-shine::after { animation: none !important; }
+}
 
 /* Вертикальный разделитель внутри строки данных (возраст · пол) */
 .smk-sep {
@@ -843,16 +997,6 @@ html.dark .smk-field-split > * + * {
   flex: none;
 }
 html.dark .smk-ico { color: var(--smk-muted-bright); }
-
-/* --- Подвал и кнопка действия ----------------------------------------------- */
-.smk-foot {
-  background: var(--smk-surface-soft);
-  border-top: 1px solid rgb(var(--smk-gold-rgb) / 0.18);
-}
-html.dark .smk-foot {
-  background: rgb(var(--smk-shadow-rgb) / 0.28);
-  border-top-color: rgb(var(--smk-light-rgb) / 0.08);
-}
 
 /* Текст и иконка всегда белые: на золотом градиенте тёмная надпись
    читалась плохо. В тёмной теме кнопка нейтрально-серая. */

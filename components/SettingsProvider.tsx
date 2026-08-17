@@ -89,22 +89,39 @@ export default function SettingsProvider({ children }: { children: React.ReactNo
 
   // 3. Оформление.
   //
-  // Класс .dark принадлежит ThemeProvider — он единственный владелец
-  // пары «светлая/тёмная», и трогать его здесь нельзя, иначе два
-  // эффекта начнут перетирать друг друга при каждом рендере.
+  // Кастомная тема активна ТОЛЬКО в расширенном режиме. Как только
+  // тумблер выключают, оформление обязано вернуться к обычной паре
+  // «светлая/тёмная» — иначе на :root остаются инлайновые переменные
+  // и интерфейс выглядит сломанным.
   //
-  // Поэтому: пока выбрана light/dark, мы вообще не вмешиваемся и лишь
-  // снимаем свои инлайновые переменные. Кастомная тема — наоборот,
-  // полностью наша: она сама выставляет .dark по своей основе.
+  // Владение классом .dark разведено: пока тема кастомная, им управляем
+  // мы; в остальных случаях — ThemeProvider. Ниже, при выходе из
+  // кастомной темы, мы синхронизируем класс с системной/сохранённой
+  // темой и больше его не трогаем.
+  const isCustomTheme = settings.advancedMode
+    && settings.themeId !== 'light'
+    && settings.themeId !== 'dark';
+
   useEffect(() => {
-    const isPreset = settings.themeId === 'light' || settings.themeId === 'dark';
-    if (isPreset) {
-      clearThemeColors();
-    } else {
+    if (isCustomTheme) {
       const theme = resolveTheme(settings.themeId, settings.customThemes);
       applyThemeColors(theme.colors, theme.isDark);
+      return;
     }
-  }, [settings.themeId, settings.customThemes]);
+
+    // Возврат к обычной теме: снимаем свои переменные и восстанавливаем
+    // .dark по сохранённому выбору, а если его нет — по системной теме.
+    clearThemeColors();
+    try {
+      const saved = window.localStorage.getItem('daymohk-theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const isDark = saved === 'dark' || (saved !== 'light' && prefersDark);
+      document.documentElement.classList.toggle('dark', isDark);
+      document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
+    } catch {
+      // matchMedia недоступен — оставляем как есть
+    }
+  }, [isCustomTheme, settings.themeId, settings.customThemes]);
 
   // Типографика не зависит от темы и применяется всегда.
   useEffect(() => {

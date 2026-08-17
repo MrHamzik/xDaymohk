@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { X, Loader2, Star, MapPin, Clock, Users, CalendarDays, Trash2, ExternalLink, Wallet } from 'lucide-react';
 import Avatar from '@/components/Avatar';
-import { fetchTask, runTaskAction, submitResidentReview, deleteTask, formatTimeLeft } from '@/lib/tasks/client';
+import {
+  fetchTask, runTaskAction, submitResidentReview, deleteTask,
+  formatTimeLeft, formatTaskDateTime,
+} from '@/lib/tasks/client';
 import AttendanceModal from '@/components/tasks/AttendanceModal';
 import { useI18n } from '@/lib/i18n';
 import { useTaskRealtime } from '@/lib/tasks/realtime';
@@ -198,11 +201,10 @@ export default function TaskDetailModal({
               <div className="grid grid-cols-2 gap-2 border-t border-slate-100 px-4 py-4 text-[11px] dark:border-zinc-800">
                 <InfoRow
                   icon={task.kind === 'scheduled' ? CalendarDays : Clock}
-                  label={task.kind === 'scheduled' ? t.taskStartsIn : t.taskTimeLeftLabel}
-                  value={formatTimeLeft(
-                    task.kind === 'scheduled' ? task.scheduledAt : task.deadlineAt,
-                    timeLabels,
-                  ) || '—'}
+                  label={task.kind === 'scheduled' ? t.taskWhenLabel : t.taskTimeLeftLabel}
+                  value={(task.kind === 'scheduled'
+                    ? formatTaskDateTime(task.scheduledAt)
+                    : formatTimeLeft(task.deadlineAt, timeLabels)) || '—'}
                 />
                 {task.kind === 'scheduled' && (
                   <InfoRow icon={Users} label={t.taskSlotsTaken} value={`${task.takenSlots ?? 0} / ${task.slots}`} />

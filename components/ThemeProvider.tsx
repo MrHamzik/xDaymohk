@@ -44,11 +44,20 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
     // она или светлая, и ставит .dark в SettingsProvider. Если её
     // выбрали — не вмешиваемся, иначе два эффекта перетирали бы класс
     // друг друга и тема мигала бы при каждом рендере.
+    //
+    // Важно: кастомная тема действует ТОЛЬКО при advancedMode. Без этой
+    // проверки после выключения расширенного режима класс оставался под
+    // управлением старого themeId и тема «залипала».
     let hasCustomTheme = false;
     try {
       const raw = window.localStorage.getItem('daymohk-settings');
-      const themeId = raw ? (JSON.parse(raw) as { themeId?: string }).themeId : undefined;
-      hasCustomTheme = Boolean(themeId && themeId !== 'light' && themeId !== 'dark');
+      const parsed = raw ? JSON.parse(raw) as { themeId?: string; advancedMode?: boolean } : null;
+      hasCustomTheme = Boolean(
+        parsed?.advancedMode
+        && parsed.themeId
+        && parsed.themeId !== 'light'
+        && parsed.themeId !== 'dark',
+      );
     } catch {
       hasCustomTheme = false;
     }

@@ -9,6 +9,7 @@ import {
   checkExecutorEligibility,
   countActiveTasks,
   notifyTaskEvent,
+  buildMeetingLine,
   touchExecutorActivity,
   isExecutorActive,
   makeId,
@@ -456,12 +457,16 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         await admin.from('tasks').update({ status: 'in_progress' }).eq('id', id);
       }
 
+      // В сообщении сразу говорим, КУДА и КОГДА. «Можно приступать» без
+      // адреса и времени ничего не сообщало, а у заданий «на дату»
+      // относительный отсчёт бесполезен — нужен конкретный день и час.
+      const meeting = buildMeetingLine(task);
       await notifyTaskEvent(admin, {
         recipientId: targetUserId,
         type: 'task_join_approved',
-        title: 'Заявка одобрена — можно приступать',
-        message: `«${task.title}»`,
-        titleCe: 'Дехар тIеэцна — болх бан мега',
+        title: 'Заявка одобрена',
+        message: meeting ? `«${task.title}»: ${meeting}.` : `«${task.title}»`,
+        titleCe: 'Дехар тIеэцна',
       });
 
       return NextResponse.json({ success: true });
