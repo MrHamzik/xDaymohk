@@ -78,14 +78,22 @@ function applyNeutralRamp(
   colors: ThemeColors,
   isDark: boolean,
 ): void {
-  const steps = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
+  // Только светлый конец шкалы: 50…400 — это фоны, подложки и границы,
+  // они обязаны подхватывать оттенок темы.
+  //
+  // Ступени 500…950 НЕ трогаем. В разметке они означают «тёмное»
+  // независимо от темы: bg-slate-900 у всплывающей подсказки идёт в
+  // паре с text-white, а bg-slate-900/60 — это затемняющая подложка
+  // модальных окон. Инвертировав их в тёмных темах, мы сделали бы
+  // подсказку белой с белым текстом, а подложку — светлой вспышкой.
+  const steps = [50, 100, 200, 300, 400];
   for (const [index, step] of steps.entries()) {
-    const t = index / (steps.length - 1); // 0 → светлый край, 1 → тёмный
+    const t = index / (steps.length - 1); // 0 → ближе к фону, 1 → к тексту
     const value = isDark
-      // Тёмная: от полотна к тексту.
-      ? mix(colors.bg, colors.text, 0.06 + t * 0.82)
-      // Светлая: от фона страницы к тексту.
-      : mix(colors.bg, colors.text, t * 0.94);
+      // Тёмная: от полотна вглубь, к подложкам карточек.
+      ? mix(colors.bg, colors.text, 0.05 + t * 0.16)
+      // Светлая: от фона страницы к границам.
+      : mix(colors.bg, colors.text, 0.02 + t * 0.34);
     set(`--color-slate-${step}`, value);
   }
 }
@@ -126,10 +134,7 @@ const MANAGED_PROPERTIES = [
   // подложки, текст, границы. Без её подмены светлые темы оставались
   // «цветными пятнами на холодном сером», а белый — чисто белым.
   '--color-slate-50', '--color-slate-100', '--color-slate-200',
-  '--color-slate-300', '--color-slate-400', '--color-slate-500',
-  '--color-slate-600', '--color-slate-700', '--color-slate-800',
-  '--color-slate-900', '--color-slate-950',
-  '--color-white',
+  '--color-slate-300', '--color-slate-400',
   // Семантические переменные проекта, завязанные на зелёный.
   '--border-green-dark',
   '--smk-hero-gradient',
@@ -150,6 +155,8 @@ export function applyThemeColors(
   // Стеклянный режим — отдельный класс: прозрачность и backdrop-filter
   // описаны в globals.css и выводятся из тех же переменных темы.
   root.classList.toggle('smk-glass', glass);
+  // Тема активна — включаем правила для поверхностей (.bg-white и др.).
+  root.classList.add('smk-themed');
   root.style.colorScheme = isDark ? 'dark' : 'light';
 
   // Порядок ступеней обязан оставаться монотонным: 700 — самая светлая
@@ -229,6 +236,12 @@ export function applyThemeColors(
   applyRamp(set, 'teal', mix(colors.ui, '#000000', 0.06));
   applyRamp(set, 'green', colors.ui);
 
+  // --color-white НЕ подменяем. Tailwind отдаёт из него и bg-white, и
+  // text-white (386 упоминаний в разметке): подменив его цветом
+  // карточки, мы красили белый текст в цвет фона — в тёмных темах он
+  // становился почти чёрным и пропадал. Поверхности перекрашивает
+  // правило .bg-white ниже, а текст остаётся белым.
+
   // ── Нейтральная шкала под оттенок темы ──────────────────────────
   // Серые в теме не бывают «просто серыми»: у Природы они зеленоватые,
   // у Янтаря кремовые, у Космоса синеватые. Строим шкалу от muted —
@@ -237,7 +250,6 @@ export function applyThemeColors(
   // Для тёмных тем шкала инвертируется: там slate-50 должен быть
   // тёмным (это подложка), а slate-900 — светлым (это текст).
   applyNeutralRamp(set, colors, isDark);
-  set('--color-white', colors.card);
 
   // Семантические переменные проекта, завязанные на зелёный.
   set('--border-green-dark', mix(colors.ui, '#000000', 0.34));
@@ -262,6 +274,7 @@ export function clearThemeColors(): void {
   if (typeof document === 'undefined') return;
   const root = document.documentElement;
   root.classList.remove('smk-glass');
+  root.classList.remove('smk-themed');
   for (const property of MANAGED_PROPERTIES) root.style.removeProperty(property);
 }
 
