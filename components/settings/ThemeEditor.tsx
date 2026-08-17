@@ -95,13 +95,16 @@ export default function ThemeEditor() {
       ? settings.customThemes.find((x) => `custom:${x.id}` === settings.themeId)
       : undefined;
     const source = base
-      ? { isDark: base.isDark, colors: base.colors }
+      ? { isDark: base.isDark, glass: base.glass, colors: base.colors }
       : PRESET_THEMES[settings.themeId] ?? PRESET_THEMES.dark;
 
     const created: CustomTheme = {
       id: makeId(),
       name: `${t.settingsThemeMine} ${settings.customThemes.length + 1}`,
       isDark: source.isDark,
+      // Стеклянный режим тоже наследуем: копия «Стеклянной» без него
+      // выглядела бы совсем иначе, чем оригинал.
+      glass: source.glass === true,
       colors: { ...source.colors },
     };
     update({
@@ -173,7 +176,7 @@ export default function ThemeEditor() {
 
       {editing && (
         <div className="smk-field mt-3 space-y-3 p-3">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <input
               value={editing.name}
               onChange={(e) => patchTheme(editing.id, { name: e.target.value.slice(0, 40) })}
@@ -189,6 +192,15 @@ export default function ThemeEditor() {
                 className="h-3.5 w-3.5 rounded accent-emerald-600"
               />
               {t.settingsThemeDark}
+            </label>
+            <label className="flex shrink-0 cursor-pointer items-center gap-1.5 text-[11px] font-bold text-slate-600 dark:text-zinc-300">
+              <input
+                type="checkbox"
+                checked={editing.glass === true}
+                onChange={(e) => patchTheme(editing.id, { glass: e.target.checked })}
+                className="h-3.5 w-3.5 rounded accent-emerald-600"
+              />
+              {t.settingsThemeGlass}
             </label>
           </div>
 

@@ -862,6 +862,53 @@ html.dark .smk-role {
 .smk-role--verified   { --smk-role-color: var(--smk-role-verified); }
 .smk-role--pending    { --smk-role-color: var(--smk-muted, #94a3b8); }
 
+/* --- Стеклянный режим ---------------------------------------------------------
+   Включается классом .smk-glass на <html> (тема с glass: true).
+   Прозрачность выводится из тех же цветов темы через color-mix, а не
+   задаётся отдельными значениями с альфой: палитра остаётся
+   единственным источником, и правка «Карточки» тянет за собой стекло.
+
+   backdrop-filter применяется только там, где под элементом реально
+   что-то есть. Вешать его на всё подряд нельзя: каждый такой слой —
+   отдельная композиция на GPU, на слабом телефоне список из тридцати
+   карточек начинает заметно тормозить. */
+html.smk-glass .smk-lux {
+  background: color-mix(in srgb, var(--smk-card-a) 62%, transparent);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border-color: color-mix(in srgb, var(--smk-light-rgb-color, #ffffff) 55%, transparent);
+  box-shadow:
+    0 1px 0 0 rgb(255 255 255 / 0.55) inset,
+    0 10px 30px -18px rgb(15 23 42 / 0.35);
+}
+html.smk-glass .smk-field {
+  background: color-mix(in srgb, var(--smk-card-inset) 55%, transparent);
+}
+/* Подложки строк внутри стекла делаем ещё легче, иначе карточка
+   выглядит как матовый пластик, а не как стекло. */
+html.smk-glass .smk-price,
+html.smk-glass .smk-price-teal {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+html.smk-glass .site-bottom-nav {
+  background: color-mix(in srgb, var(--smk-card-a) 70%, transparent);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+}
+/* Узор-лучи на стекле превращается в грязь: убираем. */
+html.smk-glass .smk-rays::before { display: none; }
+
+@media (prefers-reduced-transparency: reduce) {
+  html.smk-glass .smk-lux,
+  html.smk-glass .smk-field,
+  html.smk-glass .site-bottom-nav {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: var(--smk-card-a);
+  }
+}
+
 /* --- Точка рабочего статуса в строке данных ---------------------------------
    Пульсирует только у «живых» статусов: мигающий выходной читался бы
    как ошибка, а не как информация. Анимируем box-shadow и opacity —

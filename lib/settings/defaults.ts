@@ -85,7 +85,10 @@ const SEMANTIC = {
   ui: '#059669',
 };
 
-export const PRESET_THEMES: Record<string, { name: string; isDark: boolean; colors: ThemeColors }> = {
+export const PRESET_THEMES: Record<
+  string,
+  { name: string; isDark: boolean; glass?: boolean; colors: ThemeColors }
+> = {
   light: {
     name: 'Светлая',
     isDark: false,
@@ -214,6 +217,123 @@ export const PRESET_THEMES: Record<string, { name: string; isDark: boolean; colo
       mapHouse: '#fbbf24',
     },
   },
+  /**
+   * Чёрный — не «тёмно-серый», а настоящий чёрный.
+   *
+   * Полотно #000: карточка отличается от фона не заливкой, а тонкой
+   * светлой линией. Минимализм здесь означает почти полное отсутствие
+   * цвета — единственный акцент белый, поэтому текст обязан быть
+   * по-настоящему контрастным, иначе интерфейс станет нечитаемым.
+   * Смысловые цвета оставлены (статусы), но приглушены до пастели:
+   * на чистом чёрном насыщенные тона «звенят».
+   */
+  black: {
+    name: 'Чёрный',
+    isDark: true,
+    colors: {
+      bg: '#000000',
+      card: '#0a0a0a',
+      cardAlt: '#050505',
+      cardLine: '#242424',
+      cardInset: '#141414',
+      text: '#fafafa',
+      muted: '#8f8f8f',
+      // Акцент — белый: на чёрном он работает как золото на светлом.
+      accent: '#ffffff',
+      accentSoft: '#e5e5e5',
+      accentDeep: '#a3a3a3',
+      ui: '#3f3f46',
+      statusActive: '#4ade80',
+      statusBreak: '#facc15',
+      statusFlexible: '#60a5fa',
+      statusOffline: '#525252',
+      roleSpecialist: '#e5e5e5',
+      roleAdmin: '#f87171',
+      roleVerified: '#a3a3a3',
+      danger: '#ef4444',
+      heroFrom: '#171717',
+      heroTo: '#000000',
+      mapCluster: '#3f3f46',
+      mapHouse: '#a3a3a3',
+    },
+  },
+  /**
+   * Монохромный — светлая тема без единого цветного пятна.
+   *
+   * Отличается от «Чёрного» не яркостью, а подходом: там чёрный фон и
+   * белый акцент, здесь бумажно-серая шкала. Цвет остаётся только у
+   * статусов и опасного действия — убрать его совсем нельзя, иначе
+   * «работает» и «не работает» будут неразличимы для пользователя.
+   */
+  mono: {
+    name: 'Монохромный',
+    isDark: false,
+    colors: {
+      bg: '#f4f4f5',
+      card: '#ffffff',
+      cardAlt: '#fafafa',
+      cardLine: '#d4d4d8',
+      cardInset: '#f4f4f5',
+      text: '#18181b',
+      muted: '#71717a',
+      accent: '#52525b',
+      accentSoft: '#d4d4d8',
+      accentDeep: '#27272a',
+      ui: '#3f3f46',
+      // Единственные цветные элементы: без них статус читался бы
+      // только по подписи, а точка теряет смысл.
+      statusActive: '#16a34a',
+      statusBreak: '#ca8a04',
+      statusFlexible: '#2563eb',
+      statusOffline: '#a1a1aa',
+      roleSpecialist: '#52525b',
+      roleAdmin: '#71717a',
+      roleVerified: '#3f3f46',
+      danger: '#b91c1c',
+      heroFrom: '#3f3f46',
+      heroTo: '#71717a',
+      mapCluster: '#52525b',
+      mapHouse: '#a1a1aa',
+    },
+  },
+  /**
+   * Стеклянный — серебристо-белый с прозрачными карточками.
+   *
+   * glass: true включает backdrop-filter: карточки пропускают фон и
+   * размывают его. Поэтому фон намеренно не плоский, а голубовато-
+   * серый: сквозь абсолютно белое полотно «стекло» не читалось бы.
+   */
+  glass: {
+    name: 'Стеклянный',
+    isDark: false,
+    glass: true,
+    colors: {
+      bg: '#e8edf2',
+      card: '#ffffff',
+      cardAlt: '#f6f9fc',
+      cardLine: '#c9d4e0',
+      cardInset: '#eef3f8',
+      text: '#1e293b',
+      muted: '#64748b',
+      // Серебро с холодным отливом.
+      accent: '#94a3b8',
+      accentSoft: '#e2e8f0',
+      accentDeep: '#64748b',
+      ui: '#0ea5e9',
+      statusActive: '#0d9488',
+      statusBreak: '#f59e0b',
+      statusFlexible: '#0ea5e9',
+      statusOffline: '#94a3b8',
+      roleSpecialist: '#0d9488',
+      roleAdmin: '#e11d48',
+      roleVerified: '#0284c7',
+      danger: '#e11d48',
+      heroFrom: '#64748b',
+      heroTo: '#0ea5e9',
+      mapCluster: '#0ea5e9',
+      mapHouse: '#94a3b8',
+    },
+  },
 };
 
 export const PRESET_THEME_IDS = Object.keys(PRESET_THEMES);
@@ -222,11 +342,15 @@ export const PRESET_THEME_IDS = Object.keys(PRESET_THEMES);
 export function resolveTheme(
   themeId: string,
   customThemes: CustomTheme[],
-): { name: string; isDark: boolean; colors: ThemeColors } {
+): { name: string; isDark: boolean; glass?: boolean; colors: ThemeColors } {
   if (themeId.startsWith('custom:')) {
     const id = themeId.slice('custom:'.length);
     const found = customThemes.find((theme) => theme.id === id);
-    if (found) return { name: found.name, isDark: found.isDark, colors: found.colors };
+    if (found) {
+      return {
+        name: found.name, isDark: found.isDark, glass: found.glass, colors: found.colors,
+      };
+    }
     // Тему удалили, а ссылка осталась — не роняем интерфейс.
     return PRESET_THEMES.light;
   }
@@ -291,6 +415,7 @@ function normalizeCustomThemes(raw: unknown): CustomTheme[] {
           ? entry.name.trim().slice(0, 40)
           : `Моя тема ${index + 1}`,
         isDark,
+        glass: entry.glass === true,
         colors: normalizeColors(entry.colors, base),
       };
     });

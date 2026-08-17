@@ -104,7 +104,11 @@ const MANAGED_PROPERTIES = [
   '--smk-hero-gradient',
 ];
 
-export function applyThemeColors(colors: ThemeColors, isDark: boolean): void {
+export function applyThemeColors(
+  colors: ThemeColors,
+  isDark: boolean,
+  glass = false,
+): void {
   if (typeof document === 'undefined') return;
   const root = document.documentElement;
   const set = (name: string, value: string) => root.style.setProperty(name, value);
@@ -112,6 +116,9 @@ export function applyThemeColors(colors: ThemeColors, isDark: boolean): void {
   // Класс .dark по-прежнему нужен: на нём держатся сотни dark:-утилит
   // Tailwind, переписать их темой невозможно.
   root.classList.toggle('dark', isDark);
+  // Стеклянный режим — отдельный класс: прозрачность и backdrop-filter
+  // описаны в globals.css и выводятся из тех же переменных темы.
+  root.classList.toggle('smk-glass', glass);
   root.style.colorScheme = isDark ? 'dark' : 'light';
 
   // ── Семантические слоты: именно они рисуют фон и текст страницы ──
@@ -212,6 +219,7 @@ export function applyThemeColors(colors: ThemeColors, isDark: boolean): void {
 export function clearThemeColors(): void {
   if (typeof document === 'undefined') return;
   const root = document.documentElement;
+  root.classList.remove('smk-glass');
   for (const property of MANAGED_PROPERTIES) root.style.removeProperty(property);
 }
 

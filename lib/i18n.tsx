@@ -316,6 +316,7 @@ export const translations = {
     settingsThemeMine: 'Моя тема',
     settingsThemeName: 'Название темы',
     settingsThemeDark: 'Тёмная основа',
+    settingsThemeGlass: 'Стекло',
     settingsThemeDone: 'Готово',
     settingsThemeLimit: 'Своих тем',
 
@@ -829,6 +830,7 @@ export const translations = {
     settingsThemeMine: 'Сан тема',
     settingsThemeName: 'Теман цIе',
     settingsThemeDark: 'Бодане бух',
+    settingsThemeGlass: 'Минкъа',
     settingsThemeDone: 'Кийча',
     settingsThemeLimit: 'Хьайн темаш',
 

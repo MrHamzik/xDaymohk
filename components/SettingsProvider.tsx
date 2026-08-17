@@ -109,25 +109,28 @@ export default function SettingsProvider({ children }: { children: React.ReactNo
   // Пока настройки грузятся с диска, DOM не трогаем: иначе на первом
   // кадре успел бы примениться light из значения по умолчанию и тема
   // моргала бы при каждой перезагрузке.
-  const custom = isLoading
+  // «Расширенная» тема — любая, кроме базовой пары light/dark: и
+  // пресеты (Космос, Чёрный, Стеклянный…), и пользовательские. Все они
+  // применяются одинаково — через подстановку переменных.
+  const resolved = isLoading
     ? null
     : resolveTheme(settings.themeId, settings.customThemes);
-  const isCustomTheme = Boolean(
+  const isThemedMode = Boolean(
     settings.advancedMode
     && settings.themeId !== 'light'
     && settings.themeId !== 'dark',
   );
-  // Тёмная основа: у пользовательской темы — её собственный флаг,
-  // у пресета — сам идентификатор.
-  const effectiveDark = isCustomTheme
-    ? Boolean(custom?.isDark)
+  // Тёмная основа: у расширенной темы — её собственный флаг,
+  // у базовой пары — сам идентификатор.
+  const effectiveDark = isThemedMode
+    ? Boolean(resolved?.isDark)
     : settings.themeId === 'dark';
 
   useEffect(() => {
     if (isLoading) return;
 
-    if (isCustomTheme && custom) {
-      applyThemeColors(custom.colors, custom.isDark);
+    if (isThemedMode && resolved) {
+      applyThemeColors(resolved.colors, resolved.isDark, resolved.glass === true);
       return;
     }
 
@@ -136,10 +139,10 @@ export default function SettingsProvider({ children }: { children: React.ReactNo
     clearThemeColors();
     document.documentElement.classList.toggle('dark', effectiveDark);
     document.documentElement.style.colorScheme = effectiveDark ? 'dark' : 'light';
-    // custom пересоздаётся каждый рендер — в зависимостях держим его
+    // resolved пересоздаётся каждый рендер — в зависимостях держим его
     // первоисточники, иначе эффект крутился бы бесконечно.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoading, isCustomTheme, effectiveDark, settings.themeId, settings.customThemes]);
+  }, [isLoading, isThemedMode, effectiveDark, settings.themeId, settings.customThemes]);
 
   // Первый вход: themeId ещё не выбирали, берём системную/сохранённую
   // тему из ThemeProvider, чтобы поведение не изменилось для тех, кто
