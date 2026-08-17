@@ -395,7 +395,7 @@ export default function MapPage() {
 
               {/* Фильтр категорий для слоя «Другое» (как в админке) */}
               {objectMode === 'places' && (
-                <div className="mt-2 flex flex-wrap items-center gap-2">
+                <div className="mt-1 flex flex-wrap items-center gap-2">
                   <label htmlFor="map-place-category" className="text-[11px] font-bold text-slate-400">
                     Категория:
                   </label>

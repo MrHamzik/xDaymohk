@@ -214,77 +214,7 @@ export default function TaskFilterBar({
                 )}
               </div>
 
-              {/* Секция 2: Направление и сфера */}
-              <div className={sectionClass}>
-                <button
-                  type="button"
-                  onClick={() => setIsSphereOpen((v) => !v)}
-                  className={sectionHeadClass}
-                >
-                  <span className="inline-flex items-center gap-1.5">
-                    <Layers className="h-3.5 w-3.5" />
-                    Направление и сфера
-                  </span>
-                  <ChevronDown className={`h-3.5 w-3.5 transition ${isSphereOpen ? 'rotate-180' : ''}`} />
-                </button>
-                {isSphereOpen && (
-                  <div className="mt-2 grid flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setCategory('')}
-                      className={`${chipBase} ${category === '' ? chipActive : chipIdle}`}
-                    >
-                      Все
-                    </button>
-                    {categories.map((c) => (
-                      <button
-                        key={c.id}
-                        type="button"
-                        onClick={() => setCategory(c.value)}
-                        className={`${chipBase} ${category === c.value ? chipActive : chipIdle}`}
-                      >
-                        {c.labelRu}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Секция 3: срочность */}
-              <div className={sectionClass}>
-                <button
-                  type="button"
-                  onClick={() => setIsPriorityOpen((v) => !v)}
-                  className={sectionHeadClass}
-                >
-                  <span className="inline-flex items-center gap-1.5">
-                    <Zap className="h-3.5 w-3.5" />
-                    Срочность
-                  </span>
-                  <ChevronDown className={`h-3.5 w-3.5 transition ${isPriorityOpen ? 'rotate-180' : ''}`} />
-                </button>
-                {isPriorityOpen && (
-                  <div className="mt-2 grid flex flex-wrap gap-2">
-                    {[
-                      ['', 'Любая'],
-                      ['normal', 'Обычные'],
-                      ['high', '🟡 Приоритет'],
-                      ['critical', '🔴 Критично'],
-                    ].map(([value, label]) => (
-                      <button
-                        key={value || 'any'}
-                        type="button"
-                        onClick={() => setPriority(value)}
-                        className={`${chipBase} ${priority === value ? chipActive : chipIdle}`}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Секция 4: минимальная награда исполнителю */}
+              {/* Секция 2: минимальная награда исполнителю */}
               <div className={sectionClass}>
                 <button
                   type="button"
@@ -327,6 +257,75 @@ export default function TaskFilterBar({
                       Это чистая награда исполнителю — без надбавки за срочность
                       и без денег на закупку.
                     </p>
+                  </div>
+                )}
+              </div>
+              {/* Секция 3: срочность */}
+              <div className={sectionClass}>
+                <button
+                  type="button"
+                  onClick={() => setIsPriorityOpen((v) => !v)}
+                  className={sectionHeadClass}
+                >
+                  <span className="inline-flex items-center gap-1.5">
+                    <Zap className="h-3.5 w-3.5" />
+                    Срочность
+                  </span>
+                  <ChevronDown className={`h-3.5 w-3.5 transition ${isPriorityOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {isPriorityOpen && (
+                  <div className="mt-2 grid flex flex-wrap gap-2">
+                    {[
+                      ['', 'Любая'],
+                      ['normal', 'Обычные'],
+                      ['high', '🟡 Приоритет'],
+                      ['critical', '🔴 Критично'],
+                    ].map(([value, label]) => (
+                      <button
+                        key={value || 'any'}
+                        type="button"
+                        onClick={() => setPriority(value)}
+                        className={`${chipBase} ${priority === value ? chipActive : chipIdle}`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Секция 4: направление и сфера */}
+              <div className={sectionClass}>
+                <button
+                  type="button"
+                  onClick={() => setIsSphereOpen((v) => !v)}
+                  className={sectionHeadClass}
+                >
+                  <span className="inline-flex items-center gap-1.5">
+                    <Layers className="h-3.5 w-3.5" />
+                    Направление и сфера
+                  </span>
+                  <ChevronDown className={`h-3.5 w-3.5 transition ${isSphereOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {isSphereOpen && (
+                  <div className="mt-2 grid flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setCategory('')}
+                      className={`${chipBase} ${category === '' ? chipActive : chipIdle}`}
+                    >
+                      Все
+                    </button>
+                    {categories.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => setCategory(c.value)}
+                        className={`${chipBase} ${category === c.value ? chipActive : chipIdle}`}
+                      >
+                        {c.labelRu}
+                      </button>
+                    ))}
                   </div>
                 )}
               </div>

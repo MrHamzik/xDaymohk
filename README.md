@@ -72,6 +72,7 @@ npm run dev
 | 20 | `supabase/update/20-tasks-feed-fix.sql` | **Фикс пустой ленты**: вьюхи заданий с `security_invoker = false` |
 | 21 | `supabase/update/21-tasks-purchase-budget.sql` | Бюджет закупки для «Покупок» |
 | 22 | `supabase/update/22-map-categories.sql` | Категории карты из localStorage → БД |
+| 23 | `supabase/update/23-catalog-filters.sql` | Сферы каталога («Направление и сфера») из кода → БД |
 
 > 💡 **pg_cron (шаг 11)** — рекомендую включить: письма доставляются сами,
 > без ручной кнопки.

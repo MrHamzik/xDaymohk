@@ -168,7 +168,7 @@ export default function WorkplaceSection({
           {/* Категории «Другое» — общий справочник из БД
               (админка → «Фильтры» → «Карта»). */}
           {showPlaces && placeCategories.length > 0 && (
-            <div className="flex flex-wrap items-center gap-2 px-1">
+            <div className="-mt-1 flex flex-wrap items-center gap-2 px-1">
               <label htmlFor="workplace-place-category" className="text-[10px] font-bold text-slate-400">
                 Категория:
               </label>

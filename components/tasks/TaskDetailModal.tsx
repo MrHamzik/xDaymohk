@@ -100,29 +100,6 @@ export default function TaskDetailModal({
             {task?.title ?? 'Задание'}
           </h2>
           <div className="flex shrink-0 items-center gap-1">
-            {/* Удаление — в шапке, а не среди кнопок внизу: там его
-                не находили. Показываем автору всегда; можно ли удалять
-                на самом деле, решает сервер и объясняет причину. */}
-            {isAuthor && (
-              <button
-                type="button"
-                disabled={Boolean(busy)}
-                onClick={() => {
-                  if (!window.confirm('Удалить задание? Его больше не будет в списках.')) return;
-                  act('delete', async () => {
-                    await deleteTask(task!.id);
-                    onClose();
-                  });
-                }}
-                aria-label="Удалить задание"
-                title="Удалить задание"
-                className="rounded-lg p-1.5 text-rose-500 transition hover:bg-rose-50 disabled:opacity-60 dark:text-rose-400 dark:hover:bg-rose-950/40"
-              >
-                {busy === 'delete'
-                  ? <Loader2 className="h-4 w-4 animate-spin" />
-                  : <Trash2 className="h-4 w-4" />}
-              </button>
-            )}
             <button
               type="button"
               onClick={onClose}
@@ -410,16 +387,37 @@ export default function TaskDetailModal({
               </button>
             )}
 
-            {isAuthor && ['open', 'in_progress'].includes(task.status) && (
-              <button
-                type="button"
-                disabled={Boolean(busy)}
-                onClick={() => act('cancel', () => runTaskAction(task.id, 'cancel'))}
-                className={`${btn} bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700`}
-              >
-                Отменить задание
-              </button>
-            )}
+            {/* Одна кнопка вместо пары «корзина + отменить»: пока
+                задание никто не взял — оно просто удаляется, после
+                этого остаётся только отмена, чтобы исполнитель получил
+                уведомление. Пользователю не нужно выбирать между ними. */}
+            {isAuthor && ['open', 'in_progress'].includes(task.status) && (() => {
+              const canDelete = task.status === 'open' && activeParticipants.length === 0;
+              return (
+                <button
+                  type="button"
+                  disabled={Boolean(busy)}
+                  onClick={() => {
+                    if (canDelete) {
+                      if (!window.confirm('Удалить задание? Его больше не будет в списках.')) return;
+                      act('delete', async () => {
+                        await deleteTask(task.id);
+                        onClose();
+                      });
+                      return;
+                    }
+                    if (!window.confirm('Отменить задание? Исполнитель получит уведомление.')) return;
+                    act('cancel', () => runTaskAction(task.id, 'cancel'));
+                  }}
+                  className={`${btn} bg-rose-50 text-rose-700 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-950/70`}
+                >
+                  {busy === 'delete' || busy === 'cancel'
+                    ? <Loader2 className="h-4 w-4 animate-spin" />
+                    : <Trash2 className="h-4 w-4" />}
+                  {canDelete ? 'Удалить задание' : 'Отменить задание'}
+                </button>
+              );
+            })()}
 
           </div>
         )}

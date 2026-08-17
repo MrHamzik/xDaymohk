@@ -229,11 +229,15 @@ export async function touchExecutorActivity(admin: SupabaseClient, userId: strin
     const activeUntil = new Date(Date.now() + EXECUTOR_ACTIVE_MINUTES * 60_000).toISOString();
     const { data } = await admin
       .from('executor_status')
-      .select('is_active')
+      .select('is_active, active_until')
       .eq('user_id', userId)
       .maybeSingle();
-    // Продлеваем только тем, кто сам включил тумблер.
-    if (!data?.is_active) return;
+    // Продлеваем только ДЕЙСТВУЮЩУЮ активность. Раньше проверялся
+    // лишь флаг is_active, а он остаётся true и после истечения срока:
+    // человек включался вчера, сегодня заходил — и любое действие
+    // молча воскрешало статус. Теперь протухший статус так и остаётся
+    // выключенным, пока пользователь не включит его сам.
+    if (!isExecutorActive(data)) return;
     await admin
       .from('executor_status')
       .update({ active_until: activeUntil })
