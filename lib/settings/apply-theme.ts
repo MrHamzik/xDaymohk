@@ -138,11 +138,11 @@ export function applyThemeColors(
   set('--surface-card', colors.card);
   set('--surface-subtle', colors.cardAlt);
   set('--border-subtle', colors.cardLine);
-  // Границы: cardLine у тёмных тем намеренно темнее карточки (обводка
-  // «утоплена»), но для внутренних разделителей нужна видимая линия —
-  // тот же шаг, что и у поверхностей.
-  set('--border-dark-soft', surfaceStep);
-  set('--border-dark-card', surfaceStep);
+  // Границы — утопленные: линия ТЕМНЕЕ карточки, а не светлее.
+  // Светлая рамка на тёмном полотне выглядит дешёвой обводкой, поэтому
+  // берём cardLine из палитры (он и задуман как «обводка темнее фона»).
+  set('--border-dark-soft', colors.cardLine);
+  set('--border-dark-card', colors.cardLine);
 
   // ── Источники, на которые ссылаются утилиты zinc ────────────────
   set('--color-zinc-950', colors.bg);

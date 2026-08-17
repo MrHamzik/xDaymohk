@@ -144,77 +144,77 @@ export const PRESET_THEMES: Record<
    * по трём разным тонам, чтобы «работает» и «перерыв» различались
    * не только положением.
    */
+  /**
+   * Космос — построен по цветовому кругу: база синий (225°), отход
+   * ±30° даёт голубой 195° и фиолетовый 255°, дальше пурпур 280°.
+   * Раньше оттенки подбирались на глаз, и половина палитры лежала
+   * в одном фиолетовом секторе.
+   */
   space: {
     name: 'Космос',
     isDark: true,
     colors: {
-      bg: '#0d0b1a',
-      card: '#1a1530',
-      cardAlt: '#141026',
-      cardLine: '#0a0814',
-      cardInset: '#272045',
-      text: '#f0ecff',
-      muted: '#9a8fc4',
-      // Акцент карточек — холодный циан: контраст к фиолетовому
-      // интерфейсу, роль та же, что у золота в базовых темах.
-      accent: '#22d3ee',
-      accentSoft: '#a5f3fc',
-      accentDeep: '#0891b2',
-      // Интерфейс — фиолетовый: меню, кнопки, ползунки.
-      ui: '#7c5cf0',
-      statusActive: '#34d399',      // мятный: живой, но не кислотный
-      statusBreak: '#fbbf24',       // янтарь — единственное тёплое пятно
-      statusFlexible: '#22d3ee',    // циан, заодно перекликается с акцентом
-      statusOffline: '#6b6494',     // приглушённый лиловый
-      roleSpecialist: '#34d399',
-      roleAdmin: '#f472b6',         // розовый вместо алого
-      roleVerified: '#818cf8',      // индиго
-      danger: '#fb7185',
-      heroFrom: '#6d28d9',
-      heroTo: '#0891b2',            // градиент из фиолетового в циан
-      mapCluster: '#7c5cf0',
-      mapHouse: '#22d3ee',
+      bg: '#0e0c18',
+      card: '#191727',
+      cardAlt: '#131120',
+      cardLine: '#0a0912',
+      cardInset: '#272438',
+      text: '#eeecfa',
+      muted: '#948eb8',
+      // Акцент — голубой: холодный край семьи, контраст к фиолетовому.
+      accent: '#42b2d7',
+      accentSoft: '#b8e4f2',
+      accentDeep: '#2a7fa0',
+      // Интерфейс — фиолетовый (отход +30 от базы).
+      ui: '#7a54d4',
+      statusActive: '#3bc2ce',   // циан
+      statusBreak: '#d9a441',    // единственный тёплый
+      statusFlexible: '#3945d0', // индиго — база круга
+      statusOffline: '#5f5a7d',
+      roleSpecialist: '#3bc2ce',
+      roleAdmin: '#ac61d1',      // пурпур
+      roleVerified: '#3945d0',
+      danger: '#e05575',
+      heroFrom: '#3d2a8f',
+      heroTo: '#2a7fa0',
+      mapCluster: '#7a54d4',
+      mapHouse: '#42b2d7',
     },
   },
   /**
-   * Закат — алые и багровые тона, как и просили.
-   *
-   * Прежняя версия была оранжево-коричневой и выглядела грязно.
-   * Теперь база — вино и багрянец, интерфейс — алый кармин, а акцент
-   * уходит в золото: классическая пара «красное + золотое», к которой
-   * добавлен оранжевый для полутонов. Холодный акцент здесь один —
-   * бирюзовый «произвольный график», иначе четыре статуса читались бы
-   * как один тёплый градиент.
+   * Закат — тёплая половина круга: база красный (0°), отход ±30° даёт
+   * розовый 330° и оранжевый 30°, дальше золото 42°. Алые и багровые
+   * тона, как и просили, но собранные по правилу, а не наугад.
    */
   sunset: {
     name: 'Закат',
     isDark: true,
     colors: {
-      bg: '#180509',
-      card: '#2d0b14',
-      cardAlt: '#210710',
-      cardLine: '#120407',
-      cardInset: '#421320',
-      text: '#ffeef0',
-      muted: '#c98f99',
-      // Акцент — золото: пара к алому, та же роль, что в базовых темах.
-      accent: '#fbbf24',
-      accentSoft: '#fde68a',
-      accentDeep: '#d97706',
-      // Интерфейс — алый кармин.
-      ui: '#e11d48',
-      statusActive: '#f59e0b',      // янтарь: «горит», в тон закату
-      statusBreak: '#fb923c',       // оранжевый
-      statusFlexible: '#2dd4bf',    // бирюза — единственный холодный
-      statusOffline: '#8a5560',     // выцветший бордовый
-      roleSpecialist: '#f59e0b',
-      roleAdmin: '#f43f5e',
-      roleVerified: '#fbbf24',
-      danger: '#ff4d6d',
-      heroFrom: '#9f1239',          // бордо
-      heroTo: '#ea580c',            // в оранжевый закат
-      mapCluster: '#e11d48',
-      mapHouse: '#fbbf24',
+      bg: '#190b0e',
+      card: '#281519',
+      cardAlt: '#1f1013',
+      cardLine: '#12080a',
+      cardInset: '#3a2227',
+      text: '#ffeef1',
+      muted: '#c2919b',
+      // Акцент — золото: классическая пара к алому.
+      accent: '#eeb32b',
+      accentSoft: '#fbe3a4',
+      accentDeep: '#b8801a',
+      // Интерфейс — кармин (база круга).
+      ui: '#db243c',
+      statusActive: '#e77823',   // оранжевый, тёплый край
+      statusBreak: '#eeb32b',    // золото
+      statusFlexible: '#3fa8b5', // единственный холодный
+      statusOffline: '#8a5f66',
+      roleSpecialist: '#e77823',
+      roleAdmin: '#db4382',      // роза
+      roleVerified: '#eeb32b',
+      danger: '#e24932',
+      heroFrom: '#9c1730',
+      heroTo: '#e77823',
+      mapCluster: '#db243c',
+      mapHouse: '#eeb32b',
     },
   },
   /**
@@ -335,6 +335,83 @@ export const PRESET_THEMES: Record<
       heroTo: '#0ea5e9',
       mapCluster: '#0ea5e9',
       mapHouse: '#94a3b8',
+    },
+  },
+  /**
+   * Природа — построена по цветовому кругу RYB.
+   *
+   * База — зелёный (130° в HSL), от него отход на ±30°: салатовый 100°
+   * и бирюза 160°, плюс голубой 195° как дальний холодный акцент.
+   * Насыщенность и светлота подобраны так, чтобы соседние оттенки
+   * различались, но читались как одна семья.
+   */
+  nature: {
+    name: 'Природа',
+    isDark: true,
+    colors: {
+      bg: '#0d1712',
+      card: '#16221c',
+      cardAlt: '#111c16',
+      cardLine: '#0a120e',
+      cardInset: '#213029',
+      text: '#e8f5ee',
+      muted: '#8aa89a',
+      // Акцент — бирюза (холодный край семьи).
+      accent: '#37ae97',
+      accentSoft: '#a7e0d4',
+      accentDeep: '#25806e',
+      // Интерфейс — лист (база круга).
+      ui: '#389f49',
+      statusActive: '#68c639',   // салат, тёплый край
+      statusBreak: '#d9a441',    // единственный тёплый: контраст к зелени
+      statusFlexible: '#3ea8cc', // голубой
+      statusOffline: '#5d7a6d',
+      roleSpecialist: '#68c639',
+      roleAdmin: '#d96a5a',
+      roleVerified: '#3ea8cc',
+      danger: '#d9564a',
+      heroFrom: '#1f6b45',
+      heroTo: '#2f8f86',
+      mapCluster: '#389f49',
+      mapHouse: '#37ae97',
+    },
+  },
+  /**
+   * Янтарь — тёплая половина того же круга.
+   *
+   * База — жёлтый (50°), отход ±30°: оранжевая охра 28° и лимонный 74°.
+   * Холодных тонов почти нет — только «произвольный график», иначе все
+   * четыре статуса слились бы в один медовый градиент.
+   */
+  amber: {
+    name: 'Янтарь',
+    isDark: true,
+    colors: {
+      bg: '#18130c',
+      card: '#231d15',
+      cardAlt: '#1c170f',
+      cardLine: '#120e08',
+      cardInset: '#312a21',
+      text: '#fdf3e3',
+      muted: '#b09a7c',
+      // Акцент — золото (сердце семьи).
+      accent: '#f1c927',
+      accentSoft: '#fbe9a8',
+      accentDeep: '#b8901a',
+      // Интерфейс — охра: темнее акцента, не спорит с ним.
+      ui: '#da741b',
+      statusActive: '#aacf30',   // лимон, холодный край
+      statusBreak: '#eda71d',    // янтарь
+      statusFlexible: '#4bb3c4', // единственный холодный
+      statusOffline: '#7d6b52',
+      roleSpecialist: '#aacf30',
+      roleAdmin: '#e0553c',
+      roleVerified: '#f1c927',
+      danger: '#e0553c',
+      heroFrom: '#a34e10',
+      heroTo: '#e0a020',
+      mapCluster: '#da741b',
+      mapHouse: '#f1c927',
     },
   },
 };
