@@ -118,7 +118,7 @@ export const PRESET_THEMES: Record<
       card: '#1c1c20',
       cardAlt: '#161619',
       cardLine: '#0f0f12',
-      cardInset: '#1f1f23',
+      cardInset: '#26262c',
       text: '#ffffff',
       muted: '#8a8a93',
       accent: '#ffae00',
@@ -152,7 +152,7 @@ export const PRESET_THEMES: Record<
       card: '#1a1530',
       cardAlt: '#141026',
       cardLine: '#0a0814',
-      cardInset: '#221b3d',
+      cardInset: '#272045',
       text: '#f0ecff',
       muted: '#9a8fc4',
       // Акцент карточек — холодный циан: контраст к фиолетовому
@@ -194,7 +194,7 @@ export const PRESET_THEMES: Record<
       card: '#2d0b14',
       cardAlt: '#210710',
       cardLine: '#120407',
-      cardInset: '#3b101c',
+      cardInset: '#421320',
       text: '#ffeef0',
       muted: '#c98f99',
       // Акцент — золото: пара к алому, та же роль, что в базовых темах.
@@ -235,7 +235,7 @@ export const PRESET_THEMES: Record<
       card: '#0a0a0a',
       cardAlt: '#050505',
       cardLine: '#121212',
-      cardInset: '#141414',
+      cardInset: '#1a1a1a',
       text: '#fafafa',
       muted: '#8f8f8f',
       // Акцент — белый: на чёрном он работает как золото на светлом.

@@ -121,6 +121,16 @@ export function applyThemeColors(
   root.classList.toggle('smk-glass', glass);
   root.style.colorScheme = isDark ? 'dark' : 'light';
 
+  // Порядок ступеней обязан оставаться монотонным: 700 — самая светлая
+  // поверхность, 950 — самая тёмная. Раньше 700 получал cardInset
+  // (подложку строк), которая почти равна карточке, — и выключенный
+  // тумблер с границами пропадал, хотя в светлой теме был виден.
+  //
+  // Теперь 700 выводим отдельно: отступаем от карточки в сторону
+  // текста. Для тёмной темы это шаг к белому, для светлой — к чёрному,
+  // поэтому одна формула работает в обеих.
+  const surfaceStep = mix(colors.card, isDark ? '#ffffff' : '#000000', 0.13);
+
   // ── Семантические слоты: именно они рисуют фон и текст страницы ──
   set('--background', colors.bg);
   set('--foreground', colors.text);
@@ -128,14 +138,17 @@ export function applyThemeColors(
   set('--surface-card', colors.card);
   set('--surface-subtle', colors.cardAlt);
   set('--border-subtle', colors.cardLine);
-  set('--border-dark-soft', colors.cardLine);
-  set('--border-dark-card', colors.cardLine);
+  // Границы: cardLine у тёмных тем намеренно темнее карточки (обводка
+  // «утоплена»), но для внутренних разделителей нужна видимая линия —
+  // тот же шаг, что и у поверхностей.
+  set('--border-dark-soft', surfaceStep);
+  set('--border-dark-card', surfaceStep);
 
   // ── Источники, на которые ссылаются утилиты zinc ────────────────
   set('--color-zinc-950', colors.bg);
   set('--color-zinc-900', colors.cardAlt);
   set('--color-zinc-800', colors.card);
-  set('--color-zinc-700', colors.cardInset);
+  set('--color-zinc-700', surfaceStep);
 
   // ── Карточка ────────────────────────────────────────────────────
   set('--smk-card-a', colors.card);
