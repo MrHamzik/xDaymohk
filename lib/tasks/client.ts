@@ -129,6 +129,15 @@ export async function runTaskAction(
   await parse(response);
 }
 
+/** Удалить своё задание (мягко: уходит в архив, история сохраняется). */
+export async function deleteTask(taskId: string): Promise<void> {
+  const response = await fetch(`/api/tasks/${encodeURIComponent(taskId)}`, {
+    method: 'DELETE',
+    headers: await authHeaders(),
+  });
+  await parse(response);
+}
+
 export async function fetchExecutorStatus(): Promise<{
   isActive: boolean;
   activeUntil: string | null;

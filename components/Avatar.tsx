@@ -1,17 +1,18 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { cacheBustAvatarUrl } from '@/lib/media';
+import { cacheBustAvatarUrl, AVATAR_FALLBACK } from '@/lib/media';
 
-const FALLBACK = '/icon.png';
+const FALLBACK = AVATAR_FALLBACK;
 
-interface TaskAvatarProps {
+interface AvatarProps {
   src?: string | null;
   className?: string;
+  alt?: string;
 }
 
 /**
- * Аватар в разделе заданий.
+ * Аватар пользователя — единая точка для всего приложения.
  *
  * Решает две проблемы, всплывшие в консоли:
  *
@@ -27,7 +28,7 @@ interface TaskAvatarProps {
  * referrerPolicy="no-referrer" — Google охотнее отдаёт аватар без
  * заголовка Referer с localhost.
  */
-export default function TaskAvatar({ src, className = '' }: TaskAvatarProps) {
+export default function Avatar({ src, className = '', alt = '' }: AvatarProps) {
   const initial = src && src.trim() ? cacheBustAvatarUrl(src) : FALLBACK;
   const [current, setCurrent] = useState(initial);
 
@@ -39,7 +40,7 @@ export default function TaskAvatar({ src, className = '' }: TaskAvatarProps) {
   return (
     <img
       src={current}
-      alt=""
+      alt={alt}
       loading="lazy"
       referrerPolicy="no-referrer"
       onError={() => {

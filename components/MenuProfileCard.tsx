@@ -1,5 +1,6 @@
 'use client';
 
+import Avatar from '@/components/Avatar';
 import Link from 'next/link';
 import { Ban } from 'lucide-react';
 import { cacheBustAvatarUrl } from '@/lib/media';
@@ -44,11 +45,7 @@ export default function MenuProfileCard() {
     <>
       <div className={`relative h-11 w-11 shrink-0 rounded-full p-0.5 shadow-sm overflow-hidden bg-white dark:bg-zinc-950 ${isLocked ? 'ring-2 ring-red-400/80' : 'ring-2 ring-emerald-500/80'}`}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={cacheBustAvatarUrl(account?.avatarUrl || '/icon.png')}
-          alt={account?.fullName || 'Даймохк'}
-          className="h-full w-full object-cover rounded-full"
-        />
+        <Avatar src={account?.avatarUrl || '/icon.png'} className="h-full w-full object-cover rounded-full" />
       </div>
       <div className="min-w-0 flex-1">
         <h3 className="truncate text-xs font-bold text-slate-900 dark:text-white">

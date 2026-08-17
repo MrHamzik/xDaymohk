@@ -53,7 +53,7 @@ export default function MapSegmentedControl<T extends string>({
             aria-selected={radio ? isActive : undefined}
             aria-pressed={radio ? undefined : isActive}
             onClick={() => onSelect(option.value)}
-            className={`rounded-lg px-2 py-1 text-[11px] font-bold transition ${
+            className={`rounded-lg px-2 py-1 text-[11px] font-bold transition ${className.includes('w-full') ? 'flex-1 ' : ''}${
               isActive
                 ? 'bg-white text-slate-900 shadow-sm dark:bg-zinc-700 dark:text-white'
                 : 'text-slate-500 hover:text-slate-800 dark:text-zinc-500 dark:hover:text-zinc-200'

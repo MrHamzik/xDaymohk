@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { X, Loader2, Star, Check, UserX } from 'lucide-react';
-import TaskAvatar from '@/components/tasks/TaskAvatar';
+import Avatar from '@/components/Avatar';
 import { runTaskAction, submitResidentReview } from '@/lib/tasks/client';
 import { taskTotalReward, type Task, type TaskParticipant } from '@/lib/types';
 
@@ -160,7 +160,7 @@ export default function AttendanceModal({
                 }`}
               >
                 <div className="flex items-center gap-2.5">
-                  <TaskAvatar src={p.avatarUrl} className="h-9 w-9 shrink-0 rounded-xl object-cover" />
+                  <Avatar src={p.avatarUrl} className="h-9 w-9 shrink-0 rounded-xl object-cover" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-xs font-bold text-slate-900 dark:text-white">
                       {p.fullName || 'Житель'}

@@ -1,9 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { X, Loader2, Star, MapPin, Clock, Users, CalendarDays } from 'lucide-react';
-import TaskAvatar from '@/components/tasks/TaskAvatar';
-import { fetchTask, runTaskAction, submitResidentReview, formatTimeLeft } from '@/lib/tasks/client';
+import { X, Loader2, Star, MapPin, Clock, Users, CalendarDays, Trash2, ExternalLink } from 'lucide-react';
+import Avatar from '@/components/Avatar';
+import { fetchTask, runTaskAction, submitResidentReview, deleteTask, formatTimeLeft } from '@/lib/tasks/client';
 import AttendanceModal from '@/components/tasks/AttendanceModal';
 import {
   taskTotalReward,
@@ -109,7 +109,7 @@ export default function TaskDetailModal({
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
+        <div className="min-h-0 flex-1 overflow-y-auto">
           {isLoading && (
             <div className="flex justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-emerald-600" />
@@ -119,8 +119,8 @@ export default function TaskDetailModal({
           {task && (
             <>
               {/* Заказчик — по этим цифрам судят, браться ли */}
-              <div className="flex items-center gap-3 rounded-2xl bg-slate-50 p-3 dark:bg-zinc-800/60">
-                <TaskAvatar src={task.authorAvatarUrl} className="h-11 w-11 shrink-0 rounded-xl object-cover" />
+              <div className="flex items-center gap-3 px-4 py-4">
+                <Avatar src={task.authorAvatarUrl} className="h-11 w-11 shrink-0 rounded-xl object-cover" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold text-slate-900 dark:text-white">
                     {task.authorName || 'Житель Даймохк'}
@@ -142,12 +142,17 @@ export default function TaskDetailModal({
               </div>
 
               {task.description && (
-                <p className="whitespace-pre-wrap break-words rounded-xl border border-slate-100 bg-slate-50/70 p-3 text-xs leading-relaxed text-slate-700 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-300">
-                  {task.description}
-                </p>
+                <div className="border-t border-slate-100 px-4 py-4 dark:border-zinc-800">
+                  <h3 className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                    Подробности
+                  </h3>
+                  <p className="whitespace-pre-wrap break-words text-[13px] leading-relaxed text-slate-700 dark:text-zinc-300">
+                    {task.description}
+                  </p>
+                </div>
               )}
 
-              <div className="grid grid-cols-2 gap-2 text-[11px]">
+              <div className="grid grid-cols-2 gap-2 border-t border-slate-100 px-4 py-4 text-[11px] dark:border-zinc-800">
                 <InfoRow
                   icon={task.kind === 'scheduled' ? CalendarDays : Clock}
                   label={task.kind === 'scheduled' ? 'Дата работ' : 'Сделать до'}
@@ -159,9 +164,25 @@ export default function TaskDetailModal({
                 {task.address && <InfoRow icon={MapPin} label="Адрес" value={task.address} />}
               </div>
 
+              {/* Как в анкете: быстрый переход к точке на карте */}
+              {typeof task.lat === 'number' && typeof task.lng === 'number' && (
+                <div className="border-t border-slate-100 px-4 py-3 dark:border-zinc-800">
+                  <a
+                    href={`https://yandex.ru/maps/?pt=${task.lng},${task.lat}&z=17&l=map`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 hover:underline dark:text-emerald-400"
+                  >
+                    <MapPin className="h-3.5 w-3.5" />
+                    Открыть на карте
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+              )}
+
               {/* Участники: видно, кто взял задание */}
               {activeParticipants.length > 0 && (
-                <div>
+                <div className="border-t border-slate-100 px-4 py-4 dark:border-zinc-800">
                   <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-400">
                     {task.kind === 'urgent' ? 'Исполнитель' : `Записались (${activeParticipants.length})`}
                   </h3>
@@ -169,9 +190,9 @@ export default function TaskDetailModal({
                     {activeParticipants.map((p) => (
                       <div
                         key={p.id}
-                        className="flex items-center gap-2 rounded-xl border border-slate-200 p-2 dark:border-zinc-700"
+                        className="flex items-center gap-2 rounded-xl bg-slate-50 p-2.5 dark:bg-zinc-800/60"
                       >
-                        <TaskAvatar src={p.avatarUrl} className="h-8 w-8 shrink-0 rounded-lg object-cover" />
+                        <Avatar src={p.avatarUrl} className="h-8 w-8 shrink-0 rounded-lg object-cover" />
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-xs font-bold text-slate-900 dark:text-white">
                             {p.fullName || 'Житель'}
@@ -197,7 +218,7 @@ export default function TaskDetailModal({
               )}
 
               {task.status === 'awaiting_confirm' && (
-                <p className="rounded-xl bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+                <p className="mx-4 mb-4 rounded-xl bg-amber-50 px-3.5 py-2.5 text-[11px] font-semibold leading-relaxed text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
                   Исполнитель отметил работу выполненной. Если не подтвердить за {TASK_AUTO_CONFIRM_HOURS} ч,
                   задание закроется автоматически, а создание новых будет заблокировано.
                 </p>
@@ -205,7 +226,7 @@ export default function TaskDetailModal({
 
               {/* Оценка второй стороны после закрытия сделки */}
               {task.status === 'completed' && (isAuthor || isExecutor) && (
-                <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-3 dark:border-emerald-900 dark:bg-emerald-950/30">
+                <div className="mx-4 mb-4 rounded-2xl bg-emerald-50/70 p-3.5 dark:bg-emerald-950/30">
                   <h3 className="mb-2 text-xs font-bold text-emerald-900 dark:text-emerald-300">
                     {isAuthor ? 'Оцените исполнителя' : 'Оцените заказчика'}
                   </h3>
@@ -254,7 +275,7 @@ export default function TaskDetailModal({
               )}
 
               {error && (
-                <p className="rounded-xl bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
+                <p className="mx-4 mb-4 rounded-xl bg-rose-50 px-3.5 py-2.5 text-xs font-semibold text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
                   {error}
                 </p>
               )}
@@ -342,9 +363,29 @@ export default function TaskDetailModal({
                 type="button"
                 disabled={Boolean(busy)}
                 onClick={() => act('cancel', () => runTaskAction(task.id, 'cancel'))}
-                className={`${btn} border border-slate-200 text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-300`}
+                className={`${btn} bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700`}
               >
                 Отменить задание
+              </button>
+            )}
+
+            {/* Удаление доступно, пока задание никто не взял: иначе
+                исполнителя нужно предупредить — для этого «Отменить». */}
+            {isAuthor && task.status === 'open' && activeParticipants.length === 0 && (
+              <button
+                type="button"
+                disabled={Boolean(busy)}
+                onClick={() => {
+                  if (!window.confirm('Удалить задание? Его больше не будет в списках.')) return;
+                  act('delete', async () => {
+                    await deleteTask(task.id);
+                    onClose();
+                  });
+                }}
+                className="flex items-center justify-center gap-1.5 rounded-xl bg-rose-50 px-3 py-2.5 text-sm font-bold text-rose-700 transition hover:bg-rose-100 disabled:opacity-60 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-950/70"
+              >
+                {busy === 'delete' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                Удалить
               </button>
             )}
           </div>
@@ -373,7 +414,7 @@ function InfoRow({
   value: string;
 }) {
   return (
-    <div className="rounded-xl bg-slate-50 p-2 dark:bg-zinc-800/60">
+    <div className="rounded-xl bg-slate-50 p-2.5 dark:bg-zinc-800/60">
       <p className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">
         <Icon className="h-3 w-3" />
         {label}

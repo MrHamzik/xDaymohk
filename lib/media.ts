@@ -87,10 +87,18 @@ export async function compressImageFile(file: File, square = false) {
  * Работает только с нашими storage-URL (profile-media).
  */
 export function cacheBustAvatarUrl(url: string): string {
-  if (!url || !url.includes('/profile-media/')) return url;
+  // Пустое значение нельзя отдавать в src: React предупреждает
+  // («An empty string was passed to the src attribute»), а браузер
+  // повторно скачивает саму страницу. У жителей без аватара поле
+  // пустое, поэтому подставляем иконку приложения.
+  if (!url || !url.trim()) return AVATAR_FALLBACK;
+  if (!url.includes('/profile-media/')) return url;
   const sep = url.includes('?') ? '&' : '?';
   return `${url}${sep}v=${Date.now()}`;
 }
+
+/** Запасной аватар: используется, когда ссылки нет или картинка не грузится. */
+export const AVATAR_FALLBACK = '/icon.png';
 
 export async function compressImageDataUrl(dataUrl: string, square = false) {
   return compressDataUrl(dataUrl, square);

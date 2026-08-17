@@ -1,5 +1,6 @@
 'use client';
 
+import Avatar from '@/components/Avatar';
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { Archive, ArrowLeft, Ban, Check, ChevronDown, Clock3, Eye, EyeOff, FolderOpen, MapPin, Moon, Plus, RotateCcw, Save as SaveIcon, Search, Send, ShieldAlert, Star, Sun, Trash2, Upload, UserCheck, UserRound, X, Pencil } from 'lucide-react';
@@ -1703,7 +1704,7 @@ export default function AdminPage() {
                           <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-2xl bg-slate-200 dark:bg-zinc-800">
                             {profile.avatarUrl ? (
                               // eslint-disable-next-line @next/next/no-img-element
-                              <img src={cacheBustAvatarUrl(profile.avatarUrl)} alt="" className="h-full w-full object-cover" />
+                              <Avatar src={profile.avatarUrl} className="h-full w-full object-cover" />
                             ) : (
                               <span className="flex h-full w-full items-center justify-center text-sm font-bold text-slate-500">{profile.fullName.charAt(0)}</span>
                             )}
@@ -1748,7 +1749,7 @@ export default function AdminPage() {
                         <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-2xl bg-slate-200 dark:bg-zinc-800">
                           {profile.avatarUrl ? (
                             // eslint-disable-next-line @next/next/no-img-element
-                            <img src={cacheBustAvatarUrl(profile.avatarUrl)} alt="" className="h-full w-full object-cover" />
+                            <Avatar src={profile.avatarUrl} className="h-full w-full object-cover" />
                           ) : (
                             <span className="flex h-full w-full items-center justify-center text-sm font-bold text-slate-500">{profile.fullName.charAt(0)}</span>
                           )}
@@ -1782,7 +1783,7 @@ export default function AdminPage() {
                           <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-2xl bg-slate-200 dark:bg-zinc-800">
                             {profile.avatarUrl ? (
                               // eslint-disable-next-line @next/next/no-img-element
-                              <img src={cacheBustAvatarUrl(profile.avatarUrl)} alt="" className="h-full w-full object-cover" />
+                              <Avatar src={profile.avatarUrl} className="h-full w-full object-cover" />
                             ) : (
                               <span className="flex h-full w-full items-center justify-center text-sm font-bold text-slate-500">{profile.fullName.charAt(0)}</span>
                             )}
@@ -1847,7 +1848,7 @@ export default function AdminPage() {
                           <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-2xl bg-slate-200 dark:bg-zinc-800">
                             {profile.avatarUrl ? (
                               // eslint-disable-next-line @next/next/no-img-element
-                              <img src={cacheBustAvatarUrl(profile.avatarUrl)} alt="" className="h-full w-full object-cover" />
+                              <Avatar src={profile.avatarUrl} className="h-full w-full object-cover" />
                             ) : (
                               <span className="flex h-full w-full items-center justify-center text-sm font-bold text-slate-500">
                                 {profile.fullName.charAt(0)}
@@ -1928,7 +1929,7 @@ export default function AdminPage() {
                 className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white"
               />
             </div>
-            <div className="space-y-3">{tabFilteredUsers.length === 0 ? <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-500">{L('Пользователей пока нет.', 'Лелошхой хIинца бац.')}</div> : tabFilteredUsers.map((user) => { const userProfiles = profiles.filter((profile) => profile.ownerId === user.id); const expanded = expandedUserId === user.id; return <div key={user.id} className={`rounded-3xl border p-4 shadow-sm transition ${user.isBlocked ? 'border-red-300 bg-red-50/70 dark:border-red-900 dark:bg-red-950/50' : 'border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-950'}`}><div className="flex flex-wrap items-center gap-3"><img src={cacheBustAvatarUrl(user.avatarUrl)} alt="" className="h-12 w-12 shrink-0 rounded-2xl object-cover" /><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-slate-900 dark:text-white">{user.fullName}</p><p className="truncate text-xs text-slate-500 dark:text-zinc-500">{user.email} · {L('анкет:', 'анкеташ:')} {user.profileCount}</p>
+            <div className="space-y-3">{tabFilteredUsers.length === 0 ? <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-500">{L('Пользователей пока нет.', 'Лелошхой хIинца бац.')}</div> : tabFilteredUsers.map((user) => { const userProfiles = profiles.filter((profile) => profile.ownerId === user.id); const expanded = expandedUserId === user.id; return <div key={user.id} className={`rounded-3xl border p-4 shadow-sm transition ${user.isBlocked ? 'border-red-300 bg-red-50/70 dark:border-red-900 dark:bg-red-950/50' : 'border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-950'}`}><div className="flex flex-wrap items-center gap-3"><Avatar src={user.avatarUrl} className="h-12 w-12 shrink-0 rounded-2xl object-cover" /><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-slate-900 dark:text-white">{user.fullName}</p><p className="truncate text-xs text-slate-500 dark:text-zinc-500">{user.email} · {L('анкет:', 'анкеташ:')} {user.profileCount}</p>
                           {user.isAdmin && <span className="mt-1 inline-flex rounded-md bg-slate-800 px-1.5 py-0.5 text-[10px] font-bold text-white dark:bg-zinc-700">Админ</span>}
                           {user.isBlocked && <span className="mt-1 inline-flex rounded-md bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white">{L('Аккаунт заблокирован', 'Аккаунт билсна')}</span>}
                         </div>

@@ -2,15 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Plus, Loader2, Power, MapPin, Search, Star } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ArrowLeft, Loader2, Power, MapPin, Search, Star } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import SidebarNav from '@/components/SidebarNav';
 import BottomNav from '@/components/BottomNav';
 import MobileMenuDrawer from '@/components/MobileMenuDrawer';
+import CreateActionModal from '@/components/CreateActionModal';
 import TaskCard from '@/components/tasks/TaskCard';
 import CreateTaskModal from '@/components/tasks/CreateTaskModal';
 import TaskDetailModal from '@/components/tasks/TaskDetailModal';
-import MapSegmentedControl from '@/components/MapSegmentedControl';
+import TaskFilterBar from '@/components/tasks/TaskFilterBar';
 import { useAuth } from '@/components/AuthProvider';
 import { useProfiles } from '@/components/ProfilesProvider';
 import {
@@ -30,6 +32,7 @@ type FeedTab = 'nearby' | 'all' | 'mine' | 'taken';
 export default function VayghullakhPage() {
   const { account } = useAuth();
   const { isCurrentUserAdmin } = useProfiles();
+  const router = useRouter();
 
   const [tasks, setTasks] = useState<Task[]>([]);
   // Задания, где я исполнитель, приходят отдельным запросом: общая лента
@@ -53,6 +56,7 @@ export default function VayghullakhPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [openTaskId, setOpenTaskId] = useState<string | null>(null);
   const [isMenuDrawerOpen, setIsMenuDrawerOpen] = useState(false);
+  const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -215,61 +219,21 @@ export default function VayghullakhPage() {
             </div>
           )}
 
-          {/* Вкладки + поиск */}
-          <div className="mb-3 space-y-2">
-            <MapSegmentedControl
-              ariaLabel="Лента заданий"
-              active={[tab]}
-              onSelect={(value) => setTab(value as FeedTab)}
-              options={[
-                { value: 'nearby', label: 'Близко' },
-                { value: 'all', label: 'Все' },
-                { value: 'mine', label: 'Мои' },
-                { value: 'taken', label: 'В работе', count: myTasks.length || undefined },
-              ]}
-            />
-
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Поиск по заданиям"
-                aria-label="Поиск по заданиям"
-                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
-              />
-            </div>
-
-            {categories.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setCategory('')}
-                  className={`rounded-full px-2.5 py-1 text-[11px] font-bold transition ${
-                    category === ''
-                      ? 'bg-emerald-600 text-white'
-                      : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400'
-                  }`}
-                >
-                  Все
-                </button>
-                {categories.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => setCategory(c.value)}
-                    className={`rounded-full px-2.5 py-1 text-[11px] font-bold transition ${
-                      category === c.value
-                        ? 'bg-emerald-600 text-white'
-                        : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400'
-                    }`}
-                  >
-                    {c.labelRu}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          <TaskFilterBar
+            query={query}
+            setQuery={setQuery}
+            tab={tab}
+            setTab={(v) => setTab(v as FeedTab)}
+            tabs={[
+              { value: 'nearby', label: 'Близко' },
+              { value: 'all', label: 'Все' },
+              { value: 'mine', label: 'Мои' },
+              { value: 'taken', label: 'В работе', count: myTasks.length || undefined },
+            ]}
+            categories={categories}
+            category={category}
+            setCategory={setCategory}
+          />
 
           {pendingReview.length > 0 && (
             <button
@@ -325,16 +289,6 @@ export default function VayghullakhPage() {
       </div>
 
       {/* Кнопка создания */}
-      {account && (
-        <button
-          type="button"
-          onClick={() => setIsCreateOpen(true)}
-          aria-label="Создать задание"
-          className="fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-lg shadow-emerald-600/35 transition hover:scale-105 hover:bg-emerald-700 active:scale-95 sm:bottom-6"
-        >
-          <Plus className="h-6 w-6 stroke-[2.5]" />
-        </button>
-      )}
 
       <CreateTaskModal
         isOpen={isCreateOpen}
@@ -349,11 +303,23 @@ export default function VayghullakhPage() {
         onChanged={load}
       />
 
-      <BottomNav onOpenMenu={() => setIsMenuDrawerOpen(true)} isAdmin={isCurrentUserAdmin} />
+      <BottomNav
+        onOpenMenu={() => setIsMenuDrawerOpen(true)}
+        onOpenCreate={() => setIsCreateSheetOpen(true)}
+        isAdmin={isCurrentUserAdmin}
+      />
       <MobileMenuDrawer
         isOpen={isMenuDrawerOpen}
         onClose={() => setIsMenuDrawerOpen(false)}
         isAdmin={isCurrentUserAdmin}
+      />
+      {/* Плюс в нижнем баре открывает общее круговое меню; выбор
+          нужного раздела сразу открывает форму, не уводя со страницы. */}
+      <CreateActionModal
+        isOpen={isCreateSheetOpen}
+        onClose={() => setIsCreateSheetOpen(false)}
+        onOpenCreateProfile={() => router.push('/catalog')}
+        onOpenGullaq={() => setIsCreateOpen(true)}
       />
     </div>
   );

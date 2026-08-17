@@ -102,6 +102,78 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   });
 }
 
+/**
+ * DELETE /api/tasks/:id — удалить своё задание.
+ *
+ * Пользователь ожидает, что «удалить» убирает задание из всех списков.
+ * Физически строку не стираем: на неё ссылаются участники, отзывы
+ * (resident_reviews.task_id) и разбор жалоб. Поэтому помечаем
+ * cancelled + is_archived — из ленты и «моих» задание исчезает, а
+ * история и рейтинги остаются целыми.
+ *
+ * Разрешено автору и админу. Задание, по которому уже идёт работа,
+ * удалить нельзя — сначала отмена (исполнитель должен узнать причину).
+ */
+export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
+  const limit = await rateLimit(request, { limit: 30, windowMs: 60_000, scope: 'task-delete' });
+  if (!limit.allowed) {
+    return withRateLimitHeaders(
+      NextResponse.json({ error: 'Too many requests' }, { status: 429 }),
+      { ...limit, limit: 30 },
+    );
+  }
+
+  const { id } = await context.params;
+  const auth = await authenticateTaskRequest(request);
+  if ('error' in auth) return taskAuthError(auth);
+  const { userId, email, admin } = auth;
+  const isAdmin = isAdminEmail(email);
+
+  const { data: task, error } = await admin
+    .from('tasks')
+    .select('id, author_id, status, title')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) {
+    log.warn('task delete: read failed:', error.message);
+    return NextResponse.json({ error: 'Не удалось загрузить задание' }, { status: 500 });
+  }
+  if (!task) return NextResponse.json({ error: 'Задание не найдено' }, { status: 404 });
+
+  if (String(task.author_id) !== userId && !isAdmin) {
+    return NextResponse.json({ error: 'Можно удалять только свои задания' }, { status: 403 });
+  }
+
+  // Если кто-то уже взялся — требуем отмену, чтобы он получил уведомление.
+  const { count: activeCount } = await admin
+    .from('task_participants')
+    .select('id', { count: 'exact', head: true })
+    .eq('task_id', id)
+    .in('status', ['joined', 'attended']);
+  if ((activeCount ?? 0) > 0 && !isAdmin) {
+    return NextResponse.json(
+      { error: 'Задание уже взято — сначала отмените его, исполнитель получит уведомление' },
+      { status: 409 },
+    );
+  }
+
+  const { error: updateError } = await admin
+    .from('tasks')
+    .update({
+      status: 'cancelled',
+      cancelled_at: new Date().toISOString(),
+      cancel_reason: 'Удалено автором',
+      is_archived: true,
+    })
+    .eq('id', id);
+  if (updateError) {
+    log.warn('task delete failed:', updateError.message);
+    return NextResponse.json({ error: 'Не удалось удалить задание' }, { status: 500 });
+  }
+
+  return NextResponse.json({ success: true });
+}
+
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   const limit = await rateLimit(request, { limit: 60, windowMs: 60_000, scope: 'task-action' });
   if (!limit.allowed) {

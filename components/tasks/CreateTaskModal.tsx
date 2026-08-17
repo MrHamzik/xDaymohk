@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { X, Loader2 } from 'lucide-react';
+import { X, Loader2, ExternalLink } from 'lucide-react';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 import { createTask, fetchTaskFilters } from '@/lib/tasks/client';
 import { taskTotalReward, type AppFilter, type TaskKind, type TaskPriority } from '@/lib/types';
@@ -114,8 +114,12 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
     }
   };
 
-  const fieldClass = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white';
-  const labelClass = 'mb-1 block text-xs font-bold text-slate-700 dark:text-zinc-300';
+  // Поля с мягкой заливкой вместо голых рамок: так форма читается
+  // плотнее и совпадает по духу с карточками каталога.
+  const fieldClass = 'w-full rounded-xl border border-transparent bg-slate-100/80 px-3.5 py-3 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:bg-white focus:ring-2 focus:ring-emerald-500/30 dark:bg-zinc-800 dark:text-white dark:placeholder:text-zinc-500 dark:focus:bg-zinc-800';
+  const labelClass = 'mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-zinc-400';
+  // Секция: заголовок + разделитель сверху, без вложенных рамок.
+  const sectionClass = 'space-y-3 border-t border-slate-100 px-4 py-4 dark:border-zinc-800';
 
   return (
     <div
@@ -143,8 +147,10 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
+        <div className="min-h-0 flex-1 overflow-y-auto">
           {/* Тип задания */}
+          <div className="px-4 pb-4 pt-4">
+          <span className={labelClass}>Тип задания</span>
           <div className="flex items-center gap-1 rounded-xl bg-slate-100 p-1 dark:bg-zinc-800" role="tablist">
             {([['urgent', 'Срочное'], ['scheduled', 'На дату']] as [TaskKind, string][]).map(([value, label]) => (
               <button
@@ -163,8 +169,10 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
               </button>
             ))}
           </div>
+          </div>
 
-          <div>
+          <div className={sectionClass}>
+            <div>
             <label htmlFor="task-title" className={labelClass}>Что нужно сделать *</label>
             <input
               id="task-title"
@@ -174,9 +182,9 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
               placeholder="Например: купить хлеб и молоко"
               className={fieldClass}
             />
-          </div>
+            </div>
 
-          <div>
+            <div>
             <label htmlFor="task-desc" className={labelClass}>Подробности</label>
             <textarea
               id="task-desc"
@@ -187,9 +195,10 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
               placeholder="Уточните детали: что именно, куда принести, особые пожелания"
               className={`${fieldClass} resize-none`}
             />
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className={`${sectionClass} grid grid-cols-2 gap-3`}>
             <div>
               <label htmlFor="task-category" className={labelClass}>Категория</label>
               <select
@@ -224,7 +233,7 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
 
           {/* Приоритет — надбавка платит заказчик */}
           {isPaid && (
-            <div>
+            <div className={sectionClass}>
               <span className={labelClass}>Срочность</span>
               <div className="flex items-center gap-1 rounded-xl bg-slate-100 p-1 dark:bg-zinc-800">
                 {([
@@ -256,7 +265,7 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
           )}
 
           {kind === 'urgent' ? (
-            <div>
+            <div className={sectionClass}>
               <label htmlFor="task-deadline" className={labelClass}>Сделать до *</label>
               <input
                 id="task-deadline"
@@ -267,7 +276,7 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
               />
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3">
+            <div className={`${sectionClass} grid grid-cols-2 gap-3`}>
               <div>
                 <label htmlFor="task-scheduled" className={labelClass}>Дата и время *</label>
                 <input
@@ -294,8 +303,22 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
             </div>
           )}
 
-          <div>
-            <label htmlFor="task-address" className={labelClass}>Адрес</label>
+          <div className={sectionClass}>
+            <div className="flex items-center justify-between gap-2">
+              <label htmlFor="task-address" className={labelClass}>Адрес</label>
+              {/* Как в анкете: ссылка появляется, когда координаты выбраны */}
+              {coords && (
+                <a
+                  href={`https://yandex.ru/maps/?pt=${coords.lng},${coords.lat}&z=17&l=map`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mb-1.5 inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:underline dark:text-emerald-400"
+                >
+                  Открыть на карте
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              )}
+            </div>
             <AddressAutocomplete
               id="task-address"
               value={address}
@@ -308,8 +331,8 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
           </div>
 
           {/* Требования: кого пускать на задание */}
-          <details className="rounded-xl border border-slate-200 p-3 dark:border-zinc-700">
-            <summary className="cursor-pointer text-xs font-bold text-slate-700 dark:text-zinc-300">
+          <details className={sectionClass}>
+            <summary className="cursor-pointer text-[11px] font-bold uppercase tracking-wide text-slate-500 marker:text-emerald-500 dark:text-zinc-400">
               Требования к исполнителю
             </summary>
             <div className="mt-3 space-y-3">
@@ -356,9 +379,11 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
           </details>
 
           {error && (
-            <p className="rounded-xl bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
-              {error}
-            </p>
+            <div className="px-4 pb-4">
+              <p className="rounded-xl bg-rose-50 px-3.5 py-2.5 text-xs font-semibold text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
+                {error}
+              </p>
+            </div>
           )}
         </div>
 

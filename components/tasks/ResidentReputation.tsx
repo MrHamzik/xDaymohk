@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Star, Loader2, Handshake } from 'lucide-react';
-import TaskAvatar from '@/components/tasks/TaskAvatar';
+import Avatar from '@/components/Avatar';
 import { fetchResidentReviews } from '@/lib/tasks/client';
 import type { ResidentReview } from '@/lib/types';
 
@@ -77,7 +77,7 @@ export default function ResidentReputation({ ownerId }: ResidentReputationProps)
             className="rounded-xl border border-slate-100 bg-white p-2.5 dark:border-zinc-800 dark:bg-zinc-800"
           >
             <div className="flex items-start gap-2">
-              <TaskAvatar src={review.authorAvatarUrl} className="h-6 w-6 shrink-0 rounded-full object-cover" />
+              <Avatar src={review.authorAvatarUrl} className="h-6 w-6 shrink-0 rounded-full object-cover" />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
                   <p className="truncate text-[11px] font-bold text-slate-900 dark:text-white">

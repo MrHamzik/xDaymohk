@@ -1,5 +1,6 @@
 'use client';
 
+import Avatar from '@/components/Avatar';
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { Ban, ChevronDown, Clock, ExternalLink, Flag, MapPin, MessageSquare, Pencil, Phone, Send, Star, Trash2, X } from 'lucide-react';
@@ -1249,7 +1250,7 @@ export default function ProfileModal({
                           <div className="h-7 w-7 shrink-0 overflow-hidden rounded-lg bg-slate-200 dark:bg-zinc-700">
                             {other.avatarUrl ? (
                               // eslint-disable-next-line @next/next/no-img-element
-                              <img src={cacheBustAvatarUrl(other.avatarUrl)} alt="" className="h-full w-full object-cover" />
+                              <Avatar src={other.avatarUrl} className="h-full w-full object-cover" />
                             ) : (
                               <span className="flex h-full w-full items-center justify-center text-[10px] font-bold text-slate-500">
                                 {other.fullName.charAt(0)}

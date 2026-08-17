@@ -1,5 +1,6 @@
 'use client';
 
+import Avatar from '@/components/Avatar';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, FileText, LocateFixed, MapPinned, Phone, Users, Star } from 'lucide-react';
@@ -292,7 +293,7 @@ export default function MapPage() {
                     onClick={() => hasMapPoint ? setSelectedProfileId(profile.id) : setActiveProfileId(profile.id)}
                     className={`flex min-w-0 items-center gap-2 rounded-xl border p-2 text-left transition ${isSelected ? 'border-emerald-400 bg-emerald-50 dark:border-emerald-700 dark:bg-emerald-950/30' : 'border-slate-200 bg-slate-50 hover:border-emerald-300 dark:border-zinc-700 dark:bg-zinc-800/70 dark:hover:border-emerald-800'}`}
                   >
-                    <img src={cacheBustAvatarUrl(profile.avatarUrl)} alt="" className="h-10 w-10 shrink-0 rounded-lg object-cover" />
+                    <Avatar src={profile.avatarUrl} className="h-10 w-10 shrink-0 rounded-lg object-cover" />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-xs font-bold text-slate-900 dark:text-white">{profile.professionTitle || 'Личная анкета'}</span>
                       <span className="block truncate text-[11px] text-slate-500 dark:text-zinc-500">{profile.workplaceAddress || 'Адрес не указан'}</span>
@@ -415,7 +416,7 @@ export default function MapPage() {
               <div>
                 <div className="mb-4 flex items-start gap-3">
                   <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 dark:border-zinc-700 dark:bg-zinc-800">
-                    <img src={cacheBustAvatarUrl(selectedProfile.avatarUrl)} alt={selectedProfile.fullName} className="h-full w-full object-cover" />
+                    <Avatar src={selectedProfile.avatarUrl} className="h-full w-full object-cover" />
                   </div>
                   <div className="min-w-0">
                     <h3 id="profile-location-title" className="break-words text-sm font-bold text-slate-900 dark:text-white">{selectedProfile.fullName}</h3>
