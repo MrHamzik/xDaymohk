@@ -67,9 +67,10 @@ export default function SearchFilter({
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (cancelled || !data?.filters?.length) return;
-        setDbCategories(data.filters.map((f: { value: string; labelRu: string }) => ({
+        setDbCategories(data.filters.map((f: { value: string; labelRu: string; icon?: string | null }) => ({
           id: f.value,
           label: f.labelRu,
+          icon: f.icon ?? undefined,
         })));
       })
       .catch(() => {});
@@ -99,7 +100,8 @@ export default function SearchFilter({
   const builtinIcons = new Map(PROFESSION_CATEGORIES.map((c) => [c.id, c.icon]));
   const professionOptions: Array<{ id: string; label: string; icon?: string }> =
     dbCategories
-      ? dbCategories.map((c) => ({ ...c, icon: builtinIcons.get(c.id) }))
+      // Иконка из БД, а если её там нет — встроенная по id.
+      ? dbCategories.map((c) => ({ ...c, icon: c.icon || builtinIcons.get(c.id) }))
       : PROFESSION_CATEGORIES
           .filter((c) => c.id !== 'all')
           .map((c) => ({ id: c.id, label: c.label, icon: c.icon }));
@@ -324,7 +326,9 @@ export default function SearchFilter({
                   <ChevronDown className={`h-3.5 w-3.5 transition ${isProfessionOpen ? 'rotate-180' : ''}`} />
                 </button>
                 {isProfessionOpen && (
-                  <div className="mt-2 flex flex-wrap gap-2">
+                  // Ровно две колонки: список длинный, во flex-wrap
+                  // кнопки скакали по ширине и выглядели неаккуратно.
+                  <div className="mt-2 grid grid-cols-2 gap-1.5">
                     {professionOptions.map((category) => {
                       // Иконка берётся из встроенной карты по id; у сфер,
                       // добавленных админом, её нет — рисуем «портфель».

@@ -5,6 +5,7 @@ import { X, Loader2, Star, MapPin, Clock, Users, CalendarDays, Trash2, ExternalL
 import Avatar from '@/components/Avatar';
 import { fetchTask, runTaskAction, submitResidentReview, deleteTask, formatTimeLeft } from '@/lib/tasks/client';
 import AttendanceModal from '@/components/tasks/AttendanceModal';
+import { useTaskRealtime } from '@/lib/tasks/realtime';
 import {
   taskTotalReward,
   TASK_AUTO_CONFIRM_HOURS,
@@ -52,6 +53,10 @@ export default function TaskDetailModal({
   }, [taskId]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Открытая карточка живая: нажатие «Выполнил» у второй стороны,
+  // отметка явки и новый отзыв применяются без перезахода.
+  useTaskRealtime(taskId, load);
 
   useEffect(() => {
     if (!taskId) return;

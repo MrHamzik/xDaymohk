@@ -1,7 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Loader2, Plus, Trash2, Save, GripVertical, RotateCcw } from 'lucide-react';
+import {
+  Loader2, Plus, Trash2, Save, GripVertical, RotateCcw,
+  Briefcase, Stethoscope, Hammer, GraduationCap, Wrench, Scissors,
+  ShoppingBag, Sprout, Car, Home, Utensils, Truck, Baby, Scale,
+  Paintbrush, Laptop, Camera, Music, Dumbbell, Leaf,
+} from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import type { AppFilter } from '@/lib/types';
 
@@ -12,11 +17,24 @@ import type { AppFilter } from '@/lib/types';
  * разделе «Адреса» → «Поиск и категории», дублировать их здесь нельзя —
  * получились бы два несогласованных справочника.
  */
-type Scope = 'tasks' | 'catalog';
+type Scope = 'tasks' | 'catalog' | 'map';
+
+/**
+ * Иконки для фильтров. Ключ хранится в app_filters.icon, значение —
+ * компонент lucide-react. Список закрытый: имя из БД попадает в
+ * разметку, поэтому произвольные значения не допускаются.
+ */
+const ICON_OPTIONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  Briefcase, Stethoscope, Hammer, GraduationCap, Wrench, Scissors,
+  ShoppingBag, Sprout, Car, Home, Utensils, Truck, Baby, Scale,
+  Paintbrush, Laptop, Camera, Music, Dumbbell, Leaf,
+};
+const ICON_NAMES = Object.keys(ICON_OPTIONS);
 
 const SCOPES: Array<{ value: Scope; label: string; hint: string }> = [
   { value: 'tasks', label: 'Задания', hint: 'Направления в «Аренца Темщик» и «ГIончалла»' },
   { value: 'catalog', label: 'Каталог', hint: 'Сферы деятельности специалистов' },
+  { value: 'map', label: 'Карта', hint: 'Категории объектов «Другое» на карте' },
 ];
 
 export default function AdminFiltersSection() {
@@ -31,6 +49,7 @@ export default function AdminFiltersSection() {
   const [newValue, setNewValue] = useState('');
   const [newLabelRu, setNewLabelRu] = useState('');
   const [newLabelCe, setNewLabelCe] = useState('');
+  const [newIcon, setNewIcon] = useState('Briefcase');
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -85,10 +104,11 @@ export default function AdminFiltersSection() {
         scope, value,
         labelRu: newLabelRu.trim(),
         labelCe: newLabelCe.trim() || undefined,
+        icon: newIcon,
         sortOrder: (filters.length + 1) * 10,
         isActive: true,
       });
-      setNewValue(''); setNewLabelRu(''); setNewLabelCe('');
+      setNewValue(''); setNewLabelRu(''); setNewLabelCe(''); setNewIcon('Briefcase');
       setNotice('Фильтр добавлен');
       await load();
     } catch (e) {
@@ -108,6 +128,7 @@ export default function AdminFiltersSection() {
         value: filter.value,
         labelRu: filter.labelRu,
         labelCe: filter.labelCe ?? undefined,
+        icon: filter.icon ?? undefined,
         sortOrder: filter.sortOrder,
         isActive: filter.isActive,
       });
@@ -136,6 +157,7 @@ export default function AdminFiltersSection() {
         await post({
           id: filter.id, scope: filter.scope, value: filter.value,
           labelRu: filter.labelRu, labelCe: filter.labelCe ?? undefined,
+          icon: filter.icon ?? undefined,
           sortOrder: filter.sortOrder, isActive: true,
         });
         setNotice('Фильтр включён');
@@ -223,7 +245,7 @@ export default function AdminFiltersSection() {
       {/* Добавление */}
       <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
         <p className="mb-2 text-xs font-bold text-slate-700 dark:text-zinc-300">Новый фильтр</p>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-[7rem_5rem_1fr_1fr_auto]">
           <input
             value={newValue}
             onChange={(e) => setNewValue(e.target.value)}
@@ -231,6 +253,16 @@ export default function AdminFiltersSection() {
             aria-label="Код фильтра"
             className={field}
           />
+          <select
+            value={newIcon}
+            onChange={(e) => setNewIcon(e.target.value)}
+            aria-label="Иконка"
+            className={field}
+          >
+            {ICON_NAMES.map((name) => (
+              <option key={name} value={name}>{name}</option>
+            ))}
+          </select>
           <input
             value={newLabelRu}
             onChange={(e) => setNewLabelRu(e.target.value)}
@@ -241,7 +273,7 @@ export default function AdminFiltersSection() {
           <input
             value={newLabelCe}
             onChange={(e) => setNewLabelCe(e.target.value)}
-            placeholder="Нохчийн (необяз.)"
+            placeholder="Нохчийн"
             aria-label="Название на чеченском"
             className={field}
           />
@@ -249,7 +281,7 @@ export default function AdminFiltersSection() {
             type="button"
             onClick={handleAdd}
             disabled={busyId === 'new'}
-            className="flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-700 disabled:opacity-60"
+            className="col-span-2 flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-700 disabled:opacity-60 sm:col-span-1"
           >
             {busyId === 'new' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
             Добавить
@@ -268,6 +300,16 @@ export default function AdminFiltersSection() {
         </p>
       ) : (
         <div className="space-y-2">
+          {/* Шапка колонок — только на широком экране, на мобильном
+              поля подписаны плейсхолдерами. */}
+          <div className="hidden grid-cols-[auto_7rem_5rem_1fr_1fr_auto] gap-2 px-2.5 text-[10px] font-bold uppercase tracking-wide text-slate-400 sm:grid">
+            <span className="w-4" />
+            <span>Код</span>
+            <span>Иконка</span>
+            <span>Название</span>
+            <span>Нохчийн</span>
+            <span className="w-[4.5rem] text-right">Действия</span>
+          </div>
           {filters.map((filter) => (
             <div
               key={filter.id}
@@ -275,12 +317,13 @@ export default function AdminFiltersSection() {
               onDragStart={() => setDragId(filter.id)}
               onDragOver={(e) => e.preventDefault()}
               onDrop={() => handleDrop(filter.id)}
-              className={`flex flex-wrap items-center gap-2 rounded-2xl border bg-white p-2.5 shadow-sm transition dark:bg-zinc-950 ${
+              className={`grid grid-cols-[auto_1fr] items-center gap-2 rounded-2xl border bg-white p-2.5 shadow-sm transition dark:bg-zinc-950 sm:grid-cols-[auto_7rem_5rem_1fr_1fr_auto] ${
                 dragId === filter.id
                   ? 'border-emerald-400 opacity-60'
                   : 'border-slate-200 dark:border-zinc-800'
               } ${filter.isActive ? '' : 'opacity-55'}`}
             >
+              {/* Ручка перетаскивания */}
               <span
                 className="cursor-grab text-slate-300 active:cursor-grabbing dark:text-zinc-600"
                 title="Перетащите, чтобы изменить порядок"
@@ -288,27 +331,48 @@ export default function AdminFiltersSection() {
                 <GripVertical className="h-4 w-4" />
               </span>
 
-              {/* Код — служебный, но нужен для ссылок в URL; показываем
-                  компактно. Внутренний id пользователю не показываем. */}
-              <code className="shrink-0 rounded bg-slate-100 px-1.5 py-1 text-[10px] text-slate-500 dark:bg-zinc-800 dark:text-zinc-400">
+              {/* Код: служебный слаг, используется в ссылках и сравнениях */}
+              <code className="truncate rounded bg-slate-100 px-1.5 py-1 text-[10px] text-slate-500 dark:bg-zinc-800 dark:text-zinc-400">
                 {filter.value}
               </code>
+
+              {/* Иконка: селект + живой предпросмотр слева */}
+              <div className="col-span-2 flex items-center gap-1.5 sm:col-span-1">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
+                  {(() => {
+                    const Icon = ICON_OPTIONS[filter.icon ?? ''] ?? Briefcase;
+                    return <Icon className="h-3.5 w-3.5" />;
+                  })()}
+                </span>
+                <select
+                  value={filter.icon ?? ''}
+                  onChange={(e) => patchLocal(filter.id, { icon: e.target.value })}
+                  aria-label={`Иконка ${filter.value}`}
+                  className={`${field} min-w-0 flex-1`}
+                >
+                  <option value="">—</option>
+                  {ICON_NAMES.map((name) => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+              </div>
 
               <input
                 value={filter.labelRu}
                 onChange={(e) => patchLocal(filter.id, { labelRu: e.target.value })}
                 aria-label={`Название ${filter.value}`}
-                className={`${field} min-w-[8rem] flex-1`}
+                placeholder="Название"
+                className={`${field} col-span-2 sm:col-span-1`}
               />
               <input
                 value={filter.labelCe ?? ''}
                 onChange={(e) => patchLocal(filter.id, { labelCe: e.target.value })}
                 placeholder="Нохчийн"
                 aria-label={`Название на чеченском ${filter.value}`}
-                className={`${field} min-w-[8rem] flex-1`}
+                className={`${field} col-span-2 sm:col-span-1`}
               />
 
-              <div className="flex shrink-0 gap-1">
+              <div className="col-span-2 flex shrink-0 justify-end gap-1 sm:col-span-1">
                 <button
                   type="button"
                   onClick={() => handleSave(filter)}

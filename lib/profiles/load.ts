@@ -60,7 +60,7 @@ export async function loadUsersFromSupabase(): Promise<UserSummary[]> {
   // (AdminPage already gates the whole page on isCurrentUserAdmin).
   const { data, error } = await supabase
     .from('v_users_with_profile_count')
-    .select('id, email, full_name, avatar_url, is_admin, is_blocked, profile_count, hidden_count, gender, birth_date')
+    .select('id, email, full_name, avatar_url, is_admin, is_blocked, profile_count, hidden_count, gender, birth_date, resident_rating, resident_review_count')
     .order('created_at', { ascending: false });
   if (error || !data) return [];
   return data
@@ -81,6 +81,10 @@ export async function loadUsersFromSupabase(): Promise<UserSummary[]> {
       // триггером trg_user_profiles_demographics).
       gender: row.gender === 'male' || row.gender === 'female' ? row.gender : undefined,
       birthDate: row.birth_date ? String(row.birth_date) : undefined,
+      // Репутация по заданиям (колонки добавлены обновлением
+      // supabase/update/24-tasks-realtime.sql).
+      residentRating: Number(row.resident_rating ?? 0),
+      residentReviewCount: Number(row.resident_review_count ?? 0),
     }));
 }
 

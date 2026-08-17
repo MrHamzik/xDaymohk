@@ -5,6 +5,7 @@ import { Award, Ban, ChevronRight, Flag, MapPin, Star } from 'lucide-react';
 import { Profile } from '@/lib/types';
 import { calculateAge, formatDisplayName, formatReviews } from '@/lib/text';
 import { useI18n } from '@/lib/i18n';
+import { useProfiles } from '@/components/ProfilesProvider';
 import ProfileBadges, { WorkingStatusBadge } from '@/components/ProfileBadges';
 import { cacheBustAvatarUrl } from '@/lib/media';
 
@@ -33,7 +34,15 @@ export default function ProfileCard({
   onBlock,
 }: ProfileCardProps) {
   const { t } = useI18n();
+  const { users } = useProfiles();
   const openProfile = () => onSelect(profile);
+
+  // Репутация в заданиях привязана к ЧЕЛОВЕКУ (user_profiles), а не к
+  // анкете, поэтому берём её у владельца. Это не рейтинг специалиста:
+  // тот про навыки и живёт в profile.rating.
+  const owner = profile.ownerId ? users.find((u) => u.id === profile.ownerId) : undefined;
+  const residentRating = Number(owner?.residentRating ?? 0);
+  const residentReviews = Number(owner?.residentReviewCount ?? 0);
   const profileIsAdmin = Boolean(isAdminStatus);
   const hasAction = Boolean((isAdmin && !profileIsAdmin && onBlock) || (!isOwnProfile && !profile.isVerified && profile.verificationStatus !== 'verified' && onReport));
 
@@ -76,6 +85,21 @@ export default function ProfileCard({
             </h3>
             <WorkingStatusBadge profile={profile} />
           </div>
+          {/* Репутация в заданиях — сразу под именем, до бейджей:
+              по ней судят о человеке перед сделкой. */}
+          {residentReviews > 0 && (
+            <div className="mt-1 flex items-center gap-1 text-[11px]">
+              <Star className="h-3 w-3 shrink-0 fill-amber-400 text-amber-400" />
+              <span className="font-bold text-amber-600 dark:text-amber-400">
+                {residentRating.toFixed(1)}
+              </span>
+              <span className="truncate text-slate-400 dark:text-zinc-500">
+                · {residentReviews} {residentReviews === 1 ? 'оценка'
+                  : residentReviews < 5 ? 'оценки' : 'оценок'}
+              </span>
+            </div>
+          )}
+
           <div className="mt-1.5">
             <ProfileBadges profile={profile} adminStatus={profileIsAdmin} showPending={showPending} />
           </div>

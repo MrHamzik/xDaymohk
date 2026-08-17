@@ -22,6 +22,7 @@ import {
   distanceMeters,
 } from '@/lib/tasks/client';
 import { TASK_NEARBY_RADIUS_M, type AppFilter, type Task } from '@/lib/types';
+import { useTasksRealtime } from '@/lib/tasks/realtime';
 
 type FeedTab = 'nearby' | 'all' | 'mine';
 
@@ -68,6 +69,10 @@ export default function VaygoPage() {
     fetchTaskFilters('tasks').then(setCategories).catch(() => setCategories([]));
     runTaskMaintenance();
   }, [load]);
+
+  // Живое обновление ленты: чужие действия (взяли задание, выполнили,
+  // подтвердили) видны без перезахода.
+  useTasksRealtime(load);
 
   useEffect(() => {
     if (tab !== 'nearby' || position || geoDenied) return;

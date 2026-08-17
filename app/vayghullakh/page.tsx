@@ -25,6 +25,7 @@ import {
   distanceMeters,
 } from '@/lib/tasks/client';
 import { TASK_NEARBY_RADIUS_M, type AppFilter, type Task } from '@/lib/types';
+import { useTasksRealtime } from '@/lib/tasks/realtime';
 
 /** Вкладки ленты. «Близко» — по умолчанию, 1 км от текущей позиции. */
 type FeedTab = 'nearby' | 'all' | 'mine' | 'taken';
@@ -90,6 +91,10 @@ export default function VayghullakhPage() {
     runTaskMaintenance();
   }, [load]);
 
+  // Живое обновление ленты: чужие действия (взяли задание, выполнили,
+  // подтвердили) видны без перезахода.
+  useTasksRealtime(load);
+
   useEffect(() => {
     if (!account) return;
     fetchExecutorStatus()
@@ -142,7 +147,14 @@ export default function VayghullakhPage() {
       list = list.filter((t) => t.authorId === account?.id);
     } else if (tab === 'taken') {
       // Реальный список участия — из /api/tasks/mine, а не догадки по статусу.
-      list = myTasks;
+      // Завершённые сюда не попадают: /mine отдаёт и их (для метки
+      // «ожидает оценки»), но во вкладке «В работе» им не место.
+      // Исключение — задания, которые я ещё не оценил: их нужно видеть,
+      // иначе оценку негде поставить.
+      list = myTasks.filter(
+        (t) => !['completed', 'cancelled', 'expired'].includes(t.status)
+          || pendingReview.includes(t.id),
+      );
     } else if (tab === 'nearby' && position) {
       list = list.filter((t) => typeof t.distanceM === 'number' && t.distanceM <= TASK_NEARBY_RADIUS_M);
     }
@@ -164,7 +176,7 @@ export default function VayghullakhPage() {
       return [...list].sort((a, b) => (a.distanceM ?? 1e9) - (b.distanceM ?? 1e9));
     }
     return list;
-  }, [withDistance, myTasks, tab, category, priorityFilter, minReward, query, account?.id, position]);
+  }, [withDistance, myTasks, pendingReview, tab, category, priorityFilter, minReward, query, account?.id, position]);
 
   return (
     <div className="flex min-h-[100dvh] min-w-0 flex-col overflow-x-hidden bg-slate-50 bg-radial-gradient transition-colors dark:bg-zinc-950">

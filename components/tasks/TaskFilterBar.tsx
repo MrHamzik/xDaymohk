@@ -308,22 +308,22 @@ export default function TaskFilterBar({
                   <ChevronDown className={`h-3.5 w-3.5 transition ${isSphereOpen ? 'rotate-180' : ''}`} />
                 </button>
                 {isSphereOpen && (
-                  <div className="mt-2 grid flex flex-wrap gap-2">
+                  <div className="mt-2 grid grid-cols-2 gap-1.5">
                     <button
                       type="button"
                       onClick={() => setCategory('')}
-                      className={`${chipBase} ${category === '' ? chipActive : chipIdle}`}
+                      className={`${chipBase} min-w-0 ${category === '' ? chipActive : chipIdle}`}
                     >
-                      Все
+                      <span className="truncate">Все</span>
                     </button>
                     {categories.map((c) => (
                       <button
                         key={c.id}
                         type="button"
                         onClick={() => setCategory(c.value)}
-                        className={`${chipBase} ${category === c.value ? chipActive : chipIdle}`}
+                        className={`${chipBase} min-w-0 ${category === c.value ? chipActive : chipIdle}`}
                       >
-                        {c.labelRu}
+                        <span className="truncate">{c.labelRu}</span>
                       </button>
                     ))}
                   </div>

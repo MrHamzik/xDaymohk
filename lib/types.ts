@@ -53,6 +53,9 @@ export interface UserSummary {
   isAdmin: boolean;
   isBlocked: boolean;
   profileCount: number;
+  /** Репутация в заданиях: рейтинг ЧЕЛОВЕКА (не навыков специалиста). */
+  residentRating?: number;
+  residentReviewCount?: number;
 }
 
 export type NotificationType =
@@ -545,6 +548,8 @@ export interface AppFilter {
   value: string;
   labelRu: string;
   labelCe?: string | null;
+  /** Имя иконки lucide-react; пусто — иконка по умолчанию. */
+  icon?: string | null;
   sortOrder: number;
   isActive: boolean;
 }

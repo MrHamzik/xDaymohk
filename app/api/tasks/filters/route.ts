@@ -42,7 +42,7 @@ export async function GET(request: Request) {
 
   let query = client
     .from('app_filters')
-    .select('id, scope, value, label_ru, label_ce, sort_order, is_active')
+    .select('id, scope, value, label_ru, label_ce, icon, sort_order, is_active')
     .order('sort_order', { ascending: true });
   if (!includeInactive) query = query.eq('is_active', true);
   if (scopeParam && SCOPES.includes(scopeParam as Scope)) {
@@ -62,6 +62,7 @@ export async function GET(request: Request) {
       value: f.value,
       labelRu: f.label_ru,
       labelCe: f.label_ce,
+      icon: f.icon,
       sortOrder: f.sort_order,
       isActive: f.is_active,
     })),
@@ -109,6 +110,10 @@ export async function POST(request: Request) {
   const labelRu = String(body.labelRu ?? '').trim().slice(0, 100);
   if (!labelRu) return NextResponse.json({ error: 'Укажите название' }, { status: 400 });
   const labelCe = String(body.labelCe ?? '').trim().slice(0, 100) || null;
+  // Иконка — имя из набора lucide-react. Ограничиваем латиницей, чтобы
+  // в разметку не попало произвольное значение из запроса.
+  const iconRaw = String(body.icon ?? '').trim().slice(0, 40);
+  const icon = /^[A-Za-z0-9]+$/.test(iconRaw) ? iconRaw : null;
   const sortOrder = Math.min(Math.max(Math.floor(Number(body.sortOrder) || 0), 0), 10_000);
   const isActive = body.isActive !== false;
 
@@ -122,6 +127,7 @@ export async function POST(request: Request) {
     value,
     label_ru: labelRu,
     label_ce: labelCe,
+    icon,
     sort_order: sortOrder,
     is_active: isActive,
   };
