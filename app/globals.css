@@ -876,7 +876,7 @@ html.smk-glass .smk-lux {
   background: color-mix(in srgb, var(--smk-card-a) 62%, transparent);
   backdrop-filter: blur(14px) saturate(140%);
   -webkit-backdrop-filter: blur(14px) saturate(140%);
-  border-color: color-mix(in srgb, var(--smk-light-rgb-color, #ffffff) 55%, transparent);
+  border-color: color-mix(in srgb, var(--smk-card-line) 45%, transparent);
   box-shadow:
     0 1px 0 0 rgb(255 255 255 / 0.55) inset,
     0 10px 30px -18px rgb(15 23 42 / 0.35);
@@ -891,21 +891,71 @@ html.smk-glass .smk-price-teal {
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }
-html.smk-glass .site-bottom-nav {
-  background: color-mix(in srgb, var(--smk-card-a) 70%, transparent);
+
+/* --- Прозрачность для ВСЕХ фоновых поверхностей -----------------------------
+   Одних карточек мало: панели, модальные окна, шапка и боковое меню
+   рисуются утилитами bg-white / dark:bg-zinc-*, и рядом со стеклянной
+   карточкой они выглядели плотными заплатками.
+
+   Красим по классам Tailwind, а не по каждому компоненту: разметку
+   переписывать не нужно, а при выключении темы правила просто
+   перестают действовать. Прозрачность считаем от цвета темы через
+   color-mix, поэтому источник по-прежнему один — палитра.
+
+   !important здесь оправдан: утилиты Tailwind имеют ту же
+   специфичность, и без него порядок в бандле решал бы, кто победит. */
+html.smk-glass .bg-white,
+html.smk-glass .bg-slate-50,
+html.smk-glass .bg-slate-100,
+html.smk-glass .bg-zinc-50,
+html.smk-glass .bg-zinc-100 {
+  background-color: color-mix(in srgb, var(--smk-card-a) 60%, transparent) !important;
+  backdrop-filter: blur(12px) saturate(135%);
+  -webkit-backdrop-filter: blur(12px) saturate(135%);
+}
+html.smk-glass .bg-slate-50\/70,
+html.smk-glass .bg-slate-50\/60,
+html.smk-glass .bg-slate-50\/50,
+html.smk-glass .bg-slate-50\/40 {
+  background-color: color-mix(in srgb, var(--smk-card-inset) 45%, transparent) !important;
+}
+
+/* Шапка, нижняя панель и боковое меню — сильнее размытие: под ними
+   проезжает контент, и слабый blur давал «грязь» вместо стекла. */
+html.smk-glass .site-bottom-nav,
+html.smk-glass header,
+html.smk-glass aside > div {
+  background-color: color-mix(in srgb, var(--smk-card-a) 68%, transparent) !important;
   backdrop-filter: blur(18px) saturate(150%);
   -webkit-backdrop-filter: blur(18px) saturate(150%);
 }
+
+/* Модальные окна: фон под ними и так затемнён подложкой, поэтому
+   стекло держим плотнее — иначе текст формы читается плохо. */
+html.smk-glass [role="dialog"] > div {
+  background-color: color-mix(in srgb, var(--smk-card-a) 82%, transparent) !important;
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+}
+
 /* Узор-лучи на стекле превращается в грязь: убираем. */
 html.smk-glass .smk-rays::before { display: none; }
 
+/* Доступность: у кого выключена прозрачность в системе — получают
+   плотные поверхности без размытия. */
 @media (prefers-reduced-transparency: reduce) {
   html.smk-glass .smk-lux,
   html.smk-glass .smk-field,
-  html.smk-glass .site-bottom-nav {
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    background: var(--smk-card-a);
+  html.smk-glass .bg-white,
+  html.smk-glass .bg-slate-50,
+  html.smk-glass .bg-slate-100,
+  html.smk-glass .site-bottom-nav,
+  html.smk-glass header,
+  html.smk-glass aside > div,
+  html.smk-glass [role="dialog"] > div {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background-color: var(--smk-card-a) !important;
   }
 }
 
