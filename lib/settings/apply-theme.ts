@@ -28,7 +28,7 @@ function hexToRgbChannels(hex: string): string {
 }
 
 /** Смешивает цвет с белым/чёрным — для производных оттенков. */
-function mix(hex: string, target: '#ffffff' | '#000000', amount: number): string {
+function mix(hex: string, target: string, amount: number): string {
   const from = hex.replace('#', '');
   const to = target.replace('#', '');
   const channel = (index: number) => {
@@ -54,7 +54,7 @@ const RAMP: Array<[step: number, amount: number]> = [
 
 function applyRamp(
   set: (name: string, value: string) => void,
-  name: 'emerald' | 'teal' | 'green',
+  name: 'emerald' | 'teal' | 'green' | 'slate',
   base: string,
 ): void {
   for (const [step, amount] of RAMP) {
@@ -62,6 +62,31 @@ function applyRamp(
       ? base
       : mix(base, amount < 0 ? '#ffffff' : '#000000', Math.abs(amount));
     set(`--color-${name}-${step}`, value);
+  }
+}
+
+/**
+ * Нейтральная шкала slate под оттенок темы.
+ *
+ * В светлой теме идёт как обычно: 50 — почти фон, 900 — почти текст.
+ * В тёмной — переворачивается: разметка пишет bg-slate-50 для светлых
+ * подложек, и если оставить их светлыми, тёмная тема пойдёт белыми
+ * заплатками. Поэтому там 50 = самый тёмный конец.
+ */
+function applyNeutralRamp(
+  set: (name: string, value: string) => void,
+  colors: ThemeColors,
+  isDark: boolean,
+): void {
+  const steps = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
+  for (const [index, step] of steps.entries()) {
+    const t = index / (steps.length - 1); // 0 → светлый край, 1 → тёмный
+    const value = isDark
+      // Тёмная: от полотна к тексту.
+      ? mix(colors.bg, colors.text, 0.06 + t * 0.82)
+      // Светлая: от фона страницы к тексту.
+      : mix(colors.bg, colors.text, t * 0.94);
+    set(`--color-slate-${step}`, value);
   }
 }
 
@@ -97,6 +122,14 @@ const MANAGED_PROPERTIES = [
   '--color-green-300', '--color-green-400', '--color-green-500',
   '--color-green-600', '--color-green-700', '--color-green-800',
   '--color-green-900', '--color-green-950',
+  // Нейтральная шкала: в разметке это 1550 упоминаний — фон страницы,
+  // подложки, текст, границы. Без её подмены светлые темы оставались
+  // «цветными пятнами на холодном сером», а белый — чисто белым.
+  '--color-slate-50', '--color-slate-100', '--color-slate-200',
+  '--color-slate-300', '--color-slate-400', '--color-slate-500',
+  '--color-slate-600', '--color-slate-700', '--color-slate-800',
+  '--color-slate-900', '--color-slate-950',
+  '--color-white',
   // Семантические переменные проекта, завязанные на зелёный.
   '--border-green-dark',
   '--smk-hero-gradient',
@@ -195,6 +228,16 @@ export function applyThemeColors(
   // держим их в той же гамме, иначе на фоне темы они выпадают.
   applyRamp(set, 'teal', mix(colors.ui, '#000000', 0.06));
   applyRamp(set, 'green', colors.ui);
+
+  // ── Нейтральная шкала под оттенок темы ──────────────────────────
+  // Серые в теме не бывают «просто серыми»: у Природы они зеленоватые,
+  // у Янтаря кремовые, у Космоса синеватые. Строим шкалу от muted —
+  // он уже несёт нужный подтон, — а белый заменяем цветом карточки.
+  //
+  // Для тёмных тем шкала инвертируется: там slate-50 должен быть
+  // тёмным (это подложка), а slate-900 — светлым (это текст).
+  applyNeutralRamp(set, colors, isDark);
+  set('--color-white', colors.card);
 
   // Семантические переменные проекта, завязанные на зелёный.
   set('--border-green-dark', mix(colors.ui, '#000000', 0.34));

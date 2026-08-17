@@ -327,80 +327,83 @@ export const PRESET_THEMES: Record<
     },
   },
   /**
-   * Природа — СВЕТЛАЯ тема: небесная и позитивная.
+   * Природа — светлая, небесная и позитивная.
    *
    * Круг RYB: база зелёный 130° (интерфейс — лист), отход даёт
-   * небесно-голубой 195° (акцент). Прошлая версия была тёмной с
-   * кислотным салатом; здесь светлота поднята, насыщенность снижена —
-   * получается свет и воздух, а не неон.
+   * небесно-голубой 195° (акцент).
    *
-   * Белый и серые остались, но с зелёным подтоном: чистого #f5f5f5
-   * в теме нет, иначе она распадается на «зелёные пятна на сером».
+   * Поверхности осветлены: карточка #fbfefc, фон #edf8f2. Это НЕ
+   * чистый белый и не нейтральный серый — у обоих зелёный подтон,
+   * иначе тема распадается на «цветные пятна по холодной бумаге».
+   * Текст при этом остаётся достаточно тёмным: осветлять его вместе
+   * с фоном нельзя, контраст ушёл бы ниже нормы читаемости.
    */
   nature: {
     name: 'Природа',
     isDark: false,
     colors: {
-      bg: '#f5faf7',
-      card: '#ffffff',
-      cardAlt: '#fbfefc',
-      cardLine: '#d3e3da',
-      cardInset: '#eff6f2',
-      text: '#264033',
-      muted: '#5c7a6b',
-      accent: '#2b91b6',
-      accentSoft: '#cee9f3',
-      accentDeep: '#216883',
-      ui: '#2c8c4c',
-      statusActive: '#2c964f',
-      statusBreak: '#dc9518',
-      statusFlexible: '#2d97be',
-      statusOffline: '#94a89c',
-      roleSpecialist: '#2c8c4c',
-      roleAdmin: '#c2564e',
-      roleVerified: '#2b91b6',
-      danger: '#c2564e',
-      heroFrom: '#2c8c4c',
-      heroTo: '#2b91b6',
-      mapCluster: '#2c8c4c',
-      mapHouse: '#2b91b6',
+      bg: '#edf8f2',
+      card: '#fbfefc',
+      cardAlt: '#f4faf7',
+      cardLine: '#cae2d6',
+      cardInset: '#e6f4ed',
+      text: '#305545',
+      muted: '#547867',
+      accent: '#36a2c9',
+      accentSoft: '#d6edf5',
+      accentDeep: '#2f7893',
+      ui: '#389f5d',
+      statusActive: '#38a85e',
+      statusBreak: '#e49e25',
+      statusFlexible: '#3ea6cc',
+      statusOffline: '#a4b7ad',
+      roleSpecialist: '#389f5d',
+      roleAdmin: '#c96a5c',
+      roleVerified: '#36a2c9',
+      danger: '#c96a5c',
+      heroFrom: '#389f5d',
+      heroTo: '#36a2c9',
+      mapCluster: '#389f5d',
+      mapHouse: '#36a2c9',
     },
   },
   /**
-   * Янтарь — СВЕТЛАЯ тема: тёплая и солнечная.
+   * Янтарь — светлая, тёплая и солнечная.
    *
    * Круг RYB: база жёлтый 50°, отход ±30° даёт охру 28° (интерфейс) и
    * лимонно-оливковый 80° (статус «работает»); акцент — золото 45°.
-   * Полотно кремовое: белый с жёлтым подтоном, чтобы тёплые акценты
-   * не выглядели наклейками на холодной бумаге.
+   *
+   * Поверхности кремовые: карточка #fefdfb, фон #fbf6ea. Белый здесь
+   * тёплый — на холодной бумаге золото и охра смотрелись бы
+   * наклейками. Текст остаётся тёмным ради читаемости.
    */
   amber: {
     name: 'Янтарь',
     isDark: false,
     colors: {
-      bg: '#fcf9f3',
-      card: '#ffffff',
-      cardAlt: '#fffdf9',
-      cardLine: '#eadfcd',
-      cardInset: '#f9f5eb',
-      text: '#423324',
-      muted: '#7e6e58',
-      accent: '#dda90e',
-      accentSoft: '#faedc6',
-      accentDeep: '#9c6911',
-      ui: '#c86a19',
-      statusActive: '#6c8c2c',
-      statusBreak: '#d89b0e',
-      statusFlexible: '#3490b2',
-      statusOffline: '#a59c8d',
-      roleSpecialist: '#6c8c2c',
-      roleAdmin: '#c25a3c',
-      roleVerified: '#c86a19',
-      danger: '#c25a3c',
-      heroFrom: '#c86a19',
-      heroTo: '#dda90e',
-      mapCluster: '#c86a19',
-      mapHouse: '#dda90e',
+      bg: '#fbf6ea',
+      card: '#fefdfb',
+      cardAlt: '#fcfaf2',
+      cardLine: '#e9dbc4',
+      cardInset: '#f8f1e2',
+      text: '#58442d',
+      muted: '#7c6a50',
+      accent: '#edb91d',
+      accentSoft: '#fbf0d0',
+      accentDeep: '#af7a1d',
+      ui: '#db7924',
+      statusActive: '#7c9f38',
+      statusBreak: '#ecab13',
+      statusFlexible: '#3d9ec2',
+      statusOffline: '#b4ac9c',
+      roleSpecialist: '#7c9f38',
+      roleAdmin: '#c96248',
+      roleVerified: '#db7924',
+      danger: '#c96248',
+      heroFrom: '#db7924',
+      heroTo: '#edb91d',
+      mapCluster: '#db7924',
+      mapHouse: '#edb91d',
     },
   },
 };
