@@ -43,8 +43,8 @@
     --surface-subtle: var(--color-zinc-900);
     --foreground: #fafafa;
     --border-subtle: var(--color-zinc-700);
-    --border-dark-soft: rgb(35 43 61 / 90%);
-    --border-dark-card: rgb(35 43 61 / 90%);
+    --border-dark-soft: rgb(28 28 31 / 90%);
+    --border-dark-card: rgb(28 28 31 / 90%);
     --border-green-dark: #2b7a64;
     --status-offline: #52525b;
     color-scheme: dark;
@@ -338,14 +338,10 @@ html.dark .bg-radial-gradient {
 
 
 @theme {
-  /* Тёмная тема переведена в сине-стальную гамму, чтобы фон приложения
-     сочетался с карточками (.smk-lux). Раньше здесь был нейтральный
-     серый, и синие карточки на нём выглядели чужеродно.
-     Соотношение прежнее: 950 — фон, 800 — поверхности, 700 — границы. */
-  --color-zinc-950: #0d111a;
-  --color-zinc-900: #141a26;
-  --color-zinc-800: #171d2a;
-  --color-zinc-700: #232b3d;
+  --color-zinc-950: rgb(19, 19, 19);
+  --color-zinc-900: #202123;
+  --color-zinc-800: rgba(23, 23, 26, 1);
+  --color-zinc-700: rgba(31, 31, 35, 1);
 }
 
 
@@ -633,14 +629,16 @@ html.dark .smk-price-teal {
   --smk-gold-soft: #e8cd8f;
   --smk-gold-deep: #a8823a;
 
-  /* Тёмная тема: сине-стальная гамма.
-     Карточка светлее фона приложения, обводка — темнее карточки. */
-  --smk-navy-card-a: #1a2130;   /* верх полотна   */
-  --smk-navy-card-b: #141a26;   /* низ полотна    */
-  --smk-navy-line: #0d1220;     /* обводка: темнее карточки */
-  --smk-navy-inset: #202940;    /* подложки строк */
-  --smk-steel: #7c9cc4;         /* иконки, лучи   */
-  --smk-steel-bright: #a8c6e8;  /* акцентный текст */
+  /* Тёмная тема: нейтральная гамма приложения, без синевы.
+     Карточка чуть светлее фона, обводка — темнее карточки.
+     Золото в тёмной теме не используется: жёлтая окантовка и жёлтые
+     штрихи на тёмном полотне выглядели инородно. */
+  --smk-card-a: #1c1c20;   /* верх полотна   */
+  --smk-card-b: #161619;   /* низ полотна    */
+  --smk-card-line: #0f0f12;     /* обводка: темнее карточки */
+  --smk-card-inset: #232327;    /* подложки строк */
+  --smk-muted: #8a8a93;         /* иконки, лучи   */
+  --smk-muted-bright: #c4c4cc;  /* акцентный текст */
 }
 
 /* --- Полотно карточки ------------------------------------------------------ */
@@ -657,10 +655,10 @@ html.dark .smk-price-teal {
 }
 html.dark .smk-lux {
   /* Обводка того же синего, что и карточка, только темнее */
-  border-color: var(--smk-navy-line);
-  background: linear-gradient(168deg, var(--smk-navy-card-a) 0%, var(--smk-navy-card-b) 100%);
+  border-color: var(--smk-card-line);
+  background: linear-gradient(168deg, var(--smk-card-a) 0%, var(--smk-card-b) 100%);
   box-shadow:
-    0 1px 0 0 rgb(168 198 232 / 0.06) inset,
+    0 1px 0 0 rgb(255 255 255 / 0.05) inset,
     0 18px 40px -24px rgb(0 0 0 / 0.85);
 }
 @media (hover: hover) {
@@ -669,7 +667,7 @@ html.dark .smk-lux {
     border-color: rgb(212 175 95 / 0.5);
   }
   html.dark .smk-lux:hover {
-    border-color: rgb(124 156 196 / 0.45);
+    border-color: rgb(255 255 255 / 0.22);
   }
 }
 .smk-lux:active { transform: translateY(0); }
@@ -696,9 +694,9 @@ html.dark .smk-lux {
 }
 html.dark .smk-lux::before {
   background-image:
-    linear-gradient(74deg,  transparent 48.6%, rgb(124 156 196 / 0.20) 48.8%, transparent 49.1%),
-    linear-gradient(112deg, transparent 61.4%, rgb(124 156 196 / 0.13) 61.6%, transparent 61.9%),
-    linear-gradient(58deg,  transparent 79.4%, rgb(124 156 196 / 0.09) 79.6%, transparent 79.9%);
+    linear-gradient(74deg,  transparent 48.6%, rgb(255 255 255 / 0.10) 48.8%, transparent 49.1%),
+    linear-gradient(112deg, transparent 61.4%, rgb(255 255 255 / 0.06) 61.6%, transparent 61.9%),
+    linear-gradient(58deg,  transparent 79.4%, rgb(255 255 255 / 0.04) 79.6%, transparent 79.9%);
 }
 
 /* --- Имя: без засечек, крупно ----------------------------------------------- */
@@ -716,8 +714,8 @@ html.dark .smk-lux::before {
   background: linear-gradient(140deg, var(--smk-gold-soft), var(--smk-gold-deep));
 }
 html.dark .smk-ring {
-  background: linear-gradient(140deg, var(--smk-steel-bright), #3d5a80);
-  box-shadow: 0 0 14px -3px rgb(124 156 196 / 0.5);
+  background: linear-gradient(140deg, #3f3f46, #27272a);
+  box-shadow: 0 0 12px -4px rgb(0 0 0 / 0.8);
 }
 .smk-ring > * {
   border-radius: 9999px;
@@ -743,8 +741,8 @@ html.dark .smk-rule {
   background: linear-gradient(
     to right,
     transparent,
-    rgb(124 156 196 / 0.28) 12%,
-    rgb(124 156 196 / 0.28) 88%,
+    rgb(255 255 255 / 0.14) 12%,
+    rgb(255 255 255 / 0.14) 88%,
     transparent
   );
 }
@@ -759,8 +757,8 @@ html.dark .smk-rule {
   box-shadow: inset 0 0 0 1px rgb(15 23 42 / 0.05);
 }
 html.dark .smk-field {
-  background: var(--smk-navy-inset);
-  box-shadow: inset 0 0 0 1px rgb(168 198 232 / 0.07);
+  background: var(--smk-card-inset);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.06);
 }
 
 /* Тонкая линия между строками внутри одной группы. */
@@ -768,7 +766,7 @@ html.dark .smk-field {
   border-top: 1px solid rgb(15 23 42 / 0.06);
 }
 html.dark .smk-field-split > * + * {
-  border-top-color: rgb(168 198 232 / 0.08);
+  border-top-color: rgb(255 255 255 / 0.07);
 }
 
 /* --- Иконка строки данных --------------------------------------------------- */
@@ -776,7 +774,7 @@ html.dark .smk-field-split > * + * {
   color: var(--smk-gold-deep);
   flex: none;
 }
-html.dark .smk-ico { color: var(--smk-steel-bright); }
+html.dark .smk-ico { color: var(--smk-muted-bright); }
 
 /* --- Подвал и кнопка действия ----------------------------------------------- */
 .smk-foot {
@@ -784,12 +782,12 @@ html.dark .smk-ico { color: var(--smk-steel-bright); }
   border-top: 1px solid rgb(212 175 95 / 0.18);
 }
 html.dark .smk-foot {
-  background: rgb(9 13 22 / 0.5);
-  border-top-color: rgb(124 156 196 / 0.14);
+  background: rgb(0 0 0 / 0.28);
+  border-top-color: rgb(255 255 255 / 0.08);
 }
 
 /* Текст и иконка всегда белые: на золотом градиенте тёмная надпись
-   читалась плохо, а в тёмной теме кнопка синяя. */
+   читалась плохо. В тёмной теме кнопка нейтрально-серая. */
 .smk-btn-gold {
   background: linear-gradient(100deg, var(--smk-gold-deep), var(--smk-gold));
   color: #ffffff;
@@ -799,8 +797,8 @@ html.dark .smk-foot {
   transition: filter 0.18s ease, transform 0.18s ease;
 }
 html.dark .smk-btn-gold {
-  background: linear-gradient(100deg, #2f4f78, #4a7ab0);
-  box-shadow: 0 6px 16px -8px rgb(74 122 176 / 0.9);
+  background: linear-gradient(100deg, #3f3f46, #52525b);
+  box-shadow: 0 6px 16px -8px rgb(0 0 0 / 0.8);
 }
 .smk-btn-gold:hover { filter: brightness(1.08); }
 .smk-btn-gold:active { transform: scale(0.98); }
@@ -815,7 +813,7 @@ html.dark .smk-btn-gold {
   border-radius: 9999px;
   border: 2px solid #ffffff;
 }
-html.dark .smk-dot { border-color: var(--smk-navy-card-a); }
+html.dark .smk-dot { border-color: var(--smk-card-a); }
 
 /* --- Звезда рейтинга и акцент стрелки ---------------------------------------
    Звезда золотая в обеих темах — так она и на синем референсе. А вот
@@ -823,9 +821,9 @@ html.dark .smk-dot { border-color: var(--smk-navy-card-a); }
    иначе на синем полотне появляется случайный жёлтый. */
 .smk-star { color: #d4af5f; fill: #d4af5f; }
 .smk-rating-value { color: var(--smk-gold-deep); }
-html.dark .smk-rating-value { color: #e8cd8f; }
+html.dark .smk-rating-value { color: #e4e4e7; }
 
 .smk-arrow { color: rgb(203 213 225); transition: color 0.2s ease, transform 0.2s ease; }
 html.dark .smk-arrow { color: rgb(71 85 105); }
 .group:hover .smk-arrow { color: var(--smk-gold-deep); transform: translateX(2px); }
-html.dark .group:hover .smk-arrow { color: var(--smk-steel-bright); }
+html.dark .group:hover .smk-arrow { color: var(--smk-muted-bright); }
