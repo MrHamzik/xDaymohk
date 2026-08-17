@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { X, Loader2, Star, MapPin, Clock, Users, CalendarDays } from 'lucide-react';
-import { cacheBustAvatarUrl } from '@/lib/media';
+import TaskAvatar from '@/components/tasks/TaskAvatar';
 import { fetchTask, runTaskAction, submitResidentReview, formatTimeLeft } from '@/lib/tasks/client';
 import AttendanceModal from '@/components/tasks/AttendanceModal';
 import {
@@ -120,11 +120,7 @@ export default function TaskDetailModal({
             <>
               {/* Заказчик — по этим цифрам судят, браться ли */}
               <div className="flex items-center gap-3 rounded-2xl bg-slate-50 p-3 dark:bg-zinc-800/60">
-                <img
-                  src={cacheBustAvatarUrl(task.authorAvatarUrl || '')}
-                  alt=""
-                  className="h-11 w-11 shrink-0 rounded-xl object-cover"
-                />
+                <TaskAvatar src={task.authorAvatarUrl} className="h-11 w-11 shrink-0 rounded-xl object-cover" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold text-slate-900 dark:text-white">
                     {task.authorName || 'Житель Даймохк'}
@@ -175,11 +171,7 @@ export default function TaskDetailModal({
                         key={p.id}
                         className="flex items-center gap-2 rounded-xl border border-slate-200 p-2 dark:border-zinc-700"
                       >
-                        <img
-                          src={cacheBustAvatarUrl(p.avatarUrl || '')}
-                          alt=""
-                          className="h-8 w-8 shrink-0 rounded-lg object-cover"
-                        />
+                        <TaskAvatar src={p.avatarUrl} className="h-8 w-8 shrink-0 rounded-lg object-cover" />
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-xs font-bold text-slate-900 dark:text-white">
                             {p.fullName || 'Житель'}

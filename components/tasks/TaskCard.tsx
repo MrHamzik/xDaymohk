@@ -1,7 +1,7 @@
 'use client';
 
 import { Clock, MapPin, Star, Users, Zap, AlertTriangle, CalendarDays } from 'lucide-react';
-import { cacheBustAvatarUrl } from '@/lib/media';
+import TaskAvatar from '@/components/tasks/TaskAvatar';
 import { formatTimeLeft } from '@/lib/tasks/client';
 import { taskTotalReward, type Task } from '@/lib/types';
 
@@ -55,11 +55,7 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
     >
       {/* Шапка: по этим цифрам исполнитель решает, стоит ли браться */}
       <div className="flex items-center gap-2.5">
-        <img
-          src={cacheBustAvatarUrl(task.authorAvatarUrl || '')}
-          alt=""
-          className="h-9 w-9 shrink-0 rounded-xl object-cover"
-        />
+        <TaskAvatar src={task.authorAvatarUrl} className="h-9 w-9 shrink-0 rounded-xl object-cover" />
         <div className="min-w-0 flex-1">
           <p className="truncate text-xs font-bold text-slate-900 dark:text-white">
             {task.authorName || 'Житель Даймохк'}
