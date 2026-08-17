@@ -5,6 +5,7 @@ import { useProfiles } from '@/components/ProfilesProvider';
 import { CheckCircle2, Clock3, ShieldAlert, Star } from 'lucide-react';
 import { Profile } from '@/lib/types';
 import { calculateWorkingStatus } from '@/lib/schedule';
+import { useMinuteTick } from '@/lib/use-clock';
 import { useI18n } from '@/lib/i18n';
 
 /**
@@ -42,6 +43,9 @@ export interface WorkingStatusBadgeProps {
 export function WorkingStatusBadge({ profile, onDarkBackground = false }: WorkingStatusBadgeProps) {
   const { t } = useI18n();
   const effectiveOverride = useEffectiveOverride(profile);
+  // Расписание зависит от текущего времени — пересчитываем раз в минуту,
+  // иначе бейдж застывает в состоянии на момент загрузки страницы.
+  useMinuteTick();
   // Only specialists have working hours and real-time open/break/closed status
   if (!profile.isSpecialist) return null;
 
@@ -86,6 +90,8 @@ export function WorkingStatusBadge({ profile, onDarkBackground = false }: Workin
  */
 export function useWorkingStatusRing(profile: Profile): { className: string; label: string | null } {
   const effectiveOverride = useEffectiveOverride(profile);
+  // См. WorkingStatusBadge: без тика кольцо не меняет цвет до перезагрузки.
+  useMinuteTick();
   if (!profile.isSpecialist) return { className: '', label: null };
 
   const statusInfo = calculateWorkingStatus(profile, effectiveOverride);

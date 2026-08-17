@@ -554,6 +554,16 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         .eq('task_id', id)
         .eq('user_id', userId)
         .maybeSingle();
+      // Запланированное задание закрывает заказчик отметкой явки —
+      // «Выполнил» там не применяется. Кнопку в интерфейсе убрали, но
+      // проверку дублируем: клиент менять нельзя, порядок статусов
+      // должен держать сервер.
+      if (task.kind === 'scheduled') {
+        return NextResponse.json(
+          { error: 'Задание на дату закрывает заказчик отметкой явки' },
+          { status: 409 },
+        );
+      }
       if (String(participant?.status) === 'pending') {
         return NextResponse.json(
           { error: 'Заказчик ещё не одобрил вашу заявку' },

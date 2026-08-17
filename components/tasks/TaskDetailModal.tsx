@@ -456,26 +456,31 @@ export default function TaskDetailModal({
               </button>
             )}
 
+            {/* «Выполнил» — только на срочных заданиях. Задание «на дату»
+                закрывает заказчик отметкой явки: он видит, кто пришёл, и
+                там же ставит оценки с бонусами. Кнопка у исполнителя
+                переводила задание в awaiting_confirm и ломала этот путь. */}
+            {isExecutor && task.kind === 'urgent' && ['open', 'in_progress'].includes(task.status) && (
+              <button
+                type="button"
+                disabled={Boolean(busy)}
+                onClick={() => act('submit', () => runTaskAction(task.id, 'submit'))}
+                className={`${btn} bg-emerald-600 text-white hover:bg-emerald-700`}
+              >
+                {busy === 'submit' && <Loader2 className="h-4 w-4 animate-spin" />}
+                {t.taskSubmitBtn}
+              </button>
+            )}
+
             {isExecutor && ['open', 'in_progress'].includes(task.status) && (
-              <>
-                <button
-                  type="button"
-                  disabled={Boolean(busy)}
-                  onClick={() => act('submit', () => runTaskAction(task.id, 'submit'))}
-                  className={`${btn} bg-emerald-600 text-white hover:bg-emerald-700`}
-                >
-                  {busy === 'submit' && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {t.taskSubmitBtn}
-                </button>
-                <button
-                  type="button"
-                  disabled={Boolean(busy)}
-                  onClick={() => act('leave', () => runTaskAction(task.id, 'leave'))}
-                  className={`${btn} border border-slate-200 text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-300`}
-                >
-                  {t.taskLeaveBtn}
-                </button>
-              </>
+              <button
+                type="button"
+                disabled={Boolean(busy)}
+                onClick={() => act('leave', () => runTaskAction(task.id, 'leave'))}
+                className={`${btn} border border-slate-200 text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-300`}
+              >
+                {t.taskLeaveBtn}
+              </button>
             )}
 
             {isAuthor && task.status === 'awaiting_confirm' && (
