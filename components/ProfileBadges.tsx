@@ -55,6 +55,39 @@ export function WorkingStatusBadge({ profile, onDarkBackground = false }: Workin
   );
 }
 
+/**
+ * Точка рабочего статуса поверх аватара (референс «цвета стиль»):
+ * зелёная — работает, жёлтая — перерыв, серая — не работает,
+ * голубая — произвольный график.
+ *
+ * Переиспользует расчёт из WorkingStatusBadge, но без подписи:
+ * в шапке карточки текстовый бейдж рядом с именем не помещался.
+ */
+export function WorkingStatusDot({ profile }: { profile: Profile }) {
+  const { account } = useAuth();
+  if (!profile.isSpecialist) return null;
+
+  const isOwner = Boolean(account && account.id === profile.ownerId);
+  const effectiveOverride = isOwner ? account?.statusOverride : profile.statusOverride;
+  const statusInfo = calculateWorkingStatus(profile, effectiveOverride);
+
+  const dotBg = statusInfo.status === 'flexible'
+    ? 'bg-sky-500'
+    : statusInfo.status === 'break'
+    ? 'bg-amber-500'
+    : statusInfo.status === 'offline'
+    ? 'bg-zinc-400'
+    : 'bg-emerald-500';
+
+  return (
+    <span
+      title={`${statusInfo.label}${statusInfo.details ? ` (${statusInfo.details})` : ''}`}
+      aria-label={statusInfo.label}
+      className={`smk-dot ${dotBg}`}
+    />
+  );
+}
+
 interface ProfileBadgesProps {
   profile: Profile;
   /** Account-level role, resolved from the signed-in Google account. */

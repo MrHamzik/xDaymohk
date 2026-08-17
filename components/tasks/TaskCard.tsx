@@ -70,10 +70,8 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
         }
       }}
       aria-label={`Открыть задание: ${task.title}`}
-      className={`smk-card smk-ornament group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border bg-white text-slate-900 shadow-sm hover:shadow-lg dark:bg-zinc-800 dark:text-white ${
-        needsReview
-          ? 'border-amber-300/70 hover:border-amber-400 dark:border-amber-800/80'
-          : 'border-slate-200/70 hover:border-emerald-300/80 dark:border-zinc-700/80 dark:hover:border-emerald-800'
+      className={`smk-lux group flex h-full cursor-pointer flex-col overflow-hidden text-slate-900 dark:text-white ${
+        needsReview ? 'ring-1 ring-amber-300/70 dark:ring-amber-700/60' : ''
       }`}
     >
       {/* Слой 3: «корешок» — цвет говорит о срочности до чтения текста */}
@@ -82,7 +80,7 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
       {/* ── Шапка: заказчик и цена ─────────────────────────────── */}
       <div className="flex items-start gap-3 py-3.5 pl-4 pr-3.5">
         <div className="relative shrink-0">
-          <div className="h-11 w-11 overflow-hidden rounded-xl bg-slate-100 ring-1 ring-slate-200/70 dark:bg-zinc-950 dark:ring-zinc-700/70">
+          <div className="smk-ring h-11 w-11">
             <Avatar
               src={task.authorAvatarUrl}
               alt={task.authorName || 'Заказчик'}
@@ -100,13 +98,13 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
         </div>
 
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-[13px] font-bold leading-tight text-slate-900 dark:text-white">
+          <h3 className="smk-title truncate text-base font-bold leading-tight text-slate-900 dark:text-white">
             {task.authorName || 'Житель Даймохк'}
           </h3>
           {/* Слой 5: метаданные с воздухом и ромбами-разделителями */}
           <div className="smk-meta mt-1.5 flex flex-wrap items-center text-[11px] leading-relaxed text-slate-500 dark:text-zinc-400">
             <span className="inline-flex items-center gap-1 font-bold text-amber-600 dark:text-amber-400">
-              <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+              <Star className="h-3 w-3 fill-[#d4af5f] text-[#d4af5f]" />
               {rating > 0 ? rating.toFixed(1) : 'нет оценок'}
             </span>
             <span>{task.authorAccountDays ?? 0} дн.</span>
@@ -133,7 +131,7 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
       </div>
 
       {/* Слой 2: разделитель с ромбом */}
-      <div className="smk-divider mx-4" />
+      <hr className="smk-rule mx-4" />
 
       {/* ── Суть задания ───────────────────────────────────────── */}
       <div className="px-4 py-3">
@@ -147,7 +145,7 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
         )}
       </div>
 
-      <div className="smk-divider mx-4" />
+      <hr className="smk-rule mx-4" />
 
       {/* ── Метки ──────────────────────────────────────────────── */}
       <div className="mt-auto flex flex-wrap items-center gap-1.5 px-4 py-3 text-[10px] font-bold">
@@ -212,12 +210,12 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
       </div>
 
       {/* ── Подвал: адрес и стрелка ────────────────────────────── */}
-      <div className="flex items-center justify-between gap-2 border-t border-slate-100 bg-slate-50/60 py-2.5 pl-4 pr-3.5 dark:border-zinc-700/60 dark:bg-zinc-900/40">
+      <div className="smk-foot flex items-center justify-between gap-2 py-2.5 pl-4 pr-3.5">
         <span className="flex min-w-0 items-center gap-1.5 text-[11px] text-slate-500 dark:text-zinc-400">
           <MapPin className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
           <span className="truncate">{task.address || 'Адрес не указан'}</span>
         </span>
-        <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-emerald-500 dark:text-zinc-600" />
+        <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-[#d4af5f] dark:text-zinc-600" />
       </div>
     </article>
   );
