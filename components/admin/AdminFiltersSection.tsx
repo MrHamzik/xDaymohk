@@ -5,7 +5,7 @@ import {
   Loader2, Plus, Trash2, Save, GripVertical, RotateCcw,
   Briefcase, Stethoscope, Hammer, GraduationCap, Wrench, Scissors,
   ShoppingBag, Sprout, Car, Home, Utensils, Truck, Baby, Scale,
-  Paintbrush, Laptop, Camera, Music, Dumbbell, Leaf,
+  Paintbrush, Laptop, Camera, Music, Dumbbell, Leaf, ChevronDown,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import type { AppFilter } from '@/lib/types';
@@ -30,6 +30,73 @@ const ICON_OPTIONS: Record<string, React.ComponentType<{ className?: string }>> 
   Paintbrush, Laptop, Camera, Music, Dumbbell, Leaf,
 };
 const ICON_NAMES = Object.keys(ICON_OPTIONS);
+
+/**
+ * Выбор иконки сеткой, а не выпадающим списком названий: по строке
+ * «Sprout» непонятно, что будет нарисовано. Кнопки показывают саму
+ * иконку, подпись остаётся в title для ясности.
+ */
+function IconPicker({
+  value,
+  onChange,
+  label,
+}: {
+  value: string;
+  onChange: (name: string) => void;
+  label: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const Current = ICON_OPTIONS[value] ?? Briefcase;
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setIsOpen((v) => !v)}
+        aria-label={label}
+        title={value || 'Иконка'}
+        className="flex h-9 w-full items-center justify-center gap-1 rounded-lg border border-transparent bg-slate-100 text-slate-700 transition hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+      >
+        <Current className="h-4 w-4" />
+        <ChevronDown className="h-3 w-3 opacity-60" />
+      </button>
+
+      {isOpen && (
+        <>
+          {/* Клик мимо закрывает палитру */}
+          <button
+            type="button"
+            aria-label="Закрыть выбор иконки"
+            className="fixed inset-0 z-20 cursor-default"
+            onClick={() => setIsOpen(false)}
+          />
+          <div className="absolute left-0 top-full z-30 mt-1 grid w-56 grid-cols-6 gap-1 rounded-xl border border-slate-200 bg-white p-2 shadow-xl dark:border-zinc-700 dark:bg-zinc-900">
+            {ICON_NAMES.map((name) => {
+              const Icon = ICON_OPTIONS[name];
+              const isActive = name === value;
+              return (
+                <button
+                  key={name}
+                  type="button"
+                  title={name}
+                  aria-label={name}
+                  onClick={() => { onChange(name); setIsOpen(false); }}
+                  className={`flex h-8 w-8 items-center justify-center rounded-lg transition ${
+                    isActive
+                      ? 'bg-emerald-600 text-white'
+                      : 'text-slate-600 hover:bg-slate-100 dark:text-zinc-300 dark:hover:bg-zinc-800'
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 const SCOPES: Array<{ value: Scope; label: string; hint: string }> = [
   { value: 'tasks', label: 'Задания', hint: 'Направления в «Аренца Темщик» и «ГIончалла»' },
@@ -245,7 +312,7 @@ export default function AdminFiltersSection() {
       {/* Добавление */}
       <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
         <p className="mb-2 text-xs font-bold text-slate-700 dark:text-zinc-300">Новый фильтр</p>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-[7rem_5rem_1fr_1fr_auto]">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-[7rem_4rem_1fr_1fr_auto]">
           <input
             value={newValue}
             onChange={(e) => setNewValue(e.target.value)}
@@ -253,16 +320,7 @@ export default function AdminFiltersSection() {
             aria-label="Код фильтра"
             className={field}
           />
-          <select
-            value={newIcon}
-            onChange={(e) => setNewIcon(e.target.value)}
-            aria-label="Иконка"
-            className={field}
-          >
-            {ICON_NAMES.map((name) => (
-              <option key={name} value={name}>{name}</option>
-            ))}
-          </select>
+          <IconPicker value={newIcon} onChange={setNewIcon} label="Иконка нового фильтра" />
           <input
             value={newLabelRu}
             onChange={(e) => setNewLabelRu(e.target.value)}
@@ -302,7 +360,7 @@ export default function AdminFiltersSection() {
         <div className="space-y-2">
           {/* Шапка колонок — только на широком экране, на мобильном
               поля подписаны плейсхолдерами. */}
-          <div className="hidden grid-cols-[auto_7rem_5rem_1fr_1fr_auto] gap-2 px-2.5 text-[10px] font-bold uppercase tracking-wide text-slate-400 sm:grid">
+          <div className="hidden grid-cols-[auto_7rem_4rem_1fr_1fr_auto] gap-2 px-2.5 text-[10px] font-bold uppercase tracking-wide text-slate-400 sm:grid">
             <span className="w-4" />
             <span>Код</span>
             <span>Иконка</span>
@@ -317,7 +375,7 @@ export default function AdminFiltersSection() {
               onDragStart={() => setDragId(filter.id)}
               onDragOver={(e) => e.preventDefault()}
               onDrop={() => handleDrop(filter.id)}
-              className={`grid grid-cols-[auto_1fr] items-center gap-2 rounded-2xl border bg-white p-2.5 shadow-sm transition dark:bg-zinc-950 sm:grid-cols-[auto_7rem_5rem_1fr_1fr_auto] ${
+              className={`grid grid-cols-[auto_1fr] items-center gap-2 rounded-2xl border bg-white p-2.5 shadow-sm transition dark:bg-zinc-950 sm:grid-cols-[auto_7rem_4rem_1fr_1fr_auto] ${
                 dragId === filter.id
                   ? 'border-emerald-400 opacity-60'
                   : 'border-slate-200 dark:border-zinc-800'
@@ -337,25 +395,11 @@ export default function AdminFiltersSection() {
               </code>
 
               {/* Иконка: селект + живой предпросмотр слева */}
-              <div className="col-span-2 flex items-center gap-1.5 sm:col-span-1">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
-                  {(() => {
-                    const Icon = ICON_OPTIONS[filter.icon ?? ''] ?? Briefcase;
-                    return <Icon className="h-3.5 w-3.5" />;
-                  })()}
-                </span>
-                <select
-                  value={filter.icon ?? ''}
-                  onChange={(e) => patchLocal(filter.id, { icon: e.target.value })}
-                  aria-label={`Иконка ${filter.value}`}
-                  className={`${field} min-w-0 flex-1`}
-                >
-                  <option value="">—</option>
-                  {ICON_NAMES.map((name) => (
-                    <option key={name} value={name}>{name}</option>
-                  ))}
-                </select>
-              </div>
+              <IconPicker
+                value={filter.icon ?? ''}
+                onChange={(name) => patchLocal(filter.id, { icon: name })}
+                label={`Иконка ${filter.value}`}
+              />
 
               <input
                 value={filter.labelRu}

@@ -53,9 +53,6 @@ export interface UserSummary {
   isAdmin: boolean;
   isBlocked: boolean;
   profileCount: number;
-  /** Репутация в заданиях: рейтинг ЧЕЛОВЕКА (не навыков специалиста). */
-  residentRating?: number;
-  residentReviewCount?: number;
 }
 
 export type NotificationType =

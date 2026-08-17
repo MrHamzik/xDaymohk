@@ -34,15 +34,19 @@ export default function ProfileCard({
   onBlock,
 }: ProfileCardProps) {
   const { t } = useI18n();
-  const { users } = useProfiles();
+  const { reputation } = useProfiles();
   const openProfile = () => onSelect(profile);
 
-  // Репутация в заданиях привязана к ЧЕЛОВЕКУ (user_profiles), а не к
-  // анкете, поэтому берём её у владельца. Это не рейтинг специалиста:
-  // тот про навыки и живёт в profile.rating.
-  const owner = profile.ownerId ? users.find((u) => u.id === profile.ownerId) : undefined;
-  const residentRating = Number(owner?.residentRating ?? 0);
-  const residentReviews = Number(owner?.residentReviewCount ?? 0);
+  // Репутация в заданиях привязана к ЧЕЛОВЕКУ, а не к анкете, поэтому
+  // берём её у владельца из публичной вьюхи.
+  //
+  // Показываем ТОЛЬКО в личной анкете: у специалиста своя оценка —
+  // profile.rating, она про навыки в профессии. Смешивать их нельзя,
+  // иначе на карточке мастера оказывались бы две разные звёздочки.
+  const ownerReputation = profile.ownerId ? reputation[profile.ownerId] : undefined;
+  const showResidentRating = !profile.isSpecialist;
+  const residentRating = Number(ownerReputation?.rating ?? 0);
+  const residentReviews = Number(ownerReputation?.reviewCount ?? 0);
   const profileIsAdmin = Boolean(isAdminStatus);
   const hasAction = Boolean((isAdmin && !profileIsAdmin && onBlock) || (!isOwnProfile && !profile.isVerified && profile.verificationStatus !== 'verified' && onReport));
 
@@ -87,7 +91,7 @@ export default function ProfileCard({
           </div>
           {/* Репутация в заданиях — сразу под именем, до бейджей:
               по ней судят о человеке перед сделкой. */}
-          {residentReviews > 0 && (
+          {showResidentRating && residentReviews > 0 && (
             <div className="mt-1 flex items-center gap-1 text-[11px]">
               <Star className="h-3 w-3 shrink-0 fill-amber-400 text-amber-400" />
               <span className="font-bold text-amber-600 dark:text-amber-400">

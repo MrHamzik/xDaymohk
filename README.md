@@ -74,6 +74,7 @@ npm run dev
 | 22 | `supabase/update/22-map-categories.sql` | Категории карты из localStorage → БД |
 | 23 | `supabase/update/23-catalog-filters.sql` | Сферы каталога («Направление и сфера») из кода → БД |
 | 24 | `supabase/update/24-tasks-realtime.sql` | Realtime заданий, репутация во вьюхе пользователей, иконки фильтров |
+| 25 | `supabase/update/25-public-reputation.sql` | Публичная вьюха репутации (рейтинг виден всем, а не только владельцу) |
 
 > 💡 **pg_cron (шаг 11)** — рекомендую включить: письма доставляются сами,
 > без ручной кнопки.

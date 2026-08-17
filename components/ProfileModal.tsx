@@ -758,9 +758,11 @@ export default function ProfileModal({
             {profile.bio}
           </p>
 
-          {/* Репутация жителя по заданиям — отдельно от рейтинга
-              специалиста: тот про навыки, этот про человека. */}
-          <ResidentReputation ownerId={profile.ownerId} />
+          {/* Репутация жителя по заданиям — только в ЛИЧНОЙ анкете.
+              У специалиста есть собственный рейтинг (profile.rating)
+              про навыки; показывать рядом второй, «человеческий», —
+              значит путать посетителя двумя разными оценками. */}
+          {!profile.isSpecialist && <ResidentReputation ownerId={profile.ownerId} />}
           {profile.experience && (
             <p className="mt-2 rounded-lg bg-emerald-50 px-2.5 py-1.5 text-sm font-extrabold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">Стаж: {profile.experience}</p>
           )}

@@ -1,7 +1,7 @@
 'use client';
 
 import Avatar from '@/components/Avatar';
-import { useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { Archive, ArrowLeft, Ban, Check, ChevronDown, Clock3, Eye, EyeOff, FolderOpen, MapPin, Moon, Plus, RotateCcw, Save as SaveIcon, Search, Send, ShieldAlert, Star, Sun, Trash2, Upload, UserCheck, UserRound, X, Pencil } from 'lucide-react';
 import AdminLetterEditorCard from '@/components/AdminLetterEditorCard';
@@ -255,6 +255,26 @@ export default function AdminPage() {
   const [dmsError, setDmsError] = useState('');
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
   const [customCategories, setCustomCategories] = useState<string[]>([]);
+  // Общий справочник категорий карты из БД (app_filters, scope='map').
+  // Раздел «Фильтры» → «Карта» и этот экран должны показывать одно и
+  // то же: раньше здесь был только localStorage, поэтому списки
+  // расходились между устройствами и между разделами админки.
+  const [dbMapCategories, setDbMapCategories] = useState<string[]>([]);
+  const reloadMapCategories = useCallback(async () => {
+    try {
+      const res = await fetch('/api/tasks/filters?scope=map', { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = await res.json();
+      setDbMapCategories(
+        (data.filters ?? [])
+          .map((f: { labelRu?: string }) => String(f.labelRu ?? '').trim())
+          .filter(Boolean),
+      );
+    } catch {
+      // офлайн — останется локальный список
+    }
+  }, []);
+  useEffect(() => { reloadMapCategories(); }, [reloadMapCategories]);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [addressFilter, setAddressFilter] = useState<string>('all');
   const [addressSearch, setAddressSearch] = useState('');
@@ -871,7 +891,12 @@ export default function AdminPage() {
     }
   };
 
-  const allAddressCategories = Array.from(new Set([...DEFAULT_ADDRESS_CATEGORIES, ...customCategories, ...addresses.map(a=>a.category).filter(Boolean) as string[]]));
+  const allAddressCategories = Array.from(new Set([
+    ...DEFAULT_ADDRESS_CATEGORIES,
+    ...dbMapCategories,
+    ...customCategories,
+    ...addresses.map(a=>a.category).filter(Boolean) as string[],
+  ]));
 
   const visibleAddresses = addresses.filter((a) => !pendingDeletes.has(a.id));
   const deletedAddresses = addresses.filter((a) => pendingDeletes.has(a.id));
@@ -895,16 +920,45 @@ export default function AdminPage() {
   const safePage = Math.min(addressPage, totalPages - 1);
   const pageItems = filteredAddresses.slice(safePage * ADDRESS_PAGE_SIZE, safePage * ADDRESS_PAGE_SIZE + ADDRESS_PAGE_SIZE);
 
-  const handleAddCategory = () => {
+  const handleAddCategory = async () => {
     const name = newCategoryName.trim();
     if (!name) return;
     if (allAddressCategories.includes(name)) { setNewCategoryName(''); return; }
-    const next = [...customCategories, name];
-    setCustomCategories(next);
-    try { localStorage.setItem(CUSTOM_CATEGORIES_KEY, JSON.stringify(next)); } catch {}
-    setNewCategoryName('');
-    setSaveMsg(`Категория "${name}" добавлена`);
-    setTimeout(()=>setSaveMsg(null),2000);
+
+    // Пишем в общий справочник: слаг из русского названия, как в
+    // миграции 22. localStorage больше не источник истины — он остаётся
+    // только запасным вариантом, если БД недоступна.
+    const slug = name.toLowerCase()
+      .replace(/[^a-zа-яё0-9]+/gi, '-')
+      .replace(/^-+|-+$/g, '')
+      .replace(/[а-яё]/g, (ch) => {
+        const map: Record<string, string> = {
+          а:'a',б:'b',в:'v',г:'g',д:'d',е:'e',ё:'e',ж:'zh',з:'z',и:'i',й:'j',
+          к:'k',л:'l',м:'m',н:'n',о:'o',п:'p',р:'r',с:'s',т:'t',у:'u',ф:'f',
+          х:'h',ц:'c',ч:'ch',ш:'sh',щ:'sch',ъ:'',ы:'y',ь:'',э:'e',ю:'yu',я:'ya',
+        };
+        return map[ch] ?? '';
+      }) || `cat-${Date.now()}`;
+
+    try {
+      const { data: sessionData } = await supabase!.auth.getSession();
+      const token = sessionData.session?.access_token;
+      const res = await fetch('/api/tasks/filters', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ scope: 'map', value: slug, labelRu: name, sortOrder: 500 }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.error || 'Не удалось сохранить категорию');
+      }
+      await reloadMapCategories();
+      setNewCategoryName('');
+      setSaveMsg(`Категория "${name}" добавлена`);
+    } catch (e) {
+      setSaveMsg(e instanceof Error ? e.message : 'Не удалось добавить категорию');
+    }
+    setTimeout(()=>setSaveMsg(null),2500);
   };
   const handleDeleteCategory = (cat: string) => {
     const next = customCategories.filter(c=>c!==cat);
@@ -2074,7 +2128,7 @@ export default function AdminPage() {
                     className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-xs dark:border-zinc-800 dark:bg-zinc-800 dark:text-white"
                   />
                 </div>
-                <button type="button" onClick={handleAddCategory} className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-bold text-white dark:bg-white dark:text-black">{L('Добавить', 'ТIетоха')}</button>
+                <button type="button" onClick={handleAddCategory} className="shrink-0 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500">{L('Добавить', 'ТIетоха')}</button>
               </div>
               {searchQ && (
                 <p className="mt-2 text-[11px] text-slate-500 dark:text-zinc-500">
