@@ -35,10 +35,11 @@ export default function MenuProfileCard() {
     window.dispatchEvent(new Event('daymohk-open-consent'));
   };
 
-  const cls = `flex w-full items-center gap-3 rounded-2xl p-2.5 text-left transition ${
+  // .smk-panel — общий слот панелей бокового меню (см. globals.css).
+  const cls = `flex w-full items-center gap-3 p-2.5 text-left transition ${
     isLocked
       ? 'bg-red-100 ring-1 ring-red-300 dark:bg-red-900/60 dark:ring-red-800'
-      : 'bg-slate-50/90 hover:bg-slate-100 dark:bg-zinc-950 dark:hover:bg-zinc-800'
+      : 'smk-panel hover:brightness-95 dark:hover:brightness-110'
   }`;
 
   const inner = (

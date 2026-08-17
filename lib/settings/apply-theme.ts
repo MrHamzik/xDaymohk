@@ -102,7 +102,9 @@ function applyNeutralRamp(
 const MANAGED_PROPERTIES = [
   '--background', '--foreground', '--border-dark-soft',
   '--smk-card-a', '--smk-card-b', '--smk-card-line', '--smk-card-inset',
-  '--smk-muted', '--smk-muted-bright', '--smk-surface', '--smk-surface-soft',
+  '--smk-muted', '--smk-muted-bright', '--smk-icon',
+  '--smk-surface', '--smk-surface-soft',
+  '--smk-panel',
   '--smk-gold', '--smk-gold-soft', '--smk-gold-deep', '--smk-gold-rgb',
   '--smk-hairline', '--smk-hairline-strong',
   '--color-zinc-950', '--color-zinc-900', '--color-zinc-800', '--color-zinc-700',
@@ -191,7 +193,9 @@ export function applyThemeColors(
   // меню — пользователь справедливо не понимал, где этот цвет вообще
   // применяется.
   set('--color-zinc-950', colors.bg);
-  set('--color-zinc-900', mix(colors.bg, colors.card, 0.45));
+  // 900 — панели (мини-профиль, виджет намаза, панель иконок): у них
+  // теперь собственный слот, отдельный и от фона, и от карточки.
+  set('--color-zinc-900', colors.panel);
   set('--color-zinc-800', colors.card);
   set('--color-zinc-700', surfaceStep);
 
@@ -199,34 +203,40 @@ export function applyThemeColors(
   // приглушённых подписей — до этого они оставались стандартно-серыми,
   // и слот «Приглушённый текст» не давал видимого эффекта.
   if (isDark) {
-    set('--color-zinc-100', mix(colors.text, colors.card, 0.04));
-    set('--color-zinc-200', mix(colors.text, colors.card, 0.12));
-    set('--color-zinc-300', mix(colors.text, colors.muted, 0.45));
+    // 100/200 — основной текст, 300/400 — второстепенный.
+    // Между собой их НЕ смешиваем: иначе правка «Основного текста»
+    // тянула за собой подписи, и наоборот.
+    set('--color-zinc-100', colors.text);
+    set('--color-zinc-200', colors.text);
+    set('--color-zinc-300', colors.muted);
     set('--color-zinc-400', colors.muted);
-    set('--color-zinc-500', mix(colors.muted, colors.card, 0.3));
-    set('--color-zinc-600', mix(colors.muted, colors.card, 0.55));
+    set('--color-zinc-500', mix(colors.muted, colors.card, 0.25));
+    set('--color-zinc-600', mix(colors.muted, colors.card, 0.5));
   }
 
   // Светлые темы пишут текст через slate-500…900.
   if (!isDark) {
+    // 500/600 — второстепенный текст, 800/900 — основной.
+    // 700 промежуточная: её разметка использует и там, и там.
     set('--color-slate-500', colors.muted);
-    set('--color-slate-600', mix(colors.muted, colors.text, 0.35));
-    set('--color-slate-700', mix(colors.muted, colors.text, 0.6));
-    set('--color-slate-800', mix(colors.muted, colors.text, 0.82));
+    set('--color-slate-600', colors.muted);
+    set('--color-slate-700', mix(colors.muted, colors.text, 0.5));
+    set('--color-slate-800', colors.text);
     set('--color-slate-900', colors.text);
   }
 
   // ── Карточка ────────────────────────────────────────────────────
+  set('--smk-panel', colors.panel);
   set('--smk-card-a', colors.card);
   set('--smk-card-b', colors.cardAlt);
   set('--smk-card-line', colors.cardLine);
   set('--smk-card-inset', colors.cardInset);
   set('--smk-muted', colors.muted);
-  // Яркая версия ПРИГЛУШЁННОГО, а не основной текст. Через эту
-  // переменную красятся иконки строк, звезда рейтинга и стрелка
-  // карточки — привязав её к colors.text, мы делали так, что слот
-  // «Текст» менял иконки, а не текст.
-  set('--smk-muted-bright', mix(colors.muted, colors.text, 0.45));
+  // Иконки строк, звезда рейтинга, стрелка карточки. Отдельный слот:
+  // раньше значение смешивалось из text и muted, и настроить иконки
+  // независимо было нельзя — они тянулись за текстом.
+  set('--smk-muted-bright', colors.icon);
+  set('--smk-icon', colors.icon);
   set('--smk-surface', colors.card);
   set('--smk-surface-soft', colors.cardInset);
 

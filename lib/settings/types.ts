@@ -143,6 +143,12 @@ export interface ThemeColors {
   bg: string;
   /** Полотно карточки. */
   card: string;
+  /**
+   * Фон панелей: мини-профиль, виджет времени намаза, панель четырёх
+   * иконок в боковом меню. Отдельный слот от фона страницы — иначе
+   * панели сливаются с полотном и блок «плавает».
+   */
+  panel: string;
   /** Низ градиента карточки. */
   cardAlt: string;
   /** Обводка карточки. */
@@ -151,8 +157,14 @@ export interface ThemeColors {
   cardInset: string;
   /** Основной текст. */
   text: string;
-  /** Приглушённый текст. */
+  /** Второстепенный текст: подписи, пояснения, даты. */
   muted: string;
+  /**
+   * Иконки. Свой слот: раньше их цвет выводился смешиванием основного
+   * и второстепенного текста, и подкрутить иконки отдельно было
+   * невозможно — они тянулись за текстом.
+   */
+  icon: string;
 
   // ── Детали ──────────────────────────────────────────────────────
   /** Акцент: кнопки, активные элементы, звезда рейтинга. */
@@ -203,7 +215,7 @@ export const THEME_COLOR_GROUPS: Record<ThemeColorGroup, Array<keyof ThemeColors
   // cardAlt в редакторе не показываем: он даёт лишь нижнюю точку
   // градиента карточки и визуально неотличим от card. Значение
   // выводится автоматически при сохранении темы.
-  global: ['bg', 'card', 'cardInset', 'cardLine', 'text', 'muted'],
+  global: ['bg', 'panel', 'card', 'cardInset', 'cardLine', 'text', 'muted', 'icon'],
   details: ['accent', 'accentSoft', 'accentDeep', 'ui', 'danger'],
   specific: [
     'statusActive', 'statusBreak', 'statusFlexible', 'statusOffline',

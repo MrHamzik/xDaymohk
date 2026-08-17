@@ -57,7 +57,7 @@ export default function PrayerTimesBar() {
 
   return (
     <>
-      <div className="space-y-1.5 rounded-xl border border-slate-200/80 bg-white p-2 shadow-sm dark:border-zinc-800/60 dark:bg-zinc-900" >
+      <div className="smk-panel space-y-1.5 p-2 shadow-sm" >
         {/* Countdown Header: Strictly "До [Название]" */}
         <div className="flex items-center justify-between gap-1.5 border-b border-slate-100 pb-1.5 dark:border-zinc-800/60 text-xs">
           <div className="flex items-center gap-1.5 font-extrabold text-emerald-700 dark:text-emerald-400">

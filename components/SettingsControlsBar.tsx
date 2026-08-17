@@ -107,7 +107,7 @@ export default function SettingsControlsBar() {
   ];
 
   return (
-    <div className="flex w-full items-center justify-between gap-2 rounded-xl bg-slate-50/90 p-2 dark:border-zinc-700 dark:bg-zinc-900 border border-slate-200/80" >
+    <div className="smk-panel flex w-full items-center justify-between gap-2 p-2" >
       {/* 1. Status Button */}
       <div className="relative flex-1 flex justify-center" ref={statusRef}>
         <button
