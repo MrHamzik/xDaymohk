@@ -6,6 +6,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { useTheme } from '@/components/ThemeProvider';
 import { useI18n } from '@/lib/i18n';
 import NotificationCenter from '@/components/NotificationCenter';
+import { HintMark } from '@/components/settings/SettingsPrimitives';
 import ThemePickerButton from '@/components/settings/ThemePickerButton';
 import { useSettings } from '@/components/SettingsProvider';
 import { UserMasterStatus } from '@/lib/types';
@@ -73,6 +74,21 @@ export default function SettingsControlsBar() {
     }
   };
 
+  // Иконка и цвет для каждого режима — ряд из 4 кнопок.
+  // Partial: 'flexible' задаётся в самой анкете, а не тумблером.
+  const STATUS_ICONS: Partial<Record<UserMasterStatus, typeof Clock>> = {
+    auto: Clock,
+    active: Sparkles,
+    break: Coffee,
+    offline: PowerOff,
+  };
+  const STATUS_ACTIVE_BG: Partial<Record<UserMasterStatus, string>> = {
+    auto: 'bg-emerald-600',
+    active: 'bg-emerald-600',
+    break: 'bg-amber-500',
+    offline: 'bg-zinc-600',
+  };
+
   // Strictly 4 options: Автоматическое, Работает, Перерыв, Не работает
   const statusOptions: Array<{
     id: UserMasterStatus;
@@ -107,58 +123,47 @@ export default function SettingsControlsBar() {
   ];
 
   return (
-    <div className="smk-panel flex w-full items-center justify-between gap-2 p-2" >
+    <div className="smk-panel w-full p-2">
+      {/* Заголовок с подсказкой: тумблер перекрывает расписание из
+          анкет, и об этом надо сказать явно — иначе непонятно, почему
+          статус не совпадает с рабочими часами. */}
+      <div className="mb-1.5 flex items-center gap-1.5 px-1">
+        <span className="smk-sheet-label">
+          {language === 'ce' ? 'Болхан раж' : 'Режим работы'}
+        </span>
+        <HintMark text={language === 'ce'
+          ? 'ХIара низам массо хьайн анкетина тIедоьрзу — анкетан расписани хийца. Автоматан раж — сохьташца; Болх беш ву — анкета схьайиллина; Сацар — ханна сацар; Болх ца бо — садаIар.'
+          : 'Этот переключатель действует на все ваши анкеты специалиста и перекрывает их расписание. Автоматически — статус считается по рабочим часам; Работает — анкета открыта для звонков; Перерыв — временно отошли; Не работает — выходной.'}
+        />
+      </div>
+      <div className="flex w-full items-center justify-between gap-2">
       {/* 1. Status Button */}
-      <div className="relative flex-1 flex justify-center" ref={statusRef}>
-        <button
-          type="button"
-          onClick={() => setIsStatusMenuOpen((prev) => !prev)}
-          title={language === 'ce' ? `Балхан хьал: ${currentStatusId}` : `Статус: ${currentStatusId}`}
-          aria-label={language === 'ce' ? `Балхан хьал: ${currentStatusId}` : `Статус: ${currentStatusId}`}
-          className={`flex h-11 w-11 items-center justify-center rounded-xl shadow-sm transition-all active:scale-95 ${getStatusBgClass()}`}
-        >
-          {getStatusIcon()}
-        </button>
-
-        {isStatusMenuOpen && (
-          <div className="smk-solid absolute left-0 top-full z-[100] mt-2 w-64 overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl dark:border-zinc-800 dark:bg-zinc-950">
-            <div className="border-b border-slate-100 px-3 py-2.5 dark:border-zinc-800">
-              <p className="text-xs font-bold text-slate-900 dark:text-white">
-                {language === 'ce' ? 'Болхан раж' : 'Режим работы'}
-              </p>
-              <p className="text-[10px] text-slate-500 dark:text-zinc-500">
-                {language === 'ce' ? 'Хьан хIинцалера болхан хьал хийцар' : 'Переключает ваш текущий рабочий статус'}
-              </p>
-            </div>
-
-            <div className="mt-1 space-y-1">
-              {statusOptions.map((opt) => {
-                const isSelected = opt.id === currentStatusId;
-                return (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => handleSelectStatus(opt.id)}
-                    className={`flex w-full items-start gap-2.5 rounded-xl p-2 text-left text-xs transition ${
-                      isSelected
-                        ? 'bg-emerald-50 font-bold text-emerald-950 dark:bg-emerald-950/50 dark:text-emerald-200'
-                        : 'text-slate-700 hover:bg-slate-50 dark:text-zinc-400 dark:hover:bg-zinc-800'
-                    }`}
-                  >
-                    <span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${opt.dotColor}`} />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between">
-                        <span>{opt.label}</span>
-                        {isSelected && <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />}
-                      </div>
-                      <p className="text-[10px] text-slate-500 dark:text-zinc-500">{opt.description}</p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
+      {/* 1. Режим работы — компактный ряд из 4 иконок.
+             Выпадающее меню лежало absolute внутри контейнера бокового
+             меню с overflow-hidden и обрезалось. Ряд иконок помещается
+             в панель целиком и не требует всплывающего слоя. */}
+      <div className="flex flex-1 items-center gap-1" ref={statusRef}>
+        {statusOptions.map((opt) => {
+          const isActive = currentStatusId === opt.id;
+          const Icon = STATUS_ICONS[opt.id] ?? Clock;
+          return (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => handleSelectStatus(opt.id)}
+              aria-pressed={isActive}
+              title={`${opt.label} — ${opt.description}`}
+              aria-label={opt.label}
+              className={`flex h-9 flex-1 items-center justify-center rounded-lg transition active:scale-95 ${
+                isActive
+                  ? `${STATUS_ACTIVE_BG[opt.id] ?? 'bg-emerald-600'} text-white shadow-sm`
+                  : 'text-slate-500 hover:bg-black/5 dark:text-zinc-400 dark:hover:bg-white/10'
+              }`}
+            >
+              <Icon className="h-4 w-4" />
+            </button>
+          );
+        })}
       </div>
 
       {/* 2. Language Button */}
@@ -212,6 +217,7 @@ export default function SettingsControlsBar() {
         )}
       </div>
 
+      </div>
     </div>
   );
 }

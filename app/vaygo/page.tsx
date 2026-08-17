@@ -202,7 +202,7 @@ export default function VaygoPage() {
               ))}
             </div>
           ) : (
-            <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center dark:border-zinc-700">
+            <div className="smk-dashed p-8 text-center">
               <p className="text-sm font-semibold text-slate-600 dark:text-zinc-400">
                 {t.tasksEmptyGo}
               </p>

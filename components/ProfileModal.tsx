@@ -910,13 +910,13 @@ export default function ProfileModal({
                   ))}
                 </div>
               ) : (
-                <p className="rounded-xl border border-dashed border-slate-200 p-3 text-center text-xs text-slate-500 dark:border-zinc-800 dark:text-zinc-500">Пока нет отзывов. Станьте первым.</p>
+                <p className="smk-dashed p-3 text-center text-xs text-slate-500 dark:text-zinc-500">Пока нет отзывов. Станьте первым.</p>
               )}
 
               {isOwnProfile ? (
                 <p className="mt-2 rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-500">Это ваша анкета. Оставлять отзыв самому себе нельзя.</p>
               ) : canReview && (
-                <form onSubmit={handleReviewSubmit} className="mt-3 space-y-2.5 rounded-xl border border-emerald-100 bg-emerald-50/50 p-3 dark:border-zinc-800 dark:bg-zinc-800">
+                <form onSubmit={handleReviewSubmit} className="smk-sheet-row mt-3 space-y-2.5 p-3">
                   <h4 className="text-xs font-bold text-slate-900 dark:text-white">Оставить отзыв</h4>
                   <div className="flex items-center gap-1" aria-label="Выберите оценку">
                     {[1, 2, 3, 4, 5].map((rating) => (
@@ -1147,7 +1147,7 @@ export default function ProfileModal({
                                           setCommentDrafts((drafts) => ({ ...drafts, [q.id]: event.target.value }))
                                         }
                                         placeholder="Написать комментарий…"
-                                        className="w-full min-w-0 resize-y break-words rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                                        className="w-full min-w-0 resize-y break-words rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
                                       />
                                       <button
                                         type="submit"
@@ -1167,13 +1167,13 @@ export default function ProfileModal({
                         ))}
                       </div>
                     ) : (
-                      <p className="rounded-xl border border-dashed border-slate-200 p-3 text-center text-xs text-slate-500 dark:border-zinc-800 dark:text-zinc-500">Вопросов пока нет. Задайте свой первый вопрос!</p>
+                      <p className="smk-dashed p-3 text-center text-xs text-slate-500 dark:text-zinc-500">Вопросов пока нет. Задайте свой первый вопрос!</p>
                     )}
 
                     {isOwnProfile ? (
                       <p className="mt-2 rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-500">Это ваша анкета. Задавать вопросы самому себе нельзя.</p>
                     ) : account && !account.isBlocked ? (
-                      <form onSubmit={handleQuestionSubmit} className="mt-3 space-y-2.5 rounded-xl border border-emerald-100 bg-emerald-50/50 p-3 dark:border-zinc-800 dark:bg-zinc-800">
+                      <form onSubmit={handleQuestionSubmit} className="smk-sheet-row mt-3 space-y-2.5 p-3">
                         <h4 className="text-xs font-bold text-slate-900 dark:text-white">Задать вопрос</h4>
                         <div>
                           <textarea
@@ -1248,7 +1248,7 @@ export default function ProfileModal({
                 );
                 if (ownerProfiles.length === 0) {
                   return (
-                    <p className="rounded-xl border border-dashed border-slate-200 p-3 text-center text-xs text-slate-500 dark:border-zinc-800 dark:text-zinc-500">
+                    <p className="smk-dashed p-3 text-center text-xs text-slate-500 dark:text-zinc-500">
                       {language === 'ce' ? 'Анкеташ бац.' : 'Анкет нет.'}
                     </p>
                   );

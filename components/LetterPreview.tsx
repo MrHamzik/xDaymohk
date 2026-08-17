@@ -167,7 +167,7 @@ export default function LetterPreview({
           )}
         </div>
 
-        <div className="border-t border-dashed border-slate-200 dark:border-zinc-800" />
+        <div className="border-t border-dashed smk-hr" />
 
         <div className="py-3">
           <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
@@ -187,7 +187,7 @@ export default function LetterPreview({
           )}
         </div>
 
-        <div className="border-t border-dashed border-slate-200 dark:border-zinc-800" />
+        <div className="border-t border-dashed smk-hr" />
 
         <div className="flex items-center justify-between pt-3">
           <span className="flex items-center gap-1 text-[11px] text-slate-400 dark:text-zinc-500">

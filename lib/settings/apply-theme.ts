@@ -140,7 +140,7 @@ const MANAGED_PROPERTIES = [
   '--color-slate-50', '--color-slate-100', '--color-slate-200',
   '--color-slate-300', '--color-slate-400', '--color-slate-500',
   '--color-slate-600', '--color-slate-700', '--color-slate-800',
-  '--color-slate-900',
+  '--color-slate-900', '--color-slate-950',
   // Семантические переменные проекта, завязанные на зелёный.
   '--border-green-dark',
   '--smk-hero-gradient',

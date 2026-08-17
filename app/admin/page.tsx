@@ -1746,7 +1746,7 @@ export default function AdminPage() {
 
             {profilesSubTab === 'active' ? (
               filteredActive.length === 0 ? (
-                <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-500">{L('Активных анкет нет.', 'Жигара анкеташ бац.')}</div>
+                <div className="smk-dashed p-8 text-center text-sm text-slate-500 dark:text-zinc-500">{L('Активных анкет нет.', 'Жигара анкеташ бац.')}</div>
               ) : (
                 <div className="space-y-3">
                   {filteredActive.map((profile) => {
@@ -1794,7 +1794,7 @@ export default function AdminPage() {
               )
             ) : profilesSubTab === 'pending' ? (
               filteredPending.length === 0 ? (
-                <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-500">{L('Анкет на проверке нет.', 'Талларан тIехь анкеташ бац.')}</div>
+                <div className="smk-dashed p-8 text-center text-sm text-slate-500 dark:text-zinc-500">{L('Анкет на проверке нет.', 'Талларан тIехь анкеташ бац.')}</div>
               ) : (
                 <div className="space-y-3">
                   {filteredPending.map((profile) => (
@@ -1826,7 +1826,7 @@ export default function AdminPage() {
               )
             ) : (
               filteredHidden.length === 0 ? (
-                <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-500">{L('Скрытых анкет нет.', 'Къайлайаьхна анкеташ бац.')}</div>
+                <div className="smk-dashed p-8 text-center text-sm text-slate-500 dark:text-zinc-500">{L('Скрытых анкет нет.', 'Къайлайаьхна анкеташ бац.')}</div>
               ) : (
                 <div className="space-y-3">
                   {filteredHidden.map((profile) => {
@@ -1886,7 +1886,7 @@ export default function AdminPage() {
               />
             </div>
             {openComplaints.length === 0 ? (
-              <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-500">{L('Открытых жалоб нет.', 'ДIаелла арзаш бац.')}</div>
+              <div className="smk-dashed p-8 text-center text-sm text-slate-500 dark:text-zinc-500">{L('Открытых жалоб нет.', 'ДIаелла арзаш бац.')}</div>
             ) : (
               <div className="space-y-3">
                 {openComplaints.map((complaint) => {
@@ -1983,7 +1983,7 @@ export default function AdminPage() {
                 className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white"
               />
             </div>
-            <div className="space-y-3">{tabFilteredUsers.length === 0 ? <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-500">{L('Пользователей пока нет.', 'Лелошхой хIинца бац.')}</div> : tabFilteredUsers.map((user) => { const userProfiles = profiles.filter((profile) => profile.ownerId === user.id); const expanded = expandedUserId === user.id; return <div key={user.id} className={`rounded-3xl border p-4 shadow-sm transition ${user.isBlocked ? 'border-red-300 bg-red-50/70 dark:border-red-900 dark:bg-red-950/50' : 'border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-950'}`}><div className="flex flex-wrap items-center gap-3"><Avatar src={user.avatarUrl} className="h-12 w-12 shrink-0 rounded-2xl object-cover" /><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-slate-900 dark:text-white">{user.fullName}</p><p className="truncate text-xs text-slate-500 dark:text-zinc-500">{user.email} · {L('анкет:', 'анкеташ:')} {user.profileCount}</p>
+            <div className="space-y-3">{tabFilteredUsers.length === 0 ? <div className="smk-dashed p-8 text-center text-sm text-slate-500 dark:text-zinc-500">{L('Пользователей пока нет.', 'Лелошхой хIинца бац.')}</div> : tabFilteredUsers.map((user) => { const userProfiles = profiles.filter((profile) => profile.ownerId === user.id); const expanded = expandedUserId === user.id; return <div key={user.id} className={`rounded-3xl border p-4 shadow-sm transition ${user.isBlocked ? 'border-red-300 bg-red-50/70 dark:border-red-900 dark:bg-red-950/50' : 'border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-950'}`}><div className="flex flex-wrap items-center gap-3"><Avatar src={user.avatarUrl} className="h-12 w-12 shrink-0 rounded-2xl object-cover" /><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-slate-900 dark:text-white">{user.fullName}</p><p className="truncate text-xs text-slate-500 dark:text-zinc-500">{user.email} · {L('анкет:', 'анкеташ:')} {user.profileCount}</p>
                           {user.isAdmin && <span className="mt-1 inline-flex rounded-md bg-slate-800 px-1.5 py-0.5 text-[10px] font-bold text-white dark:bg-zinc-700">Админ</span>}
                           {user.isBlocked && <span className="mt-1 inline-flex rounded-md bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white">{L('Аккаунт заблокирован', 'Аккаунт билсна')}</span>}
                         </div>
@@ -2203,7 +2203,7 @@ export default function AdminPage() {
                 </div>
               </div>
               {filteredAddresses.length === 0 && (
-                <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center text-xs text-slate-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-500">
+                <div className="smk-dashed p-6 text-center text-xs text-slate-500 dark:text-zinc-500">
                   {addressFilter === '__deleted__' ? L('Удалённых адресов нет.', 'ДIадаьхна адресаш бац.') : L('Нет адресов для этого фильтра.', 'ХIокху фильтран адресаш бац.')}
                 </div>
               )}

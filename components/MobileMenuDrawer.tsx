@@ -184,7 +184,7 @@ export default function MobileMenuDrawer({ isOpen, onClose, isAdmin = false }: M
             </div>
 
             {/* 4. Section: РЕЛИГИЯ И ИСЛАМ (Clean titles without brackets or "Суры") */}
-            <div className="space-y-0.5 border-t border-slate-100 pt-2 dark:border-zinc-800">
+            <div className="space-y-0.5 border-t border-slate-100 smk-hr pt-2">
               <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-200 px-2 py-1">
                 {language === 'ce' ? 'Дин а, ислам а' : 'Религия и ислам'}
               </span>
@@ -231,7 +231,7 @@ export default function MobileMenuDrawer({ isOpen, onClose, isAdmin = false }: M
             </div>
 
             {/* 5. Section: СЕРВИСЫ ДАЙМОХК */}
-            <div className="space-y-0.5 border-t border-slate-100 pt-2 dark:border-zinc-800">
+            <div className="space-y-0.5 border-t border-slate-100 smk-hr pt-2">
               <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-200 px-2 py-1">
                 {language === 'ce' ? 'Вай сервисаш' : 'Сервисы экосистемы'}
               </span>
@@ -285,7 +285,7 @@ export default function MobileMenuDrawer({ isOpen, onClose, isAdmin = false }: M
               </div>
             </div>
 
-            <div className="space-y-0.5 border-t border-slate-100 pt-2 dark:border-zinc-800">
+            <div className="space-y-0.5 border-t border-slate-100 smk-hr pt-2">
               <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-200 px-2 py-1">
                 {language === 'ce' ? 'Кхиндерш' : 'Дополнительно'}
               </span>
