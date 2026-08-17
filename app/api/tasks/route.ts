@@ -64,10 +64,11 @@ export async function GET(request: Request) {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
+  // Фильтр архива теперь внутри вьюхи (см. 20-tasks-feed-fix.sql),
+  // здесь дублировать не нужно.
   let query = client
     .from('v_tasks_feed')
     .select('*')
-    .eq('is_archived', false)
     .order('created_at', { ascending: false })
     .range(offset, offset + pageLimit - 1);
 

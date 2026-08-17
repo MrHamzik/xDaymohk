@@ -49,8 +49,11 @@ export async function GET(request: Request) {
 
   // 2. Сами задания — через ту же вьюху, что и лента, чтобы карточка
   //    рисовалась одинаково (шапка заказчика, счётчик мест).
+  // v_task_details: сюда должны попадать и завершённые (архивные)
+  // задания — по ним считается pendingReview «ожидает оценки».
+  // v_tasks_feed архивные скрывает, поэтому она здесь не подходит.
   const { data: rows, error: tasksError } = await admin
-    .from('v_tasks_feed')
+    .from('v_task_details')
     .select('*')
     .in('id', taskIds)
     .order('created_at', { ascending: false });

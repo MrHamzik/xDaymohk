@@ -37,9 +37,11 @@ export async function GET(request: Request) {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
+  // Через вьюху: прямой JOIN к user_profiles от анонимного клиента
+  // отсекается политикой «self select», и отзывы приходили без имён.
   const { data, error } = await client
-    .from('resident_reviews')
-    .select('id, task_id, target_id, author_id, target_role, rating, text, created_at, user_profiles!resident_reviews_author_id_fkey(full_name, avatar_url)')
+    .from('v_resident_reviews')
+    .select('*')
     .eq('target_id', userId)
     .order('created_at', { ascending: false })
     .limit(100);
@@ -50,21 +52,18 @@ export async function GET(request: Request) {
   }
 
   return NextResponse.json({
-    reviews: (data ?? []).map((r) => {
-      const u = r.user_profiles as unknown as { full_name?: string; avatar_url?: string } | null;
-      return {
-        id: r.id,
-        taskId: r.task_id,
-        targetId: r.target_id,
-        authorId: r.author_id,
-        targetRole: r.target_role,
-        rating: Number(r.rating),
-        text: r.text,
-        createdAt: r.created_at,
-        authorName: u?.full_name ?? 'Житель Даймохк',
-        authorAvatarUrl: u?.avatar_url ?? '',
-      };
-    }),
+    reviews: (data ?? []).map((r) => ({
+      id: r.id,
+      taskId: r.task_id,
+      targetId: r.target_id,
+      authorId: r.author_id,
+      targetRole: r.target_role,
+      rating: Number(r.rating),
+      text: r.text,
+      createdAt: r.created_at,
+      authorName: r.author_name ?? 'Житель Даймохк',
+      authorAvatarUrl: r.author_avatar_url ?? '',
+    })),
   });
 }
 

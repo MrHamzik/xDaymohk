@@ -59,8 +59,11 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
+  // v_task_details, а не v_tasks_feed: лента скрывает архивные, но
+  // карточку завершённого задания открывать нужно — по нему стороны
+  // ставят взаимные оценки.
   const { data: task, error } = await client
-    .from('v_tasks_feed')
+    .from('v_task_details')
     .select('*')
     .eq('id', id)
     .maybeSingle();
@@ -70,34 +73,32 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   }
   if (!task) return NextResponse.json({ error: 'Задание не найдено' }, { status: 404 });
 
+  // Читаем через вьюху: прямой JOIN к user_profiles от анонимного
+  // клиента режет политика «user_profiles self select» (видна только
+  // своя строка), поэтому имена исполнителей не приходили.
   const { data: participants } = await client
-    .from('task_participants')
-    .select('id, task_id, user_id, status, attended, bonus_percent, joined_at, excluded_at, user_profiles(full_name, avatar_url, resident_rating, tasks_done_count)')
+    .from('v_task_participants')
+    .select('*')
     .eq('task_id', id)
     .order('joined_at', { ascending: true });
 
   return NextResponse.json({
     task,
-    participants: (participants ?? []).map((p) => {
-      const u = p.user_profiles as unknown as {
-        full_name?: string; avatar_url?: string;
-        resident_rating?: number; tasks_done_count?: number;
-      } | null;
-      return {
-        id: p.id,
-        taskId: p.task_id,
-        userId: p.user_id,
-        status: p.status,
-        attended: p.attended,
-        bonusPercent: p.bonus_percent,
-        joinedAt: p.joined_at,
-        excludedAt: p.excluded_at,
-        fullName: u?.full_name ?? '',
-        avatarUrl: u?.avatar_url ?? '',
-        rating: Number(u?.resident_rating ?? 0),
-        tasksDoneCount: Number(u?.tasks_done_count ?? 0),
-      };
-    }),
+    participants: (participants ?? []).map((p) => ({
+      id: p.id,
+      taskId: p.task_id,
+      userId: p.user_id,
+      status: p.status,
+      attended: p.attended,
+      bonusPercent: p.bonus_percent,
+      joinedAt: p.joined_at,
+      excludedAt: p.excluded_at,
+      fullName: p.full_name ?? '',
+      avatarUrl: p.avatar_url ?? '',
+      rating: Number(p.rating ?? 0),
+      tasksDoneCount: Number(p.tasks_done_count ?? 0),
+      accountDays: Number(p.account_days ?? 0),
+    })),
   });
 }
 
