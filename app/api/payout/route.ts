@@ -37,6 +37,7 @@ async function caller(request: Request): Promise<{ id: string } | null> {
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const mapRow = (r: any) => ({
+  isEnabled: r?.is_enabled === true,
   sbpPhone: r?.sbp_phone ?? '',
   sbpBank: r?.sbp_bank ?? '',
   cardNumber: r?.card_number ?? '',
@@ -88,8 +89,13 @@ export async function GET(request: Request) {
     const { data } = await admin.from('payout_methods')
       .select('*').eq('user_id', executor.user_id).maybeSingle();
 
+    // Тумблер выключен — реквизитов нет, даже если поля заполнены.
+    // Решение принимает сервер: клиент мог бы просто не показать блок,
+    // но данные всё равно ушли бы в ответе и были видны в DevTools.
+    const enabled = data?.is_enabled === true;
+
     return NextResponse.json({
-      payout: data ? mapRow(data) : EMPTY_PAYOUT,
+      payout: enabled && data ? mapRow(data) : EMPTY_PAYOUT,
       executorId: executor.user_id,
       paymentMethod: task.payment_method ?? 'cash',
     });
@@ -137,6 +143,7 @@ export async function POST(request: Request) {
 
   const { error } = await admin.from('payout_methods').upsert({
     user_id: me.id,
+    is_enabled: body.isEnabled === true,
     sbp_phone: sbpPhone,
     sbp_bank: String(body.sbpBank ?? '').slice(0, 60),
     card_number: cardNumber,

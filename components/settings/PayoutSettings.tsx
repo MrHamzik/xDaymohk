@@ -5,7 +5,7 @@ import { Check, Loader2, Save, Wallet } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
 import { useI18n } from '@/lib/i18n';
-import { SectionTitle } from '@/components/settings/SettingsPrimitives';
+import { SectionTitle, Toggle } from '@/components/settings/SettingsPrimitives';
 import {
   BANKS, EMPTY_PAYOUT, formatCard, formatPhone, type PayoutMethods,
 } from '@/lib/payments';
@@ -89,15 +89,57 @@ export default function PayoutSettings() {
   const field = 'w-full rounded-xl bg-slate-100/80 px-3 py-2.5 text-xs text-slate-900 outline-none transition focus:ring-2 focus:ring-emerald-500/30 dark:bg-zinc-800 dark:text-white';
   const label = 'mb-1 block text-[11px] font-bold text-slate-600 dark:text-zinc-400';
 
+  /**
+   * Переключение тумблера сохраняем СРАЗУ, не дожидаясь кнопки
+   * «Сохранить»: это согласие показывать данные другим людям, и оно
+   * должно применяться в тот момент, когда человек его дал или отозвал.
+   * Реквизиты в полях при этом остаются — выключение их не стирает.
+   */
+  const toggleEnabled = async (next: boolean) => {
+    const updated = { ...value, isEnabled: next };
+    setValue(updated);
+    setError('');
+    try {
+      const accessToken = await token();
+      const res = await fetch('/api/payout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify(updated),
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
+    } catch (e) {
+      // Откатываем переключатель: иначе человек думает, что согласие
+      // отозвано, а сервер продолжает отдавать реквизиты.
+      setValue((v) => ({ ...v, isEnabled: !next }));
+      setError(e instanceof Error ? e.message : t.payoutSaveFailed);
+    }
+  };
+
   return (
     <section>
-      <SectionTitle title={t.payoutSection} hint={t.payoutSectionHint} />
+      <SectionTitle
+        title={t.payoutSection}
+        hint={t.payoutSectionHint}
+        action={
+          <Toggle
+            checked={value.isEnabled}
+            onChange={(next) => void toggleEnabled(next)}
+            label={t.payoutSection}
+          />
+        }
+      />
+
+      {!value.isEnabled && !isLoading && (
+        <p className="smk-sheet-row p-3 text-[11px] leading-relaxed text-slate-600 dark:text-zinc-400">
+          {t.payoutDisabledHint}
+        </p>
+      )}
 
       {isLoading ? (
         <div className="flex justify-center py-6">
           <Loader2 className="h-5 w-5 animate-spin text-emerald-600" />
         </div>
-      ) : (
+      ) : value.isEnabled ? (
         <div className="space-y-2.5">
           {/* СБП */}
           <div className="smk-sheet-row p-3">
@@ -208,7 +250,7 @@ export default function PayoutSettings() {
             {t.payoutPrivacyNote}
           </p>
         </div>
-      )}
+      ) : null}
     </section>
   );
 }

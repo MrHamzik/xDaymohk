@@ -32,6 +32,14 @@ export function isPaymentMethod(value: unknown): value is PaymentMethod {
 
 /** Реквизиты исполнителя для прямого перевода. */
 export interface PayoutMethods {
+  /**
+   * Согласие показывать реквизиты заказчику.
+   *
+   * Выключено — сервер отдаёт пустые реквизиты, даже если поля
+   * заполнены: человек мог передумать, и его номер карты не должен
+   * продолжать показываться только потому, что строка осталась в БД.
+   */
+  isEnabled: boolean;
   sbpPhone: string;
   sbpBank: string;
   cardNumber: string;
@@ -40,6 +48,7 @@ export interface PayoutMethods {
 }
 
 export const EMPTY_PAYOUT: PayoutMethods = {
+  isEnabled: false,
   sbpPhone: '', sbpBank: '', cardNumber: '', cardBank: '', yoomoneyWallet: '',
 };
 
