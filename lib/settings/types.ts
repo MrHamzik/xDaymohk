@@ -173,6 +173,16 @@ export interface ThemeColors {
   divider: string;
   /** Подложка строк внутри карточки. */
   cardInset: string;
+  /**
+   * Поля заполнения: input, select, textarea и блоки-«углубления»
+   * внутри карточек (адрес в задании, сведения о человеке).
+   *
+   * Отдельный слот, а не переиспользование cardInset: подложка строки
+   * — это акцент на содержимом, а поле ввода должно читаться как место,
+   * куда пишут. Раньше поля брали bg-white, тема подменяла его цветом
+   * карточки, и поле сливалось с полотном — оставалась одна рамка.
+   */
+  field: string;
   /** Основной текст. */
   text: string;
   /** Второстепенный текст: подписи, пояснения, даты. */
@@ -243,7 +253,7 @@ export const THEME_COLOR_GROUPS: Record<ThemeColorGroup, Array<keyof ThemeColors
   // cardAlt в редакторе не показываем: он даёт лишь нижнюю точку
   // градиента карточки и визуально неотличим от card. Значение
   // выводится автоматически при сохранении темы.
-  global: ['bg', 'card', 'panel', 'cardInset', 'cardLine', 'divider', 'text', 'muted', 'icon'],
+  global: ['bg', 'card', 'panel', 'cardInset', 'field', 'cardLine', 'divider', 'text', 'muted', 'icon'],
   details: ['accent', 'accentSoft', 'accentDeep', 'ui', 'danger'],
   specific: [
     'statusAuto', 'statusActive', 'statusBreak', 'statusFlexible', 'statusOffline',

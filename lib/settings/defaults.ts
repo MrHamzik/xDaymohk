@@ -9,7 +9,7 @@ import {
   type ThemeColors,
   type UserSettings,
 } from '@/lib/settings/types';
-import { deriveCardInset, deriveDivider, derivePanel } from '@/lib/settings/derive';
+import { deriveCardInset, deriveDivider, deriveField, derivePanel } from '@/lib/settings/derive';
 
 /**
  * Умолчания живут здесь, а не в DEFAULT-ах колонок Postgres.
@@ -105,6 +105,7 @@ export const PRESET_THEMES: Record<
       cardLine: '#f5f5f5',
       divider: '#f3f3f3',
       cardInset: '#eaeaea',
+      field: '#f0f0f0',
       text: '#0f172a',
       muted: '#57667c',
       icon: '#465369',
@@ -129,6 +130,7 @@ export const PRESET_THEMES: Record<
       cardLine: '#25252a',
       divider: '#2b2b2e',
       cardInset: '#35353d',
+      field: '#2e2e35',
       text: '#ffffff',
       muted: '#96969e',
       icon: '#b3b3b9',
@@ -162,6 +164,7 @@ export const PRESET_THEMES: Record<
       cardLine: '#181734',
       divider: '#232232',
       cardInset: '#22204a',
+      field: '#1e1c40',
       text: '#ebedfa',
       muted: '#9292bf',
       icon: '#81adda',
@@ -203,6 +206,7 @@ export const PRESET_THEMES: Record<
       cardLine: '#3b1b23',
       divider: '#3c292d',
       cardInset: '#572833',
+      field: '#4c232d',
       text: '#fbf2e9',
       muted: '#cba79a',
       icon: '#e2ba8d',
@@ -246,6 +250,7 @@ export const PRESET_THEMES: Record<
       cardLine: '#141414',
       divider: '#0f0f0f',
       cardInset: '#131313',
+      field: '#111111',
       text: '#fafafa',
       muted: '#8f8f8f',
       // Акцент — белый: на чёрном он работает как золото на светлом.
@@ -288,6 +293,7 @@ export const PRESET_THEMES: Record<
       cardLine: '#f5f5f5',
       divider: '#f3f3f3',
       cardInset: '#eaeaea',
+      field: '#f0f0f0',
       // Самый тёмный тон — графит, а не почти-чёрный: тема должна
       // читаться как «серая бумага», а не как чёрный текст на белом.
       text: '#3a3a42',
@@ -334,6 +340,7 @@ export const PRESET_THEMES: Record<
       cardLine: '#f5f5f5',
       divider: '#f3f3f3',
       cardInset: '#eaeaea',
+      field: '#f0f0f0',
       text: '#1e293b',
       muted: '#526177',
       // Серебро с холодным отливом.
@@ -380,6 +387,7 @@ export const PRESET_THEMES: Record<
       cardLine: '#ecfaf1',
       divider: '#edf5ef',
       cardInset: '#d9f6e3',
+      field: '#e3f8ea',
       text: '#305545',
       muted: '#4b6f5e',
       icon: '#476c5b',
@@ -423,6 +431,7 @@ export const PRESET_THEMES: Record<
       cardLine: '#faf5ec',
       divider: '#f5f2ed',
       cardInset: '#f6ecd9',
+      field: '#f8f1e3',
       text: '#58442d',
       muted: '#78664c',
       icon: '#6f5d44',
@@ -492,6 +501,7 @@ export function normalizeColors(raw: unknown, base: ThemeColors): ThemeColors {
     cardLine: pick('cardLine'),
     divider: pick('divider'),
     cardInset: pick('cardInset'),
+    field: pick('field'),
     panel: pick('panel'),
     icon: pick('icon'),
     text: pick('text'),
@@ -554,6 +564,11 @@ function normalizeCustomThemes(raw: unknown): CustomTheme[] {
       }
       if (typeof stored.cardInset !== 'string') {
         colors.cardInset = deriveCardInset(colors.card, isDark);
+      }
+      // Слот полей появился позже: у старых тем его нет, и без вывода
+      // подставился бы цвет пресета-основы — светлое поле в тёмной теме.
+      if (typeof stored.field !== 'string') {
+        colors.field = deriveField(colors.card, isDark);
       }
       return {
         id: typeof entry.id === 'string' && entry.id ? entry.id : `theme-${index}`,

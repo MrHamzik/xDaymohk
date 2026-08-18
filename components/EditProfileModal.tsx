@@ -261,7 +261,7 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
 
           <form onSubmit={handleSubmit} className="flex-1 space-y-4 overflow-y-auto p-4 text-xs text-slate-800 dark:text-zinc-300 no-scrollbar">
             {account ? (
-              <section className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-800">
+              <section className="smk-field flex items-center gap-3 p-3">
                 <img src={account.avatarUrl} alt="" className="h-12 w-12 rounded-xl object-cover" />
                 <div>
                   <p className="font-bold text-slate-900 dark:text-white">{account.fullName}</p>

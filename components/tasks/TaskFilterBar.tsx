@@ -87,7 +87,7 @@ export default function TaskFilterBar({
   const accentText = isTeal ? 'text-teal-600 dark:text-teal-400' : 'text-emerald-600 dark:text-emerald-400';
 
   const sectionClass =
-    'rounded-xl border border-slate-100 bg-slate-50/70 p-2.5 dark:border-zinc-800 dark:bg-zinc-950/80';
+    'smk-field p-2.5';
   // Тот же класс, что у заголовков секций в SearchFilter каталога.
   const sectionHeadClass =
     'flex w-full items-center justify-between text-left text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-400';

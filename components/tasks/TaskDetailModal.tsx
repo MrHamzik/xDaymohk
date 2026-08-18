@@ -266,7 +266,7 @@ export default function TaskDetailModal({
                   <h3 className="smk-sheet-label mb-1.5">
                     {t.taskAddressHeading}
                   </h3>
-                  <div className="flex items-start gap-3 rounded-xl border border-slate-100 bg-slate-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-800">
+                  <div className="smk-field flex items-start gap-3 p-3">
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
                       <MapPin className="h-4 w-4" />
                     </div>

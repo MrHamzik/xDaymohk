@@ -432,8 +432,9 @@ textarea {
 html.smk-themed input:not([type='color']):not([type='checkbox']):not([type='radio']):not([type='range']),
 html.smk-themed select,
 html.smk-themed textarea {
-  background-color: var(--smk-card-inset);
+  background-color: var(--smk-field);
 }
+
 
 /* Fix house badge in dark to be visible but soft */
 html.dark .daymohk-house-badge.light,
@@ -650,7 +651,8 @@ html.dark .smk-price-teal {
   --smk-card-b: #ffffff;        /* низ градиента    */
   --smk-card-line: #f5f5f5;     /* обводка: контур карточек и полей */
   --smk-divider: #ebebeb;       /* разделители: линии внутри блоков */
-  --smk-card-inset: #f8fafc;    /* подложки строк   */
+  --smk-card-inset: #eaeaea;    /* подложки строк   */
+  --smk-field: #f0f0f0;         /* поля заполнения  */
   --smk-muted: #57667c;         /* второстепенный текст */
   --smk-muted-bright: #465369;  /* акцентный текст  */
   --smk-steel-a: #3f3f46;       /* сталь: кольцо, кнопка (тёмная тема) */
@@ -875,8 +877,58 @@ html.smk-themed .bg-white {
   letter-spacing: 0.04em;
   color: var(--smk-muted, #94a3b8);
 }
+/* Разделитель секций внутри листа.
+   Раньше это была прямая линия во всю ширину — на длинной карточке
+   получалась «линованная тетрадь». Теперь орнамент: линия расходится
+   от центра и затухает к краям, а в середине стоит ромб — тот же
+   мотив, что у .smk-orn в карточках. Рисуем псевдоэлементами, лишних
+   узлов в разметке не появляется. */
 .smk-sheet-section {
-  border-top: 1px solid var(--smk-divider, rgb(15 23 42 / 0.06));
+  position: relative;
+  border-top: 1px solid transparent;
+  background-image: linear-gradient(
+    to right,
+    transparent,
+    var(--smk-divider) 12%,
+    var(--smk-divider) 45%,
+    transparent 48%,
+    transparent 52%,
+    var(--smk-divider) 55%,
+    var(--smk-divider) 88%,
+    transparent
+  );
+  background-size: 100% 1px;
+  background-repeat: no-repeat;
+  background-position: top center;
+}
+/* Ромб по центру: просвет внутри делает его элементом орнамента, а не
+   кляксой. Фон берём у карточки, чтобы ромб «прорезал» линию. */
+.smk-sheet-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  translate: -50% -50%;
+  rotate: 45deg;
+  background: var(--smk-divider);
+  box-shadow: inset 0 0 0 1px var(--smk-card-a);
+  pointer-events: none;
+}
+/* Первая секция в листе идёт сразу под шапкой — там разделитель лишний. */
+.smk-sheet-head + .smk-sheet-section,
+.smk-sheet-section:first-child {
+  background-image: none;
+}
+.smk-sheet-head + .smk-sheet-section::before,
+.smk-sheet-section:first-child::before {
+  display: none;
+}
+/* Подвал листа: орнамент рисуется линией сверху, ромб там мешает
+   кнопкам — оставляем только полосу. */
+.smk-sheet-foot.smk-sheet-section::before {
+  display: none;
 }
 /* Строка «подпись — значение» внутри карточки задания. */
 .smk-sheet-row {
@@ -1083,7 +1135,8 @@ html.dark {
   --smk-card-b: #161619;        /* низ полотна    */
   --smk-card-line: #25252a;     /* обводка: контур карточек и полей */
   --smk-divider: #3a3a3e;       /* разделители: линии внутри блоков */
-  --smk-card-inset: #26262a;    /* подложки строк */
+  --smk-card-inset: #35353d;    /* подложки строк */
+  --smk-field: #2e2e35;         /* поля заполнения */
   --smk-panel: #25252a;         /* панели и подвал карточек */
   --smk-muted: #96969e;         /* второстепенный текст */
   --smk-muted-bright: #c4c4cc;
@@ -1347,16 +1400,18 @@ html.dark .smk-rule {
   );
 }
 
-/* --- Строки данных на подложке ----------------------------------------------
-   Без неё описание, возраст и адрес сливались с полотном. Подложка
-   светлее фона в тёмной теме и чуть темнее в светлой — строка читается
-   как отдельный блок, но без рамки. */
+/* --- Поля заполнения и блоки-«углубления» -------------------------------------
+   Один класс на всё, что читается как «место для данных»: строки
+   настроек, адрес в карточке задания, сведения о человеке в анкете.
+
+   Раньше здесь были два разных источника (--smk-surface-soft в светлой
+   теме и --smk-card-inset в тёмной), а блоки в карточках красились
+   классами bg-slate-50/70 и dark:bg-zinc-800 — мимо палитры вовсе.
+   Теперь общий слот «Поля заполнения», настраиваемый в редакторе тем;
+   ветвление по теме не нужно — палитра задаёт значение для каждой. */
 .smk-field {
   border-radius: 0.75rem;
-  background: var(--smk-surface-soft);
-}
-html.dark .smk-field {
-  background: var(--smk-card-inset);
+  background: var(--smk-field);
 }
 
 /* Тонкая линия между строками внутри одной группы. */

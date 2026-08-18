@@ -311,6 +311,7 @@ export interface DerivedPalette {
   cardLine: string;
   divider: string;
   cardInset: string;
+  field: string;
   panel: string;
   text: string;
   muted: string;
@@ -416,6 +417,7 @@ export function derivePalette(ui: string, isDark: boolean): DerivedPalette {
     cardLine: deriveCardLine(card),
     divider: deriveDivider(card, isDark),
     cardInset,
+    field: deriveField(card, isDark),
     panel,
     text,
     muted,
@@ -521,5 +523,29 @@ export function deriveCardInset(card: string, isDark: boolean): string {
   const next = isDark
     ? Math.min(LIGHTNESS_SCALE, scaled * INSET_DARK_FACTOR)
     : Math.max(0, scaled - INSET_LIGHT_STEP);
+  return hslToHex({ h, s, l: next / LIGHTNESS_SCALE });
+}
+
+/** Шаг поля ввода вниз на светлых темах, шкала 0–240. */
+const FIELD_LIGHT_STEP = 14;
+/** Множитель светлоты поля ввода на тёмных темах. */
+const FIELD_DARK_FACTOR = 1.65;
+
+/**
+ * Поля заполнения (`field`): input, select, textarea и блоки, которые
+ * читаются как «место для данных» — адрес в карточке задания, сведения
+ * о человеке в анкете.
+ *
+ * Мягче подложки строк (`cardInset`) и заметнее разделителя: получается
+ * три уровня глубины — полотно карточки, поле, акцентная строка.
+ * Раньше поля брали bg-white, тема подменяла его цветом карточки, и
+ * поле сливалось с полотном, оставляя одну рамку.
+ */
+export function deriveField(card: string, isDark: boolean): string {
+  const { h, s, l } = hexToHsl(card);
+  const scaled = l * LIGHTNESS_SCALE;
+  const next = isDark
+    ? Math.min(LIGHTNESS_SCALE, scaled * FIELD_DARK_FACTOR)
+    : Math.max(0, scaled - FIELD_LIGHT_STEP);
   return hslToHex({ h, s, l: next / LIGHTNESS_SCALE });
 }

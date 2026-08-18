@@ -103,6 +103,7 @@ const MANAGED_PROPERTIES = [
   '--background', '--foreground', '--border-dark-soft',
   '--smk-panel',
   '--smk-card-a', '--smk-card-b', '--smk-card-line', '--smk-card-inset',
+  '--smk-field',
   '--smk-divider',
   '--smk-muted', '--smk-muted-bright', '--smk-icon',
   '--smk-surface', '--smk-surface-soft',
@@ -248,6 +249,8 @@ export function applyThemeColors(
   // и одно значение на две задачи всегда проигрывало одной из них.
   set('--smk-divider', colors.divider);
   set('--smk-card-inset', colors.cardInset);
+  // Поля заполнения: свой слот, мягче подложки строк.
+  set('--smk-field', colors.field);
   set('--smk-muted', colors.muted);
   // Иконки строк, звезда рейтинга, стрелка карточки. Отдельный слот:
   // раньше значение смешивалось из text и muted, и настроить иконки

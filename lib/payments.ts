@@ -78,6 +78,8 @@ export const BANKS: BankOption[] = [
   { id: 'otkritie', name: 'Открытие', scheme: 'open-bank://' },
   { id: 'psb', name: 'Промсвязьбанк', scheme: 'psbmobile://' },
   { id: 'sovcom', name: 'Совкомбанк', scheme: 'sovcombank://' },
+  { id: 'ozon', name: 'Озон Банк', scheme: 'ozonbank://' },
+  { id: 'yandex', name: 'Яндекс Банк' },
   { id: 'mkb', name: 'МКБ' },
   { id: 'other', name: 'Другой банк' },
 ];

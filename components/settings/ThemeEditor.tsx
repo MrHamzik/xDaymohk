@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Check, ChevronDown, Palette, Plus, Trash2 } from 'lucide-react';
 import { useSettings } from '@/components/SettingsProvider';
 import { PRESET_THEMES, normalizeColors } from '@/lib/settings/defaults';
-import { deriveCardInset, deriveCardLine, deriveDivider, derivePalette, derivePanel } from '@/lib/settings/derive';
+import { deriveCardInset, deriveCardLine, deriveDivider, deriveField, derivePalette, derivePanel } from '@/lib/settings/derive';
 import {
   MAX_CUSTOM_THEMES, THEME_COLOR_GROUPS,
   type CustomTheme, type ThemeColorGroup, type ThemeColors,
@@ -58,6 +58,7 @@ const COLOR_LABELS: Partial<Record<keyof ThemeColors, { ru: string; ce: string }
   card: { ru: 'Карточки и поля', ce: 'Карточкаш а, меттигаш а' },
   panel: { ru: 'Панели и подвал карточек', ce: 'Панелаш а, карточкийн бух а' },
   cardInset: { ru: 'Подложка строк', ce: 'МогIанийн бухъ' },
+  field: { ru: 'Поля заполнения', ce: 'Юзу меттигаш' },
   cardLine: { ru: 'Обводка (контур)', ce: 'Йоза (контур)' },
   divider: { ru: 'Разделители (линии внутри)', ce: 'Декъархой (чоьхьара сизаш)' },
   text: { ru: 'Основной текст', ce: 'Коьрта йоза' },
@@ -365,6 +366,7 @@ export default function ThemeEditor() {
                               next.divider = deriveDivider(e.target.value, editing.isDark);
                               next.panel = derivePanel(e.target.value, editing.isDark);
                               next.cardInset = deriveCardInset(e.target.value, editing.isDark);
+                              next.field = deriveField(e.target.value, editing.isDark);
                             }
                             patchTheme(editing.id, {
                               colors: normalizeColors(next, editing.colors),

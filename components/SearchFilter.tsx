@@ -206,7 +206,7 @@ export default function SearchFilter({
 
             <div className="space-y-2.5">
               {/* Section 1: Область и населённый пункт */}
-              <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-2.5 dark:border-zinc-800 dark:bg-zinc-950/80">
+              <div className="smk-field p-2.5">
                 <button
                   type="button"
                   onClick={() => setIsRegionOpen((prev) => !prev)}
@@ -255,7 +255,7 @@ export default function SearchFilter({
               </div>
 
               {/* Section 2: Кого искать */}
-              <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-2.5 dark:border-zinc-800 dark:bg-zinc-950/80">
+              <div className="smk-field p-2.5">
                 <button
                   type="button"
                   onClick={() => setIsWhoOpen((prev) => !prev)}
@@ -285,7 +285,7 @@ export default function SearchFilter({
               </div>
 
               {/* Section 3: Статус работы */}
-              <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-2.5 dark:border-zinc-800 dark:bg-zinc-950/80">
+              <div className="smk-field p-2.5">
                 <button
                   type="button"
                   onClick={() => setIsStatusOpen((prev) => !prev)}
@@ -316,7 +316,7 @@ export default function SearchFilter({
               </div>
 
               {/* Section 4: Направление деятельности */}
-              <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-2.5 dark:border-zinc-800 dark:bg-zinc-950/80">
+              <div className="smk-field p-2.5">
                 <button
                   type="button"
                   onClick={() => setIsProfessionOpen((prev) => !prev)}
