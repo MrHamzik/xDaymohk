@@ -23,7 +23,7 @@ import {
   makeId,
   type ExecutorProfile,
 } from '@/lib/tasks/server';
-import { TASK_AUTO_CONFIRM_HOURS } from '@/lib/types';
+import { TASK_AUTO_CONFIRM_HOURS, TASK_DISPUTE_HOURS } from '@/lib/types';
 import { mapTaskRow } from '@/lib/tasks/map';
 
 /**
@@ -47,6 +47,27 @@ import { mapTaskRow } from '@/lib/tasks/map';
 type Action =
   | 'take' | 'join' | 'leave' | 'approve' | 'decline' | 'exclude'
   | 'submit' | 'confirm' | 'reject' | 'cancel' | 'attend';
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/** Идёт ли по заданию спор, который запрещает отмену и удаление. */
+function isDisputeActive(task: any): boolean {
+  if (String(task?.status) !== 'disputed') return false;
+  const until = task?.dispute_until ? Date.parse(task.dispute_until) : 0;
+  // Срок истёк, а фоновая задача ещё не отработала — считаем свободным.
+  return Boolean(until && until > Date.now());
+}
+
+/** Понятное объяснение, почему действие недоступно. */
+function disputeBlockMessage(task: any): string {
+  const until = task?.dispute_until ? new Date(task.dispute_until) : null;
+  const when = until
+    ? until.toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
+    : '';
+  return when
+    ? `Идёт рассмотрение спора до ${when}. Отменить или удалить задание можно после этого срока.`
+    : 'Идёт рассмотрение спора — отменить или удалить задание пока нельзя.';
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 const ACTIONS: Action[] = [
   'take', 'join', 'leave', 'approve', 'decline', 'exclude',
@@ -153,7 +174,7 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
 
   const { data: task, error } = await admin
     .from('tasks')
-    .select('id, author_id, status, title')
+    .select('id, author_id, status, title, dispute_until')
     .eq('id', id)
     .maybeSingle();
   if (error) {
@@ -178,6 +199,11 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
       { error: 'Задание уже взято — сначала отмените его, исполнитель получит уведомление' },
       { status: 409 },
     );
+  }
+
+  // Спор идёт — удалять нельзя по той же причине, что и отменять.
+  if (isDisputeActive(task) && !isAdmin) {
+    return NextResponse.json({ error: disputeBlockMessage(task) }, { status: 409 });
   }
 
   const { error: updateError } = await admin
@@ -694,12 +720,34 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       }
       const reason = String(body.reason ?? '').trim().slice(0, 500);
 
-      // Возвращаем в работу: у сторон есть сутки договориться, дальше
-      // разбирают админы по жалобе (жалобы уже есть в проекте).
-      await admin
+      // Задание уходит «на рассмотрение» на сутки, а не просто обратно
+      // в работу. Раньше заказчик мог нажать «Не принято» и сразу
+      // «Отменить» — исполнитель оставался ни с чем, и следов спора не
+      // оставалось. Теперь в этом окне отмена и удаление запрещены
+      // (см. cancel и DELETE), стороны договариваются или подают жалобу.
+      const disputeUntil = new Date(
+        Date.now() + TASK_DISPUTE_HOURS * 3600_000,
+      ).toISOString();
+
+      const { error: disputeError } = await admin
         .from('tasks')
-        .update({ status: 'in_progress', submitted_at: null, cancel_reason: reason || null })
+        .update({
+          status: 'disputed',
+          submitted_at: null,
+          dispute_until: disputeUntil,
+          dispute_reason: reason || null,
+        })
         .eq('id', id);
+
+      // Колонки появляются в миграции 35: без неё возвращаемся к
+      // прежнему поведению, чтобы кнопка не отказывала совсем.
+      if (disputeError) {
+        log.warn('task reject: dispute columns missing', { message: disputeError.message });
+        await admin
+          .from('tasks')
+          .update({ status: 'in_progress', submitted_at: null, cancel_reason: reason || null })
+          .eq('id', id);
+      }
 
       const { data: parts } = await admin
         .from('task_participants')
@@ -709,9 +757,11 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       for (const p of parts ?? []) {
         await notifyTaskEvent(admin, {
           recipientId: String(p.user_id),
-          type: 'task_cancel_requested',
+          type: disputeError ? 'task_cancel_requested' : 'task_disputed',
           title: 'Заказчик не принял работу',
-          message: reason ? `«${task.title}»: ${reason}` : `«${task.title}»`,
+          message: reason
+            ? `«${task.title}»: ${reason}`
+            : `«${task.title}». У вас есть ${TASK_DISPUTE_HOURS} ч, чтобы договориться или подать жалобу.`,
         });
       }
 
@@ -727,6 +777,13 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       }
       if (['completed', 'cancelled'].includes(String(task.status))) {
         return NextResponse.json({ error: 'Задание уже закрыто' }, { status: 409 });
+      }
+      // Во время спора отменять нельзя: иначе «Не принято» + «Отменить»
+      // подряд оставляют исполнителя ни с чем. Администратор может —
+      // он и разбирает жалобы.
+      const cancelBlocked = isDisputeActive(task) && !isAdmin;
+      if (cancelBlocked) {
+        return NextResponse.json({ error: disputeBlockMessage(task) }, { status: 409 });
       }
       const reason = String(body.reason ?? '').trim().slice(0, 500);
 

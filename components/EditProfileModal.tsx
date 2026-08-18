@@ -245,7 +245,7 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
     <>
       {notice && <Notice message={notice} type="error" onClose={() => setNotice('')} />}
       <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/60 p-0 backdrop-blur-sm sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label={profile ? t.editProfileTitle : t.newProfileTitle}>
-        <div className="flex max-h-[90vh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl transition-colors dark:bg-zinc-950 sm:max-w-2xl sm:rounded-2xl border border-slate-200/50 dark:border-zinc-800">
+        <div className="smk-sheet flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-3xl shadow-2xl transition-colors sm:max-w-2xl sm:rounded-3xl">
           <div className="flex shrink-0 items-center justify-between border-b border-slate-100 p-4 dark:border-zinc-800 dark:bg-zinc-950">
             <div className="flex items-center gap-2.5">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-sm">
@@ -286,14 +286,14 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
               <section className="space-y-3.5 rounded-xl border border-slate-100 bg-slate-50/60 p-3.5 dark:border-zinc-800 dark:bg-zinc-950">
                 <div>
                   <label htmlFor="profile-category" className="mb-1 block text-xs font-bold text-slate-700 dark:text-zinc-400">{t.professionCategory}</label>
-                  <select id="profile-category" value={professionCategory} onChange={(event) => setProfessionCategory(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white shadow-sm pl-3 pr-10 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white">
+                  <select id="profile-category" value={professionCategory} onChange={(event) => setProfessionCategory(event.target.value)} className="smk-field w-full pl-3 pr-10 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:text-white">
                     {PROFESSION_CATEGORIES.filter((category) => category.id !== 'all').map((category) => <option key={category.id} value={category.id}>{category.label}</option>)}
                   </select>
                 </div>
 
                 <div>
                   <label htmlFor="profile-specialization" className="mb-1 block text-xs font-bold text-slate-700 dark:text-zinc-400">{t.professionSpecialization}</label>
-                  <input id="profile-specialization" value={professionTitle} onChange={(event) => setProfessionTitle(event.target.value)} placeholder={t.professionSpecializationPlaceholder} className="w-full rounded-xl border border-slate-200 bg-white shadow-sm px-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white" />
+                  <input id="profile-specialization" value={professionTitle} onChange={(event) => setProfessionTitle(event.target.value)} placeholder={t.professionSpecializationPlaceholder} className="smk-field w-full px-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:text-white" />
                 </div>
 
                 <ExperienceSection
@@ -332,7 +332,7 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
                     <button type="button" onClick={() => setShowVideoHint((isShown) => !isShown)} aria-label="Пояснение о видео" className="text-amber-500 transition hover:text-amber-600"><Info className="h-3.5 w-3.5" /></button>
                   </div>
                   {showVideoHint && <p className="mb-2 rounded-xl bg-amber-50 p-2 text-xs leading-relaxed text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">{t.videoHint}</p>}
-                  <input id="profile-video" type="url" value={videoUrl} onChange={(event) => setVideoUrl(event.target.value)} placeholder="https://youtu.be/..." className="w-full rounded-xl border border-slate-200 bg-white shadow-sm px-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white" />
+                  <input id="profile-video" type="url" value={videoUrl} onChange={(event) => setVideoUrl(event.target.value)} placeholder="https://youtu.be/..." className="smk-field w-full px-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:text-white" />
                 </div>
 
                 <label className="flex cursor-pointer items-start gap-2 border-t border-slate-200/80 pt-2.5 text-xs dark:border-zinc-800">
@@ -365,7 +365,7 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
               </div>
               <div>
                 <label htmlFor="profile-telegram" className="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-400">Telegram</label>
-                <div className="relative"><span className="absolute inset-y-0 left-0 flex items-center pl-3 font-bold text-slate-400">@</span><input id="profile-telegram" value={telegram} onChange={(event) => setTelegram(event.target.value.replace(/^@/, ''))} placeholder={t.telegramUsername} className="w-full rounded-xl border border-slate-200 bg-white shadow-sm py-2.5 pl-8 pr-4 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white" /></div>
+                <div className="relative"><span className="absolute inset-y-0 left-0 flex items-center pl-3 font-bold text-slate-400">@</span><input id="profile-telegram" value={telegram} onChange={(event) => setTelegram(event.target.value.replace(/^@/, ''))} placeholder={t.telegramUsername} className="smk-field w-full py-2.5 pl-8 pr-4 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:text-white" /></div>
               </div>
             </div>
 

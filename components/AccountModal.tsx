@@ -199,7 +199,7 @@ export default function AccountModal({ isOpen, onClose, onOpenAddModal, onEditPr
             {account.isBlocked && <p className="rounded-xl border border-red-200 bg-red-50 p-2.5 text-xs font-semibold text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">{t.accountBlocked}</p>}
 
             {/* Avatar block */}
-            <div className="flex items-center gap-3 rounded-xl bg-slate-50 p-3 dark:bg-zinc-800">
+            <div className="smk-field flex items-center gap-3 p-3">
               <img
                 src={cacheBustAvatarUrl(avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop')}
                 alt="Аватар профиля"
@@ -223,7 +223,7 @@ export default function AccountModal({ isOpen, onClose, onOpenAddModal, onEditPr
                   placeholder="Например: Ибрагимов"
                   required
                   pattern="[А-ЯЁа-яё\-]{2,30}"
-                  className="w-full rounded-xl border border-slate-200/70 bg-white px-3 py-2.5 text-xs text-slate-900 shadow-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800/60 dark:bg-zinc-800 dark:text-white"
+                  className="smk-field w-full px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:text-white"
                 />
               </div>
               <div>
@@ -235,7 +235,7 @@ export default function AccountModal({ isOpen, onClose, onOpenAddModal, onEditPr
                   placeholder="Например: Магомед"
                   required
                   pattern="[А-ЯЁа-яё\-]{2,30}"
-                  className="w-full rounded-xl border border-slate-200/70 bg-white px-3 py-2.5 text-xs text-slate-900 shadow-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800/60 dark:bg-zinc-800 dark:text-white"
+                  className="smk-field w-full px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:text-white"
                 />
               </div>
             </div>
@@ -249,7 +249,7 @@ export default function AccountModal({ isOpen, onClose, onOpenAddModal, onEditPr
               
               <div className="rounded-xl border border-slate-200/60 bg-white p-3 shadow-sm dark:border-zinc-800/60 dark:bg-zinc-900">
                 <label htmlFor="account-gender" className="mb-1 block text-xs font-bold text-slate-700 dark:text-zinc-400">{t.genderLabel}</label>
-                <select id="account-gender" value={gender} onChange={(event) => setGender(event.target.value as any)} className="w-full rounded-xl border border-slate-200/70 bg-white px-3 pr-10 py-2.5 text-xs text-slate-900 shadow-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800/60 dark:bg-zinc-800 dark:text-white">
+                <select id="account-gender" value={gender} onChange={(event) => setGender(event.target.value as any)} className="smk-field w-full px-3 pr-10 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:text-white">
                   <option value="">{t.genderNotSet}</option>
                   <option value="male">{t.genderMale}</option>
                   <option value="female">{t.genderFemale}</option>
@@ -257,7 +257,7 @@ export default function AccountModal({ isOpen, onClose, onOpenAddModal, onEditPr
               </div>
               <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3 dark:border-zinc-800/60 dark:bg-zinc-900">
                 <label htmlFor="account-birthDate" className="mb-1 block text-xs font-bold text-slate-700 dark:text-zinc-400">{t.birthDateLabel}</label>
-                <input id="account-birthDate" type="date" value={birthDate} onChange={(event) => setBirthDate(event.target.value)} className="w-full rounded-xl border border-slate-200/70 bg-white px-3 py-2.5 text-xs text-slate-900 shadow-sm placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800/60 dark:bg-zinc-800 dark:text-white" />
+                <input id="account-birthDate" type="date" value={birthDate} onChange={(event) => setBirthDate(event.target.value)} className="smk-field w-full px-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:text-white" />
               </div>
             </div>
 

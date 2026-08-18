@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { X, Loader2, Star, MapPin, Clock, Users, CalendarDays, Trash2, ExternalLink, Wallet } from 'lucide-react';
+import { X, Loader2, Star, MapPin, Clock, Users, CalendarDays, ShieldAlert, Trash2, ExternalLink, Wallet } from 'lucide-react';
 import Link from 'next/link';
 import Avatar from '@/components/Avatar';
 import { supabase } from '@/lib/supabase';
@@ -142,6 +142,7 @@ export default function TaskDetailModal({
   // Взять задание с переводом можно только с заполненными реквизитами.
   const canTake = !task?.isPaid || canAcceptPayment(payMethod, myPayout);
 
+
   const act = async (label: string, fn: () => Promise<void>) => {
     setBusy(label);
     setError('');
@@ -160,6 +161,12 @@ export default function TaskDetailModal({
   const timeLabels = {
     overdue: t.timeOverdue, min: t.timeMin, hour: t.timeHour, day: t.timeDay,
   };
+
+  // Сколько осталось до конца рассмотрения спора. Считаем здесь, ниже
+  // timeLabels: тот же форматтер, что у дедлайна задания.
+  const disputeLeft = task?.disputeUntil
+    ? formatTimeLeft(task.disputeUntil, timeLabels)
+    : '';
 
   const btn = 'flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition disabled:opacity-60';
 
@@ -404,6 +411,32 @@ export default function TaskDetailModal({
                 <p className="mx-4 mb-4 rounded-xl bg-amber-50 px-3.5 py-2.5 text-[11px] font-semibold leading-relaxed text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
                   {t.taskAwaitConfirmNote.replace('{hours}', String(TASK_AUTO_CONFIRM_HOURS))}
                 </p>
+              )}
+
+              {/* Спор об оплате: заказчик не принял работу.
+                  Показываем обеим сторонам — исполнителю важно знать
+                  причину, заказчику — что задание заморожено и удалить
+                  его сейчас нельзя. */}
+              {task.status === 'disputed' && (
+                <div className="mx-4 mb-4 rounded-2xl bg-rose-50 px-3.5 py-3 dark:bg-rose-950/30">
+                  <h3 className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-rose-900 dark:text-rose-300">
+                    <ShieldAlert className="h-3.5 w-3.5" />
+                    {t.taskDisputeTitle}
+                  </h3>
+                  {task.disputeReason && (
+                    <p className="mb-1.5 break-words text-[11px] leading-relaxed text-rose-800/90 dark:text-rose-200/80">
+                      «{task.disputeReason}»
+                    </p>
+                  )}
+                  <p className="text-[11px] leading-relaxed text-rose-800/90 dark:text-rose-200/80">
+                    {isAuthor ? t.taskDisputeAuthor : t.taskDisputeExecutor}
+                  </p>
+                  {disputeLeft && (
+                    <p className="mt-1.5 text-[11px] font-bold text-rose-900 dark:text-rose-200">
+                      {t.taskDisputeLeft.replace('{time}', disputeLeft)}
+                    </p>
+                  )}
+                </div>
               )}
 
               {/* Подтверждение вместо исчезающей формы */}

@@ -376,6 +376,12 @@ export type TaskStatus =
   | 'open'
   | 'in_progress'
   | 'awaiting_confirm'
+  /**
+   * Заказчик не принял работу. Задание заморожено на сутки: отменить и
+   * удалить его нельзя, стороны договариваются или подают жалобу.
+   * По истечении срока возвращается в in_progress.
+   */
+  | 'disputed'
   | 'completed'
   | 'cancelled'
   | 'expired';
@@ -446,6 +452,13 @@ export const TASK_MAX_ACTIVE_PER_USER = 5;
 /** Через сколько после «Выполнил» задание подтверждается само. */
 export const TASK_AUTO_CONFIRM_HOURS = 3;
 
+/**
+ * Сколько часов задание висит «на рассмотрении» после отказа принять
+ * работу. В этом окне заказчик не может его отменить или удалить —
+ * иначе исполнитель остаётся без работы и без следов спора.
+ */
+export const TASK_DISPUTE_HOURS = 24;
+
 /** Блокировка заказчика за неподтверждение оплаты. */
 export const TASK_BLOCK_HOURS = 6;
 
@@ -508,6 +521,10 @@ export interface Task {
   minAccountDays: number;
   minTasksDone: number;
   allowNewcomers: boolean;
+  /** До какого момента задание заморожено спором (ISO). */
+  disputeUntil?: string | null;
+  /** Почему заказчик не принял работу. */
+  disputeReason?: string | null;
   /** Как заказчик рассчитается: 'cash' | 'sbp' | 'card' | 'yoomoney'. */
   paymentMethod?: string;
   status: TaskStatus;

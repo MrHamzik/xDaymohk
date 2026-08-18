@@ -160,5 +160,44 @@ export async function POST(request: Request) {
     expired += 1;
   }
 
-  return NextResponse.json({ success: true, autoConfirmed, expired });
+  // ── Споры: возвращаем в работу по истечении суток ──────────────
+  // Спор не должен висеть вечно: если стороны не договорились и никто
+  // не подал жалобу, исполнитель снова может сдать работу, а заказчик —
+  // принять или отменить.
+  let disputesReleased = 0;
+  const { data: staleDisputes } = await admin
+    .from('tasks')
+    .select('id, title, author_id')
+    .eq('status', 'disputed')
+    .lt('dispute_until', new Date().toISOString());
+
+  for (const task of staleDisputes ?? []) {
+    const { error } = await admin
+      .from('tasks')
+      .update({ status: 'in_progress', dispute_until: null })
+      .eq('id', task.id);
+    if (error) {
+      log.warn('maintenance: dispute release failed', { message: error.message });
+      continue;
+    }
+
+    const { data: parts } = await admin
+      .from('task_participants')
+      .select('user_id')
+      .eq('task_id', task.id)
+      .in('status', ['joined', 'attended']);
+
+    for (const p of [...(parts ?? []), { user_id: task.author_id }]) {
+      if (!p.user_id) continue;
+      await notifyTaskEvent(admin, {
+        recipientId: String(p.user_id),
+        type: 'task_dispute_released',
+        title: 'Срок рассмотрения истёк',
+        message: `«${task.title}» снова в работе.`,
+      });
+    }
+    disputesReleased += 1;
+  }
+
+  return NextResponse.json({ success: true, autoConfirmed, expired, disputesReleased });
 }

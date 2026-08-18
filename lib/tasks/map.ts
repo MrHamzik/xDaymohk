@@ -28,6 +28,8 @@ export function mapTaskRow(row: Record<string, unknown>) {
     minTasksDone: Number(row.min_tasks_done ?? 0),
     allowNewcomers: Boolean(row.allow_newcomers),
     paymentMethod: row.payment_method ?? 'cash',
+    disputeUntil: row.dispute_until ?? null,
+    disputeReason: row.dispute_reason ?? null,
     status: row.status,
     paymentStatus: row.payment_status,
     submittedAt: row.submitted_at,

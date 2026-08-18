@@ -220,7 +220,7 @@ export default function ProfilePage() {
             <div className="mx-auto flex w-full max-w-6xl items-start justify-start gap-6 px-3.5 pb-20 pt-18 sm:pb-8 lg:pt-24">
         {/* Detached Sidebar for Desktop */}
         <aside className="sticky top-24 z-40 hidden w-[290px] shrink-0 flex-col lg:flex h-[calc(100vh-8rem)]">
-          <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-950 no-scrollbar">
+          <div className="smk-sheet flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-3xl shadow-sm no-scrollbar">
             <SidebarNav isAdmin={isCurrentUserAdmin} />
           </div>
         </aside>
@@ -232,7 +232,7 @@ export default function ProfilePage() {
             <Link
               href="/"
               aria-label="Вернуться в каталог"
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-slate-200/70 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-zinc-700/60 dark:bg-zinc-900 dark:text-zinc-400"
+              className="smk-field flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-slate-700 shadow-sm transition hover:brightness-95 dark:text-zinc-300 dark:hover:brightness-110"
             >
               <ArrowLeft className="h-4 w-4" />
             </Link>
@@ -260,7 +260,7 @@ export default function ProfilePage() {
             )}
 
             {/* Sleek Profile Card with Avatar */}
-            <div className="flex items-center gap-3.5 rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-sm dark:border-zinc-700/60 dark:bg-zinc-900">
+            <div className="smk-field flex items-center gap-3.5 rounded-2xl p-3.5">
               <img
                 src={cacheBustAvatarUrl(avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop')}
                 alt="Аватар профиля"
@@ -288,7 +288,7 @@ export default function ProfilePage() {
                   required
                   pattern="[А-ЯЁа-яё\-]{2,30}"
                   title="Только кириллица и дефис"
-                  className="w-full rounded-xl border border-slate-200/70 bg-white px-3 py-2.5 text-xs text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white"
+                  className="smk-field w-full px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white"
                 />
               </div>
               <div>
@@ -301,7 +301,7 @@ export default function ProfilePage() {
                   required
                   pattern="[А-ЯЁа-яё\-]{2,30}"
                   title="Только кириллица и дефис"
-                  className="w-full rounded-xl border border-slate-200/70 bg-white px-3 py-2.5 text-xs text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white"
+                  className="smk-field w-full px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white"
                 />
               </div>
             </div>
@@ -315,7 +315,7 @@ export default function ProfilePage() {
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <label htmlFor="account-gender" className="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-300">{t.genderLabel}</label>
-                <select id="account-gender" value={gender} onChange={(event) => setGender(event.target.value as any)} className="w-full rounded-xl border border-slate-200/70 bg-white px-3 pr-8 py-2.5 text-xs text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-100">
+                <select id="account-gender" value={gender} onChange={(event) => setGender(event.target.value as any)} className="smk-field w-full px-3 pr-8 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-zinc-100">
                   <option value="">{t.genderNotSet}</option>
                   <option value="male">{t.genderMale}</option>
                   <option value="female">{t.genderFemale}</option>
@@ -323,12 +323,12 @@ export default function ProfilePage() {
               </div>
               <div>
                 <label htmlFor="account-birthDate" className="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-300">{t.birthDateLabel}</label>
-                <input id="account-birthDate" type="date" value={birthDate} onChange={(event) => setBirthDate(event.target.value)} className="w-full rounded-xl border border-slate-200/70 bg-white px-3 py-2.5 text-xs text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-100" />
+                <input id="account-birthDate" type="date" value={birthDate} onChange={(event) => setBirthDate(event.target.value)} className="smk-field w-full px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-zinc-100" />
               </div>
             </div>
 
             {/* My Questionnaires list */}
-            <section className="space-y-2 rounded-2xl border border-slate-200/60 bg-white p-3.5 shadow-sm dark:border-zinc-700/60 dark:bg-zinc-900">
+            <section className="smk-field space-y-2 rounded-2xl p-3.5">
               <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-2 dark:border-zinc-700/60">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-400">{t.myProfiles}</h3>
                 <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300">{ownProfiles.length}</span>
@@ -336,7 +336,7 @@ export default function ProfilePage() {
               {ownProfiles.length === 0 ? (
                 <p className="py-2 text-center text-xs text-slate-500 dark:text-zinc-500">{t.noProfilesYet}</p>
               ) : ownProfiles.map((profile) => (
-                <div key={profile.id} className={`flex items-center gap-2 rounded-xl border p-2 ${profile.isPersonal ? 'border-emerald-200 bg-emerald-50/60 dark:border-emerald-900 dark:bg-emerald-950/20' : profile.isHidden || profile.isBanned ? 'border-red-300 bg-red-50 dark:border-red-900 dark:bg-red-950/30' : 'border-slate-100 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-800'}`}>
+                <div key={profile.id} className={`flex items-center gap-2 rounded-xl border p-2 ${profile.isPersonal ? 'border-emerald-200 bg-emerald-50/60 dark:border-emerald-900 dark:bg-emerald-950/20' : profile.isHidden || profile.isBanned ? 'border-red-300 bg-red-50 dark:border-red-900 dark:bg-red-950/30' : 'smk-field border-transparent'}`}>
                   <div className="min-w-0 flex-1">
                     <div className="flex min-w-0 items-center gap-1.5">
                       <p className="truncate text-xs font-bold text-slate-900 dark:text-white">{profile.isPersonal ? t.personalProfile : (profile.professionTitle || t.personalProfile)}</p>
