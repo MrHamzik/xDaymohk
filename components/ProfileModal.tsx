@@ -686,7 +686,7 @@ export default function ProfileModal({
           </div>
         </div>
 
-        <div className="flex-1 space-y-4 overflow-y-auto p-4 text-xs text-slate-800 dark:text-zinc-300 sm:p-5 no-scrollbar">
+        <div className="smk-sections flex-1 overflow-y-auto p-4 text-xs text-slate-800 dark:text-zinc-300 sm:p-5 no-scrollbar">
           {(() => {
             const isOwner = Boolean(account && profile.ownerId && account.id === profile.ownerId);
             // Режим работы владельца виден всем: берём его из публичной
@@ -745,7 +745,7 @@ export default function ProfileModal({
               в анкетах специалистов/жителей они не показываются). */}
           {profile.isPersonal && (
             <section>
-              <h3 className="mb-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">{t.aboutPerson}</h3>
+              <h3 className="smk-sheet-label mb-1.5">{t.aboutPerson}</h3>
               {(() => {
                 // Пол и возраст берём из профиля аккаунта владельца (user_profiles),
                 // fallback — на данные анкеты.
@@ -917,7 +917,7 @@ export default function ProfileModal({
                 <p className="mt-2 rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-500">Это ваша анкета. Оставлять отзыв самому себе нельзя.</p>
               ) : canReview && (
                 <form onSubmit={handleReviewSubmit} className="smk-sheet-row mt-3 space-y-2.5 p-3">
-                  <h4 className="text-xs font-bold text-slate-900 dark:text-white">Оставить отзыв</h4>
+                  <h4 className="smk-sheet-label">Оставить отзыв</h4>
                   <div className="flex items-center gap-1" aria-label="Выберите оценку">
                     {[1, 2, 3, 4, 5].map((rating) => (
                       <button
@@ -1174,7 +1174,7 @@ export default function ProfileModal({
                       <p className="mt-2 rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-500">Это ваша анкета. Задавать вопросы самому себе нельзя.</p>
                     ) : account && !account.isBlocked ? (
                       <form onSubmit={handleQuestionSubmit} className="smk-sheet-row mt-3 space-y-2.5 p-3">
-                        <h4 className="text-xs font-bold text-slate-900 dark:text-white">Задать вопрос</h4>
+                        <h4 className="smk-sheet-label">Задать вопрос</h4>
                         <div>
                           <textarea
                             rows={2}
@@ -1239,7 +1239,7 @@ export default function ProfileModal({
               ней игнорируется, но можно переключаться на любую другую. */}
           {profile.ownerId && (
             <section className="mt-4">
-              <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+              <h3 className="smk-sheet-label mb-2">
                 {language === 'ce' ? 'Лелорхочун анкеташ' : 'Анкеты пользователя'}
               </h3>
               {(() => {
@@ -1303,7 +1303,7 @@ export default function ProfileModal({
           )}
 
           <section>
-            <h3 className="mb-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Адресс</h3>
+            <h3 className="smk-sheet-label mb-1.5">Адрес</h3>
             <div className="flex items-start gap-3 smk-sheet-row p-3">
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
                 <MapPin className="h-4 w-4" />
@@ -1325,7 +1325,7 @@ export default function ProfileModal({
 
           {profile.certificates.length > 0 && (
             <section>
-              <h3 className="mb-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+              <h3 className="smk-sheet-label mb-1.5">
                 Документы ({profile.certificates.length})
               </h3>
               <div className="grid grid-cols-2 gap-2.5">
@@ -1355,7 +1355,7 @@ export default function ProfileModal({
 
           {profile.photos.length > 0 && (
             <section>
-              <h3 className="mb-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">Фотографии работ</h3>
+              <h3 className="smk-sheet-label mb-1.5">Фотографии работ</h3>
               <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
                 {profile.photos.map((photo, index) => (
                   <div key={photo} className="relative h-24 overflow-hidden rounded-xl border border-slate-200/60 bg-slate-100 dark:border-zinc-800 dark:bg-zinc-800">

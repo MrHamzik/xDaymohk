@@ -144,16 +144,20 @@ export default function ProfileCard({
       </div>
 
       {/* Золотой разделитель, затухающий к краям */}
-      <hr className="smk-rule mx-3.5" />
+      <hr className="smk-orn mx-3.5" />
 
-      {/* ── Строки данных ───────────────────────────────────────── */}
-      <div className="space-y-1.5 px-3.5 py-2.5 text-sm">
-        {/* Первая строка под линией — роли и статусы */}
+      {/* ── Строки данных ─────────────────────────────────────────
+             Без подложек: строки разделены тонкими линиями (.smk-rows),
+             как в карточке задания. Подложка на каждой строке дробила
+             карточку на плитки и съедала воздух. */}
+      <div className="px-3.5 pb-1 pt-2">
         <ProfileBadges profile={profile} adminStatus={profileIsAdmin} showPending={showPending} />
+      </div>
 
+      <div className="smk-rows px-3.5 text-xs">
         {profile.isSpecialist && profile.professionTitle && (
-          <div className="smk-field flex items-start gap-2.5 px-2.5 py-1.5">
-            <Briefcase className="smk-ico mt-0.5 h-4 w-4" />
+          <div className="flex items-start gap-2.5 py-2">
+            <Briefcase className="smk-ico mt-0.5 h-3.5 w-3.5" />
             <p className="line-clamp-2 font-bold leading-snug text-emerald-700 dark:text-emerald-400">
               {profile.professionTitle}
             </p>
@@ -161,9 +165,9 @@ export default function ProfileCard({
         )}
 
         {profile.bio && (
-          <div className="smk-field flex items-start gap-2.5 px-2.5 py-1.5">
-            <FileText className="smk-ico mt-0.5 h-4 w-4" />
-            <p className="line-clamp-2 break-words [overflow-wrap:anywhere] leading-snug text-slate-700 dark:text-zinc-200">
+          <div className="flex items-start gap-2.5 py-2">
+            <FileText className="smk-ico mt-0.5 h-3.5 w-3.5" />
+            <p className="line-clamp-2 break-words [overflow-wrap:anywhere] leading-snug text-slate-600 dark:text-zinc-300">
               {profile.bio}
             </p>
           </div>
@@ -175,10 +179,10 @@ export default function ProfileCard({
             У жителя остаются возраст и пол. */}
         {profile.isSpecialist ? (
           (profile.experience || statusRing.status) && (
-            <div className="smk-field flex items-center gap-2 px-2.5 py-1.5">
+            <div className="flex items-center gap-2 py-2">
               {profile.experience && (
                 <span className="flex min-w-0 items-center gap-1.5 text-slate-600 dark:text-zinc-300">
-                  <BriefcaseBusiness className="smk-ico h-4 w-4" />
+                  <BriefcaseBusiness className="smk-ico h-3.5 w-3.5" />
                   <span className="text-slate-400 dark:text-zinc-500">{t.experienceLabel}:</span>
                   <span className="truncate font-semibold">{profile.experience}</span>
                 </span>
@@ -199,10 +203,10 @@ export default function ProfileCard({
           )
         ) : (
           (age !== null || profile.gender) && (
-            <div className="smk-field flex items-center gap-2 px-2.5 py-1.5">
+            <div className="flex items-center gap-2 py-2">
               {age !== null && (
                 <span className="flex min-w-0 items-center gap-1.5 text-slate-600 dark:text-zinc-300">
-                  <CalendarDays className="smk-ico h-4 w-4" />
+                  <CalendarDays className="smk-ico h-3.5 w-3.5" />
                   <span className="text-slate-400 dark:text-zinc-500">{t.ageLabel}:</span>
                   <span className="font-semibold">{age}</span>
                 </span>
@@ -210,7 +214,7 @@ export default function ProfileCard({
               {age !== null && profile.gender && <span className="smk-sep" aria-hidden />}
               {profile.gender && (
                 <span className="flex min-w-0 items-center gap-1.5 text-slate-600 dark:text-zinc-300">
-                  <VenusAndMars className="smk-ico h-4 w-4" />
+                  <VenusAndMars className="smk-ico h-3.5 w-3.5" />
                   <span className="truncate font-semibold">
                     {profile.gender === 'male' ? t.genderMale : t.genderFemale}
                   </span>
@@ -221,10 +225,10 @@ export default function ProfileCard({
         )}
 
         {profile.workplaceAddress && (
-          <div className="smk-field flex items-start gap-2.5 px-2.5 py-1.5">
+          <div className="flex items-start gap-2.5 py-2">
             {/* Булавка зелёная — единственный цветной акцент в блоке */}
-            <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
-            <span className="line-clamp-2 break-words leading-snug text-slate-700 dark:text-zinc-200">
+            <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500" />
+            <span className="line-clamp-2 break-words leading-snug text-slate-600 dark:text-zinc-300">
               {profile.workplaceAddress}
             </span>
           </div>

@@ -979,6 +979,111 @@ html.smk-themed .bg-white {
   border: 1px solid var(--smk-hairline-strong, rgb(15 23 42 / 0.12));
 }
 
+/* --- Орнаментальные разделители ----------------------------------------------
+   Вместо простой линии — вайнахский мотив: ромб в центре и «усы»,
+   затухающие к краям. Ромб рисуется через ::after, полосы — градиентом
+   на самом элементе, поэтому лишних узлов в разметке не появляется.
+
+   Цвет берётся из --smk-card-line (слот «Обводка»), то есть разделители
+   меняются вместе с темой, а не живут своей жизнью. */
+.smk-orn {
+  position: relative;
+  height: 1px;
+  border: 0;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--smk-card-line) 14%,
+    var(--smk-card-line) 42%,
+    transparent 47%,
+    transparent 53%,
+    var(--smk-card-line) 58%,
+    var(--smk-card-line) 86%,
+    transparent
+  );
+}
+.smk-orn::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  translate: -50% -50%;
+  rotate: 45deg;
+  background: var(--smk-card-line);
+  /* Внутренний просвет: сплошной ромб выглядит кляксой, а рамка в
+     один пиксель читается как элемент орнамента. */
+  box-shadow: inset 0 0 0 1px var(--smk-card-a);
+}
+
+/* Разделитель строк ВНУТРИ блока: только тонкая линия без ромба —
+   ромбы через каждые две строки превращаются в рябь. */
+.smk-orn-soft {
+  position: relative;
+  height: 1px;
+  border: 0;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--smk-card-line) 10%,
+    var(--smk-card-line) 90%,
+    transparent
+  );
+}
+
+/* Строка данных без подложки: иконка, подпись, значение.
+   Разделители между строками рисует родитель через .smk-rows. */
+.smk-rows > * + * {
+  border-top: 1px solid var(--smk-card-line);
+}
+
+/* Секции внутри листа: разделены линией на всю ширину, как в карточке
+   задания. Раньше анкета набирала секции через space-y-4 — блоки
+   «висели» в пустоте без видимой границы между смысловыми частями.
+   Первую линию не рисуем: над ней уже шапка. */
+.smk-sections > section + section,
+.smk-sections > div + section,
+.smk-sections > section + div {
+  border-top: 1px solid var(--smk-card-line);
+  margin-top: 0.875rem;
+  padding-top: 0.875rem;
+}
+
+/* --- Акцент у заголовка секции ------------------------------------------------
+   Короткая золотая засечка слева от подписи. Мелкая деталь, но именно
+   она отличает «список полей» от оформленного блока: глаз цепляется за
+   начало строки. Рисуем псевдоэлементом, разметку не трогаем. */
+.smk-sheet-label {
+  position: relative;
+  padding-left: 0.625rem;
+}
+.smk-sheet-label::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 3px;
+  height: 0.7em;
+  translate: 0 -50%;
+  border-radius: 9999px;
+  background: linear-gradient(
+    to bottom,
+    var(--smk-gold),
+    var(--smk-gold-deep)
+  );
+}
+/* Внутри форм и строк «подпись — значение» засечка лишняя: там подпись
+   стоит в одном ряду со значением, и вертикальная черта ломает строку. */
+.smk-sheet-row .smk-sheet-label,
+.smk-sheet-label--plain {
+  padding-left: 0;
+}
+.smk-sheet-row .smk-sheet-label::before,
+.smk-sheet-label--plain::before {
+  display: none;
+}
+
 /* --- Панели бокового меню ----------------------------------------------------
    Мини-профиль, виджет времени намаза и панель четырёх иконок — это
    один тип поверхности, поэтому у них общий класс и общий слот темы.

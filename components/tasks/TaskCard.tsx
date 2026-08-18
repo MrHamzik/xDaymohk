@@ -147,7 +147,7 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
       </div>
 
       {/* Слой 2: разделитель с ромбом */}
-      <hr className="smk-rule mx-4" />
+      <hr className="smk-orn mx-4" />
 
       {/* ── Суть задания ───────────────────────────────────────── */}
       <div className="px-4 py-3">
@@ -161,7 +161,7 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
         )}
       </div>
 
-      <hr className="smk-rule mx-4" />
+      <hr className="smk-orn mx-4" />
 
       {/* ── Метки ──────────────────────────────────────────────── */}
       <div className="mt-auto flex flex-wrap items-center gap-1.5 px-4 py-3 text-[10px] font-bold">
