@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Check, Palette, Settings as SettingsIcon } from 'lucide-react';
 import { useSettings } from '@/components/SettingsProvider';
-import { readableOn } from '@/lib/settings/derive';
+import { contrastRatio, readableOn } from '@/lib/settings/derive';
 import { PRESET_THEMES, resolveTheme } from '@/lib/settings/defaults';
 import { useI18n } from '@/lib/i18n';
 
@@ -33,6 +33,33 @@ export default function ThemePickerButton() {
 
   const active = resolveTheme(settings.themeId, settings.customThemes);
 
+  /**
+   * Плитка кнопки: фон и цвет значка.
+   *
+   * История правок здесь важна, потому что каждый «простой» вариант
+   * ломался в конкретной теме:
+   *   1) значок цветом фона страницы — пропадал на светлых темах;
+   *   2) значок всегда белый — исчез в «Чёрной», где акцент #ffffff;
+   *   3) значок по контрасту к акценту — стал чёрным во всех тёмных
+   *      темах, хотя там ожидается белый.
+   *
+   * Правило: в тёмной теме значок белый, в светлой — тёмный. Отдельно
+   * разбирается случай, когда акцент почти сливается с белым: там
+   * белая плитка выглядит инородным пятном на чёрном интерфейсе,
+   * поэтому подложку приглушаем до серой, а значок оставляем белым.
+   */
+  const tileStyle = (() => {
+    const accent = active.colors.accent;
+    const ink = active.isDark ? '#ffffff' : readableOn(accent);
+    // Плитка почти белая (как в теме «Чёрный») — белый значок на ней
+    // не читался бы. Берём приглушённый серый из палитры самой темы.
+    const tooLight = contrastRatio('#ffffff', accent) < 1.4;
+    if (active.isDark && tooLight) {
+      return { background: active.colors.statusOffline, color: '#ffffff' };
+    }
+    return { background: accent, color: ink };
+  })();
+
   const options = [
     ...Object.entries(PRESET_THEMES).map(([id, theme]) => ({
       id,
@@ -55,12 +82,7 @@ export default function ThemePickerButton() {
         title={`${t.settingsThemes}: ${active.name}`}
         aria-label={t.settingsThemes}
         className="flex h-11 w-11 items-center justify-center rounded-xl shadow-sm transition-all active:scale-95"
-        // Цвет значка считается по яркости плитки, а не задаётся жёстко:
-        // сначала здесь был цвет фона страницы (пропадал на светлых
-        // темах), потом всегда белый — и он исчез в теме «Чёрный», где
-        // акцент это чистый #ffffff. Теперь белый на тёмном акценте и
-        // почти чёрный на светлом.
-        style={{ background: active.colors.accent, color: readableOn(active.colors.accent) }}
+        style={tileStyle}
       >
         <Palette className="h-5 w-5" />
       </button>
