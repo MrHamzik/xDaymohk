@@ -153,7 +153,7 @@ export const PRESET_THEMES: Record<
       panel: '#181734',
       cardAlt: '#0d0b1d',
       cardLine: '#181734',
-      cardInset: '#1d1c31',
+      cardInset: '#1b1a33',
       text: '#ebedfa',
       muted: '#9292bf',
       icon: '#81adda',

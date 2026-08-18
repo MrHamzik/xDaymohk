@@ -108,7 +108,7 @@ export default function ProfileModal({
   isViewerBlocked = false,
 }: ProfileModalProps) {
   const { account } = useAuth();
-  const { language, t } = useI18n();
+  const { t } = useI18n();
   const { profiles: allProfiles, users: allUsers, isProfileAdmin, createNotification } = useProfiles();
   const [selectedCert, setSelectedCert] = useState<Certificate | null>(null);
   // A user card opened from a name link renders as a nested ProfileModal
@@ -644,7 +644,7 @@ export default function ProfileModal({
         <div className="smk-sheet-head relative shrink-0 px-4 pb-3.5 pt-4 text-slate-900 dark:text-white">
           <button
             onClick={onClose}
-            aria-label="Закрыть анкету"
+            aria-label={t.profileCloseSheet}
             className="absolute right-3.5 top-3.5 flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400"
           >
             <X className="h-4 w-4" />
@@ -690,12 +690,12 @@ export default function ProfileModal({
         <div className="min-h-0 flex-1 overflow-y-auto text-xs text-slate-800 dark:text-zinc-300 no-scrollbar">
           {(profile.isHidden || profile.isBanned) && (
             <p className="mx-4 mt-3 rounded-xl bg-red-50 px-3.5 py-2.5 text-[11px] font-semibold leading-relaxed text-red-800 dark:bg-red-950/30 dark:text-red-300">
-              Эта анкета скрыта администратором и сейчас не видна в общем каталоге.
+              {t.profileHiddenNotice}
             </p>
           )}
           {isViewerBlocked && (
             <p className="mx-4 mt-3 rounded-xl bg-red-50 px-3.5 py-2.5 text-[11px] font-semibold leading-relaxed text-red-800 dark:bg-red-950/30 dark:text-red-300">
-              Ваш аккаунт заблокирован. Вы можете только просматривать информацию.
+              {t.profileViewerBlocked}
             </p>
           )}
 
@@ -776,12 +776,12 @@ export default function ProfileModal({
             if (!videoId) return null;
             return (
               <section className="smk-sheet-section px-4 py-3.5">
-                <h3 className="smk-sheet-label mb-1.5">{t.videoTitle}</h3>
+                <h3 className="smk-sheet-label mb-1.5">{t.profileVideoHeading}</h3>
                 <div className="overflow-hidden rounded-xl">
                   <iframe
                     className="aspect-video w-full"
                     src={`https://www.youtube-nocookie.com/embed/${videoId}`}
-                    title="Видео из анкеты"
+                    title={t.profileVideoHeading}
                     loading="lazy"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                     referrerPolicy="strict-origin-when-cross-origin"
@@ -843,7 +843,7 @@ export default function ProfileModal({
                           <button
                             type="button"
                             onClick={() => openUserCard(review.authorId)}
-                            title="Открыть карточку пользователя"
+                            title={t.profileOpenUserCard}
                             className="min-w-0 break-words text-left text-xs font-bold text-slate-900 transition hover:text-emerald-600 hover:underline dark:text-white dark:hover:text-emerald-400"
                           >
                             {review.author}
@@ -860,7 +860,7 @@ export default function ProfileModal({
                               type="button"
                               onClick={() => startEditReview(review)}
                               disabled={busyId !== null}
-                              aria-label="Изменить отзыв"
+                              aria-label={t.profileEditReview}
                               title={t.edit}
                               className="flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-600 disabled:opacity-40 dark:hover:bg-emerald-950 dark:hover:text-emerald-400"
                             >
@@ -872,8 +872,8 @@ export default function ProfileModal({
                               type="button"
                               onClick={() => void handleDeleteReview(review.id)}
                               disabled={busyId === review.id}
-                              aria-label="Удалить отзыв"
-                              title="Удалить отзыв"
+                              aria-label={t.profileDeleteReview}
+                              title={t.profileDeleteReview}
                               className="flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-40 dark:hover:bg-red-950 dark:hover:text-red-400"
                             >
                               <Trash2 className="h-3.5 w-3.5 text-red-500" />
@@ -883,7 +883,7 @@ export default function ProfileModal({
                       </div>
                       {editingReviewId === review.id ? (
                         <form onSubmit={(event) => void handleEditReviewSubmit(event, review.id)} className="mt-2 space-y-2 rounded-xl smk-sheet-row p-2.5">
-                          <div className="flex items-center gap-1" aria-label="Изменить оценку">
+                          <div className="flex items-center gap-1" aria-label={t.profileRateChange}>
                             {[1, 2, 3, 4, 5].map((rating) => (
                               <button
                                 key={rating}
@@ -901,7 +901,7 @@ export default function ProfileModal({
                             maxLength={MAX_REVIEW_TEXT_LENGTH}
                             value={editReviewText}
                             onChange={(event) => setEditReviewText(event.target.value)}
-                            placeholder="Расскажите о своём опыте"
+                            placeholder={t.reviewPlaceholder}
                             className="w-full resize-y break-words rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white"
                           />
                           <div className="flex items-center gap-2">
@@ -920,15 +920,15 @@ export default function ProfileModal({
                   ))}
                 </div>
               ) : (
-                <p className="smk-dashed p-3 text-center text-xs text-slate-500 dark:text-zinc-500">Пока нет отзывов. Станьте первым.</p>
+                <p className="smk-dashed p-3 text-center text-xs text-slate-500 dark:text-zinc-500">{t.profileNoReviews}</p>
               )}
 
               {isOwnProfile ? (
-                <p className="smk-sheet-row mt-2 p-2.5 text-[11px] text-slate-500 dark:text-zinc-500">Это ваша анкета. Оставлять отзыв самому себе нельзя.</p>
+                <p className="smk-sheet-row mt-2 p-2.5 text-[11px] text-slate-500 dark:text-zinc-500">{t.profileOwnReviewBlocked}</p>
               ) : canReview && (
                 <form onSubmit={handleReviewSubmit} className="smk-sheet-row mt-2 space-y-2 p-2.5">
-                  <h4 className="smk-sheet-label">Оставить отзыв</h4>
-                  <div className="flex items-center gap-1" aria-label="Выберите оценку">
+                  <h4 className="smk-sheet-label">{t.leaveReview}</h4>
+                  <div className="flex items-center gap-1" aria-label={t.profileRatePick}>
                     {[1, 2, 3, 4, 5].map((rating) => (
                       <button
                         key={rating}
@@ -947,12 +947,12 @@ export default function ProfileModal({
                       maxLength={MAX_REVIEW_TEXT_LENGTH}
                       value={reviewText}
                       onChange={(event) => setReviewText(event.target.value)}
-                      placeholder="Расскажите о своём опыте"
+                      placeholder={t.reviewPlaceholder}
                       className="w-full resize-y break-words rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white"
                     />
                   </div>
                   <button type="submit" className="rounded-xl bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white transition hover:bg-emerald-700">
-                    Опубликовать отзыв
+                    {t.publishReview}
                   </button>
                 </form>
               )}
@@ -976,7 +976,7 @@ export default function ProfileModal({
                                 <button
                                   type="button"
                                   onClick={() => openUserCard(q.author_id)}
-                                  title="Открыть карточку пользователя"
+                                  title={t.profileOpenUserCard}
                                   className="min-w-0 truncate text-xs font-bold text-slate-900 transition hover:text-emerald-600 hover:underline dark:text-white dark:hover:text-emerald-400"
                                 >
                                   {q.author_name || 'Житель Даймохк'}
@@ -989,7 +989,7 @@ export default function ProfileModal({
                                     type="button"
                                     onClick={() => startEditQuestion(q)}
                                     disabled={busyId !== null}
-                                    aria-label="Изменить вопрос"
+                                    aria-label={t.profileEditQuestion}
                                     title={t.edit}
                                     className="flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-600 disabled:opacity-40 dark:hover:bg-emerald-950 dark:hover:text-emerald-400"
                                   >
@@ -1001,8 +1001,8 @@ export default function ProfileModal({
                                     type="button"
                                     onClick={() => void handleDeleteQuestion(q.id)}
                                     disabled={busyId === q.id}
-                                    aria-label="Удалить вопрос"
-                                    title="Удалить вопрос"
+                                    aria-label={t.profileDeleteQuestion}
+                                    title={t.profileDeleteQuestion}
                                     className="flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-40 dark:hover:bg-red-950 dark:hover:text-red-400"
                                   >
                                     <Trash2 className="h-3.5 w-3.5 text-red-500" />
@@ -1017,7 +1017,7 @@ export default function ProfileModal({
                                   maxLength={500}
                                   value={editQuestionText}
                                   onChange={(event) => setEditQuestionText(event.target.value)}
-                                  placeholder="Текст вопроса"
+                                  placeholder={t.profileQuestionTextLabel}
                                   className="w-full resize-y break-words rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white"
                                 />
                                 <div className="flex items-center gap-2">
@@ -1040,14 +1040,14 @@ export default function ProfileModal({
                               className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 transition hover:underline dark:text-emerald-400"
                             >
                               <MessageSquare className="h-3 w-3" />
-                              Обсуждение ({q.comment_count ?? commentsByQuestion[q.id]?.length ?? 0})
+                              {t.profileDiscussion} ({q.comment_count ?? commentsByQuestion[q.id]?.length ?? 0})
                               <ChevronDown className={`h-3 w-3 transition-transform ${expandedQuestion === q.id ? 'rotate-180' : ''}`} />
                             </button>
 
                             {expandedQuestion === q.id && (
                               <div className="mt-2 space-y-2 rounded-lg smk-sheet-row p-2.5">
                                 {commentsLoading === q.id ? (
-                                  <p className="text-[10px] text-slate-400">Загружаем обсуждение…</p>
+                                  <p className="text-[10px] text-slate-400">{t.profileCommentsLoading}</p>
                                 ) : (commentsByQuestion[q.id] ?? []).length > 0 ? (
                                   <div className="space-y-2">
                                     {(commentsByQuestion[q.id] ?? []).map((comment) => (
@@ -1065,13 +1065,13 @@ export default function ProfileModal({
                                               type="button"
                                               onClick={() => openUserCard(comment.author_id)}
                                               className="min-w-0 truncate text-[11px] font-bold text-slate-900 hover:text-emerald-600 hover:underline dark:text-white dark:hover:text-emerald-400"
-                                              title="Открыть карточку пользователя"
+                                              title={t.profileOpenUserCard}
                                             >
                                               {comment.author_name || 'Житель Даймохк'}
                                             </button>
                                             {comment.author_id === profile.ownerId && (
                                               <span className="shrink-0 rounded bg-emerald-100 px-1 py-px text-[9px] font-bold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">
-                                                Владелец анкеты
+                                                {t.profileSheetOwner}
                                               </span>
                                             )}
                                             <time className="shrink-0 text-[9px] font-medium text-slate-400">{formatReviewDate(comment.created_at)}</time>
@@ -1083,7 +1083,7 @@ export default function ProfileModal({
                                                   type="button"
                                                   onClick={() => openUserCard(comment.reply_to_author_id ?? undefined)}
                                                   className="font-bold text-emerald-600 hover:underline dark:text-emerald-400"
-                                                  title="Открыть карточку пользователя"
+                                                  title={t.profileOpenUserCard}
                                                 >
                                                   {comment.reply_to_author_name}
                                                 </button>
@@ -1100,8 +1100,8 @@ export default function ProfileModal({
                                               type="button"
                                               onClick={() => handleReplyToComment(q.id, comment)}
                                               disabled={busyId !== null}
-                                              aria-label="Ответить на комментарий"
-                                              title="Ответить"
+                                              aria-label={t.profileReplyAction}
+                                              title={t.profileReplyAction}
                                               className="flex h-5 w-5 items-center justify-center rounded-full text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-600 disabled:opacity-40 dark:hover:bg-emerald-950 dark:hover:text-emerald-400"
                                             >
                                               <MessageSquare className="h-3 w-3" />
@@ -1112,8 +1112,8 @@ export default function ProfileModal({
                                               type="button"
                                               onClick={() => void handleDeleteComment(comment.id, q.id)}
                                               disabled={busyId === comment.id}
-                                              aria-label="Удалить комментарий"
-                                              title="Удалить комментарий"
+                                              aria-label={t.profileDeleteComment}
+                                              title={t.profileDeleteComment}
                                               className="flex h-5 w-5 items-center justify-center rounded-full text-slate-400 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-40 dark:hover:bg-red-950 dark:hover:text-red-400"
                                             >
                                               <Trash2 className="h-3 w-3 text-red-500" />
@@ -1124,7 +1124,7 @@ export default function ProfileModal({
                                     ))}
                                   </div>
                                 ) : (
-                                  <p className="text-[10px] text-slate-400">Комментариев пока нет. Станьте первым!</p>
+                                  <p className="text-[10px] text-slate-400">{t.profileNoComments}</p>
                                 )}
 
                                 {account && !account.isBlocked ? (
@@ -1135,14 +1135,14 @@ export default function ProfileModal({
                                     {replyTargets[q.id] && (
                                       <div className="flex items-center justify-between rounded-lg bg-emerald-50 px-2 py-1 text-[10px] text-slate-600 dark:bg-emerald-950/40 dark:text-zinc-300">
                                         <span>
-                                          Ответ для <span className="font-bold text-emerald-700 dark:text-emerald-400">@{replyTargets[q.id]?.name}</span>
+                                          {t.profileReplyTo} <span className="font-bold text-emerald-700 dark:text-emerald-400">@{replyTargets[q.id]?.name}</span>
                                         </span>
                                         <button
                                           type="button"
                                           onClick={() => clearReply(q.id)}
                                           className="flex h-4 w-4 items-center justify-center rounded-full text-slate-400 transition hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400"
-                                          aria-label="Отменить ответ"
-                                          title="Отменить ответ"
+                                          aria-label={t.profileReplyCancel}
+                                          title={t.profileReplyCancel}
                                         >
                                           <X className="h-3 w-3" />
                                         </button>
@@ -1156,7 +1156,7 @@ export default function ProfileModal({
                                         onChange={(event) =>
                                           setCommentDrafts((drafts) => ({ ...drafts, [q.id]: event.target.value }))
                                         }
-                                        placeholder="Написать комментарий…"
+                                        placeholder={t.profileCommentPlaceholder}
                                         className="w-full min-w-0 resize-y break-words rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
                                       />
                                       <button
@@ -1164,12 +1164,12 @@ export default function ProfileModal({
                                         disabled={busyId === `comment-${q.id}`}
                                         className="shrink-0 rounded-lg bg-emerald-600 px-3 py-1.5 text-[11px] font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50"
                                       >
-                                        {busyId === `comment-${q.id}` ? 'Отправляем…' : 'Отправить'}
+                                        {busyId === `comment-${q.id}` ? t.profileSending : t.profileSend}
                                       </button>
                                     </div>
                                   </form>
                                 ) : (
-                                  <p className="text-[10px] text-slate-400">Войдите, чтобы комментировать.</p>
+                                  <p className="text-[10px] text-slate-400">{t.profileSignInToComment}</p>
                                 )}
                               </div>
                             )}
@@ -1177,31 +1177,31 @@ export default function ProfileModal({
                         ))}
                       </div>
                     ) : (
-                      <p className="smk-dashed p-3 text-center text-xs text-slate-500 dark:text-zinc-500">Вопросов пока нет. Задайте свой первый вопрос!</p>
+                      <p className="smk-dashed p-3 text-center text-xs text-slate-500 dark:text-zinc-500">{t.profileNoQuestions}</p>
                     )}
 
                     {isOwnProfile ? (
-                      <p className="smk-sheet-row mt-2 p-2.5 text-[11px] text-slate-500 dark:text-zinc-500">Это ваша анкета. Задавать вопросы самому себе нельзя.</p>
+                      <p className="smk-sheet-row mt-2 p-2.5 text-[11px] text-slate-500 dark:text-zinc-500">{t.profileOwnQuestionBlocked}</p>
                     ) : account && !account.isBlocked ? (
                       <form onSubmit={handleQuestionSubmit} className="smk-sheet-row mt-2 space-y-2 p-2.5">
-                        <h4 className="smk-sheet-label">Задать вопрос</h4>
+                        <h4 className="smk-sheet-label">{t.profileAskQuestion}</h4>
                         <div>
                           <textarea
                             rows={2}
                             maxLength={500}
                             value={questionText}
                             onChange={(event) => setQuestionText(event.target.value)}
-                            placeholder="Например: в какое время лучше приехать?"
+                            placeholder={t.profileQuestionPlaceholder}
                             className="w-full resize-y break-words rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white"
                           />
                           <p className="mt-0.5 text-right text-[10px] text-slate-400">{questionText.length}/500</p>
                         </div>
                         <button type="submit" disabled={questionBusy} className="rounded-xl bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50">
-                          {questionBusy ? 'Отправляем…' : 'Отправить'}
+                          {questionBusy ? t.profileSending : t.profileSend}
                         </button>
                       </form>
                     ) : (
-                      <p className="smk-sheet-row mt-2 p-2.5 text-[11px] text-slate-500 dark:text-zinc-500">Войдите, чтобы задать вопрос.</p>
+                      <p className="smk-sheet-row mt-2 p-2.5 text-[11px] text-slate-500 dark:text-zinc-500">{t.profileSignInToAsk}</p>
                     )}
                   </div>
                 )}
@@ -1270,7 +1270,7 @@ export default function ProfileModal({
           {profile.ownerId && (
             <section className="smk-sheet-section px-4 py-3.5">
               <h3 className="smk-sheet-label mb-2">
-                {language === 'ce' ? 'Лелорхочун анкеташ' : 'Анкеты пользователя'}
+                {t.profileOwnerProfilesHeading}
               </h3>
               {(() => {
                 const ownerProfiles = allProfiles.filter(
@@ -1279,7 +1279,7 @@ export default function ProfileModal({
                 if (ownerProfiles.length === 0) {
                   return (
                     <p className="smk-dashed p-3 text-center text-xs text-slate-500 dark:text-zinc-500">
-                      {language === 'ce' ? 'Анкеташ бац.' : 'Анкет нет.'}
+                      {t.profileOwnerProfilesEmpty}
                     </p>
                   );
                 }
@@ -1320,7 +1320,7 @@ export default function ProfileModal({
                           ) : null}
                           {isCurrent && (
                             <span className="shrink-0 rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
-                              {language === 'ce' ? 'ХIинца' : 'Открыта'}
+                              {t.profileOpenedBadge}
                             </span>
                           )}
                         </button>
@@ -1333,7 +1333,7 @@ export default function ProfileModal({
           )}
 
           <section className="smk-sheet-section px-4 py-3.5">
-            <h3 className="smk-sheet-label mb-1.5">Адрес</h3>
+            <h3 className="smk-sheet-label mb-1.5">{t.profileAddressHeading}</h3>
             <div className="smk-sheet-row flex items-start gap-3 p-2.5">
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
                 <MapPin className="h-4 w-4" />
@@ -1346,7 +1346,7 @@ export default function ProfileModal({
                   rel="noopener noreferrer"
                   className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:underline dark:text-emerald-400"
                 >
-                  Открыть на карте
+                  {t.openOnMap}
                   <ExternalLink className="h-3 w-3" />
                 </a>
               </div>
@@ -1356,7 +1356,7 @@ export default function ProfileModal({
           {profile.certificates.length > 0 && (
             <section className="smk-sheet-section px-4 py-3.5">
               <h3 className="smk-sheet-label mb-1.5">
-                Документы ({profile.certificates.length})
+                {t.profileDocumentsHeading} ({profile.certificates.length})
               </h3>
               <div className="grid grid-cols-2 gap-2.5">
                 {profile.certificates.map((cert) => (
@@ -1385,7 +1385,7 @@ export default function ProfileModal({
 
           {profile.photos.length > 0 && (
             <section className="smk-sheet-section px-4 py-3.5">
-              <h3 className="smk-sheet-label mb-1.5">Фотографии работ</h3>
+              <h3 className="smk-sheet-label mb-1.5">{t.profileWorkPhotosHeading}</h3>
               <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
                 {profile.photos.map((photo, index) => (
                   <div key={photo} className="relative h-24 overflow-hidden rounded-xl border border-slate-200/60 bg-slate-100 dark:border-zinc-800 dark:bg-zinc-800">
@@ -1405,7 +1405,7 @@ export default function ProfileModal({
                 className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-600 py-2.5 text-xs font-bold text-white shadow-sm shadow-emerald-600/30 transition hover:bg-emerald-700 active:scale-95"
               >
                 <Phone className="h-3.5 w-3.5" />
-                Позвонить
+                {t.callBtn}
               </button>
             )}
             {!isViewerBlocked && hasWhatsapp && (
@@ -1438,7 +1438,7 @@ export default function ProfileModal({
               <h3 className="text-xs font-bold text-slate-900 dark:text-white">{selectedCert.title}</h3>
               <button
                 onClick={() => setSelectedCert(null)}
-                aria-label="Закрыть документ"
+                aria-label={t.profileCloseDocument}
                 className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-700 transition hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400"
               >
                 <X className="h-3.5 w-3.5" />
