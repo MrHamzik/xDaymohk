@@ -3,9 +3,10 @@
 import Avatar from '@/components/Avatar';
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { Ban, BriefcaseBusiness, CalendarDays, ChevronDown, Clock, ExternalLink, Flag, MapPin, MessageSquare, Pencil, Phone, Send, Star, Trash2, VenusAndMars, X } from 'lucide-react';
+import { Ban, BriefcaseBusiness, CalendarDays, ChevronDown, Clock, ExternalLink, Flag, MapPin, MessageSquare, Pencil, Phone, Send, ShieldBan, Star, Trash2, VenusAndMars, X } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { useProfiles } from '@/components/ProfilesProvider';
+import { useBlacklist } from '@/components/BlacklistProvider';
 import { useI18n } from '@/lib/i18n';
 import { supabase } from '@/lib/supabase';
 import { Certificate, Profile, Review } from '@/lib/types';
@@ -151,6 +152,8 @@ export default function ProfileModal({
   const [editReviewRating, setEditReviewRating] = useState(0);
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
   const [editQuestionText, setEditQuestionText] = useState('');
+  const [blockBusy, setBlockBusy] = useState(false);
+  const { block: blockUser } = useBlacklist();
 
   useEffect(() => {
     setReviewRating(0);
@@ -634,6 +637,28 @@ export default function ProfileModal({
     }
   };
 
+  // ── Чёрный список ────────────────────────────────────────────────
+  // Блокировка адресуется ВЛАДЕЛЬЦУ анкеты, а не самой анкете: у
+  // человека их может быть несколько, и скрывать нужно все сразу.
+  const ownerId = profile?.ownerId;
+  const canBlockOwner = Boolean(
+    account && ownerId && ownerId !== account.id && !isAdminStatus && !account.isBlocked,
+  );
+
+  const handleBlockOwner = async () => {
+    if (!ownerId) return;
+    if (!window.confirm(t.profileBlockConfirm)) return;
+    setBlockBusy(true);
+    try {
+      await blockUser(ownerId);
+      onClose();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : t.profileBlockFailed);
+    } finally {
+      setBlockBusy(false);
+    }
+  };
+
   if (!profile) return null;
 
   return (
@@ -642,13 +667,28 @@ export default function ProfileModal({
       {notice && <Notice message={notice} type="error" onClose={() => setNotice('')} />}
       <div className="smk-sheet flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-3xl shadow-2xl transition-colors sm:max-w-2xl sm:rounded-3xl">
         <div className="smk-sheet-head relative shrink-0 px-4 pb-3.5 pt-4 text-slate-900 dark:text-white">
-          <button
-            onClick={onClose}
-            aria-label={t.profileCloseSheet}
-            className="absolute right-3.5 top-3.5 flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <div className="absolute right-3.5 top-3.5 flex items-center gap-1.5">
+            {/* Заблокировать можно только чужую анкету и только войдя.
+                Своя анкета и администратор отсекаются и на сервере. */}
+            {canBlockOwner && (
+              <button
+                onClick={handleBlockOwner}
+                disabled={blockBusy}
+                aria-label={t.profileBlockUser}
+                title={t.profileBlockUser}
+                className="smk-act smk-act--danger flex h-7 w-7 items-center justify-center"
+              >
+                <ShieldBan className="h-4 w-4" />
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              aria-label={t.profileCloseSheet}
+              className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
 
           <div className="flex items-center gap-3.5 pr-8">
             <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-slate-200/80 bg-slate-100 shadow-sm dark:border-zinc-800/60 dark:bg-zinc-800 sm:h-16 sm:w-16">

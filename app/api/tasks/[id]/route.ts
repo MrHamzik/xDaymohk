@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { rateLimit, withRateLimitHeaders } from '@/lib/rate-limit';
+import { areUsersBlocked, BLOCKED_MESSAGE } from '@/lib/blacklist';
 import { isAdminEmail } from '@/lib/admin';
 import { log } from '@/lib/logger';
 import {
@@ -246,6 +247,13 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       const deadline = task.deadline_at ? new Date(task.deadline_at).getTime() : null;
       if (deadline && deadline < Date.now()) {
         return NextResponse.json({ error: 'Срок выполнения истёк' }, { status: 409 });
+      }
+
+      // Чёрный список (обновление 32): заблокированный не может взять
+      // задание заказчика. Задание он и не увидит в списке, но запрос
+      // можно отправить напрямую по известному id.
+      if (await areUsersBlocked(admin, userId, task.author_id)) {
+        return NextResponse.json({ error: BLOCKED_MESSAGE }, { status: 403 });
       }
 
       // Брать задания может только «Активен» — иначе счётчик «подходит N»

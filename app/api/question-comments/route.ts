@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { rateLimit, withRateLimitHeaders } from '@/lib/rate-limit';
+import { areUsersBlocked, BLOCKED_MESSAGE } from '@/lib/blacklist';
 import { isAdminEmail } from '@/lib/admin';
 
 // Read environment once at module load so all handlers share the same
@@ -100,7 +101,7 @@ export async function POST(request: Request) {
   // is friendlier than a constraint error).
   const { data: question, error: questionError } = await admin
     .from('profile_questions')
-    .select('id')
+    .select('id, profile_id')
     .eq('id', questionId)
     .maybeSingle();
   if (questionError) {
@@ -108,6 +109,17 @@ export async function POST(request: Request) {
   }
   if (!question) {
     return NextResponse.json({ error: 'Вопрос не найден' }, { status: 404 });
+  }
+
+  // Чёрный список (обновление 32): комментировать обсуждение в анкете
+  // человека, с которым есть взаимная блокировка, нельзя.
+  const { data: hostProfile } = await admin
+    .from('profiles')
+    .select('owner_id')
+    .eq('id', question.profile_id ?? '')
+    .maybeSingle();
+  if (await areUsersBlocked(admin, caller.id, hostProfile?.owner_id)) {
+    return NextResponse.json({ error: BLOCKED_MESSAGE }, { status: 403 });
   }
 
   // If this is a reply, the target comment must exist and belong to the

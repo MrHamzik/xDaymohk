@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { rateLimit, withRateLimitHeaders } from '@/lib/rate-limit';
+import { areUsersBlocked, BLOCKED_MESSAGE } from '@/lib/blacklist';
 import { isAdminEmail } from '@/lib/admin';
 
 // Read environment once at module load so both handlers can share
@@ -114,6 +115,10 @@ export async function POST(request: Request) {
   }
   if (profile.owner_id && String(profile.owner_id) === caller.id) {
     return NextResponse.json({ error: 'Нельзя задать вопрос самому себе' }, { status: 400 });
+  }
+  // Чёрный список (обновление 32) — проверка на сервере обязательна.
+  if (await areUsersBlocked(admin, caller.id, profile.owner_id)) {
+    return NextResponse.json({ error: BLOCKED_MESSAGE }, { status: 403 });
   }
 
   // Insert the question. We do NOT write author_name / author_avatar_url

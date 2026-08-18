@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import ThemeProvider from '@/components/ThemeProvider';
 import AuthProvider from '@/components/AuthProvider';
 import ProfilesProvider from '@/components/ProfilesProvider';
+import { BlacklistProvider } from '@/components/BlacklistProvider';
 import NotificationsProvider from '@/components/NotificationsProvider';
 import SettingsProvider from '@/components/SettingsProvider';
 import OnboardingModal from '@/components/OnboardingModal';
@@ -68,10 +69,15 @@ export default function RootLayout({
                   применяется раньше, чем придёт ответ сервера. */}
               <SettingsProvider>
                 <NotificationsProvider>
-                  <ProfilesProvider>
-                    {children}
-                    <OnboardingModal />
-                  </ProfilesProvider>
+                  {/* Чёрный список выше ProfilesProvider: каталог и
+                      карта фильтруют выдачу по нему, значит список
+                      скрытых должен быть готов раньше анкет. */}
+                  <BlacklistProvider>
+                    <ProfilesProvider>
+                      {children}
+                      <OnboardingModal />
+                    </ProfilesProvider>
+                  </BlacklistProvider>
                 </NotificationsProvider>
               </SettingsProvider>
             </AuthProvider>

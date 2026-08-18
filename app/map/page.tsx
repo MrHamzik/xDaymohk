@@ -1,6 +1,7 @@
 'use client';
 
 import Avatar from '@/components/Avatar';
+import { useBlacklist } from '@/components/BlacklistProvider';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, FileText, LocateFixed, MapPinned, Phone, Users, Star } from 'lucide-react';
@@ -92,9 +93,15 @@ export default function MapPage() {
   }, []);
 
   const adminOwnerId = account?.isAdmin ? account.id : undefined;
+  // Скрытые чёрным списком не должны появляться и на карте: иначе
+  // человек, которого вы заблокировали, остаётся виден точкой.
+  const { isHidden: isBlockedOwner } = useBlacklist();
   const profilesWithAddresses = useMemo(
-    () => profiles.filter((profile) => Boolean(profile.workplaceAddress.trim()) && !profile.isHidden && !profile.isBanned),
-    [profiles],
+    () => profiles.filter((profile) =>
+      Boolean(profile.workplaceAddress.trim())
+      && !profile.isHidden && !profile.isBanned
+      && !isBlockedOwner(profile.ownerId)),
+    [profiles, isBlockedOwner],
   );
   const filteredProfiles = useMemo(
     () => filterProfiles(profilesWithAddresses, {
@@ -126,7 +133,7 @@ export default function MapPage() {
   const selectedOwnerProfiles = useMemo(() => {
     if (!selectedProfile) return [];
     if (!selectedProfile.ownerId) return [selectedProfile];
-    return profiles.filter((profile) => profile.ownerId === selectedProfile.ownerId && !profile.isHidden && !profile.isBanned);
+    return profiles.filter((profile) => profile.ownerId === selectedProfile.ownerId && !profile.isHidden && !profile.isBanned && !isBlockedOwner(profile.ownerId));
   }, [profiles, selectedProfile]);
 
   // Анкеты ВСЕХ жителей и специалистов, у кого указан выбранный адрес.

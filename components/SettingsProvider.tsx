@@ -177,36 +177,39 @@ export default function SettingsProvider({ children }: { children: React.ReactNo
   /**
    * Обновление настроек.
    *
-   * persist() вызывается в эффекте, а НЕ внутри апдейтера setSettings.
-   * Апдейтер обязан быть чистой функцией: React в StrictMode вызывает
-   * его дважды и может выполнить во время рендера. Запись в
-   * localStorage и setTimeout оттуда давали предупреждение
-   * «Cannot update a component while rendering» — тот самый трейс с
-   * dispatchSetState при перетаскивании цвета в редакторе тем.
+   * Апдейтер setSettings обязан быть ЧИСТОЙ функцией. React в
+   * StrictMode вызывает его дважды и может выполнить прямо во время
+   * рендера, поэтому оттуда нельзя ни писать в localStorage, ни
+   * трогать ref, ни планировать таймеры.
+   *
+   * Прошлая версия вынесла persist() в эффект, но оставила в апдейтере
+   * мутацию `pendingSave.current` — то есть побочный эффект никуда не
+   * делся, и предупреждение «Cannot update a component while
+   * rendering» продолжало появляться при перетаскивании цвета в
+   * редакторе тем (трейс dispatchSetState → update → patchTheme).
+   *
+   * Теперь апдейтер только считает новое состояние, а сохранение
+   * запускает отдельный эффект, следящий за самим `settings`. Флаг
+   * hasLocalEdit нужен, чтобы не записывать обратно то, что мы только
+   * что прочитали с сервера при загрузке.
    */
-  const pendingSave = useRef<UserSettings | null>(null);
-  const [saveTick, setSaveTick] = useState(0);
+  const hasLocalEdit = useRef(false);
 
   const update = useCallback((patch: Partial<UserSettings>) => {
-    setSettings((current) => {
-      const next = normalizeSettings({ ...current, ...patch });
-      pendingSave.current = next;
-      return next;
-    });
-    setSaveTick((value) => value + 1);
+    hasLocalEdit.current = true;
+    setSettings((current) => normalizeSettings({ ...current, ...patch }));
   }, []);
 
   const reset = useCallback(() => {
-    const next = { ...DEFAULT_SETTINGS };
-    setSettings(next);
-    pendingSave.current = next;
-    setSaveTick((value) => value + 1);
+    hasLocalEdit.current = true;
+    setSettings({ ...DEFAULT_SETTINGS });
   }, []);
 
+  // Сохраняем после фиксации состояния, а не во время его вычисления.
   useEffect(() => {
-    if (saveTick === 0 || !pendingSave.current) return;
-    persist(pendingSave.current);
-  }, [saveTick, persist]);
+    if (isLoading || !hasLocalEdit.current) return;
+    persist(settings);
+  }, [settings, isLoading, persist]);
 
   useEffect(() => () => {
     if (saveTimer.current) clearTimeout(saveTimer.current);

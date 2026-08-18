@@ -18,6 +18,7 @@ import MobileMenuDrawer from '@/components/MobileMenuDrawer';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/lib/supabase';
 import { useProfiles } from '@/components/ProfilesProvider';
+import { useBlacklist } from '@/components/BlacklistProvider';
 import { formatCount } from '@/lib/text';
 import { filterProfiles } from '@/lib/profile-filters';
 import { useI18n } from '@/lib/i18n';
@@ -66,7 +67,15 @@ export default function Home() {
     return () => window.removeEventListener('resize', update);
   }, []);
 
-  const visibleProfiles = useMemo(() => profiles.filter((profile) => !profile.isHidden && !profile.isBanned), [profiles]);
+  // Чёрный список фильтруем ЗДЕСЬ, а не в ProfilesProvider: скрытие
+  // взаимное и зависит от того, кто смотрит, — общий кеш анкет должен
+  // оставаться одинаковым для всех.
+  const { isHidden: isBlockedOwner } = useBlacklist();
+  const visibleProfiles = useMemo(
+    () => profiles.filter((profile) =>
+      !profile.isHidden && !profile.isBanned && !isBlockedOwner(profile.ownerId)),
+    [profiles, isBlockedOwner],
+  );
   const adminOwnerId = account?.isAdmin ? account.id : undefined;
   const activeProfile = useMemo(
     () => profiles.find((profile) => profile.id === activeProfileId && ((isCurrentUserAdmin || !profile.isHidden) && !profile.isBanned)) ?? null,
