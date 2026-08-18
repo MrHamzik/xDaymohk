@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Check, Palette, Settings as SettingsIcon } from 'lucide-react';
 import { useSettings } from '@/components/SettingsProvider';
-import { contrastRatio, readableOn } from '@/lib/settings/derive';
+import { contrastRatio } from '@/lib/settings/derive';
 import { PRESET_THEMES, resolveTheme } from '@/lib/settings/defaults';
 import { useI18n } from '@/lib/i18n';
 
@@ -34,30 +34,29 @@ export default function ThemePickerButton() {
   const active = resolveTheme(settings.themeId, settings.customThemes);
 
   /**
-   * Плитка кнопки: фон и цвет значка.
+   * Плитка кнопки: фон из акцента темы, значок ВСЕГДА белый.
    *
-   * История правок здесь важна, потому что каждый «простой» вариант
-   * ломался в конкретной теме:
+   * Значок белый по требованию: это фирменный вид кнопки, одинаковый
+   * во всех темах. Подбирать его цвет автоматически не нужно — такие
+   * попытки уже ломали кнопку трижды:
    *   1) значок цветом фона страницы — пропадал на светлых темах;
-   *   2) значок всегда белый — исчез в «Чёрной», где акцент #ffffff;
-   *   3) значок по контрасту к акценту — стал чёрным во всех тёмных
-   *      темах, хотя там ожидается белый.
+   *   2) значок по контрасту к акценту — становился чёрным в тёмных
+   *      темах, где ожидается белый;
+   *   3) то же правило с учётом основы — давало чёрный в светлых.
    *
-   * Правило: в тёмной теме значок белый, в светлой — тёмный. Отдельно
-   * разбирается случай, когда акцент почти сливается с белым: там
-   * белая плитка выглядит инородным пятном на чёрном интерфейсе,
-   * поэтому подложку приглушаем до серой, а значок оставляем белым.
+   * Меняется только ПОДЛОЖКА, и лишь в одном случае: когда акцент сам
+   * почти белый (тема «Чёрный»), белый значок на нём был бы не виден.
    */
   const tileStyle = (() => {
     const accent = active.colors.accent;
-    const ink = active.isDark ? '#ffffff' : readableOn(accent);
-    // Плитка почти белая (как в теме «Чёрный») — белый значок на ней
-    // не читался бы. Берём приглушённый серый из палитры самой темы.
+    // Плитка почти белая (как в теме «Чёрный», где акцент это чистый
+    // #ffffff) — белый значок на ней слился бы. Подложку приглушаем до
+    // серого из палитры самой темы; значок при этом остаётся белым.
     const tooLight = contrastRatio('#ffffff', accent) < 1.4;
-    if (active.isDark && tooLight) {
-      return { background: active.colors.statusOffline, color: '#ffffff' };
-    }
-    return { background: accent, color: ink };
+    return {
+      background: tooLight ? active.colors.statusOffline : accent,
+      color: '#ffffff',
+    };
   })();
 
   const options = [
