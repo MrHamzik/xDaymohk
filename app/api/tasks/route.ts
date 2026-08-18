@@ -276,9 +276,8 @@ export async function POST(request: Request) {
       min_account_days: minAccountDays,
       min_tasks_done: minTasksDone,
       allow_newcomers: allowNewcomers,
-      // Способ расчёта. Значение проверяем: клиент мог прислать что
-      // угодно, а колонка ограничена CHECK-ом в миграции 33.
-      payment_method: isPaymentMethod(body.paymentMethod) ? body.paymentMethod : 'cash',
+      // Способ расчёта добавляется ниже — колонка появилась в миграции
+      // 33, и на базе без неё запрос упал бы целиком.
       status: 'open',
       payment_status: 'offline',
     })
@@ -287,7 +286,28 @@ export async function POST(request: Request) {
 
   if (insertError) {
     log.warn('tasks create failed:', insertError.message);
-    return NextResponse.json({ error: 'Не удалось создать задание' }, { status: 500 });
+    // Текст ошибки отдаём наружу: «Не удалось создать задание» без
+    // причины заставляет пользователя гадать, а нас — лезть в логи
+    // сервера. Чаще всего здесь «column ... does not exist», то есть
+    // не применена миграция.
+    return NextResponse.json(
+      { error: `Не удалось создать задание: ${insertError.message}` },
+      { status: 500 },
+    );
+  }
+
+  // Способ оплаты — отдельным обновлением, потому что колонка
+  // payment_method появляется только в миграции 33. На базе без неё
+  // задание создаётся как обычно (расчёт по умолчанию наличными), а в
+  // лог падает предупреждение — вместо отказа создать задание вообще.
+  {
+    const createdId = created?.id ?? id;
+    const method = isPaymentMethod(body.paymentMethod) ? body.paymentMethod : 'cash';
+    const { error: methodError } = await admin
+      .from('tasks').update({ payment_method: method }).eq('id', createdId);
+    if (methodError) {
+      log.warn('tasks payment_method skipped', { message: methodError.message });
+    }
   }
 
   // Счётчик опубликованных — он показывается в шапке карточки, по нему

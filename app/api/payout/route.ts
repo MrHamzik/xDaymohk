@@ -37,7 +37,12 @@ async function caller(request: Request): Promise<{ id: string } | null> {
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const mapRow = (r: any) => ({
-  isEnabled: r?.is_enabled === true,
+  // Колонки может не быть (миграция 34 не применена): тогда считаем
+  // согласие данным, если реквизиты заполнены — так вела себя система
+  // до появления тумблера.
+  isEnabled: r?.is_enabled ?? Boolean(
+    r?.sbp_phone || r?.card_number || r?.yoomoney_wallet,
+  ),
   sbpPhone: r?.sbp_phone ?? '',
   sbpBank: r?.sbp_bank ?? '',
   cardNumber: r?.card_number ?? '',
@@ -141,19 +146,34 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Номер кошелька ЮMoney должен содержать 11–16 цифр' }, { status: 400 });
   }
 
-  const { error } = await admin.from('payout_methods').upsert({
+  const base = {
     user_id: me.id,
-    is_enabled: body.isEnabled === true,
     sbp_phone: sbpPhone,
     sbp_bank: String(body.sbpBank ?? '').slice(0, 60),
     card_number: cardNumber,
     card_bank: String(body.cardBank ?? '').slice(0, 60),
     yoomoney_wallet: wallet,
-  }, { onConflict: 'user_id' });
+  };
+
+  // is_enabled добавлен миграцией 34. Пробуем записать с ним, а при
+  // ошибке «нет такой колонки» повторяем без него: иначе на базе без
+  // миграции тумблер откатывался назад и реквизиты вообще не
+  // сохранялись — ровно то, на что жаловался пользователь.
+  let { error } = await admin.from('payout_methods')
+    .upsert({ ...base, is_enabled: body.isEnabled === true }, { onConflict: 'user_id' });
+
+  if (error && /is_enabled/i.test(error.message)) {
+    log.warn('payout:POST', 'is_enabled column missing, saving without it');
+    ({ error } = await admin.from('payout_methods')
+      .upsert(base, { onConflict: 'user_id' }));
+  }
 
   if (error) {
     log.warn('payout:POST', 'upsert failed', { message: error.message });
-    return NextResponse.json({ error: 'Не удалось сохранить реквизиты' }, { status: 500 });
+    return NextResponse.json(
+      { error: `Не удалось сохранить реквизиты: ${error.message}` },
+      { status: 500 },
+    );
   }
   return NextResponse.json({ ok: true });
 }
