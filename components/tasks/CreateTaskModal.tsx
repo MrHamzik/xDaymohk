@@ -5,6 +5,8 @@ import { X, Loader2, ExternalLink } from 'lucide-react';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 import { useI18n } from '@/lib/i18n';
 import { createTask, fetchTaskFilters } from '@/lib/tasks/client';
+import { getUserCoords } from '@/lib/geo';
+import { findClosestSamashkiHouse } from '@/lib/samashki-addresses';
 import {
   taskCostBreakdown, TASK_MIN_REWARD, TASK_PRIORITY_SURCHARGE,
   type AppFilter, type TaskKind, type TaskPriority,
@@ -39,7 +41,10 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
   const [scheduledAt, setScheduledAt] = useState('');
   const [address, setAddress] = useState('');
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const [minRating, setMinRating] = useState('0');
+  // 4.5 по умолчанию: заказчик почти всегда хочет проверенного
+  // исполнителя, а ноль пропускал вообще всех и обнаруживался только
+  // после первого неудачного отклика. Планку видно и её можно снизить.
+  const [minRating, setMinRating] = useState('4.5');
   const [minAccountDays, setMinAccountDays] = useState('0');
   const [minTasksDone, setMinTasksDone] = useState('0');
   const [allowNewcomers, setAllowNewcomers] = useState(true);
@@ -55,6 +60,36 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
     const tomorrow = new Date(Date.now() + 24 * 3600_000);
     setDeadlineAt(toLocalInput(soon));
     setScheduledAt(toLocalInput(tomorrow));
+  }, [isOpen]);
+
+  // Адрес подставляем сам: берём координаты пользователя и находим
+  // ближайший дом из адресной книги (та же функция, что у кнопки «Моё
+  // место» на карте). Задание почти всегда «у меня дома», и ручной ввод
+  // улицы каждый раз — лишняя работа.
+  //
+  // getUserCoords не показывает окно запроса сам: если разрешение не
+  // выдано, поле просто остаётся пустым, и человек заполнит его руками.
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    void getUserCoords().then((position) => {
+      if (cancelled || !position) return;
+      // Не перетираем то, что пользователь уже начал вводить.
+      setAddress((current) => {
+        if (current.trim()) return current;
+        try {
+          const closest = findClosestSamashkiHouse(position);
+          if (closest?.fullAddress) {
+            setCoords({ lat: closest.lat, lng: closest.lng });
+            return closest.fullAddress;
+          }
+        } catch {
+          // Адресная книга недоступна — оставляем поле пустым.
+        }
+        return current;
+      });
+    });
+    return () => { cancelled = true; };
   }, [isOpen]);
 
   useEffect(() => {
@@ -403,11 +438,14 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
             />
           </div>
 
-          {/* Требования: кого пускать на задание */}
-          <details className={sectionClass}>
-            <summary className="cursor-pointer text-[11px] font-bold uppercase tracking-wide text-slate-500 marker:text-emerald-500 dark:text-zinc-400">
+          {/* Требования: кого пускать на задание.
+              Раньше блок был свёрнут в <details>: заказчик его не
+              открывал и не знал, что фильтры вообще есть, — а потом
+              удивлялся откликам без рейтинга. Показываем всегда. */}
+          <div className={sectionClass}>
+            <h3 className="text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-zinc-400">
               {t.taskRequirements}
-            </summary>
+            </h3>
             <div className="mt-3 space-y-3">
               <div className="grid grid-cols-3 gap-2">
                 <div>
@@ -449,7 +487,7 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
                 </span>
               </label>
             </div>
-          </details>
+          </div>
 
           {error && (
             <div className="px-4 pb-4">

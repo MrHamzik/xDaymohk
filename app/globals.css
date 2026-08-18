@@ -1391,7 +1391,25 @@ html.dark .smk-btn-gold {
    Звезда золотая в обеих темах — так она и на синем референсе. А вот
    служебные элементы (стрелка, ховер) в тёмной теме уходят в сталь,
    иначе на синем полотне появляется случайный жёлтый. */
-.smk-star { color: var(--smk-gold-deep); fill: var(--smk-gold); }
+/* Звезда рейтинга: обводка ЯРЧЕ заливки, а не темнее.
+   Раньше stroke брал --smk-gold-deep (тёмный оттенок акцента), и контур
+   получался темнее тела звезды — она выглядела «обведённой карандашом».
+   Светлый контур по краю читается как блик и держит форму на любом
+   фоне. --smk-gold-soft светлее акцента во всех девяти темах. */
+.smk-star {
+  /* Контур светлее тела: подмешиваем белый к акценту, а не берём
+     готовый accentSoft. Причина — тема «Чёрный», где акцент это уже
+     чистый #ffffff: там accentSoft (#e5e5e5) оказывается ТЕМНЕЕ
+     заливки, и звезда снова выглядит обведённой карандашом.
+     color-mix с белым не может уйти вниз по яркости ни в одной теме. */
+  color: color-mix(in srgb, var(--smk-gold) 45%, #ffffff);
+  fill: var(--smk-gold);
+}
+/* Без color-mix берём светлый оттенок акцента — он подходит везде,
+   кроме «Чёрной», а она в старых браузерах и так редкость. */
+@supports not (color: color-mix(in srgb, red 50%, blue)) {
+  .smk-star { color: var(--smk-gold-soft); }
+}
 .smk-rating-value { color: var(--smk-gold); }
 html.dark .smk-rating-value { color: var(--smk-muted-bright); }
 
@@ -1704,4 +1722,80 @@ html.dark .group:hover .smk-arrow { color: var(--smk-muted-bright); }
   font-size: 11px;
   font-weight: 800;
   color: var(--smk-gold-deep);
+}
+
+
+/* --- Кнопка закрытия в меню «+» ----------------------------------------------
+   Круглая «×» в центре веера действий. Раньше была жёстко белой
+   (bg-white/25, border-white/50) и не реагировала на тему: на светлых
+   темах белое на белом почти пропадало.
+
+   Теперь поверхность и штрих выводятся из палитры, а золотое кольцо
+   связывает кнопку с остальным оформлением — те же засечки и орнаменты,
+   что в карточках. */
+.smk-close-orb {
+  color: #ffffff;
+  background:
+    radial-gradient(circle at 50% 35%,
+      rgb(var(--smk-light-rgb) / 0.22) 0%,
+      rgb(var(--smk-light-rgb) / 0.06) 60%,
+      transparent 100%),
+    color-mix(in srgb, var(--smk-card-a) 25%, transparent);
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  box-shadow:
+    0 0 0 1px rgb(var(--smk-gold-rgb) / 0.55),
+    0 0 0 5px rgb(var(--smk-gold-rgb) / 0.12),
+    0 12px 32px -12px rgb(var(--smk-shadow-rgb) / 0.75);
+}
+.smk-close-orb:hover {
+  background:
+    radial-gradient(circle at 50% 35%,
+      rgb(var(--smk-light-rgb) / 0.3) 0%,
+      rgb(var(--smk-light-rgb) / 0.1) 60%,
+      transparent 100%),
+    color-mix(in srgb, var(--smk-card-a) 35%, transparent);
+  box-shadow:
+    0 0 0 1px rgb(var(--smk-gold-rgb) / 0.8),
+    0 0 0 6px rgb(var(--smk-gold-rgb) / 0.18),
+    0 14px 36px -12px rgb(var(--smk-shadow-rgb) / 0.85);
+}
+
+/* --- Поля даты и времени -----------------------------------------------------
+   input[type=datetime-local] рисует иконку календаря средствами
+   браузера, и она НЕ наследует цвет текста: в тёмных темах остаётся
+   почти чёрной на тёмном поле — выглядит как «иконка не работает».
+
+   color-scheme переключает всю внутреннюю отрисовку поля (иконку,
+   выпадающий календарь, разделители) на тёмный вариант. Это
+   стандартный способ, а не подкрашивание фильтром: filter: invert
+   ломает цвета в светлой теме и не влияет на сам календарь.
+
+   Дополнительно расширяем зону клика по иконке: по умолчанию она около
+   16px, попасть пальцем трудно. */
+input[type='date'],
+input[type='time'],
+input[type='datetime-local'] {
+  color-scheme: light;
+}
+html.dark input[type='date'],
+html.dark input[type='time'],
+html.dark input[type='datetime-local'] {
+  color-scheme: dark;
+}
+input[type='date']::-webkit-calendar-picker-indicator,
+input[type='time']::-webkit-calendar-picker-indicator,
+input[type='datetime-local']::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  padding: 0.35rem;
+  margin-right: -0.2rem;
+  border-radius: 0.4rem;
+  opacity: 0.65;
+  transition: opacity 0.15s ease, background-color 0.15s ease;
+}
+input[type='date']::-webkit-calendar-picker-indicator:hover,
+input[type='time']::-webkit-calendar-picker-indicator:hover,
+input[type='datetime-local']::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+  background-color: rgb(var(--smk-gold-rgb) / 0.16);
 }

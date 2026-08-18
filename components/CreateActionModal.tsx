@@ -186,7 +186,7 @@ export default function CreateActionModal({
             onClick={onClose}
             aria-label={t.close}
             title={t.close}
-            className="z-20 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white/25 text-white shadow-2xl backdrop-blur-xl border border-white/50 transition-all duration-300 hover:bg-white/35 hover:scale-110 active:scale-95"
+            className="smk-close-orb z-20 flex h-14 w-14 shrink-0 items-center justify-center rounded-full transition-all duration-300 hover:scale-110 active:scale-95"
           >
             <X className="h-7 w-7 stroke-[2.5]" />
           </button>
