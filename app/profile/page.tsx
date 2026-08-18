@@ -328,8 +328,8 @@ export default function ProfilePage() {
             </div>
 
             {/* My Questionnaires list */}
-            <section className="smk-field space-y-2 rounded-2xl p-3.5">
-              <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-2 dark:border-zinc-700/60">
+            <section className="smk-group">
+              <div className="flex items-center justify-between gap-3 pb-1">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-400">{t.myProfiles}</h3>
                 <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300">{ownProfiles.length}</span>
               </div>

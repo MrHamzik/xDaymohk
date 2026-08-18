@@ -104,6 +104,7 @@ export const PRESET_THEMES: Record<
     colors: {
       bg: '#f8fafc',
       card: '#ffffff',
+      surface: '#ffffff',
       panel: '#ececec',
       cardAlt: '#ffffff',
       cardLine: '#f5f5f5',
@@ -129,6 +130,7 @@ export const PRESET_THEMES: Record<
     colors: {
       bg: '#131313',
       card: '#1c1c20',
+      surface: '#1c1c20',
       panel: '#25252a',
       cardAlt: '#161619',
       cardLine: '#25252a',
@@ -163,6 +165,7 @@ export const PRESET_THEMES: Record<
     colors: {
       bg: '#080713',
       card: '#121127',
+      surface: '#121127',
       panel: '#181734',
       cardAlt: '#0d0b1d',
       cardLine: '#181734',
@@ -205,6 +208,7 @@ export const PRESET_THEMES: Record<
     colors: {
       bg: '#1b090e',
       card: '#2e151b',
+      surface: '#2e151b',
       panel: '#3b1b23',
       cardAlt: '#250e14',
       cardLine: '#3b1b23',
@@ -249,6 +253,7 @@ export const PRESET_THEMES: Record<
     colors: {
       bg: '#000000',
       card: '#0a0a0a',
+      surface: '#0a0a0a',
       panel: '#141414',
       cardAlt: '#050505',
       cardLine: '#141414',
@@ -292,6 +297,7 @@ export const PRESET_THEMES: Record<
     colors: {
       bg: '#f7f7f8',
       card: '#ffffff',
+      surface: '#ffffff',
       panel: '#ececec',
       cardAlt: '#fbfbfc',
       cardLine: '#f5f5f5',
@@ -339,6 +345,7 @@ export const PRESET_THEMES: Record<
     colors: {
       bg: '#e8edf2',
       card: '#ffffff',
+      surface: '#ffffff',
       panel: '#ececec',
       cardAlt: '#f6f9fc',
       cardLine: '#f5f5f5',
@@ -386,6 +393,7 @@ export const PRESET_THEMES: Record<
     colors: {
       bg: '#edf8f2',
       card: '#fbfefc',
+      surface: '#fbfefc',
       panel: '#dcf6e5',
       cardAlt: '#f4faf7',
       cardLine: '#ecfaf1',
@@ -430,6 +438,7 @@ export const PRESET_THEMES: Record<
     colors: {
       bg: '#fbf6ea',
       card: '#fefdfb',
+      surface: '#fefdfb',
       panel: '#f6eedc',
       cardAlt: '#fcfaf2',
       cardLine: '#faf5ec',
@@ -501,6 +510,7 @@ export function normalizeColors(raw: unknown, base: ThemeColors): ThemeColors {
   return {
     bg: pick('bg'),
     card: pick('card'),
+    surface: pick('surface'),
     cardAlt: pick('cardAlt'),
     cardLine: pick('cardLine'),
     divider: pick('divider'),
@@ -573,6 +583,11 @@ function normalizeCustomThemes(raw: unknown): CustomTheme[] {
       // подставился бы цвет пресета-основы — светлое поле в тёмной теме.
       if (typeof stored.field !== 'string') {
         colors.field = deriveField(colors.card, isDark);
+      }
+      // Каркас (шапка, меню) до этого совпадал с карточкой — так и
+      // оставляем, иначе интерфейс у существующих тем поедет.
+      if (typeof stored.surface !== 'string') {
+        colors.surface = colors.card;
       }
       return {
         id: typeof entry.id === 'string' && entry.id ? entry.id : `theme-${index}`,

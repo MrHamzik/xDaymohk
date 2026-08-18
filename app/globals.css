@@ -1967,3 +1967,90 @@ html.fx-no-motion *::after {
     transition-duration: 0.001s !important;
   }
 }
+
+/* --- Каркас приложения --------------------------------------------------------
+   Шапка и нижняя навигация читают слот «Шапка и меню», а не цвет
+   карточки. Раньше они красились классами bg-white / dark:bg-zinc-950,
+   и правка «Карточек» перекрашивала оболочку целиком — вместе с линией
+   под шапкой. */
+.site-header,
+.site-bottom-nav {
+  background-color: color-mix(in srgb, var(--smk-surface) 95%, transparent);
+  border-color: var(--smk-divider);
+}
+.site-header { border-bottom: 1px solid var(--smk-divider); }
+
+/* --- Группа полей формы -------------------------------------------------------
+   Раньше поля лежали в контейнере .smk-field и сами были .smk-field —
+   фон в фоне одного цвета, из-за чего блок читался как одно пятно, а
+   отдельные поля терялись.
+
+   Теперь группа — прозрачная рамка с орнаментальными разделителями
+   между полями, а фон и тень несёт каждое поле отдельно. Так у поля
+   появляется собственная глубина, а границы между ними видны. */
+.smk-group {
+  background: transparent;
+  padding: 0;
+}
+.smk-group > * + * {
+  margin-top: 0.875rem;
+  padding-top: 0.875rem;
+  position: relative;
+}
+/* Орнамент между полями: линия с разрывом и ромбом по центру — тот же
+   мотив, что у разделителей секций. */
+.smk-group > * + *::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--smk-divider) 14%,
+    var(--smk-divider) 45%,
+    transparent 48%,
+    transparent 52%,
+    var(--smk-divider) 55%,
+    var(--smk-divider) 86%,
+    transparent
+  );
+  opacity: var(--fx-pattern);
+}
+
+/* Поля внутри формы: собственная глубина вместо плоской заливки.
+   Мягкая внутренняя тень читается как «углубление», куда пишут. */
+.smk-field input,
+.smk-field select,
+.smk-field textarea,
+input.smk-field,
+select.smk-field,
+textarea.smk-field {
+  box-shadow:
+    inset 0 1px 2px rgb(var(--smk-shadow-rgb) / calc(0.10 * var(--fx-shadow))),
+    0 1px 0 rgb(var(--smk-light-rgb) / calc(0.04 * var(--fx-shadow)));
+  transition: box-shadow 0.18s ease, background-color 0.18s ease;
+}
+input.smk-field:focus,
+select.smk-field:focus,
+textarea.smk-field:focus {
+  box-shadow:
+    inset 0 1px 2px rgb(var(--smk-shadow-rgb) / calc(0.06 * var(--fx-shadow))),
+    0 0 0 3px rgb(var(--smk-gold-rgb) / calc(0.16 * var(--fx-glow)));
+}
+
+/* Блоки с данными (аватар+имя+телефон, описание, контакты) получают ту
+   же глубину, что карточки: раньше на них не было ни тени, ни
+   градиента — они выглядели вырезанными из фона. */
+.smk-field {
+  box-shadow:
+    0 1px 2px -1px rgb(var(--smk-shadow-rgb) / calc(0.10 * var(--fx-shadow))),
+    0 4px 12px -8px rgb(var(--smk-shadow-rgb) / calc(0.18 * var(--fx-shadow)));
+  background-image: linear-gradient(
+    168deg,
+    color-mix(in srgb, var(--smk-light-rgb-color, transparent) 0%, transparent) 0%,
+    color-mix(in srgb, var(--smk-card-a) calc(14% * var(--fx-gradient)), transparent) 100%
+  );
+}

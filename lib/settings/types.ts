@@ -149,6 +149,16 @@ export interface ThemeColors {
   /** Полотно карточки. */
   card: string;
   /**
+   * Поверхности каркаса: шапка сайта, нижняя навигация, боковое меню,
+   * всплывающие слои.
+   *
+   * Отдельно от `card`, потому что это разные сущности: карточка —
+   * содержимое, каркас — оболочка вокруг него. Раньше оба брали один
+   * цвет, и правка «Карточек» перекрашивала половину интерфейса —
+   * от линии под шапкой до боковой панели.
+   */
+  surface: string;
+  /**
    * Панели: мини-профиль, виджет времени намаза, блок четырёх иконок,
    * подвал карточек. Самостоятельный слот — эти поверхности не должны
    * зависеть ни от фона страницы, ни от карточки.
@@ -253,7 +263,7 @@ export const THEME_COLOR_GROUPS: Record<ThemeColorGroup, Array<keyof ThemeColors
   // cardAlt в редакторе не показываем: он даёт лишь нижнюю точку
   // градиента карточки и визуально неотличим от card. Значение
   // выводится автоматически при сохранении темы.
-  global: ['bg', 'card', 'panel', 'cardInset', 'field', 'cardLine', 'divider', 'text', 'muted', 'icon'],
+  global: ['bg', 'card', 'surface', 'panel', 'cardInset', 'field', 'cardLine', 'divider', 'text', 'muted', 'icon'],
   details: ['accent', 'accentSoft', 'accentDeep', 'ui', 'danger'],
   specific: [
     'statusAuto', 'statusActive', 'statusBreak', 'statusFlexible', 'statusOffline',

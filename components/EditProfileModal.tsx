@@ -283,7 +283,7 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
             )}
 
             {isSpecialist && (
-              <section className="smk-field space-y-3.5 p-3.5">
+              <section className="smk-group">
                 <div>
                   <label htmlFor="profile-category" className="mb-1 block text-xs font-bold text-slate-700 dark:text-zinc-400">{t.professionCategory}</label>
                   <select id="profile-category" value={professionCategory} onChange={(event) => setProfessionCategory(event.target.value)} className="smk-field w-full pl-3 pr-10 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:text-white">
