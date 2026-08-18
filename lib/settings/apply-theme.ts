@@ -103,6 +103,7 @@ const MANAGED_PROPERTIES = [
   '--background', '--foreground', '--border-dark-soft',
   '--smk-panel',
   '--smk-card-a', '--smk-card-b', '--smk-card-line', '--smk-card-inset',
+  '--smk-divider',
   '--smk-muted', '--smk-muted-bright', '--smk-icon',
   '--smk-surface', '--smk-surface-soft',
   '--smk-gold', '--smk-gold-soft', '--smk-gold-deep', '--smk-gold-rgb',
@@ -229,6 +230,10 @@ export function applyThemeColors(
   set('--smk-card-a', colors.card);
   set('--smk-card-b', colors.cardAlt);
   set('--smk-card-line', colors.cardLine);
+  // Разделитель — линия ВНУТРИ блока. Отдельный слот: контур карточки
+  // должен быть еле заметен, а линия между строками обязана читаться,
+  // и одно значение на две задачи всегда проигрывало одной из них.
+  set('--smk-divider', colors.divider);
   set('--smk-card-inset', colors.cardInset);
   set('--smk-muted', colors.muted);
   // Иконки строк, звезда рейтинга, стрелка карточки. Отдельный слот:

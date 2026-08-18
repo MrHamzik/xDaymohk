@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Check, ChevronDown, Palette, Plus, Trash2 } from 'lucide-react';
 import { useSettings } from '@/components/SettingsProvider';
 import { PRESET_THEMES, normalizeColors } from '@/lib/settings/defaults';
+import { deriveCardLine, deriveDivider } from '@/lib/settings/derive';
 import {
   MAX_CUSTOM_THEMES, THEME_COLOR_GROUPS,
   type CustomTheme, type ThemeColorGroup, type ThemeColors,
@@ -41,7 +42,8 @@ const COLOR_LABELS: Partial<Record<keyof ThemeColors, { ru: string; ce: string }
   card: { ru: 'Карточки и поля', ce: 'Карточкаш а, меттигаш а' },
   panel: { ru: 'Панели и подвал карточек', ce: 'Панелаш а, карточкийн бух а' },
   cardInset: { ru: 'Подложка строк', ce: 'МогIанийн бухъ' },
-  cardLine: { ru: 'Обводка', ce: 'Йоза' },
+  cardLine: { ru: 'Обводка (контур)', ce: 'Йоза (контур)' },
+  divider: { ru: 'Разделители (линии внутри)', ce: 'Декъархой (чоьхьара сизаш)' },
   text: { ru: 'Основной текст', ce: 'Коьрта йоза' },
   muted: { ru: 'Второстепенный текст', ce: 'ШолгIа йоза' },
   icon: { ru: 'Иконки', ce: 'ГIирсаш' },
@@ -270,6 +272,15 @@ export default function ThemeEditor() {
                                 editing.isDark ? '#000000' : '#ffffff',
                                 0.16,
                               );
+                              // Обводка и разделители выводятся из карточки
+                              // по фиксированным правилам (см. lib/settings/
+                              // derive.ts). Пересчитываем их здесь же, иначе
+                              // после смены карточки линии остались бы от
+                              // прошлого цвета. Оба слота открыты в
+                              // редакторе: значение можно поправить руками
+                              // следующим кликом.
+                              next.cardLine = deriveCardLine(e.target.value);
+                              next.divider = deriveDivider(e.target.value, editing.isDark);
                             }
                             patchTheme(editing.id, {
                               colors: normalizeColors(next, editing.colors),

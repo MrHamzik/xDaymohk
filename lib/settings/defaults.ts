@@ -9,6 +9,7 @@ import {
   type ThemeColors,
   type UserSettings,
 } from '@/lib/settings/types';
+import { deriveDivider } from '@/lib/settings/derive';
 
 /**
  * Умолчания живут здесь, а не в DEFAULT-ах колонок Postgres.
@@ -98,6 +99,7 @@ export const PRESET_THEMES: Record<
       panel: '#f5f5f5',
       cardAlt: '#ffffff',
       cardLine: '#f5f5f5',
+      divider: '#ebebeb',
       cardInset: '#f8fafc',
       text: '#0f172a',
       muted: '#57667c',
@@ -121,6 +123,7 @@ export const PRESET_THEMES: Record<
       panel: '#25252a',
       cardAlt: '#161619',
       cardLine: '#25252a',
+      divider: '#3a3a3e',
       cardInset: '#26262a',
       text: '#ffffff',
       muted: '#96969e',
@@ -153,6 +156,7 @@ export const PRESET_THEMES: Record<
       panel: '#181734',
       cardAlt: '#0d0b1d',
       cardLine: '#181734',
+      divider: '#2e2d43',
       cardInset: '#1b1a33',
       text: '#ebedfa',
       muted: '#9292bf',
@@ -192,6 +196,7 @@ export const PRESET_THEMES: Record<
       panel: '#3b1b23',
       cardAlt: '#250e14',
       cardLine: '#3b1b23',
+      divider: '#50373c',
       cardInset: '#372025',
       text: '#fbf2e9',
       muted: '#cba79a',
@@ -233,6 +238,7 @@ export const PRESET_THEMES: Record<
       panel: '#141414',
       cardAlt: '#050505',
       cardLine: '#141414',
+      divider: '#141414',
       cardInset: '#151515',
       text: '#fafafa',
       muted: '#8f8f8f',
@@ -273,6 +279,7 @@ export const PRESET_THEMES: Record<
       panel: '#f5f5f5',
       cardAlt: '#fbfbfc',
       cardLine: '#f5f5f5',
+      divider: '#ebebeb',
       cardInset: '#f2f2f4',
       // Самый тёмный тон — графит, а не почти-чёрный: тема должна
       // читаться как «серая бумага», а не как чёрный текст на белом.
@@ -317,6 +324,7 @@ export const PRESET_THEMES: Record<
       panel: '#f5f5f5',
       cardAlt: '#f6f9fc',
       cardLine: '#f5f5f5',
+      divider: '#ebebeb',
       cardInset: '#eef3f8',
       text: '#1e293b',
       muted: '#526177',
@@ -361,6 +369,7 @@ export const PRESET_THEMES: Record<
       panel: '#ecfaf1',
       cardAlt: '#f4faf7',
       cardLine: '#ecfaf1',
+      divider: '#e2efe6',
       cardInset: '#e6f4ed',
       text: '#305545',
       muted: '#4b6f5e',
@@ -402,6 +411,7 @@ export const PRESET_THEMES: Record<
       panel: '#faf5ec',
       cardAlt: '#fcfaf2',
       cardLine: '#faf5ec',
+      divider: '#efebe2',
       cardInset: '#f8f1e2',
       text: '#58442d',
       muted: '#78664c',
@@ -469,6 +479,7 @@ export function normalizeColors(raw: unknown, base: ThemeColors): ThemeColors {
     card: pick('card'),
     cardAlt: pick('cardAlt'),
     cardLine: pick('cardLine'),
+    divider: pick('divider'),
     cardInset: pick('cardInset'),
     panel: pick('panel'),
     icon: pick('icon'),
@@ -501,6 +512,15 @@ function normalizeCustomThemes(raw: unknown): CustomTheme[] {
       const entry = (item ?? {}) as Record<string, unknown>;
       const isDark = entry.isDark !== false;
       const base = isDark ? PRESET_THEMES.dark.colors : PRESET_THEMES.light.colors;
+      const colors = normalizeColors(entry.colors, base);
+      // Темы, сохранённые до появления слота «Разделители», приходят без
+      // него — и подставился бы divider ЧУЖОЙ темы (пресета-основы),
+      // то есть линия от светлой темы внутри тёмной карточки. Выводим
+      // его из карточки самой темы по общему правилу.
+      const stored = (entry.colors ?? {}) as Record<string, unknown>;
+      if (typeof stored.divider !== 'string') {
+        colors.divider = deriveDivider(colors.card, isDark);
+      }
       return {
         id: typeof entry.id === 'string' && entry.id ? entry.id : `theme-${index}`,
         name: typeof entry.name === 'string' && entry.name.trim()
@@ -508,7 +528,7 @@ function normalizeCustomThemes(raw: unknown): CustomTheme[] {
           : `Моя тема ${index + 1}`,
         isDark,
         glass: entry.glass === true,
-        colors: normalizeColors(entry.colors, base),
+        colors,
       };
     });
 }

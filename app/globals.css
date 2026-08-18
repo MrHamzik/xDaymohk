@@ -532,41 +532,6 @@ html.dark .smk-ornament::before {
   );
 }
 
-/* --- Слой 2. Разделители с ромбом ------------------------------------------
-   Вместо сплошной линии — линия, прерванная ромбом по центру. */
-.smk-divider {
-  position: relative;
-  height: 1px;
-  background: linear-gradient(
-    to right,
-    transparent,
-    rgb(226 232 240) 18%,
-    rgb(226 232 240) 82%,
-    transparent
-  );
-}
-html.dark .smk-divider {
-  background: linear-gradient(
-    to right,
-    transparent,
-    rgb(39 39 42) 18%,
-    rgb(39 39 42) 82%,
-    transparent
-  );
-}
-.smk-divider::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 5px;
-  height: 5px;
-  translate: -50% -50%;
-  rotate: 45deg;
-  background: rgb(203 213 225);
-}
-html.dark .smk-divider::after { background: rgb(63 63 70); }
-
 /* --- Слой 3. Акцентная полоса статуса --------------------------------------
    Тонкая вертикальная полоска слева — «корешок» карточки. */
 .smk-spine {
@@ -678,7 +643,8 @@ html.dark .smk-price-teal {
      сломанной. Тёмные варианты теперь живут в блоке html.dark ниже. */
   --smk-card-a: #ffffff;        /* полотно карточки */
   --smk-card-b: #ffffff;        /* низ градиента    */
-  --smk-card-line: #f5f5f5;     /* обводка          */
+  --smk-card-line: #f5f5f5;     /* обводка: контур карточек и полей */
+  --smk-divider: #ebebeb;       /* разделители: линии внутри блоков */
   --smk-card-inset: #f8fafc;    /* подложки строк   */
   --smk-muted: #57667c;         /* второстепенный текст */
   --smk-muted-bright: #465369;  /* акцентный текст  */
@@ -899,7 +865,7 @@ html.smk-themed .bg-white {
   color: var(--smk-muted, #94a3b8);
 }
 .smk-sheet-section {
-  border-top: 1px solid var(--smk-hairline, rgb(15 23 42 / 0.06));
+  border-top: 1px solid var(--smk-divider, rgb(15 23 42 / 0.06));
 }
 /* Строка «подпись — значение» внутри карточки задания. */
 .smk-sheet-row {
@@ -910,7 +876,7 @@ html.smk-themed .bg-white {
 /* Подвал карточки — та же поверхность, что панели бокового меню. */
 .smk-card-foot {
   background: var(--smk-panel, #f1f3f6);
-  border-top: 1px solid var(--smk-hairline, rgb(15 23 42 / 0.06));
+  border-top: 1px solid var(--smk-divider, rgb(15 23 42 / 0.06));
 }
 
 /* --- Полотно модального окна ------------------------------------------------
@@ -955,13 +921,13 @@ html.smk-themed .bg-white {
    .smk-hr — тонкая линия между блоками (боковое меню, фильтры, списки
    в модалках). Раньше такие линии писали dark:border-zinc-800, а это
    почти чёрный: в тёмной теме они выглядели провалом, а не штрихом.
-   Берём тот же --smk-hairline, что и у карточек.
+   Берём --smk-divider: это линия внутри блока, а не его контур.
 
    .smk-dashed — пустое состояние («Пока нет отзывов», «Выберите точку
    анкеты»). В светлой теме это была штриховая рамка, в тёмной — грязная
    сплошная линия. Теперь пунктир в обеих темах и цвет из палитры. */
 .smk-hr {
-  border-color: var(--smk-hairline-strong, rgb(15 23 42 / 0.12));
+  border-color: var(--smk-divider, rgb(15 23 42 / 0.12));
 }
 .smk-dashed {
   border: 1px dashed var(--smk-hairline-strong, rgb(15 23 42 / 0.12));
@@ -984,8 +950,9 @@ html.smk-themed .bg-white {
    затухающие к краям. Ромб рисуется через ::after, полосы — градиентом
    на самом элементе, поэтому лишних узлов в разметке не появляется.
 
-   Цвет берётся из --smk-card-line (слот «Обводка»), то есть разделители
-   меняются вместе с темой, а не живут своей жизнью. */
+   Цвет берётся из --smk-divider (слот «Разделители»), а не из обводки:
+   контур карточки должен быть еле заметен, а линия внутри блока обязана
+   читаться — одно значение на две задачи всегда проигрывало одной. */
 .smk-orn {
   position: relative;
   height: 1px;
@@ -993,12 +960,12 @@ html.smk-themed .bg-white {
   background: linear-gradient(
     to right,
     transparent,
-    var(--smk-card-line) 14%,
-    var(--smk-card-line) 42%,
+    var(--smk-divider) 14%,
+    var(--smk-divider) 42%,
     transparent 47%,
     transparent 53%,
-    var(--smk-card-line) 58%,
-    var(--smk-card-line) 86%,
+    var(--smk-divider) 58%,
+    var(--smk-divider) 86%,
     transparent
   );
 }
@@ -1011,7 +978,7 @@ html.smk-themed .bg-white {
   height: 6px;
   translate: -50% -50%;
   rotate: 45deg;
-  background: var(--smk-card-line);
+  background: var(--smk-divider);
   /* Внутренний просвет: сплошной ромб выглядит кляксой, а рамка в
      один пиксель читается как элемент орнамента. */
   box-shadow: inset 0 0 0 1px var(--smk-card-a);
@@ -1026,8 +993,8 @@ html.smk-themed .bg-white {
   background: linear-gradient(
     to right,
     transparent,
-    var(--smk-card-line) 10%,
-    var(--smk-card-line) 90%,
+    var(--smk-divider) 10%,
+    var(--smk-divider) 90%,
     transparent
   );
 }
@@ -1035,7 +1002,7 @@ html.smk-themed .bg-white {
 /* Строка данных без подложки: иконка, подпись, значение.
    Разделители между строками рисует родитель через .smk-rows. */
 .smk-rows > * + * {
-  border-top: 1px solid var(--smk-card-line);
+  border-top: 1px solid var(--smk-divider);
 }
 
 /* --- Акцент у заголовка секции ------------------------------------------------
@@ -1093,7 +1060,8 @@ html.dark {
   /* Тёмные поверхности: зеркало светлого блока из :root. */
   --smk-card-a: #1c1c20;        /* верх полотна   */
   --smk-card-b: #161619;        /* низ полотна    */
-  --smk-card-line: #25252a;     /* обводка: штрих в тон темы */
+  --smk-card-line: #25252a;     /* обводка: контур карточек и полей */
+  --smk-divider: #3a3a3e;       /* разделители: линии внутри блоков */
   --smk-card-inset: #26262a;    /* подложки строк */
   --smk-panel: #25252a;         /* панели и подвал карточек */
   --smk-muted: #96969e;         /* второстепенный текст */
@@ -1326,9 +1294,8 @@ html.smk-glass .smk-rays::before { display: none; }
   align-self: stretch;
   width: 1px;
   min-height: 1rem;
-  background: var(--smk-hairline-strong);
+  background: var(--smk-divider);
 }
-html.dark .smk-sep { background: rgb(var(--smk-light-rgb) / 0.12); }
 .smk-ring > * {
   border-radius: 9999px;
   display: block;
@@ -1373,10 +1340,7 @@ html.dark .smk-field {
 
 /* Тонкая линия между строками внутри одной группы. */
 .smk-field-split > * + * {
-  border-top: 1px solid var(--smk-hairline);
-}
-html.dark .smk-field-split > * + * {
-  border-top-color: rgb(var(--smk-light-rgb) / 0.07);
+  border-top: 1px solid var(--smk-divider);
 }
 
 /* --- Иконка строки данных --------------------------------------------------- */

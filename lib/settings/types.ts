@@ -151,8 +151,21 @@ export interface ThemeColors {
   panel: string;
   /** Низ градиента карточки. */
   cardAlt: string;
-  /** Обводка карточки. */
+  /**
+   * Обводка — линия по КОНТУРУ: периметр карточек, всплывающих слоёв,
+   * полей ввода. Выводится из карточки прибавкой 9 единиц яркости по
+   * шкале 0–240.
+   */
   cardLine: string;
+  /**
+   * Разделители — линии ВНУТРИ блоков: строки карточки, секции листа,
+   * орнаментальные полосы. Отдельный слот, потому что у контура и
+   * внутренней линии разные задачи: контур очерчивает форму и должен
+   * быть еле заметен, разделитель структурирует содержимое и обязан
+   * читаться. Выводится из карточки: насыщенность/2, яркость ×2 на
+   * тёмных темах и −19 по шкале 0–240 на светлых.
+   */
+  divider: string;
   /** Подложка строк внутри карточки. */
   cardInset: string;
   /** Основной текст. */
@@ -215,7 +228,7 @@ export const THEME_COLOR_GROUPS: Record<ThemeColorGroup, Array<keyof ThemeColors
   // cardAlt в редакторе не показываем: он даёт лишь нижнюю точку
   // градиента карточки и визуально неотличим от card. Значение
   // выводится автоматически при сохранении темы.
-  global: ['bg', 'card', 'panel', 'cardInset', 'cardLine', 'text', 'muted', 'icon'],
+  global: ['bg', 'card', 'panel', 'cardInset', 'cardLine', 'divider', 'text', 'muted', 'icon'],
   details: ['accent', 'accentSoft', 'accentDeep', 'ui', 'danger'],
   specific: [
     'statusActive', 'statusBreak', 'statusFlexible', 'statusOffline',
