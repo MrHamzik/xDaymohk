@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Filter, ChevronDown, X, MapPin, Layers, Zap, Wallet } from 'lucide-react';
+import { Banknote, Search, Filter, ChevronDown, X, MapPin, Layers, Zap, Wallet } from 'lucide-react';
 import MapSegmentedControl from '@/components/MapSegmentedControl';
 import { useI18n } from '@/lib/i18n';
+import { PAYMENT_METHODS } from '@/lib/payments';
 import type { AppFilter } from '@/lib/types';
 
 interface TaskFilterBarProps {
@@ -21,6 +22,9 @@ interface TaskFilterBarProps {
   /** Минимальная награда ИСПОЛНИТЕЛЮ (без надбавок и закупки), ₽. */
   minReward: number;
   setMinReward: (value: number) => void;
+  /** Фильтр по способу расчёта: пусто = любой. */
+  payment: string;
+  setPayment: (value: string) => void;
   /** Акцентный цвет: emerald для «Аренца Темщик», teal для «ГIончалла». */
   accent?: 'emerald' | 'teal';
 }
@@ -47,6 +51,8 @@ export default function TaskFilterBar({
   setPriority,
   minReward,
   setMinReward,
+  payment,
+  setPayment,
   accent = 'emerald',
 }: TaskFilterBarProps) {
   const { t, language } = useI18n();
@@ -58,7 +64,8 @@ export default function TaskFilterBar({
   const [regionAll, setRegionAll] = useState(true);
   const [regionSamashki, setRegionSamashki] = useState(true);
   const [isRewardOpen, setIsRewardOpen] = useState(false);
-  const activeCount = (category ? 1 : 0) + (priority ? 1 : 0) + (minReward > 0 ? 1 : 0);
+  const [isPaymentOpen, setIsPaymentOpen] = useState(false);
+  const activeCount = (category ? 1 : 0) + (priority ? 1 : 0) + (minReward > 0 ? 1 : 0) + (payment ? 1 : 0);
 
   const resetAll = () => {
     setCategory('');
@@ -285,6 +292,45 @@ export default function TaskFilterBar({
                         type="button"
                         onClick={() => setPriority(value)}
                         className={`${chipBase} ${priority === value ? chipActive : chipIdle}`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Секция: способ расчёта.
+                  Для исполнителя это не косметика: без заполненных
+                  реквизитов он не сможет взять задание с переводом,
+                  поэтому возможность отсеять их сразу экономит время. */}
+              <div className={sectionClass}>
+                <button
+                  type="button"
+                  onClick={() => setIsPaymentOpen((v) => !v)}
+                  aria-expanded={isPaymentOpen}
+                  className="flex w-full items-center justify-between gap-2 text-left"
+                >
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-600 dark:text-zinc-300">
+                    <Banknote className="h-3.5 w-3.5" />
+                    {t.taskPaymentMethod}
+                  </span>
+                  <ChevronDown className={`h-3.5 w-3.5 transition ${isPaymentOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {isPaymentOpen && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {[
+                      ['', t.tasksPaymentAny],
+                      ...PAYMENT_METHODS.map((method) => [
+                        method,
+                        t[`taskPay_${method}` as keyof typeof t] as string,
+                      ]),
+                    ].map(([value, label]) => (
+                      <button
+                        key={value || 'any'}
+                        type="button"
+                        onClick={() => setPayment(value)}
+                        className={`${chipBase} ${payment === value ? chipActive : chipIdle}`}
                       >
                         {label}
                       </button>

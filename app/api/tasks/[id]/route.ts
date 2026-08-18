@@ -2,6 +2,13 @@ import { NextResponse } from 'next/server';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { rateLimit, withRateLimitHeaders } from '@/lib/rate-limit';
 import { areUsersBlocked, BLOCKED_MESSAGE } from '@/lib/blacklist';
+import {
+  canAcceptPayment, isPaymentMethod, payoutFieldFor, type PaymentMethod,
+} from '@/lib/payments';
+
+/** Ответ, когда у исполнителя нет реквизитов под способ оплаты. */
+const PAYOUT_REQUIRED_MESSAGE =
+  'Заказчик платит переводом. Заполните реквизиты в настройках, чтобы взять это задание.';
 import { isAdminEmail } from '@/lib/admin';
 import { log } from '@/lib/logger';
 import {
@@ -254,6 +261,48 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       // можно отправить напрямую по известному id.
       if (await areUsersBlocked(admin, userId, task.author_id)) {
         return NextResponse.json({ error: BLOCKED_MESSAGE }, { status: 403 });
+      }
+
+      // Реквизиты для безналичного расчёта.
+      //
+      // Без них задание зависает после выполнения: заказчик готов
+      // платить, а перевести некуда. Проверяем на сервере, потому что
+      // кнопка на клиенте — не защита: запрос можно отправить напрямую.
+      //
+      // Наличные не проверяем вовсе: расчёт при встрече реквизитов не
+      // требует.
+      if (task.is_paid) {
+        const method: PaymentMethod = isPaymentMethod(task.payment_method)
+          ? task.payment_method
+          : 'cash';
+        const field = payoutFieldFor(method);
+        if (field) {
+          const { data: payoutRow } = await admin
+            .from('payout_methods')
+            .select('*')
+            .eq('user_id', userId)
+            .maybeSingle();
+
+          // is_enabled добавлен миграцией 34: на базе без неё считаем
+          // согласие данным, если реквизиты заполнены.
+          const payout = payoutRow ? {
+            isEnabled: payoutRow.is_enabled ?? Boolean(
+              payoutRow.sbp_phone || payoutRow.card_number || payoutRow.yoomoney_wallet,
+            ),
+            sbpPhone: payoutRow.sbp_phone ?? '',
+            sbpBank: payoutRow.sbp_bank ?? '',
+            cardNumber: payoutRow.card_number ?? '',
+            cardBank: payoutRow.card_bank ?? '',
+            yoomoneyWallet: payoutRow.yoomoney_wallet ?? '',
+          } : null;
+
+          if (!canAcceptPayment(method, payout)) {
+            return NextResponse.json(
+              { error: PAYOUT_REQUIRED_MESSAGE, needsPayout: method },
+              { status: 409 },
+            );
+          }
+        }
       }
 
       // Брать задания может только «Активен» — иначе счётчик «подходит N»

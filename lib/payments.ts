@@ -148,3 +148,36 @@ export function yoomoneyLink(wallet: string, amount: number): string {
   const sum = Math.max(1, Math.round(amount));
   return `https://yoomoney.ru/to/${digits}/${sum}`;
 }
+
+/**
+ * Какой реквизит обязателен для способа оплаты.
+ *
+ * Наличные не требуют ничего — расчёт при встрече. Для остальных
+ * исполнитель обязан заранее заполнить реквизиты, иначе заказчику
+ * некуда переводить, и задание зависает после выполнения.
+ */
+export function payoutFieldFor(method: PaymentMethod): keyof PayoutMethods | null {
+  switch (method) {
+    case 'sbp': return 'sbpPhone';
+    case 'card': return 'cardNumber';
+    case 'yoomoney': return 'yoomoneyWallet';
+    case 'cash':
+    default: return null;
+  }
+}
+
+/**
+ * Может ли исполнитель взять задание с таким способом оплаты.
+ *
+ * Проверяем И согласие (`isEnabled`), И сам реквизит: человек мог
+ * выключить приём переводов, оставив данные в полях.
+ */
+export function canAcceptPayment(
+  method: PaymentMethod,
+  payout: PayoutMethods | null | undefined,
+): boolean {
+  const field = payoutFieldFor(method);
+  if (!field) return true;
+  if (!payout?.isEnabled) return false;
+  return Boolean(String(payout[field] ?? '').trim());
+}

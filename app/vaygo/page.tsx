@@ -44,6 +44,7 @@ export default function VaygoPage() {
   const [category, setCategory] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
   const [minReward, setMinReward] = useState(0);
+  const [payment, setPayment] = useState('');
   const [query, setQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -123,6 +124,9 @@ export default function VaygoPage() {
     // Сравниваем с чистой наградой: надбавка за срочность и деньги
     // на закупку — не доход исполнителя.
     if (minReward > 0) list = list.filter((t) => t.reward >= minReward);
+    // Способ расчёта: у старых заданий колонки нет — считаем наличными,
+    // иначе фильтр «Наличные» их бы не находил.
+    if (payment) list = list.filter((t) => (t.paymentMethod ?? 'cash') === payment);
     const q = query.trim().toLowerCase();
     if (q) {
       list = list.filter((t) =>
@@ -132,7 +136,7 @@ export default function VaygoPage() {
       return [...list].sort((a, b) => (a.distanceM ?? 1e9) - (b.distanceM ?? 1e9));
     }
     return list;
-  }, [withDistance, tab, category, priorityFilter, minReward, query, account?.id, position]);
+  }, [withDistance, tab, category, priorityFilter, minReward, payment, query, account?.id, position]);
 
   return (
     <div className="flex min-h-[100dvh] min-w-0 flex-col overflow-x-hidden bg-slate-50 bg-radial-gradient transition-colors dark:bg-zinc-950">
@@ -182,6 +186,8 @@ export default function VaygoPage() {
             setPriority={setPriorityFilter}
             minReward={minReward}
             setMinReward={setMinReward}
+            payment={payment}
+            setPayment={setPayment}
             accent="teal"
           />
 

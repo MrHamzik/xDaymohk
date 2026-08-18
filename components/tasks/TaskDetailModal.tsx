@@ -2,7 +2,12 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { X, Loader2, Star, MapPin, Clock, Users, CalendarDays, Trash2, ExternalLink, Wallet } from 'lucide-react';
+import Link from 'next/link';
 import Avatar from '@/components/Avatar';
+import { supabase } from '@/lib/supabase';
+import {
+  canAcceptPayment, isPaymentMethod, type PaymentMethod, type PayoutMethods,
+} from '@/lib/payments';
 import {
   fetchTask, runTaskAction, submitResidentReview, deleteTask,
   formatTimeLeft, formatTaskDateTime,
@@ -46,6 +51,7 @@ export default function TaskDetailModal({
   const [ratingSubmitted, setRatingSubmitted] = useState(false);
   // Модалка отметки явки (только для запланированных заданий).
   const [isAttendanceOpen, setIsAttendanceOpen] = useState(false);
+  const [myPayout, setMyPayout] = useState<PayoutMethods | null>(null);
 
   const load = useCallback(async () => {
     if (!taskId) return;
@@ -63,6 +69,33 @@ export default function TaskDetailModal({
   }, [taskId, t.taskLoadOneError]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Свои реквизиты: нужны, чтобы предупредить об их отсутствии заранее,
+  // а не после отказа сервера. Сервер всё равно проверит повторно —
+  // клиентская проверка здесь только ради понятности.
+  useEffect(() => {
+    if (!taskId) return;
+    let cancelled = false;
+    const loadPayout = async () => {
+      if (!supabase) return;
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      if (!token) return;
+      try {
+        const res = await fetch('/api/payout', {
+          cache: 'no-store',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) setMyPayout(data.payout ?? null);
+      } catch {
+        // Не получилось — сервер откажет с понятным текстом.
+      }
+    };
+    void loadPayout();
+    return () => { cancelled = true; };
+  }, [taskId]);
 
   // Новое задание — новая форма оценки.
   useEffect(() => {
@@ -101,6 +134,13 @@ export default function TaskDetailModal({
   // форму отзыва значит просить оценить второй раз.
   const authorRatesViaAttendance = Boolean(task && task.kind === 'scheduled');
   const total = task ? taskTotalReward(task.reward, task.priority) : 0;
+
+  // Способ расчёта: у заданий, созданных до его появления, колонки нет.
+  const payMethod: PaymentMethod = isPaymentMethod(task?.paymentMethod)
+    ? task!.paymentMethod as PaymentMethod
+    : 'cash';
+  // Взять задание с переводом можно только с заполненными реквизитами.
+  const canTake = !task?.isPaid || canAcceptPayment(payMethod, myPayout);
 
   const act = async (label: string, fn: () => Promise<void>) => {
     setBusy(label);
@@ -442,17 +482,34 @@ export default function TaskDetailModal({
         {task && (
           <div className="smk-sheet-section smk-sheet-foot flex flex-wrap gap-2 p-4">
             {!isAuthor && !isExecutor && !isPendingMe && task.status === 'open' && (
-              <button
-                type="button"
-                disabled={Boolean(busy)}
-                onClick={() => act('take', () => runTaskAction(task.id, task.kind === 'urgent' ? 'take' : 'join'))}
-                className={`${btn} bg-emerald-600 text-white hover:bg-emerald-700`}
-              >
-                {busy === 'take' && <Loader2 className="h-4 w-4 animate-spin" />}
-                {task.isPaid
-                  ? t.taskTakeRequestBtn
-                  : task.kind === 'urgent' ? t.taskTakeBtn : t.taskJoinBtn}
-              </button>
+              <>
+                <button
+                  type="button"
+                  disabled={Boolean(busy) || !canTake}
+                  onClick={() => act('take', () => runTaskAction(task.id, task.kind === 'urgent' ? 'take' : 'join'))}
+                  className={`${btn} bg-emerald-600 text-white hover:bg-emerald-700`}
+                >
+                  {busy === 'take' && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {task.isPaid
+                    ? t.taskTakeRequestBtn
+                    : task.kind === 'urgent' ? t.taskTakeBtn : t.taskJoinBtn}
+                </button>
+
+                {/* Объясняем, ПОЧЕМУ кнопка недоступна, и даём путь к
+                    решению: неактивная кнопка без причины выглядит как
+                    поломка. */}
+                {!canTake && (
+                  <p className="w-full rounded-xl bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+                    {t.taskNeedPayout.replace(
+                      '{method}',
+                      t[`taskPay_${payMethod}` as keyof typeof t] as string,
+                    )}{' '}
+                    <Link href="/settings" className="font-bold underline">
+                      {t.taskNeedPayoutLink}
+                    </Link>
+                  </p>
+                )}
+              </>
             )}
 
             {/* Заявку можно отозвать, пока заказчик не ответил */}

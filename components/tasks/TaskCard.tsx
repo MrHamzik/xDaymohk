@@ -2,12 +2,13 @@
 
 import {
   Clock, MapPin, Star, Users, Zap, AlertTriangle,
-  CalendarDays, ChevronRight, ShieldCheck, Wallet,
+  Banknote, CalendarDays, ChevronRight, CreditCard, ShieldCheck, Wallet,
 } from 'lucide-react';
 import Avatar from '@/components/Avatar';
 import { useI18n } from '@/lib/i18n';
 import { formatTimeLeft, formatTaskDateTime } from '@/lib/tasks/client';
 import { taskCostBreakdown, TASK_PRIORITY_SURCHARGE, type Task } from '@/lib/types';
+import { isPaymentMethod, type PaymentMethod } from '@/lib/payments';
 
 interface TaskCardProps {
   task: Task;
@@ -59,6 +60,11 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
     ? `${t.tasksUrgencyCritical} +${surchargePercent}%`
     : null;
   const cost = taskCostBreakdown(task.reward, task.priority, task.purchaseBudget ?? 0);
+  // Задания, созданные до появления способов оплаты, колонки не имеют —
+  // для них расчёт наличными, как было раньше.
+  const payMethod: PaymentMethod = isPaymentMethod(task.paymentMethod)
+    ? task.paymentMethod
+    : 'cash';
   const total = cost.reward + cost.surcharge;
   const timeLabels = {
     overdue: t.timeOverdue, min: t.timeMin, hour: t.timeHour, day: t.timeDay,
@@ -204,6 +210,23 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
           >
             <Users className="h-3 w-3" />
             {takenSlots} / {task.slots}
+          </span>
+        )}
+
+        {/* Способ расчёта — только у платных заданий: в «ГIончалла»
+            денег нет, и метка «наличными» там сбивала бы с толку. */}
+        {task.isPaid && (
+          <span
+            className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 ${
+              payMethod === 'cash'
+                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'
+                : 'bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300'
+            }`}
+          >
+            {payMethod === 'cash'
+              ? <Banknote className="h-3 w-3" />
+              : <CreditCard className="h-3 w-3" />}
+            {t[`taskPay_${payMethod}` as keyof typeof t] as string}
           </span>
         )}
 
