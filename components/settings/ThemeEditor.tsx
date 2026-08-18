@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Check, ChevronDown, Palette, Plus, Trash2 } from 'lucide-react';
 import { useSettings } from '@/components/SettingsProvider';
 import { PRESET_THEMES, normalizeColors } from '@/lib/settings/defaults';
-import { deriveCardLine, deriveDivider } from '@/lib/settings/derive';
+import { deriveCardLine, deriveDivider, derivePalette } from '@/lib/settings/derive';
 import {
   MAX_CUSTOM_THEMES, THEME_COLOR_GROUPS,
   type CustomTheme, type ThemeColorGroup, type ThemeColors,
@@ -34,6 +34,22 @@ const GROUP_TITLES: Record<ThemeColorGroup, { ru: string; ce: string; hint: stri
     ce: 'Къаьсттина',
     hint: 'Смысловые цвета: статусы работы, роли, шапка каталога и объекты на карте.',
   },
+};
+
+/**
+ * Главный цвет — отдельный блок над группами.
+ *
+ * Это не 26-й слот палитры, а способ задать её целиком: из него
+ * выводятся поверхности, текст, акцент и градиенты. Смысловые цвета
+ * (статусы, роли, «удалить») только подгоняются по светлоте — красный
+ * «удалить» остаётся красным в любой теме.
+ */
+const MAIN_COLOR = {
+  ru: 'Главный цвет',
+  ce: 'Коьрта бос',
+  hint: 'Из него считается вся палитра: фон, карточки, линии, текст и акцент. Тонкие правки — в группах ниже.',
+  noteRu: 'Меняет всю тему сразу. Отдельные цвета можно поправить ниже — они не сбросятся, пока снова не выбран главный цвет.',
+  noteCe: 'Дерриг тема цкъа хийцало. Кегийра беснаш лахахь нисдан мега — коьрта бос юха ца харжахь, уьш ца дожадо.',
 };
 
 /** Подписи только для слотов, показанных в редакторе (cardAlt скрыт). */
@@ -218,6 +234,55 @@ export default function ThemeEditor() {
               />
               {t.settingsThemeGlass}
             </label>
+          </div>
+
+          {/* Главный цвет — вход в тему одним движением. Человек задаёт
+              намерение («тема будет фиолетовой»), остальные 25 слотов
+              считаются по формулам из lib/settings/derive.ts, а тонкие
+              правки остаются доступными в группах ниже. Так устроены
+              Material You и Radix Colors: собрать согласованную палитру
+              по 25 пикерам вручную почти невозможно. */}
+          <div className="smk-sheet-row p-2.5">
+            <div className="flex items-center gap-1.5">
+              <span className="min-w-0 flex-1 truncate text-[11px] font-bold uppercase tracking-wide text-slate-700 dark:text-zinc-300">
+                {language === 'ce' ? MAIN_COLOR.ce : MAIN_COLOR.ru}
+              </span>
+              <HintMark text={MAIN_COLOR.hint} />
+            </div>
+
+            <div className="mt-2 flex items-center gap-2">
+              <input
+                type="color"
+                value={editing.colors.ui}
+                onChange={(e) => {
+                  const ui = e.target.value;
+                  patchTheme(editing.id, {
+                    colors: normalizeColors(
+                      { ...derivePalette(ui, editing.isDark), ui },
+                      editing.colors,
+                    ),
+                  });
+                }}
+                aria-label={language === 'ce' ? MAIN_COLOR.ce : MAIN_COLOR.ru}
+                className="h-9 w-14 shrink-0 cursor-pointer rounded-lg border-0 bg-transparent p-0"
+              />
+              {/* Предпросмотр выводимых цветов: видно, что поменяется,
+                  до нажатия. Порядок — от полотна к акценту. */}
+              <div className="flex min-w-0 flex-1 gap-1">
+                {(['bg', 'card', 'divider', 'text', 'muted', 'accent'] as Array<keyof ThemeColors>).map((key) => (
+                  <span
+                    key={key}
+                    title={language === 'ce' ? COLOR_LABELS[key]?.ce : COLOR_LABELS[key]?.ru}
+                    className="h-6 min-w-0 flex-1 rounded-md ring-1 ring-black/10 dark:ring-white/10"
+                    style={{ background: editing.colors[key] }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <p className="mt-1.5 text-[10px] leading-relaxed text-slate-500 dark:text-zinc-500">
+              {language === 'ce' ? MAIN_COLOR.noteCe : MAIN_COLOR.noteRu}
+            </p>
           </div>
 
           {/* Три группы: правки по смыслу, а не сплошной список из 22

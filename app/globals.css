@@ -1441,3 +1441,38 @@ html.dark .group:hover .smk-arrow { color: var(--smk-muted-bright); }
   border-radius: 9999px;
   background: linear-gradient(to right, var(--smk-gold-deep), var(--smk-gold));
 }
+
+/* --- Мета-строка и кнопки действий в карточках --------------------------------
+   Дата отзыва и кнопки «карандаш / корзина» писались классом
+   text-slate-400. Ступени 50…400 темы выводит из ФОНА страницы
+   (applyRamp), поэтому в тёмных темах slate-400 оказывался почти
+   цветом полотна: дата гасла, карандаш пропадал. К палитре они при
+   этом не были привязаны вовсе — hover жёстко держал emerald.
+
+   Оба класса читают слоты темы: подпись — «Второстепенный текст»,
+   действие — «Иконки», подсветка — «Главный цвет» и «Опасное
+   действие». */
+.smk-meta {
+  color: var(--smk-muted);
+  font-variant-numeric: tabular-nums;
+}
+.smk-act {
+  color: var(--smk-icon);
+  border-radius: 9999px;
+  transition: color 0.16s ease, background-color 0.16s ease;
+}
+.smk-act:hover:not(:disabled) {
+  color: var(--color-emerald-600);
+  background-color: color-mix(in srgb, var(--color-emerald-600) 12%, transparent);
+}
+.smk-act:disabled {
+  opacity: 0.4;
+}
+/* Удаление — то же поведение, но в «опасном» цвете темы. */
+.smk-act--danger,
+.smk-act--danger:hover:not(:disabled) {
+  color: rgb(var(--smk-danger-rgb));
+}
+.smk-act--danger:hover:not(:disabled) {
+  background-color: rgb(var(--smk-danger-rgb) / 0.12);
+}

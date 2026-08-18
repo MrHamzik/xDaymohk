@@ -850,7 +850,7 @@ export default function ProfileModal({
                           </button>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          <time className="text-[10px] font-medium text-slate-400">{formatReviewDate(review.createdAt)}</time>
+                          <time className="smk-meta text-[10px] font-medium">{formatReviewDate(review.createdAt)}</time>
                           <span className="flex items-center gap-1 text-xs font-bold text-amber-500">
                             <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
                             {review.rating.toFixed(1)}
@@ -862,7 +862,7 @@ export default function ProfileModal({
                               disabled={busyId !== null}
                               aria-label={t.profileEditReview}
                               title={t.edit}
-                              className="flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-600 disabled:opacity-40 dark:hover:bg-emerald-950 dark:hover:text-emerald-400"
+                              className="smk-act flex h-6 w-6 items-center justify-center"
                             >
                               <Pencil className="h-3.5 w-3.5" />
                             </button>
@@ -874,9 +874,9 @@ export default function ProfileModal({
                               disabled={busyId === review.id}
                               aria-label={t.profileDeleteReview}
                               title={t.profileDeleteReview}
-                              className="flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-40 dark:hover:bg-red-950 dark:hover:text-red-400"
+                              className="smk-act smk-act--danger flex h-6 w-6 items-center justify-center"
                             >
-                              <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                              <Trash2 className="h-3.5 w-3.5" />
                             </button>
                           )}
                         </div>
@@ -983,7 +983,7 @@ export default function ProfileModal({
                                 </button>
                               </div>
                               <div className="flex shrink-0 items-center gap-2">
-                                <time className="text-[10px] font-medium text-slate-400">{formatReviewDate(q.created_at)}</time>
+                                <time className="smk-meta text-[10px] font-medium">{formatReviewDate(q.created_at)}</time>
                                 {canEditBy(q.author_id) && editingQuestionId !== q.id && (
                                   <button
                                     type="button"
@@ -991,7 +991,7 @@ export default function ProfileModal({
                                     disabled={busyId !== null}
                                     aria-label={t.profileEditQuestion}
                                     title={t.edit}
-                                    className="flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-600 disabled:opacity-40 dark:hover:bg-emerald-950 dark:hover:text-emerald-400"
+                                    className="smk-act flex h-6 w-6 items-center justify-center"
                                   >
                                     <Pencil className="h-3.5 w-3.5" />
                                   </button>
@@ -1003,9 +1003,9 @@ export default function ProfileModal({
                                     disabled={busyId === q.id}
                                     aria-label={t.profileDeleteQuestion}
                                     title={t.profileDeleteQuestion}
-                                    className="flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-40 dark:hover:bg-red-950 dark:hover:text-red-400"
+                                    className="smk-act smk-act--danger flex h-6 w-6 items-center justify-center"
                                   >
-                                    <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                                    <Trash2 className="h-3.5 w-3.5" />
                                   </button>
                                 )}
                               </div>
@@ -1047,7 +1047,7 @@ export default function ProfileModal({
                             {expandedQuestion === q.id && (
                               <div className="mt-2 space-y-2 rounded-lg smk-sheet-row p-2.5">
                                 {commentsLoading === q.id ? (
-                                  <p className="text-[10px] text-slate-400">{t.profileCommentsLoading}</p>
+                                  <p className="smk-meta text-[10px]">{t.profileCommentsLoading}</p>
                                 ) : (commentsByQuestion[q.id] ?? []).length > 0 ? (
                                   <div className="space-y-2">
                                     {(commentsByQuestion[q.id] ?? []).map((comment) => (
@@ -1074,7 +1074,7 @@ export default function ProfileModal({
                                                 {t.profileSheetOwner}
                                               </span>
                                             )}
-                                            <time className="shrink-0 text-[9px] font-medium text-slate-400">{formatReviewDate(comment.created_at)}</time>
+                                            <time className="smk-meta shrink-0 text-[9px] font-medium">{formatReviewDate(comment.created_at)}</time>
                                           </div>
                                           <p className="mt-0.5 break-words [overflow-wrap:anywhere] whitespace-pre-wrap text-[11px] leading-relaxed text-slate-600 dark:text-zinc-400">
                                             {comment.reply_to_author_name && comment.comment.startsWith(`${comment.reply_to_author_name}, `) ? (
@@ -1102,7 +1102,7 @@ export default function ProfileModal({
                                               disabled={busyId !== null}
                                               aria-label={t.profileReplyAction}
                                               title={t.profileReplyAction}
-                                              className="flex h-5 w-5 items-center justify-center rounded-full text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-600 disabled:opacity-40 dark:hover:bg-emerald-950 dark:hover:text-emerald-400"
+                                              className="smk-act flex h-5 w-5 items-center justify-center"
                                             >
                                               <MessageSquare className="h-3 w-3" />
                                             </button>
@@ -1114,9 +1114,9 @@ export default function ProfileModal({
                                               disabled={busyId === comment.id}
                                               aria-label={t.profileDeleteComment}
                                               title={t.profileDeleteComment}
-                                              className="flex h-5 w-5 items-center justify-center rounded-full text-slate-400 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-40 dark:hover:bg-red-950 dark:hover:text-red-400"
+                                              className="smk-act smk-act--danger flex h-5 w-5 items-center justify-center"
                                             >
-                                              <Trash2 className="h-3 w-3 text-red-500" />
+                                              <Trash2 className="h-3 w-3" />
                                             </button>
                                           )}
                                         </div>
@@ -1124,7 +1124,7 @@ export default function ProfileModal({
                                     ))}
                                   </div>
                                 ) : (
-                                  <p className="text-[10px] text-slate-400">{t.profileNoComments}</p>
+                                  <p className="smk-meta text-[10px]">{t.profileNoComments}</p>
                                 )}
 
                                 {account && !account.isBlocked ? (
@@ -1140,7 +1140,7 @@ export default function ProfileModal({
                                         <button
                                           type="button"
                                           onClick={() => clearReply(q.id)}
-                                          className="flex h-4 w-4 items-center justify-center rounded-full text-slate-400 transition hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400"
+                                          className="smk-act smk-act--danger flex h-4 w-4 items-center justify-center"
                                           aria-label={t.profileReplyCancel}
                                           title={t.profileReplyCancel}
                                         >
@@ -1169,7 +1169,7 @@ export default function ProfileModal({
                                     </div>
                                   </form>
                                 ) : (
-                                  <p className="text-[10px] text-slate-400">{t.profileSignInToComment}</p>
+                                  <p className="smk-meta text-[10px]">{t.profileSignInToComment}</p>
                                 )}
                               </div>
                             )}
@@ -1194,7 +1194,7 @@ export default function ProfileModal({
                             placeholder={t.profileQuestionPlaceholder}
                             className="w-full resize-y break-words rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white"
                           />
-                          <p className="mt-0.5 text-right text-[10px] text-slate-400">{questionText.length}/500</p>
+                          <p className="smk-meta mt-0.5 text-right text-[10px]">{questionText.length}/500</p>
                         </div>
                         <button type="submit" disabled={questionBusy} className="rounded-xl bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50">
                           {questionBusy ? t.profileSending : t.profileSend}

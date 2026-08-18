@@ -103,7 +103,7 @@ export default function ResidentReputation({ ownerId }: ResidentReputationProps)
                   </span>
                 </div>
                 {/* Роль показывает, в каком качестве человека оценили */}
-                <p className="text-[10px] text-slate-400">
+                <p className="smk-meta text-[10px]">
                   {review.targetRole === 'customer' ? t.reputationAsCustomer : t.reputationAsExecutor}
                 </p>
                 {review.text && (
@@ -120,7 +120,7 @@ export default function ResidentReputation({ ownerId }: ResidentReputationProps)
         {/* Все оценки без текста — показывать в ленте нечего, но сам факт
             обратной связи отразить нужно. */}
         {!isLoading && withText.length === 0 && (reviews?.length ?? 0) > 0 && (
-          <p className="py-1 text-center text-[11px] text-slate-400 dark:text-zinc-500">
+          <p className="smk-meta py-1 text-center text-[11px]">
             {t.reputationNoComments}
           </p>
         )}

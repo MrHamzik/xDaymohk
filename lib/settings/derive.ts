@@ -108,3 +108,230 @@ export function deriveDivider(card: string, isDark: boolean): string {
     l: Math.min(LIGHTNESS_SCALE, Math.max(0, next)) / LIGHTNESS_SCALE,
   });
 }
+
+/* ===========================================================================
+   Палитра из одного «Главного цвета»
+   ---------------------------------------------------------------------------
+   Пользователь выбирает ОДИН цвет, остальные 25 слотов выводятся по
+   правилам ниже. Это стандартный для дизайн-систем подход (Material
+   You, Radix Colors): человек задаёт намерение, система считает
+   производные — и тема остаётся согласованной, чего вручную по 25
+   пикерам почти не добиться.
+
+   Что важно в этих формулах:
+
+   1. ОТТЕНОК ведущий, а не случайный. Фон, карточки, текст и серые
+      берут оттенок главного цвета — поэтому в теме нет «чужого»
+      нейтрального серого, всё в одной семье. Насыщенность у них низкая:
+      подтон читается, но не спорит с контентом.
+
+   2. НАПРАВЛЕНИЕ задаёт isDark. На тёмной основе поверхности идут вверх
+      от почти чёрного, текст — светлый; на светлой всё зеркально. Одна
+      арифметика на оба случая давала белое на белом.
+
+   3. АКЦЕНТ берётся отходом по кругу RYB (художественному), а не HSL:
+      в HSL 90° — салатовый, а не жёлтый, и «дополнительный» цвет
+      получался грязным. Отход +40° по RYB даёт соседний тёплый тон.
+
+   4. СМЫСЛОВЫЕ цвета (статусы, роли, опасное действие) НЕ выводятся из
+      главного: зелёный «работает» и красный «удалить» — договорённость
+      с пользователем, а не оформление. Их только подстраивают по
+      светлоте под основу, чтобы они не выбивались яркостью.
+   =========================================================================== */
+
+/**
+ * Круг RYB (художественный) → HSL.
+ *
+ * В HSL «жёлтый» стоит на 60°, а «зелёный» на 120°, из-за чего
+ * равномерные отходы дают неожиданные цвета: 90° — салатовый. Художники
+ * же считают по кругу красный–жёлтый–синий. Таблица переводит один круг
+ * в другой по опорным точкам с линейной интерполяцией между ними.
+ */
+const RYB_TO_HSL: Array<[number, number]> = [
+  [0, 0], [30, 18], [60, 48], [90, 60], [120, 75], [150, 96],
+  [180, 120], [210, 160], [240, 225], [270, 260], [300, 290],
+  [330, 330], [360, 360],
+];
+
+function rybToHsl(rybHue: number): number {
+  const hue = ((rybHue % 360) + 360) % 360;
+  for (let i = 0; i < RYB_TO_HSL.length - 1; i += 1) {
+    const [fromR, fromH] = RYB_TO_HSL[i];
+    const [toR, toH] = RYB_TO_HSL[i + 1];
+    if (hue >= fromR && hue <= toR) {
+      const ratio = (hue - fromR) / (toR - fromR);
+      return (fromH + (toH - fromH) * ratio) % 360;
+    }
+  }
+  return hue;
+}
+
+function hslToRyb(hslHue: number): number {
+  const hue = ((hslHue % 360) + 360) % 360;
+  for (let i = 0; i < RYB_TO_HSL.length - 1; i += 1) {
+    const [fromR, fromH] = RYB_TO_HSL[i];
+    const [toR, toH] = RYB_TO_HSL[i + 1];
+    if (hue >= fromH && hue <= toH) {
+      const ratio = (hue - fromH) / (toH - fromH);
+      return (fromR + (toR - fromR) * ratio) % 360;
+    }
+  }
+  return hue;
+}
+
+/** Оттенок фирменного золота (#ffae00) — цель для акцента. */
+const GOLD_HUE = 41;
+
+/**
+ * Сместить оттенок `from` в сторону `to` по кратчайшей дуге на долю
+ * `ratio`. Идём кратчайшим путём: через дальнюю сторону круга золото
+ * ушло бы в зелень.
+ */
+function towardHue(from: number, to: number, ratio: number): number {
+  let delta = ((to - from + 540) % 360) - 180;
+  delta *= ratio;
+  return ((from + delta) % 360 + 360) % 360;
+}
+
+/** Сдвиг оттенка по кругу RYB на заданный угол. */
+function shiftRyb(hslHue: number, degrees: number): number {
+  return rybToHsl(hslToRyb(hslHue) + degrees);
+}
+
+/** Собрать цвет: оттенок главного, своя насыщенность и яркость (0–240). */
+function tone(h: number, saturation: number, lightness240: number): string {
+  return hslToHex({ h, s: saturation, l: lightness240 / LIGHTNESS_SCALE });
+}
+
+/** Подогнать готовый смысловой цвет под светлоту основы. */
+function fit(hex: string, isDark: boolean): string {
+  const { h, s, l } = hexToHsl(hex);
+  // На тёмном фоне насыщенный «чистый» цвет выглядит кислотным, на
+  // светлом — наоборот, тонет. Сдвигаем светлоту к рабочему коридору.
+  const target = isDark
+    ? Math.max(l, 0.55)
+    : Math.min(l, 0.52);
+  return hslToHex({ h, s: Math.min(s, 0.82), l: target });
+}
+
+/** Готовые смысловые цвета: одинаковый смысл во всех темах. */
+const SEMANTIC_BASE = {
+  statusActive: '#10b981',
+  statusBreak: '#f59e0b',
+  statusFlexible: '#0ea5e9',
+  statusOffline: '#a1a1aa',
+  roleSpecialist: '#10b981',
+  roleAdmin: '#ef4444',
+  roleVerified: '#3b82f6',
+  danger: '#f43f5e',
+};
+
+/** Все слоты палитры, кроме главного цвета, выведенные из него. */
+export interface DerivedPalette {
+  bg: string;
+  card: string;
+  cardAlt: string;
+  cardLine: string;
+  divider: string;
+  cardInset: string;
+  panel: string;
+  text: string;
+  muted: string;
+  icon: string;
+  accent: string;
+  accentSoft: string;
+  accentDeep: string;
+  statusActive: string;
+  statusBreak: string;
+  statusFlexible: string;
+  statusOffline: string;
+  roleSpecialist: string;
+  roleAdmin: string;
+  roleVerified: string;
+  danger: string;
+  heroFrom: string;
+  heroTo: string;
+  mapCluster: string;
+  mapHouse: string;
+}
+
+/**
+ * Построить палитру из главного цвета.
+ *
+ * Значения светлоты подобраны по девяти готовым темам: «Космос» и
+ * «Закат» ложатся в эти же коридоры, то есть правило описывает уже
+ * работающие темы, а не придумано с нуля.
+ */
+export function derivePalette(ui: string, isDark: boolean): DerivedPalette {
+  const { h, s } = hexToHsl(ui);
+
+  // Подтон поверхностей: заметен, но не спорит с содержимым. У очень
+  // блёклого главного цвета не «дорисовываем» насыщенность, иначе
+  // серая тема стала бы цветной против воли пользователя.
+  const surfaceSat = Math.min(s * 0.55, isDark ? 0.42 : 0.3);
+  const textSat = Math.min(s * 0.5, 0.6);
+  const mutedSat = Math.min(s * 0.4, 0.3);
+
+  // Поверхности. Шкала 0–240; шаги взяты из «Космоса» и «Заката».
+  const bg = isDark ? tone(h, surfaceSat, 12) : tone(h, surfaceSat * 0.55, 228);
+  const card = isDark ? tone(h, surfaceSat * 0.9, 26) : tone(h, surfaceSat * 0.35, 238);
+  const panel = deriveCardLine(card);
+  const cardInset = isDark ? tone(h, surfaceSat * 0.85, 34) : tone(h, surfaceSat * 0.3, 233);
+
+  // Текст: светлый на тёмной основе и наоборот. Второстепенный отходит
+  // к середине — он обязан читаться, но тише основного.
+  const text = isDark ? tone(h, textSat * 0.35, 228) : tone(h, textSat * 0.5, 26);
+  const muted = isDark ? tone(h, mutedSat, 158) : tone(h, mutedSat, 92);
+  // Иконки чуть ярче подписей: они мельче и теряются наравне с текстом.
+  const icon = isDark ? tone(h, mutedSat * 1.2, 172) : tone(h, mutedSat * 1.1, 80);
+
+  // Акцент тянется к ЗОЛОТУ, а не отходит от главного цвета на
+  // фиксированный угол. Золото — фирменная деталь проекта (засечки
+  // заголовков, орнаментальные разделители, звезда рейтинга), и во всех
+  // готовых темах акцент именно тёплый. Отход «главный +40° по RYB»
+  // пробовался первым и уводил зелёный главный цвет в синий акцент —
+  // тема переставала быть узнаваемой.
+  //
+  // Подмешиваем 10 % оттенка главного цвета: золото получает подтон
+  // темы и не выглядит наклейкой. На «Закате» (главный 8°) формула
+  // даёт 38° — ровно тот акцент, что подобран в теме вручную.
+  const accentHue = towardHue(GOLD_HUE, h, 0.1);
+  const accentSat = Math.max(Math.min(s * 1.05, 0.92), 0.62);
+  const accent = tone(accentHue, accentSat, isDark ? 138 : 126);
+  const accentSoft = tone(accentHue, Math.min(accentSat, 0.8), isDark ? 208 : 216);
+  const accentDeep = tone(accentHue, accentSat, isDark ? 108 : 96);
+
+  return {
+    bg,
+    card,
+    cardAlt: isDark ? tone(h, surfaceSat * 0.9, 21) : card,
+    cardLine: deriveCardLine(card),
+    divider: deriveDivider(card, isDark),
+    cardInset,
+    panel,
+    text,
+    muted,
+    icon,
+    accent,
+    accentSoft,
+    accentDeep,
+    statusActive: fit(SEMANTIC_BASE.statusActive, isDark),
+    statusBreak: fit(SEMANTIC_BASE.statusBreak, isDark),
+    statusFlexible: fit(SEMANTIC_BASE.statusFlexible, isDark),
+    // «Не работает» — единственный намеренно нейтральный статус:
+    // он должен гаснуть, поэтому берёт подтон темы, а не свой цвет.
+    statusOffline: isDark ? tone(h, mutedSat * 0.6, 120) : tone(h, mutedSat * 0.6, 132),
+    roleSpecialist: fit(SEMANTIC_BASE.roleSpecialist, isDark),
+    roleAdmin: fit(SEMANTIC_BASE.roleAdmin, isDark),
+    roleVerified: fit(SEMANTIC_BASE.roleVerified, isDark),
+    danger: fit(SEMANTIC_BASE.danger, isDark),
+    // Шапка каталога — градиент от главного цвета к соседнему по RYB:
+    // два тона одной семьи вместо случайной пары.
+    heroFrom: tone(h, Math.min(s, 0.8), isDark ? 72 : 108),
+    heroTo: tone(shiftRyb(h, -25), Math.min(s, 0.75), isDark ? 88 : 126),
+    // Карта: кластеры — главным цветом, дома — акцентом. Так метки
+    // разных типов различаются и без подписи.
+    mapCluster: ui,
+    mapHouse: accent,
+  };
+}

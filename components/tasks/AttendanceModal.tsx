@@ -132,7 +132,7 @@ export default function AttendanceModal({
             type="button"
             onClick={onClose}
             aria-label={t.close}
-            className="shrink-0 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 dark:hover:bg-zinc-800"
+            className="smk-act shrink-0 rounded-lg p-1.5"
           >
             <X className="h-4 w-4" />
           </button>

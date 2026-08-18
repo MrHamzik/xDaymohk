@@ -142,7 +142,7 @@ export default function TaskDetailModal({
               type="button"
               onClick={onClose}
               aria-label={t.close}
-              className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 dark:hover:bg-zinc-800"
+              className="smk-act rounded-lg p-1.5"
             >
               <X className="h-4 w-4" />
             </button>

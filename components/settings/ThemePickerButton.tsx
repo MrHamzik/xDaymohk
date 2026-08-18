@@ -53,8 +53,10 @@ export default function ThemePickerButton() {
         aria-expanded={isOpen}
         title={`${t.settingsThemes}: ${active.name}`}
         aria-label={t.settingsThemes}
-        className="flex h-11 w-11 items-center justify-center rounded-xl shadow-sm transition-all active:scale-95"
-        style={{ background: active.colors.accent, color: active.colors.bg }}
+        className="flex h-11 w-11 items-center justify-center rounded-xl text-white shadow-sm transition-all active:scale-95"
+        // Иконка всегда белая: цвет фона страницы (прежнее значение) на
+        // светлых темах давал белую плитку с почти белым значком.
+        style={{ background: active.colors.accent }}
       >
         <Palette className="h-5 w-5" />
       </button>
