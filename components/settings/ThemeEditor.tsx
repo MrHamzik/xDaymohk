@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Check, ChevronDown, Palette, Plus, Trash2 } from 'lucide-react';
 import { useSettings } from '@/components/SettingsProvider';
 import { PRESET_THEMES, normalizeColors } from '@/lib/settings/defaults';
-import { deriveCardLine, deriveDivider, derivePalette, derivePanel } from '@/lib/settings/derive';
+import { deriveCardInset, deriveCardLine, deriveDivider, derivePalette, derivePanel } from '@/lib/settings/derive';
 import {
   MAX_CUSTOM_THEMES, THEME_COLOR_GROUPS,
   type CustomTheme, type ThemeColorGroup, type ThemeColors,
@@ -364,6 +364,7 @@ export default function ThemeEditor() {
                               next.cardLine = deriveCardLine(e.target.value);
                               next.divider = deriveDivider(e.target.value, editing.isDark);
                               next.panel = derivePanel(e.target.value, editing.isDark);
+                              next.cardInset = deriveCardInset(e.target.value, editing.isDark);
                             }
                             patchTheme(editing.id, {
                               colors: normalizeColors(next, editing.colors),

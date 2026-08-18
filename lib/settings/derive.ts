@@ -11,10 +11,14 @@
  *    9). Оттенок и насыщенность не меняются.
  *
  *  • Разделитель (divider) — линия ВНУТРИ блока: между строками, между
- *    секциями листа, орнаментальные полосы. Её задача обратная: она
- *    структурирует содержимое и обязана читаться. Правило:
- *    насыщенность делится пополам, яркость удваивается на тёмных темах
- *    и уменьшается на 19 единиц (0–240) на светлых.
+ *    секциями листа, орнаментальные полосы. Она структурирует
+ *    содержимое, но не должна спорить с ним. Правило: насыщенность
+ *    делится пополам, яркость умножается на 1.5 на тёмных темах и
+ *    уменьшается на 11 единиц (0–240) на светлых.
+ *
+ *    Изначально было ×2 и −19 — на тёмных темах линии выходили с
+ *    контрастом 1.5 и «резали» карточку на полосы. Вдвое мягче (1.20)
+ *    достаточно, чтобы граница читалась, но карточка осталась цельной.
  *
  * Шкала 0–240 — та, что показывают палитры Windows и Photoshop, а не
  * доля 0–1: пользователь задаёт правило именно в этих единицах.
@@ -26,7 +30,9 @@ const LIGHTNESS_CEILING = 231;
 /** Шаг обводки от карточки, в единицах шкалы 0–240. */
 const OUTLINE_STEP = 9;
 /** Шаг разделителя вниз на светлых темах, в единицах шкалы 0–240. */
-const DIVIDER_LIGHT_STEP = 19;
+const DIVIDER_LIGHT_STEP = 11;
+/** Множитель светлоты разделителя на тёмных темах. */
+const DIVIDER_DARK_FACTOR = 1.5;
 
 export interface Hsl {
   /** Оттенок, 0–360. */
@@ -101,7 +107,7 @@ export function deriveCardLine(card: string): string {
 export function deriveDivider(card: string, isDark: boolean): string {
   const { h, s, l } = hexToHsl(card);
   const scaled = l * LIGHTNESS_SCALE;
-  const next = isDark ? scaled * 2 : scaled - DIVIDER_LIGHT_STEP;
+  const next = isDark ? scaled * DIVIDER_DARK_FACTOR : scaled - DIVIDER_LIGHT_STEP;
   return hslToHex({
     h,
     s: s / 2,
@@ -363,7 +369,9 @@ export function derivePalette(ui: string, isDark: boolean): DerivedPalette {
   // Панель на светлых темах уходит ВНИЗ от карточки: вверх упирается в
   // потолок и подвал сливается с полотном.
   const panel = derivePanel(card, isDark);
-  const cardInset = isDark ? tone(h, surfaceSat(0.4), 36) : tone(h, surfaceSat(0.83), 223);
+  // Подложка блоков заметнее разделителя: иначе карточка выглядит
+  // одним сплошным пятном (см. deriveCardInset).
+  const cardInset = deriveCardInset(card, isDark);
 
   // Текст: светлый на тёмной основе и наоборот. Светлота 228/63 взята
   // из эталонов — она даёт контраст к карточке около 15 на тёмных
@@ -488,4 +496,30 @@ export function derivePanel(card: string, isDark: boolean): string {
   const { h, s, l } = hexToHsl(card);
   const scaled = l * LIGHTNESS_SCALE - PANEL_LIGHT_STEP;
   return hslToHex({ h, s, l: Math.max(0, scaled) / LIGHTNESS_SCALE });
+}
+
+/** Шаг подложки строк вниз на светлых темах, шкала 0–240. */
+const INSET_LIGHT_STEP = 20;
+/** Множитель светлоты подложки на тёмных темах. */
+const INSET_DARK_FACTOR = 1.9;
+
+/**
+ * Подложка строк и блоков внутри карточки (`cardInset`).
+ *
+ * Отличается от разделителя по задаче: разделитель — тонкая линия, ей
+ * достаточно едва читаться; подложка занимает площадь и должна ЯВНО
+ * отделять блок от полотна, иначе карточка выглядит одним сплошным
+ * пятном — ровно та «монотонность», на которую жаловался заказчик.
+ *
+ * Поэтому шаг здесь вдвое больше, чем у разделителя: контраст к
+ * карточке 1.15–1.40 против 1.10–1.25 у линии. Вместе они дают
+ * иерархию: полотно → блок → линия внутри блока.
+ */
+export function deriveCardInset(card: string, isDark: boolean): string {
+  const { h, s, l } = hexToHsl(card);
+  const scaled = l * LIGHTNESS_SCALE;
+  const next = isDark
+    ? Math.min(LIGHTNESS_SCALE, scaled * INSET_DARK_FACTOR)
+    : Math.max(0, scaled - INSET_LIGHT_STEP);
+  return hslToHex({ h, s, l: next / LIGHTNESS_SCALE });
 }

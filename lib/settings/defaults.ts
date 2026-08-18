@@ -9,7 +9,7 @@ import {
   type ThemeColors,
   type UserSettings,
 } from '@/lib/settings/types';
-import { deriveDivider, derivePanel } from '@/lib/settings/derive';
+import { deriveCardInset, deriveDivider, derivePanel } from '@/lib/settings/derive';
 
 /**
  * Умолчания живут здесь, а не в DEFAULT-ах колонок Postgres.
@@ -103,8 +103,8 @@ export const PRESET_THEMES: Record<
       panel: '#ececec',
       cardAlt: '#ffffff',
       cardLine: '#f5f5f5',
-      divider: '#ebebeb',
-      cardInset: '#f8fafc',
+      divider: '#f3f3f3',
+      cardInset: '#eaeaea',
       text: '#0f172a',
       muted: '#57667c',
       icon: '#465369',
@@ -127,8 +127,8 @@ export const PRESET_THEMES: Record<
       panel: '#25252a',
       cardAlt: '#161619',
       cardLine: '#25252a',
-      divider: '#3a3a3e',
-      cardInset: '#26262a',
+      divider: '#2b2b2e',
+      cardInset: '#35353d',
       text: '#ffffff',
       muted: '#96969e',
       icon: '#b3b3b9',
@@ -160,8 +160,8 @@ export const PRESET_THEMES: Record<
       panel: '#181734',
       cardAlt: '#0d0b1d',
       cardLine: '#181734',
-      divider: '#2e2d43',
-      cardInset: '#1b1a33',
+      divider: '#232232',
+      cardInset: '#22204a',
       text: '#ebedfa',
       muted: '#9292bf',
       icon: '#81adda',
@@ -201,8 +201,8 @@ export const PRESET_THEMES: Record<
       panel: '#3b1b23',
       cardAlt: '#250e14',
       cardLine: '#3b1b23',
-      divider: '#50373c',
-      cardInset: '#372025',
+      divider: '#3c292d',
+      cardInset: '#572833',
       text: '#fbf2e9',
       muted: '#cba79a',
       icon: '#e2ba8d',
@@ -244,8 +244,8 @@ export const PRESET_THEMES: Record<
       panel: '#141414',
       cardAlt: '#050505',
       cardLine: '#141414',
-      divider: '#141414',
-      cardInset: '#151515',
+      divider: '#0f0f0f',
+      cardInset: '#131313',
       text: '#fafafa',
       muted: '#8f8f8f',
       // Акцент — белый: на чёрном он работает как золото на светлом.
@@ -286,8 +286,8 @@ export const PRESET_THEMES: Record<
       panel: '#ececec',
       cardAlt: '#fbfbfc',
       cardLine: '#f5f5f5',
-      divider: '#ebebeb',
-      cardInset: '#f2f2f4',
+      divider: '#f3f3f3',
+      cardInset: '#eaeaea',
       // Самый тёмный тон — графит, а не почти-чёрный: тема должна
       // читаться как «серая бумага», а не как чёрный текст на белом.
       text: '#3a3a42',
@@ -332,8 +332,8 @@ export const PRESET_THEMES: Record<
       panel: '#ececec',
       cardAlt: '#f6f9fc',
       cardLine: '#f5f5f5',
-      divider: '#ebebeb',
-      cardInset: '#eef3f8',
+      divider: '#f3f3f3',
+      cardInset: '#eaeaea',
       text: '#1e293b',
       muted: '#526177',
       // Серебро с холодным отливом.
@@ -378,8 +378,8 @@ export const PRESET_THEMES: Record<
       panel: '#dcf6e5',
       cardAlt: '#f4faf7',
       cardLine: '#ecfaf1',
-      divider: '#e2efe6',
-      cardInset: '#e6f4ed',
+      divider: '#edf5ef',
+      cardInset: '#d9f6e3',
       text: '#305545',
       muted: '#4b6f5e',
       icon: '#476c5b',
@@ -421,8 +421,8 @@ export const PRESET_THEMES: Record<
       panel: '#f6eedc',
       cardAlt: '#fcfaf2',
       cardLine: '#faf5ec',
-      divider: '#efebe2',
-      cardInset: '#f8f1e2',
+      divider: '#f5f2ed',
+      cardInset: '#f6ecd9',
       text: '#58442d',
       muted: '#78664c',
       icon: '#6f5d44',
@@ -545,6 +545,15 @@ function normalizeCustomThemes(raw: unknown): CustomTheme[] {
       // только если пользователь не задал цвет вручную.
       if (typeof stored.panel !== 'string') {
         colors.panel = derivePanel(colors.card, isDark);
+      }
+      // Разделители и подложка пересчитываются по смягчённым формулам:
+      // прежние значения резали карточку на полосы. Ручные правки
+      // пользователя не трогаем.
+      if (typeof stored.divider !== 'string') {
+        colors.divider = deriveDivider(colors.card, isDark);
+      }
+      if (typeof stored.cardInset !== 'string') {
+        colors.cardInset = deriveCardInset(colors.card, isDark);
       }
       return {
         id: typeof entry.id === 'string' && entry.id ? entry.id : `theme-${index}`,

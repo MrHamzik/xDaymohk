@@ -292,21 +292,6 @@ html.dark .bg-card-gradient {
   display: none;
 }
 
-/* Card glow & professional drop shadows - unified soft style */
-.card-gradient-glow {
-  background: #ffffff;
-  box-shadow:
-    0 4px 16px -2px color-mix(in srgb, var(--color-emerald-500) 6%, transparent),
-    0 1px 3px 0 rgba(0, 0, 0, 0.03);
-  border: 1px solid rgba(226, 232, 240, 0.8);
-}
-
-html.dark .card-gradient-glow {
-  background: #1e1e22;
-  border: 1px solid rgba(40, 40, 45, 0.9);
-  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.35), 0 1px 3px 0 rgba(0, 0, 0, 0.25);
-}
-
 @keyframes bounceSlow {
   0%, 100% {
     transform: translateY(0);
@@ -425,11 +410,13 @@ html.dark .shadow-sm {
    Поверхности рисуют себя сами: .smk-lux, .smk-panel, .smk-sheet-row.
    Тем, кому рамка нужна, ставят её классом в разметке. */
 
-/* Ensure inputs in dark have soft border not harsh */
-html.dark input,
-html.dark select,
-html.dark textarea {
-  border-color: rgb(50 50 55 / 90%);
+/* Обводка полей ввода. Раньше здесь стоял литерал rgb(50 50 55 / 90%),
+   и в «Космосе», «Закате» и «Природе» поля обводились серым, чужим для
+   темы. Читаем слот «Обводка» — тот же, что у карточек. */
+input,
+select,
+textarea {
+  border-color: var(--smk-card-line);
 }
 
 /* Fix house badge in dark to be visible but soft */
@@ -1726,39 +1713,21 @@ html.dark .group:hover .smk-arrow { color: var(--smk-muted-bright); }
 
 
 /* --- Кнопка закрытия в меню «+» ----------------------------------------------
-   Круглая «×» в центре веера действий. Раньше была жёстко белой
-   (bg-white/25, border-white/50) и не реагировала на тему: на светлых
-   темах белое на белом почти пропадало.
+   Плоская круглая «×» в центре веера действий.
 
-   Теперь поверхность и штрих выводятся из палитры, а золотое кольцо
-   связывает кнопку с остальным оформлением — те же засечки и орнаменты,
-   что в карточках. */
+   Раньше была стеклянной: белая полупрозрачная подложка, размытие и
+   золотое кольцо. Два минуса — не реагировала на тему (белое на белом
+   в светлых) и выбивалась из плоского стиля остального интерфейса.
+
+   Теперь это сплошная заливка главным цветом темы (--color-emerald-600
+   подменяется палитрой), без размытия и колец. Значок белый: главный
+   цвет во всех темах достаточно тёмный. */
 .smk-close-orb {
   color: #ffffff;
-  background:
-    radial-gradient(circle at 50% 35%,
-      rgb(var(--smk-light-rgb) / 0.22) 0%,
-      rgb(var(--smk-light-rgb) / 0.06) 60%,
-      transparent 100%),
-    color-mix(in srgb, var(--smk-card-a) 25%, transparent);
-  backdrop-filter: blur(14px) saturate(1.2);
-  -webkit-backdrop-filter: blur(14px) saturate(1.2);
-  box-shadow:
-    0 0 0 1px rgb(var(--smk-gold-rgb) / 0.55),
-    0 0 0 5px rgb(var(--smk-gold-rgb) / 0.12),
-    0 12px 32px -12px rgb(var(--smk-shadow-rgb) / 0.75);
+  background: var(--color-emerald-600);
 }
 .smk-close-orb:hover {
-  background:
-    radial-gradient(circle at 50% 35%,
-      rgb(var(--smk-light-rgb) / 0.3) 0%,
-      rgb(var(--smk-light-rgb) / 0.1) 60%,
-      transparent 100%),
-    color-mix(in srgb, var(--smk-card-a) 35%, transparent);
-  box-shadow:
-    0 0 0 1px rgb(var(--smk-gold-rgb) / 0.8),
-    0 0 0 6px rgb(var(--smk-gold-rgb) / 0.18),
-    0 14px 36px -12px rgb(var(--smk-shadow-rgb) / 0.85);
+  background: var(--color-emerald-700);
 }
 
 /* --- Поля даты и времени -----------------------------------------------------

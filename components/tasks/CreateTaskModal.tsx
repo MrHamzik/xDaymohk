@@ -6,6 +6,8 @@ import AddressAutocomplete from '@/components/AddressAutocomplete';
 import { useI18n } from '@/lib/i18n';
 import { createTask, fetchTaskFilters } from '@/lib/tasks/client';
 import { getUserCoords } from '@/lib/geo';
+import { useAuth } from '@/components/AuthProvider';
+import { useProfiles } from '@/components/ProfilesProvider';
 import { PAYMENT_METHODS, type PaymentMethod } from '@/lib/payments';
 import { findClosestSamashkiHouse } from '@/lib/samashki-addresses';
 import {
@@ -29,6 +31,8 @@ function toLocalInput(date: Date): string {
 
 export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: CreateTaskModalProps) {
   const { t, language } = useI18n();
+  const { account } = useAuth();
+  const { profiles } = useProfiles();
   const [categories, setCategories] = useState<AppFilter[]>([]);
   const [kind, setKind] = useState<TaskKind>('urgent');
   const [title, setTitle] = useState('');
@@ -66,35 +70,66 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
     setScheduledAt(toLocalInput(tomorrow));
   }, [isOpen]);
 
-  // Адрес подставляем сам: берём координаты пользователя и находим
-  // ближайший дом из адресной книги (та же функция, что у кнопки «Моё
-  // место» на карте). Задание почти всегда «у меня дома», и ручной ввод
-  // улицы каждый раз — лишняя работа.
+  // Адрес подставляем сам, в два источника по убыванию точности:
+  //   1. GPS → ближайший дом из адресной книги (как кнопка «Моё место»);
+  //   2. адрес из личной анкеты — если GPS запрещён или недоступен.
   //
-  // getUserCoords не показывает окно запроса сам: если разрешение не
-  // выдано, поле просто остаётся пустым, и человек заполнит его руками.
+  // Второй источник обязателен: getUserCoords намеренно не показывает
+  // окно запроса разрешения (иначе Chrome блокирует геолокацию после
+  // нескольких отказов), поэтому у большинства пользователей координат
+  // просто нет. Без запасного варианта поле оставалось пустым — ровно
+  // то, на что жаловался заказчик.
   useEffect(() => {
     if (!isOpen) return;
     let cancelled = false;
-    void getUserCoords().then((position) => {
-      if (cancelled || !position) return;
+
+    /** Адрес из личной анкеты пользователя. */
+    const fromProfile = (): { address: string; lat?: number; lng?: number } | null => {
+      if (!account) return null;
+      const own = profiles.filter((profile) => profile.ownerId === account.id);
+      // Личная анкета приоритетнее: в ней домашний адрес, а в анкете
+      // специалиста — место работы.
+      const personal = own.find((profile) => profile.isPersonal) ?? own[0];
+      const value = personal?.workplaceAddress?.trim();
+      if (!value) return null;
+      return {
+        address: value,
+        lat: personal?.workplaceCoords?.lat,
+        lng: personal?.workplaceCoords?.lng,
+      };
+    };
+
+    const apply = (value: string, lat?: number, lng?: number) => {
       // Не перетираем то, что пользователь уже начал вводить.
-      setAddress((current) => {
-        if (current.trim()) return current;
+      setAddress((current) => (current.trim() ? current : value));
+      if (typeof lat === 'number' && typeof lng === 'number') {
+        setCoords((current) => current ?? { lat, lng });
+      }
+    };
+
+    void getUserCoords().then((position) => {
+      if (cancelled) return;
+
+      if (position) {
         try {
           const closest = findClosestSamashkiHouse(position);
           if (closest?.fullAddress) {
-            setCoords({ lat: closest.lat, lng: closest.lng });
-            return closest.fullAddress;
+            apply(closest.fullAddress, closest.lat, closest.lng);
+            return;
           }
         } catch {
-          // Адресная книга недоступна — оставляем поле пустым.
+          // Адресная книга недоступна — пробуем анкету.
         }
-        return current;
-      });
+      }
+
+      const profileAddress = fromProfile();
+      if (profileAddress) {
+        apply(profileAddress.address, profileAddress.lat, profileAddress.lng);
+      }
     });
+
     return () => { cancelled = true; };
-  }, [isOpen]);
+  }, [isOpen, account, profiles]);
 
   useEffect(() => {
     if (!isOpen) return;
