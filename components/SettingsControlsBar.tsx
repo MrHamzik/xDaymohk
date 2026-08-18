@@ -49,15 +49,20 @@ export default function SettingsControlsBar() {
     };
   }, [isStatusMenuOpen, placeMenu]);
 
+  // Закрытие по клику мимо. Проверяем И якорь, И саму модалку:
+  // она рендерится порталом в body, поэтому statusRef её НЕ содержит —
+  // раньше любой клик по модалке считался «снаружи», она закрывалась
+  // на mousedown, и до onClick иконки дело не доходило.
+  const menuRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
+    if (!isStatusMenuOpen) return;
     const handleClickOutside = (event: MouseEvent) => {
-      if (statusRef.current && !statusRef.current.contains(event.target as Node)) {
-        setIsStatusMenuOpen(false);
-      }
+      const target = event.target as Node;
+      if (statusRef.current?.contains(target)) return;
+      if (menuRef.current?.contains(target)) return;
+      setIsStatusMenuOpen(false);
     };
-    if (isStatusMenuOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
+    document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isStatusMenuOpen]);
 
@@ -166,14 +171,8 @@ export default function SettingsControlsBar() {
             него обрезался. */}
         {isStatusMenuOpen && menuBox && typeof document !== 'undefined' && createPortal(
           <>
-            <button
-              type="button"
-              aria-hidden
-              tabIndex={-1}
-              onClick={() => setIsStatusMenuOpen(false)}
-              className="fixed inset-0 z-[110] cursor-default"
-            />
             <div
+              ref={menuRef}
               style={{ top: menuBox.top, left: menuBox.left }}
               className="smk-solid fixed z-[111] rounded-2xl p-2 shadow-2xl"
             >

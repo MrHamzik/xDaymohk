@@ -678,7 +678,7 @@ html.dark .smk-price-teal {
      сломанной. Тёмные варианты теперь живут в блоке html.dark ниже. */
   --smk-card-a: #ffffff;        /* полотно карточки */
   --smk-card-b: #ffffff;        /* низ градиента    */
-  --smk-card-line: #c9c9c9;     /* обводка          */
+  --smk-card-line: #e6e6e6;     /* обводка          */
   --smk-card-inset: #f8fafc;    /* подложки строк   */
   --smk-muted: #57667c;         /* второстепенный текст */
   --smk-muted-bright: #465369;  /* акцентный текст  */
@@ -686,7 +686,7 @@ html.dark .smk-price-teal {
   --smk-steel-b: #27272a;
   --smk-steel-c: #52525b;
 
-  --smk-panel: #ededed;         /* панели и подвал карточек */
+  --smk-panel: #e6e6e6;         /* панели и подвал карточек */
   --smk-icon: #465369;          /* иконки строк     */
   --smk-surface: #ffffff;
   --smk-surface-soft: rgb(248 250 252 / 0.9);
@@ -989,12 +989,10 @@ html.smk-themed .bg-white {
    цвет полотна, и панели «плыли» — на разных страницах получался
    разный оттенок. */
 .smk-panel {
+  /* Без рамки: панель и так отделена собственным фоном, а её линия
+     была единственной ненастраиваемой обводкой в интерфейсе. */
   background-color: var(--smk-panel, #f1f5f9);
-  border: 1px solid var(--smk-panel-line, rgb(15 23 42 / 0.08));
   border-radius: 0.75rem;
-}
-html.dark .smk-panel {
-  --smk-panel-line: rgb(255 255 255 / 0.07);
 }
 /* Тёмное значение объявляем в html.dark, а не в :root: обе переменные
    в одном блоке конфликтовали — последняя перебивала первую. */
@@ -1002,9 +1000,9 @@ html.dark {
   /* Тёмные поверхности: зеркало светлого блока из :root. */
   --smk-card-a: #1c1c20;        /* верх полотна   */
   --smk-card-b: #161619;        /* низ полотна    */
-  --smk-card-line: #b5b5de;     /* обводка: штрих в тон темы */
+  --smk-card-line: #34343b;     /* обводка: штрих в тон темы */
   --smk-card-inset: #26262a;    /* подложки строк */
-  --smk-panel: #2c2c30;         /* панели и подвал карточек */
+  --smk-panel: #34343b;         /* панели и подвал карточек */
   --smk-muted: #96969e;         /* второстепенный текст */
   --smk-muted-bright: #c4c4cc;
   --smk-icon: #b3b3b9;
