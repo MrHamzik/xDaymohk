@@ -198,6 +198,50 @@ function shiftRyb(hslHue: number, degrees: number): number {
   return rybToHsl(hslToRyb(hslHue) + degrees);
 }
 
+/** Относительная яркость по WCAG — основа расчёта контраста. */
+function relativeLuminance(hex: string): number {
+  const clean = hex.replace('#', '');
+  const channels = [0, 2, 4].map((i) => {
+    const value = parseInt(clean.slice(i, i + 2), 16) / 255;
+    return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+}
+
+/** Коэффициент контраста двух цветов (1 — совпадают, 21 — чёрный/белый). */
+export function contrastRatio(a: string, b: string): number {
+  const first = relativeLuminance(a);
+  const second = relativeLuminance(b);
+  return (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05);
+}
+
+/**
+ * Подогнать светлоту цвета так, чтобы контраст к фону был не ниже
+ * заданного.
+ *
+ * Нужно потому, что HSL-светлота НЕ равна воспринимаемой яркости: при
+ * одинаковой L жёлтый выглядит much светлее синего. Из-за этого акцент
+ * с фиксированной L=126 на светлом фоне давал контраст 1.37 для
+ * жёлтого и 3.0 для оранжевого — то есть «золото» местами пропадало.
+ * Двигаем светлоту шагами, пока не наберём нужный контраст.
+ */
+function ensureContrast(
+  hex: string,
+  background: string,
+  minRatio: number,
+  darken: boolean,
+): string {
+  const { h, s, l } = hexToHsl(hex);
+  let lightness = l;
+  for (let step = 0; step < 60; step += 1) {
+    const candidate = hslToHex({ h, s, l: lightness });
+    if (contrastRatio(candidate, background) >= minRatio) return candidate;
+    lightness += darken ? -0.01 : 0.01;
+    if (lightness <= 0 || lightness >= 1) break;
+  }
+  return hslToHex({ h, s, l: Math.min(1, Math.max(0, lightness)) });
+}
+
 /** Собрать цвет: оттенок главного, своя насыщенность и яркость (0–240). */
 function tone(h: number, saturation: number, lightness240: number): string {
   return hslToHex({ h, s: saturation, l: lightness240 / LIGHTNESS_SCALE });
@@ -297,9 +341,19 @@ export function derivePalette(ui: string, isDark: boolean): DerivedPalette {
   // даёт 38° — ровно тот акцент, что подобран в теме вручную.
   const accentHue = towardHue(GOLD_HUE, h, 0.1);
   const accentSat = Math.max(Math.min(s * 1.05, 0.92), 0.62);
-  const accent = tone(accentHue, accentSat, isDark ? 138 : 126);
+  // Светлота по шкале — только отправная точка: HSL-яркость не равна
+  // воспринимаемой, и жёлтое золото при той же L тонуло на белом, а
+  // синий акцент был слишком тёмным. Доводим по контрасту к карточке:
+  // ориентиры взяты с готовых тем (светлые ~1.8, тёмные ~9).
+  const accentRaw = tone(accentHue, accentSat, isDark ? 138 : 126);
+  const accent = ensureContrast(accentRaw, card, isDark ? 7 : 1.8, !isDark);
   const accentSoft = tone(accentHue, Math.min(accentSat, 0.8), isDark ? 208 : 216);
-  const accentDeep = tone(accentHue, accentSat, isDark ? 108 : 96);
+  const accentDeep = ensureContrast(
+    tone(accentHue, accentSat, isDark ? 108 : 96),
+    card,
+    isDark ? 4.5 : 3,
+    !isDark,
+  );
 
   return {
     bg,

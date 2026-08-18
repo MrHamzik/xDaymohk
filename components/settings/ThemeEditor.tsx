@@ -220,7 +220,23 @@ export default function ThemeEditor() {
               <input
                 type="checkbox"
                 checked={editing.isDark}
-                onChange={(e) => patchTheme(editing.id, { isDark: e.target.checked })}
+                onChange={(e) => {
+                  // Основа задаёт НАПРАВЛЕНИЕ всех формул: на тёмной
+                  // поверхности идут вверх от почти чёрного, текст
+                  // светлый, на светлой — зеркально. Раньше галочка
+                  // меняла только флаг, а цвета оставались от прошлой
+                  // основы: тема получала светлый текст на светлом фоне
+                  // и выглядела сломанной. Пересчитываем палитру от
+                  // того же главного цвета.
+                  const isDark = e.target.checked;
+                  patchTheme(editing.id, {
+                    isDark,
+                    colors: normalizeColors(
+                      { ...derivePalette(editing.colors.ui, isDark), ui: editing.colors.ui },
+                      editing.colors,
+                    ),
+                  });
+                }}
                 className="h-3.5 w-3.5 rounded accent-emerald-600"
               />
               {t.settingsThemeDark}

@@ -156,6 +156,18 @@ export function applyThemeColors(
   const root = document.documentElement;
   const set = (name: string, value: string) => root.style.setProperty(name, value);
 
+  // Сначала СНИМАЕМ всё, что писала прошлая тема, и только потом
+  // пишем заново.
+  //
+  // Без этого смена основы «тёмная ↔ светлая» ломала оформление:
+  // текстовые ступени zinc-100…600 задаются только в тёмной ветке, а
+  // slate-500…900 — только в светлой. При переключении инлайновые
+  // значения прошлой ветки оставались на :root и перебивали каскад из
+  // globals.css — светлая тема получала белый текст от тёмной, и
+  // наоборот. Свойство, которое новая ветка не выставит, обязано
+  // вернуться к значению из CSS, а не «залипнуть».
+  for (const property of MANAGED_PROPERTIES) root.style.removeProperty(property);
+
   // Класс .dark по-прежнему нужен: на нём держатся сотни dark:-утилит
   // Tailwind, переписать их темой невозможно.
   root.classList.toggle('dark', isDark);
