@@ -271,7 +271,7 @@
      краям, потому что крайние остановки были глубже средних. */
   background: var(
     --smk-hero-gradient,
-    linear-gradient(135deg, #059669 0%, #14b8a6 100%)
+    linear-gradient(135deg, #04845c 0%, #12a292 100%)
   );
 }
 
@@ -1477,4 +1477,30 @@ html.dark .group:hover .smk-arrow { color: var(--smk-muted-bright); }
 }
 .smk-act--danger:hover:not(:disabled) {
   background-color: rgb(var(--smk-danger-rgb) / 0.12);
+}
+
+/* --- Плитки режима работы -----------------------------------------------------
+   Кнопка статуса в панели четырёх иконок и ряд режимов в её модалке.
+   Раньше фон писался классами bg-emerald-600 / bg-amber-500 /
+   bg-zinc-600 — то есть мимо палитры: пользователь менял слот
+   «Статус «Работает»» в редакторе тем, а плитка оставалась зелёной.
+   Теперь читаем те же переменные, что и точка статуса на карточке
+   анкеты, — цвет один во всех местах, где он означает одно и то же. */
+.smk-status-bg--active {
+  background: var(--smk-status-active);
+}
+.smk-status-bg--active:hover {
+  background: var(--smk-status-active-deep);
+}
+.smk-status-bg--break {
+  background: var(--smk-status-break);
+}
+.smk-status-bg--break:hover {
+  background: var(--smk-status-break-deep);
+}
+.smk-status-bg--offline {
+  background: var(--smk-status-offline);
+}
+.smk-status-bg--offline:hover {
+  background: var(--smk-status-offline-deep);
 }

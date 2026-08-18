@@ -76,17 +76,20 @@ export default function SettingsControlsBar() {
     }
   };
 
+  // Фон плитки берётся из слота темы «Статус ...», а не из жёстких
+  // emerald/amber/zinc: пользователь настраивает цвет статуса в
+  // палитре, и кнопка обязана его показывать. Классы .smk-status-bg--*
+  // читают те же переменные, что и точка статуса на карточке анкеты.
   const getStatusBgClass = () => {
     switch (currentStatusId) {
-      case 'active':
-        return 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/30';
       case 'break':
-        return 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/30';
+        return 'smk-status-bg--break text-white';
       case 'offline':
-        return 'bg-zinc-600 hover:bg-zinc-700 text-white shadow-zinc-600/30';
+        return 'smk-status-bg--offline text-white';
+      case 'active':
       case 'auto':
       default:
-        return 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/30';
+        return 'smk-status-bg--active text-white';
     }
   };
 
@@ -113,10 +116,10 @@ export default function SettingsControlsBar() {
     offline: PowerOff,
   };
   const STATUS_ACTIVE_BG: Partial<Record<UserMasterStatus, string>> = {
-    auto: 'bg-emerald-600',
-    active: 'bg-emerald-600',
-    break: 'bg-amber-500',
-    offline: 'bg-zinc-600',
+    auto: 'smk-status-bg--active',
+    active: 'smk-status-bg--active',
+    break: 'smk-status-bg--break',
+    offline: 'smk-status-bg--offline',
   };
 
   // Strictly 4 options: Автоматическое, Работает, Перерыв, Не работает
@@ -130,25 +133,25 @@ export default function SettingsControlsBar() {
       id: 'auto',
       label: language === 'ce' ? '🟢 Автоматан раж' : '🟢 Автоматическое',
       description: language === 'ce' ? 'Расписанца ша шех хийцало' : 'Переключается автоматически по часам',
-      dotColor: 'bg-emerald-500',
+      dotColor: 'smk-status-bg--active',
     },
     {
       id: 'active',
       label: language === 'ce' ? '🟢 Болх беш ву' : '🟢 Работает',
       description: language === 'ce' ? 'Анкета къамелашна а, тIечIагIдаршна а схьайиллина ю' : 'Анкета открыта для заказов и звонков',
-      dotColor: 'bg-emerald-500',
+      dotColor: 'smk-status-bg--active',
     },
     {
       id: 'break',
       label: language === 'ce' ? '🟠 Сацар' : '🟠 Перерыв',
       description: language === 'ce' ? 'Дена юкъахь ханна сацар' : 'Временный перерыв в течение дня',
-      dotColor: 'bg-amber-500',
+      dotColor: 'smk-status-bg--break',
     },
     {
       id: 'offline',
       label: language === 'ce' ? '⚫ Болх ца бо' : '⚫ Не работает',
       description: language === 'ce' ? 'Болх ца бен де йа садаIар' : 'Выходной или закрыто',
-      dotColor: 'bg-zinc-500',
+      dotColor: 'smk-status-bg--offline',
     },
   ];
 
