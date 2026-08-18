@@ -678,7 +678,7 @@ html.dark .smk-price-teal {
      сломанной. Тёмные варианты теперь живут в блоке html.dark ниже. */
   --smk-card-a: #ffffff;        /* полотно карточки */
   --smk-card-b: #ffffff;        /* низ градиента    */
-  --smk-card-line: #e6e6e6;     /* обводка          */
+  --smk-card-line: #f5f5f5;     /* обводка          */
   --smk-card-inset: #f8fafc;    /* подложки строк   */
   --smk-muted: #57667c;         /* второстепенный текст */
   --smk-muted-bright: #465369;  /* акцентный текст  */
@@ -686,7 +686,7 @@ html.dark .smk-price-teal {
   --smk-steel-b: #27272a;
   --smk-steel-c: #52525b;
 
-  --smk-panel: #e6e6e6;         /* панели и подвал карточек */
+  --smk-panel: #f5f5f5;         /* панели и подвал карточек */
   --smk-icon: #465369;          /* иконки строк     */
   --smk-surface: #ffffff;
   --smk-surface-soft: rgb(248 250 252 / 0.9);
@@ -1000,9 +1000,9 @@ html.dark {
   /* Тёмные поверхности: зеркало светлого блока из :root. */
   --smk-card-a: #1c1c20;        /* верх полотна   */
   --smk-card-b: #161619;        /* низ полотна    */
-  --smk-card-line: #34343b;     /* обводка: штрих в тон темы */
+  --smk-card-line: #25252a;     /* обводка: штрих в тон темы */
   --smk-card-inset: #26262a;    /* подложки строк */
-  --smk-panel: #34343b;         /* панели и подвал карточек */
+  --smk-panel: #25252a;         /* панели и подвал карточек */
   --smk-muted: #96969e;         /* второстепенный текст */
   --smk-muted-bright: #c4c4cc;
   --smk-icon: #b3b3b9;
