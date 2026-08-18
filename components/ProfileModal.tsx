@@ -1263,10 +1263,10 @@ export default function ProfileModal({
                           type="button"
                           disabled={isCurrent}
                           onClick={() => { if (!isCurrent) setNestedProfile(other); }}
-                          className={`flex w-full items-center gap-2 rounded-xl border p-2 text-left transition ${
+                          className={`flex w-full items-center gap-2 p-2 text-left transition ${
                             isCurrent
-                              ? 'cursor-default border-emerald-300 bg-emerald-50/60 dark:border-emerald-800 dark:bg-emerald-950/30'
-                              : 'border-slate-100 bg-slate-50/70 hover:border-emerald-300 dark:border-zinc-800 dark:bg-zinc-800 dark:hover:border-emerald-800'
+                              ? 'smk-sheet-row cursor-default ring-1 ring-emerald-400/70'
+                              : 'smk-sheet-row hover:brightness-95 dark:hover:brightness-110'
                           }`}
                         >
                           <div className="h-7 w-7 shrink-0 overflow-hidden rounded-lg bg-slate-200 dark:bg-zinc-700">

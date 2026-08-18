@@ -94,7 +94,6 @@ export const PRESET_THEMES: Record<
     isDark: false,
     colors: {
       bg: '#f8fafc',
-      panel: '#e8eaed',
       card: '#ffffff',
       cardAlt: '#ffffff',
       cardLine: '#e8d9b0',
@@ -117,7 +116,6 @@ export const PRESET_THEMES: Record<
     isDark: true,
     colors: {
       bg: '#131313',
-      panel: '#2b2b2b',
       card: '#1c1c20',
       cardAlt: '#161619',
       cardLine: '#0f0f12',
@@ -149,7 +147,6 @@ export const PRESET_THEMES: Record<
     isDark: true,
     colors: {
       bg: '#080713',
-      panel: '#1a1835',
       card: '#121127',
       cardAlt: '#0d0b1d',
       cardLine: '#06050f',
@@ -188,7 +185,6 @@ export const PRESET_THEMES: Record<
     isDark: true,
     colors: {
       bg: '#1b090e',
-      panel: '#412028',
       card: '#2e151b',
       cardAlt: '#250e14',
       cardLine: '#130609',
@@ -229,7 +225,6 @@ export const PRESET_THEMES: Record<
     isDark: true,
     colors: {
       bg: '#000000',
-      panel: '#191919',
       card: '#0a0a0a',
       cardAlt: '#050505',
       cardLine: '#121212',
@@ -269,7 +264,6 @@ export const PRESET_THEMES: Record<
     isDark: false,
     colors: {
       bg: '#f7f7f8',
-      panel: '#eaeaeb',
       card: '#ffffff',
       cardAlt: '#fbfbfc',
       cardLine: '#e0e0e4',
@@ -313,7 +307,6 @@ export const PRESET_THEMES: Record<
     glass: true,
     colors: {
       bg: '#e8edf2',
-      panel: '#dadfe5',
       card: '#ffffff',
       cardAlt: '#f6f9fc',
       cardLine: '#c9d4e0',
@@ -357,7 +350,6 @@ export const PRESET_THEMES: Record<
     isDark: false,
     colors: {
       bg: '#edf8f2',
-      panel: '#e0ede6',
       card: '#fbfefc',
       cardAlt: '#f4faf7',
       cardLine: '#cae2d6',
@@ -398,7 +390,6 @@ export const PRESET_THEMES: Record<
     isDark: false,
     colors: {
       bg: '#fbf6ea',
-      panel: '#f0eadd',
       card: '#fefdfb',
       cardAlt: '#fcfaf2',
       cardLine: '#e9dbc4',
@@ -470,7 +461,6 @@ export function normalizeColors(raw: unknown, base: ThemeColors): ThemeColors {
     cardAlt: pick('cardAlt'),
     cardLine: pick('cardLine'),
     cardInset: pick('cardInset'),
-    panel: pick('panel'),
     icon: pick('icon'),
     text: pick('text'),
     muted: pick('muted'),

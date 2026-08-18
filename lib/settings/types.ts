@@ -143,12 +143,6 @@ export interface ThemeColors {
   bg: string;
   /** Полотно карточки. */
   card: string;
-  /**
-   * Фон панелей: мини-профиль, виджет времени намаза, панель четырёх
-   * иконок в боковом меню. Отдельный слот от фона страницы — иначе
-   * панели сливаются с полотном и блок «плавает».
-   */
-  panel: string;
   /** Низ градиента карточки. */
   cardAlt: string;
   /** Обводка карточки. */
@@ -215,7 +209,10 @@ export const THEME_COLOR_GROUPS: Record<ThemeColorGroup, Array<keyof ThemeColors
   // cardAlt в редакторе не показываем: он даёт лишь нижнюю точку
   // градиента карточки и визуально неотличим от card. Значение
   // выводится автоматически при сохранении темы.
-  global: ['bg', 'panel', 'card', 'cardInset', 'cardLine', 'text', 'muted', 'icon'],
+  // panel в редакторе не показываем: он выводится из card через
+  // color-mix в globals.css. Отдельный слот давал темам разъезжаться —
+  // в каждой приходилось подбирать цвет заново.
+  global: ['bg', 'card', 'cardInset', 'cardLine', 'text', 'muted', 'icon'],
   details: ['accent', 'accentSoft', 'accentDeep', 'ui', 'danger'],
   specific: [
     'statusActive', 'statusBreak', 'statusFlexible', 'statusOffline',

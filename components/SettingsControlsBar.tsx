@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Clock, Coffee, Moon, PowerOff, Sparkles, Sun, Check } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { useTheme } from '@/components/ThemeProvider';
@@ -23,6 +24,31 @@ export default function SettingsControlsBar() {
   const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false);
   const [localStatus, setLocalStatus] = useState<UserMasterStatus>('auto');
   const statusRef = useRef<HTMLDivElement | null>(null);
+  // Координаты компактной модалки. Считаем вручную: она рендерится
+  // порталом в body, чтобы её не срезал overflow-hidden бокового меню.
+  const [menuBox, setMenuBox] = useState<{ top: number; left: number } | null>(null);
+
+  const placeMenu = useCallback(() => {
+    const anchor = statusRef.current;
+    if (!anchor) return;
+    const rect = anchor.getBoundingClientRect();
+    const margin = 8;
+    const width = 220;
+    const left = Math.max(margin, Math.min(rect.left, window.innerWidth - width - margin));
+    setMenuBox({ top: rect.bottom + 8, left });
+  }, []);
+
+  useEffect(() => {
+    if (!isStatusMenuOpen) return;
+    placeMenu();
+    const onScroll = () => placeMenu();
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', onScroll);
+    return () => {
+      window.removeEventListener('scroll', onScroll, true);
+      window.removeEventListener('resize', onScroll);
+    };
+  }, [isStatusMenuOpen, placeMenu]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -74,7 +100,7 @@ export default function SettingsControlsBar() {
     }
   };
 
-  // Иконка и цвет для каждого режима — ряд из 4 кнопок.
+  // Иконка и цвет для каждого режима — компактный ряд в модалке.
   // Partial: 'flexible' задаётся в самой анкете, а не тумблером.
   const STATUS_ICONS: Partial<Record<UserMasterStatus, typeof Clock>> = {
     auto: Clock,
@@ -123,48 +149,73 @@ export default function SettingsControlsBar() {
   ];
 
   return (
-    <div className="smk-panel w-full p-2">
-      {/* Заголовок с подсказкой: тумблер перекрывает расписание из
-          анкет, и об этом надо сказать явно — иначе непонятно, почему
-          статус не совпадает с рабочими часами. */}
-      <div className="mb-1.5 flex items-center gap-1.5 px-1">
-        <span className="smk-sheet-label">
-          {language === 'ce' ? 'Болхан раж' : 'Режим работы'}
-        </span>
-        <HintMark text={language === 'ce'
-          ? 'ХIара низам массо хьайн анкетина тIедоьрзу — анкетан расписани хийца. Автоматан раж — сохьташца; Болх беш ву — анкета схьайиллина; Сацар — ханна сацар; Болх ца бо — садаIар.'
-          : 'Этот переключатель действует на все ваши анкеты специалиста и перекрывает их расписание. Автоматически — статус считается по рабочим часам; Работает — анкета открыта для звонков; Перерыв — временно отошли; Не работает — выходной.'}
-        />
-      </div>
-      <div className="flex w-full items-center justify-between gap-2">
+    <div className="smk-panel flex w-full items-center justify-between gap-2 p-2" >
       {/* 1. Status Button */}
-      {/* 1. Режим работы — компактный ряд из 4 иконок.
-             Выпадающее меню лежало absolute внутри контейнера бокового
-             меню с overflow-hidden и обрезалось. Ряд иконок помещается
-             в панель целиком и не требует всплывающего слоя. */}
-      <div className="flex flex-1 items-center gap-1" ref={statusRef}>
-        {statusOptions.map((opt) => {
-          const isActive = currentStatusId === opt.id;
-          const Icon = STATUS_ICONS[opt.id] ?? Clock;
-          return (
+      <div className="relative flex-1 flex justify-center" ref={statusRef}>
+        <button
+          type="button"
+          onClick={() => setIsStatusMenuOpen((prev) => !prev)}
+          title={language === 'ce' ? `Балхан хьал: ${currentStatusId}` : `Статус: ${currentStatusId}`}
+          aria-label={language === 'ce' ? `Балхан хьал: ${currentStatusId}` : `Статус: ${currentStatusId}`}
+          className={`flex h-11 w-11 items-center justify-center rounded-xl shadow-sm transition-all active:scale-95 ${getStatusBgClass()}`}
+        >
+          {getStatusIcon()}
+        </button>
+
+        {/* Компактная модалка: ряд из 4 иконок. Рендерится порталом —
+            боковое меню имеет overflow-hidden, и absolute-слой внутри
+            него обрезался. */}
+        {isStatusMenuOpen && menuBox && typeof document !== 'undefined' && createPortal(
+          <>
             <button
-              key={opt.id}
               type="button"
-              onClick={() => handleSelectStatus(opt.id)}
-              aria-pressed={isActive}
-              title={`${opt.label} — ${opt.description}`}
-              aria-label={opt.label}
-              className={`flex h-9 flex-1 items-center justify-center rounded-lg transition active:scale-95 ${
-                isActive
-                  ? `${STATUS_ACTIVE_BG[opt.id] ?? 'bg-emerald-600'} text-white shadow-sm`
-                  : 'text-slate-500 hover:bg-black/5 dark:text-zinc-400 dark:hover:bg-white/10'
-              }`}
+              aria-hidden
+              tabIndex={-1}
+              onClick={() => setIsStatusMenuOpen(false)}
+              className="fixed inset-0 z-[110] cursor-default"
+            />
+            <div
+              style={{ top: menuBox.top, left: menuBox.left }}
+              className="smk-solid fixed z-[111] rounded-2xl p-2 shadow-2xl"
             >
-              <Icon className="h-4 w-4" />
-            </button>
-          );
-        })}
+              <div className="mb-1.5 flex items-center gap-1.5 px-1">
+                <span className="smk-sheet-label">
+                  {language === 'ce' ? 'Болхан раж' : 'Режим работы'}
+                </span>
+                <HintMark text={language === 'ce'
+                  ? 'ХIара низам массо хьайн говзанчин анкетина тIедоьрзу — анкетан расписани хийца. Сохьташца — расписанца; Болх беш ву — анкета схьайиллина; Сацар — ханна сацар; Болх ца бо — садаIар.'
+                  : 'Переключатель действует на все ваши анкеты специалиста и перекрывает их расписание. По расписанию — статус считается по рабочим часам; Работает — анкета открыта для звонков; Перерыв — временно отошли; Не работает — выходной.'}
+                />
+              </div>
+              <div className="flex items-center gap-1">
+                {statusOptions.map((opt) => {
+                  const isSelected = opt.id === currentStatusId;
+                  const Icon = STATUS_ICONS[opt.id] ?? Clock;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => handleSelectStatus(opt.id)}
+                      aria-pressed={isSelected}
+                      title={`${opt.label} — ${opt.description}`}
+                      aria-label={opt.label}
+                      className={`flex h-10 w-10 items-center justify-center rounded-xl transition active:scale-95 ${
+                        isSelected
+                          ? `${STATUS_ACTIVE_BG[opt.id] ?? 'bg-emerald-600'} text-white shadow-sm`
+                          : 'text-slate-500 hover:bg-black/5 dark:text-zinc-400 dark:hover:bg-white/10'
+                      }`}
+                    >
+                      <Icon className="h-4.5 w-4.5" />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </>,
+          document.body,
+        )}
       </div>
+
 
       {/* 2. Language Button */}
       <div className="flex-1 flex justify-center">
@@ -215,8 +266,6 @@ export default function SettingsControlsBar() {
           )}
         </button>
         )}
-      </div>
-
       </div>
     </div>
   );

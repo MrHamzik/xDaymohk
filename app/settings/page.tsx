@@ -18,7 +18,7 @@ import { useProfiles } from '@/components/ProfilesProvider';
 import { useSettings } from '@/components/SettingsProvider';
 import { prefFor } from '@/lib/settings/defaults';
 import {
-  FONT_FAMILIES, LOCKED_NOTIFICATION_GROUPS, NOTIFICATION_GROUPS,
+  LOCKED_NOTIFICATION_GROUPS, NOTIFICATION_GROUPS,
   type FontFamilyId, type NotificationGroup,
 } from '@/lib/settings/types';
 import { useI18n } from '@/lib/i18n';
@@ -276,14 +276,6 @@ export default function SettingsPage() {
                         ))}
                       </select>
 
-                      {/* Живой образец: выбирать шрифт вслепую по названию
-                          бессмысленно, нужно видеть кириллицу. */}
-                      <p
-                        className="mt-2 rounded-lg bg-white px-2.5 py-2 text-xs leading-relaxed text-slate-700 dark:bg-zinc-800 dark:text-zinc-300"
-                        style={{ fontFamily: FONT_FAMILIES[settings.fontFamily] }}
-                      >
-                        {t.settingsFontSample}
-                      </p>
                     </div>
                   </section>
                 </div>

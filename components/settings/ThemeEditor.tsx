@@ -38,7 +38,6 @@ const GROUP_TITLES: Record<ThemeColorGroup, { ru: string; ce: string; hint: stri
 /** Подписи только для слотов, показанных в редакторе (cardAlt скрыт). */
 const COLOR_LABELS: Partial<Record<keyof ThemeColors, { ru: string; ce: string }>> = {
   bg: { ru: 'Фон страницы', ce: 'АгIонан букъ' },
-  panel: { ru: 'Панели бокового меню', ce: 'Аг1он декъан панелаш' },
   card: { ru: 'Карточки, шапка, поля', ce: 'Карточкаш, корта, меттигаш' },
   cardInset: { ru: 'Подложка строк', ce: 'МогIанийн бухъ' },
   cardLine: { ru: 'Обводка', ce: 'Йоза' },
@@ -223,7 +222,7 @@ export default function ThemeEditor() {
           {(Object.keys(THEME_COLOR_GROUPS) as ThemeColorGroup[]).map((group) => {
             const isOpen = openGroup === group;
             return (
-              <div key={group} className="rounded-xl bg-white/60 p-2 dark:bg-zinc-900/40">
+              <div key={group} className="smk-sheet-row p-2">
                 {/* HintMark — самостоятельная кнопка, поэтому она НЕ может
                     лежать внутри кнопки-заголовка: вложенный <button>
                     невалиден в HTML и ломает гидратацию. Раскладываем

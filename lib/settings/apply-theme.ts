@@ -104,7 +104,6 @@ const MANAGED_PROPERTIES = [
   '--smk-card-a', '--smk-card-b', '--smk-card-line', '--smk-card-inset',
   '--smk-muted', '--smk-muted-bright', '--smk-icon',
   '--smk-surface', '--smk-surface-soft',
-  '--smk-panel',
   '--smk-gold', '--smk-gold-soft', '--smk-gold-deep', '--smk-gold-rgb',
   '--smk-hairline', '--smk-hairline-strong',
   '--color-zinc-950', '--color-zinc-900', '--color-zinc-800', '--color-zinc-700',
@@ -193,9 +192,11 @@ export function applyThemeColors(
   // меню — пользователь справедливо не понимал, где этот цвет вообще
   // применяется.
   set('--color-zinc-950', colors.bg);
-  // 900 — панели (мини-профиль, виджет намаза, панель иконок): у них
-  // теперь собственный слот, отдельный и от фона, и от карточки.
-  set('--color-zinc-900', colors.panel);
+  // 900 — панели (мини-профиль, виджет намаза, панель иконок).
+  // Выводим из карточки тем же шагом, что и --smk-panel в globals.css:
+  // «чуть ярче карточки». Отдельного слота в палитре нет — иначе в
+  // каждой теме приходилось бы подбирать цвет заново.
+  set('--color-zinc-900', mix(colors.card, isDark ? '#ffffff' : '#000000', 0.07));
   set('--color-zinc-800', colors.card);
   set('--color-zinc-700', surfaceStep);
 
@@ -226,7 +227,6 @@ export function applyThemeColors(
   }
 
   // ── Карточка ────────────────────────────────────────────────────
-  set('--smk-panel', colors.panel);
   set('--smk-card-a', colors.card);
   set('--smk-card-b', colors.cardAlt);
   set('--smk-card-line', colors.cardLine);

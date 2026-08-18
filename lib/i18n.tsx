@@ -328,7 +328,6 @@ export const translations = {
     settingsFontSerif: 'С засечками',
     settingsFontMono: 'Моноширинный и системный',
     settingsFontSystem: 'Системный',
-    settingsFontSample: 'Даймохк — люди и услуги рядом. Пример текста 0123456789.',
 
     settingsReset: 'Вернуть по умолчанию',
     settingsResetWarning: 'ВНИМАНИЕ! «Вернуть по умолчанию» сбрасывает все изменения, которые вы внесли: уведомления, тему, шрифт и собственные темы оформления.',
@@ -842,7 +841,6 @@ export const translations = {
     settingsFontSerif: 'Мекхашца',
     settingsFontMono: 'Моноширинни а, системин а',
     settingsFontSystem: 'Системин',
-    settingsFontSample: 'Даймохк — гергахь адамаш а, гIуллакхаш а. Масал 0123456789.',
 
     settingsReset: 'Юха а лаьцнарг',
     settingsResetWarning: 'ТИДАМ БЕ! «Юха а лаьцнарг» ахьа дина дерриг хийцамаш дIадоху: хаамаш, тема, йоза а, хьайн темаш а.',

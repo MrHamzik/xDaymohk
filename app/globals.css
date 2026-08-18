@@ -684,7 +684,10 @@ html.dark .smk-price-teal {
   --smk-steel-b: #27272a;
   --smk-steel-c: #52525b;
 
-  --smk-panel: #e8eaed;         /* панели бокового меню */
+  /* Панели бокового меню: чуть ярче карточки, но не самостоятельный
+     цвет. Выводим через color-mix от --smk-card-a, поэтому во всех
+     темах соотношение одинаковое, а перезаписей в стилях нет. */
+  --smk-panel: color-mix(in srgb, var(--smk-card-a) 93%, var(--smk-text-mix, #000000));
   --smk-icon: #465369;          /* иконки строк     */
   --smk-surface: #ffffff;
   --smk-surface-soft: rgb(248 250 252 / 0.9);
@@ -905,10 +908,11 @@ html.smk-themed .bg-white {
   background: var(--smk-card-inset, #f8fafc);
 }
 
-/* Подвал карточки: заметно отделён от полотна, как и просили —
-   раньше он был чуть темнее, потом стал сливаться. */
+/* Подвал карточки. Берёт --smk-card-inset (подложку строк), а НЕ
+   --smk-panel: панели бокового меню — другой тип поверхности, и
+   правка их цвета не должна менять подвал карточек. */
 .smk-card-foot {
-  background: var(--smk-panel, #f1f5f9);
+  background: var(--smk-card-inset, #f1f5f9);
   border-top: 1px solid var(--smk-hairline, rgb(15 23 42 / 0.06));
 }
 
@@ -988,6 +992,8 @@ html.dark .smk-panel {
 /* Тёмное значение объявляем в html.dark, а не в :root: обе переменные
    в одном блоке конфликтовали — последняя перебивала первую. */
 html.dark {
+  /* В тёмной теме «ярче» значит светлее — подмешиваем белый. */
+  --smk-text-mix: #ffffff;
   /* Тёмные поверхности: зеркало светлого блока из :root. */
   --smk-card-a: #1c1c20;        /* верх полотна   */
   --smk-card-b: #161619;        /* низ полотна    */
@@ -995,7 +1001,6 @@ html.dark {
   --smk-card-inset: #26262c;    /* подложки строк */
   --smk-muted: #96969e;         /* второстепенный текст */
   --smk-muted-bright: #c4c4cc;
-  --smk-panel: #2b2b2b;
   --smk-icon: #c4c4cc;
   --smk-surface: #1c1c20;
   --smk-hairline: rgb(255 255 255 / 0.08);
