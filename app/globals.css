@@ -1531,7 +1531,28 @@ html.dark .group:hover .smk-arrow { color: var(--smk-muted-bright); }
 .smk-read {
   font-size: 0.9375rem;
   line-height: 1.75;
-  color: var(--smk-muted-bright, #1f2937);
+
+  /* --- Цвет текста для длинного чтения -----------------------------
+     Берём слот «Основной текст» темы (--foreground), а не
+     --smk-muted-bright: последний хранит цвет ИКОНОК и для текста
+     слишком блёклый (5.8 против 8.2 в «Природе»).
+
+     Но чистые #000/#fff для чтения не годятся: на большом объёме
+     текста максимальный контраст утомляет глаз — это давняя норма
+     книжной типографики, её же придерживаются Medium и Notion.
+     Поэтому подмешиваем 12 % фона карточки: «Тёмная» с её #ffffff
+     смягчается до ~#dbdbdb, «Светлая» с #0f172a — до ~#2e3546.
+
+     Темы, где текст изначально мягкий («Природа» #305545 = 8.2,
+     «Янтарь» #58442d = 9.1), после подмеса остаются в комфортном
+     диапазоне и не проваливаются ниже нормы. */
+  color: color-mix(in srgb, var(--foreground) 88%, var(--smk-card-a));
+}
+
+/* Старые браузеры без color-mix получают неразбавленный цвет: лучше
+   чуть более резкий текст, чем нечитаемый. */
+@supports not (color: color-mix(in srgb, red 50%, blue)) {
+  .smk-read { color: var(--foreground); }
 }
 .smk-read-p {
   margin-top: 0.35rem;
@@ -1548,7 +1569,15 @@ html.dark .group:hover .smk-arrow { color: var(--smk-muted-bright); }
 .smk-read-h1,
 .smk-read-h2,
 .smk-read-h3 {
-  color: var(--smk-text, #0f172a);
+  /* --foreground, а не выдуманный --smk-text: слот «Основной текст»
+     темы попадает именно в него (apply-theme.ts). Переменной
+     --smk-text не существует ни в CSS, ни в JS, поэтому здесь всегда
+     срабатывал запасной #0f172a — в тёмных темах это давало тёмный
+     заголовок на тёмном фоне с контрастом 1.04.
+
+     Заголовки берут цвет БЕЗ смягчения, в отличие от основного текста:
+     они короткие, и полный контраст здесь держит структуру страницы. */
+  color: var(--foreground);
   font-weight: 800;
   line-height: 1.3;
   scroll-margin-top: 5rem;
@@ -1639,7 +1668,7 @@ html.dark .group:hover .smk-arrow { color: var(--smk-muted-bright); }
   padding: 0.55rem 0.7rem;
   background: var(--smk-card-inset);
   font-weight: 700;
-  color: var(--smk-text);
+  color: var(--foreground);
   white-space: nowrap;
 }
 .smk-read-table td {
