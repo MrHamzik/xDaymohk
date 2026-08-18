@@ -247,15 +247,42 @@ function tone(h: number, saturation: number, lightness240: number): string {
   return hslToHex({ h, s: saturation, l: lightness240 / LIGHTNESS_SCALE });
 }
 
-/** Подогнать готовый смысловой цвет под светлоту основы. */
-function fit(hex: string, isDark: boolean): string {
+/**
+ * Подогнать смысловой цвет под тему.
+ *
+ * Смысл цвета сохраняется (красный «удалить» остаётся красным), но он
+ * должен выглядеть частью темы, а не наклейкой из другого набора.
+ * В готовых темах это видно прямо: «Админ» в «Космосе» — сиреневый
+ * #c265e8, а не универсальный красный #ef4444; «Специалист» в «Закате»
+ * — оранжевый #e58c2b. Раньше эти слоты не тонировались вовсе, и на
+ * любой пользовательской теме оставались стандартные цвета — отсюда
+ * замечание «админ и другие иконки не меняются».
+ *
+ * Оттенок тянем к главному цвету на `pull` (кратчайшей дугой), а
+ * светлоту ставим в рабочий коридор темы.
+ */
+function tint(
+  hex: string,
+  uiHue: number,
+  uiSat: number,
+  isDark: boolean,
+  pull: number,
+  maxShift = 30,
+): string {
   const { h, s, l } = hexToHsl(hex);
-  // На тёмном фоне насыщенный «чистый» цвет выглядит кислотным, на
-  // светлом — наоборот, тонет. Сдвигаем светлоту к рабочему коридору.
-  const target = isDark
-    ? Math.max(l, 0.55)
-    : Math.min(l, 0.52);
-  return hslToHex({ h, s: Math.min(s, 0.82), l: target });
+  // Долю сдвига ограничиваем ещё и абсолютом в градусах. Без потолка
+  // доля 0.35 от красного к зелёному главному цвету (142°) давала 50° —
+  // «Админ» становился жёлтым и переставал читаться как предупреждение.
+  // 30° — ширина соседнего сектора на цветовом круге: подтон виден,
+  // смысл цвета цел.
+  const shift = ((uiHue - h + 540) % 360) - 180;
+  const limited = Math.max(-maxShift, Math.min(maxShift, shift * pull));
+  const hue = ((h + limited) % 360 + 360) % 360;
+  // Насыщенность подтягиваем к главному цвету наполовину: у блёклого
+  // ui смысловые цвета тоже приглушаются, у сочного — остаются сочными.
+  const sat = Math.min(s * 0.6 + uiSat * 0.4, 0.85);
+  const lightness = isDark ? Math.max(l, 0.56) : Math.min(l, 0.5);
+  return hslToHex({ h: hue, s: sat, l: lightness });
 }
 
 /** Готовые смысловые цвета: одинаковый смысл во всех темах. */
@@ -309,25 +336,41 @@ export interface DerivedPalette {
 export function derivePalette(ui: string, isDark: boolean): DerivedPalette {
   const { h, s } = hexToHsl(ui);
 
-  // Подтон поверхностей: заметен, но не спорит с содержимым. У очень
-  // блёклого главного цвета не «дорисовываем» насыщенность, иначе
-  // серая тема стала бы цветной против воли пользователя.
-  const surfaceSat = Math.min(s * 0.55, isDark ? 0.42 : 0.3);
-  const textSat = Math.min(s * 0.5, 0.6);
-  const mutedSat = Math.min(s * 0.4, 0.3);
+  // Насыщенность поверхностей берём ДОЛЕЙ от главного цвета, а не
+  // «сколько-нибудь». Доли сняты с готовых тем — отношение S слота к
+  // S главного цвета:
+  //
+  //            Космос  Закат  Природа  Янтарь
+  //   bg        0.64    0.64    0.92     0.95
+  //   card      0.56    0.48    1.25     0.84
+  //   cardInset 0.47    0.34    0.81     0.85
+  //   muted     0.37    0.41    0.40     0.31
+  //   icon      0.78    0.76    0.43     0.33
+  //
+  // Прошлая версия сначала резала насыщенность вдвое (s * 0.55), а
+  // затем умножала ещё на 0.35 — у светлых тем от подтона оставалось
+  // 0…7 % вместо 60…85 %, и поверхности выходили почти серыми:
+  // «глобальные цвета как будто не меняются». Потолок оставляем, но
+  // высокий — он нужен лишь против кислотных значений.
+  const surfaceSat = (ratio: number) => Math.min(s * ratio, 0.75);
 
-  // Поверхности. Шкала 0–240; шаги взяты из «Космоса» и «Заката».
-  const bg = isDark ? tone(h, surfaceSat, 12) : tone(h, surfaceSat * 0.55, 228);
-  const card = isDark ? tone(h, surfaceSat * 0.9, 26) : tone(h, surfaceSat * 0.35, 238);
+  // Светлые темы держат подтон именно на насыщенности: белая карточка
+  // #fbfefc в «Природе» имеет S=60 % при светлоте 238 — поэтому она
+  // читается зеленоватой, а не белой.
+  const bg = isDark ? tone(h, surfaceSat(0.64), 12) : tone(h, surfaceSat(0.93), 228);
+  const card = isDark ? tone(h, surfaceSat(0.52), 26) : tone(h, surfaceSat(1.0), 238);
   const panel = deriveCardLine(card);
-  const cardInset = isDark ? tone(h, surfaceSat * 0.85, 34) : tone(h, surfaceSat * 0.3, 233);
+  const cardInset = isDark ? tone(h, surfaceSat(0.4), 36) : tone(h, surfaceSat(0.83), 223);
 
-  // Текст: светлый на тёмной основе и наоборот. Второстепенный отходит
-  // к середине — он обязан читаться, но тише основного.
-  const text = isDark ? tone(h, textSat * 0.35, 228) : tone(h, textSat * 0.5, 26);
-  const muted = isDark ? tone(h, mutedSat, 158) : tone(h, mutedSat, 92);
-  // Иконки чуть ярче подписей: они мельче и теряются наравне с текстом.
-  const icon = isDark ? tone(h, mutedSat * 1.2, 172) : tone(h, mutedSat * 1.1, 80);
+  // Текст: светлый на тёмной основе и наоборот. Светлота 228/63 взята
+  // из эталонов — она даёт контраст к карточке около 15 на тёмных
+  // темах и 8.5 на светлых, то есть выше требований WCAG AA с запасом.
+  const text = isDark ? tone(h, surfaceSat(0.86), 228) : tone(h, surfaceSat(0.5), 63);
+  const muted = isDark ? tone(h, surfaceSat(0.38), 158) : tone(h, surfaceSat(0.36), 90);
+  // Иконки заметно цветнее подписей: в «Космосе» доля 0.78 против 0.37
+  // у muted — именно это делает иконки «живыми», а не серыми. На
+  // светлых темах они, наоборот, приглушены.
+  const icon = isDark ? tone(h, surfaceSat(0.77), 168) : tone(h, surfaceSat(0.4), 82);
 
   // Акцент тянется к ЗОЛОТУ, а не отходит от главного цвета на
   // фиксированный угол. Золото — фирменная деталь проекта (засечки
@@ -358,7 +401,7 @@ export function derivePalette(ui: string, isDark: boolean): DerivedPalette {
   return {
     bg,
     card,
-    cardAlt: isDark ? tone(h, surfaceSat * 0.9, 21) : card,
+    cardAlt: isDark ? tone(h, surfaceSat(0.52), 21) : card,
     cardLine: deriveCardLine(card),
     divider: deriveDivider(card, isDark),
     cardInset,
@@ -369,16 +412,26 @@ export function derivePalette(ui: string, isDark: boolean): DerivedPalette {
     accent,
     accentSoft,
     accentDeep,
-    statusActive: fit(SEMANTIC_BASE.statusActive, isDark),
-    statusBreak: fit(SEMANTIC_BASE.statusBreak, isDark),
-    statusFlexible: fit(SEMANTIC_BASE.statusFlexible, isDark),
+    // Статусы тянем к теме слабо (0.18): «работает» обязан остаться
+    // узнаваемо зелёным, иначе значение статуса теряется.
+    statusActive: tint(SEMANTIC_BASE.statusActive, h, s, isDark, 0.18),
+    statusBreak: tint(SEMANTIC_BASE.statusBreak, h, s, isDark, 0.18),
+    statusFlexible: tint(SEMANTIC_BASE.statusFlexible, h, s, isDark, 0.18),
     // «Не работает» — единственный намеренно нейтральный статус:
     // он должен гаснуть, поэтому берёт подтон темы, а не свой цвет.
-    statusOffline: isDark ? tone(h, mutedSat * 0.6, 120) : tone(h, mutedSat * 0.6, 132),
-    roleSpecialist: fit(SEMANTIC_BASE.roleSpecialist, isDark),
-    roleAdmin: fit(SEMANTIC_BASE.roleAdmin, isDark),
-    roleVerified: fit(SEMANTIC_BASE.roleVerified, isDark),
-    danger: fit(SEMANTIC_BASE.danger, isDark),
+    statusOffline: isDark
+      ? tone(h, surfaceSat(0.25), 120)
+      : tone(h, surfaceSat(0.25), 150),
+    // Роли — бейджи оформления, а не сигналы безопасности, поэтому
+    // подтон сильнее (0.35). Но «Админ» и «Опасное действие» держат
+    // узкий потолок сдвига (14°): красный, уехавший на 30°, читается
+    // уже как оранжевый, а предупреждение обязано оставаться красным.
+    roleSpecialist: tint(SEMANTIC_BASE.roleSpecialist, h, s, isDark, 0.35),
+    roleAdmin: tint(SEMANTIC_BASE.roleAdmin, h, s, isDark, 0.35, 14),
+    // «Проверен» совпадает с главным цветом — как в «Космосе» и
+    // «Янтаре», где roleVerified в точности равен ui.
+    roleVerified: ui,
+    danger: tint(SEMANTIC_BASE.danger, h, s, isDark, 0.12, 14),
     // Шапка каталога — градиент от главного цвета к соседнему по RYB:
     // два тона одной семьи вместо случайной пары.
     heroFrom: tone(h, Math.min(s, 0.8), isDark ? 72 : 108),
