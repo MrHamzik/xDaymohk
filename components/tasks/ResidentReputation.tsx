@@ -56,10 +56,10 @@ export default function ResidentReputation({ ownerId }: ResidentReputationProps)
   const visible = expanded ? withText : withText.slice(0, 3);
 
   return (
-    <section className="mt-3 overflow-hidden rounded-2xl border border-slate-100 bg-slate-50/50 dark:border-zinc-800 dark:bg-zinc-950/50">
-      <div className="flex items-center justify-between gap-2 border-b border-slate-100 px-3 py-2.5 dark:border-zinc-800">
-        <h3 className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-zinc-400">
-          <Handshake className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+    <section className="smk-sheet-section px-4 py-3.5">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h3 className="smk-sheet-label flex items-center gap-1.5">
+          <Handshake className="h-3 w-3" />
           {t.reputationTitle}
         </h3>
         {reviews && reviews.length > 0 && (
@@ -73,7 +73,7 @@ export default function ResidentReputation({ ownerId }: ResidentReputationProps)
         )}
       </div>
 
-      <div className="space-y-2 p-3">
+      <div className="space-y-1.5">
         {isLoading && (
           <div className="flex justify-center py-3">
             <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
@@ -84,11 +84,11 @@ export default function ResidentReputation({ ownerId }: ResidentReputationProps)
             за время может накопиться много, и анкета уезжала бы вниз
             на несколько экранов. Полоса прокрутки скрыта (.no-scrollbar),
             как и везде в приложении. */}
-        <div className={expanded ? 'no-scrollbar max-h-72 space-y-2 overflow-y-auto' : 'space-y-2'}>
+        <div className={expanded ? 'no-scrollbar max-h-72 space-y-1.5 overflow-y-auto' : 'space-y-1.5'}>
         {visible.map((review) => (
           <article
             key={review.id}
-            className="rounded-xl border border-slate-100 bg-white p-2.5 dark:border-zinc-800 dark:bg-zinc-800"
+            className="smk-sheet-row p-2.5"
           >
             <div className="flex items-start gap-2">
               <Avatar src={review.authorAvatarUrl} className="h-6 w-6 shrink-0 rounded-full object-cover" />

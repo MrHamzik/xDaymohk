@@ -1038,18 +1038,6 @@ html.smk-themed .bg-white {
   border-top: 1px solid var(--smk-card-line);
 }
 
-/* Секции внутри листа: разделены линией на всю ширину, как в карточке
-   задания. Раньше анкета набирала секции через space-y-4 — блоки
-   «висели» в пустоте без видимой границы между смысловыми частями.
-   Первую линию не рисуем: над ней уже шапка. */
-.smk-sections > section + section,
-.smk-sections > div + section,
-.smk-sections > section + div {
-  border-top: 1px solid var(--smk-card-line);
-  margin-top: 0.875rem;
-  padding-top: 0.875rem;
-}
-
 /* --- Акцент у заголовка секции ------------------------------------------------
    Короткая золотая засечка слева от подписи. Мелкая деталь, но именно
    она отличает «список полей» от оформленного блока: глаз цепляется за
@@ -1429,3 +1417,63 @@ html.dark .smk-rating-value { color: var(--smk-muted-bright); }
 html.dark .smk-arrow { color: var(--smk-arrow-color-dark); }
 .group:hover .smk-arrow { color: var(--smk-gold); transform: translateX(2px); }
 html.dark .group:hover .smk-arrow { color: var(--smk-muted-bright); }
+
+/* --- Сегментированный переключатель ------------------------------------------
+   «Отзывы / Вопросы / Оценки» внутри анкеты. Раньше это были три
+   кнопки с нижним подчёркиванием — линия подчёркивания сливалась с
+   разделителями секций, и блок читался как случайный набор надписей.
+   Сегменты — стандартный для мобильных интерфейсов приём (iOS segmented
+   control): активный сегмент выделен подложкой, остальные плоские. */
+.smk-seg {
+  position: relative;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 0.75rem;
+  background: var(--smk-card-inset, #f8fafc);
+}
+.smk-seg-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  padding: 0.45rem 0.25rem;
+  border-radius: 0.55rem;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--smk-muted, #94a3b8);
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+.smk-seg-btn--on {
+  background: var(--smk-card-a, #ffffff);
+  color: var(--smk-muted-bright, #0f172a);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+}
+/* Счётчик рядом с названием вкладки: та же строка, но тише основного
+   текста — цифра не должна спорить со словом. */
+.smk-seg-num {
+  font-size: 10px;
+  font-weight: 700;
+  opacity: 0.65;
+}
+.smk-seg-btn--on .smk-seg-num {
+  color: var(--smk-gold-deep, #ffcd6d);
+  opacity: 1;
+}
+
+/* --- Шкала распределения оценок ---------------------------------------------
+   Полоска «5 ★ ▓▓▓▓░ 12». Раньше дорожка красилась bg-slate-100 /
+   dark:bg-zinc-800 — то есть мимо палитры темы; в тёмных темах она
+   проваливалась в чёрный. Берём подложку строк и золото акцента. */
+.smk-bar {
+  height: 5px;
+  overflow: hidden;
+  border-radius: 9999px;
+  background: var(--smk-card-inset, #f1f5f9);
+}
+.smk-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(to right, var(--smk-gold-deep), var(--smk-gold));
+}

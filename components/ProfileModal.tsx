@@ -3,7 +3,7 @@
 import Avatar from '@/components/Avatar';
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { Ban, ChevronDown, Clock, ExternalLink, Flag, MapPin, MessageSquare, Pencil, Phone, Send, Star, Trash2, X } from 'lucide-react';
+import { Ban, BriefcaseBusiness, CalendarDays, ChevronDown, Clock, ExternalLink, Flag, MapPin, MessageSquare, Pencil, Phone, Send, Star, Trash2, VenusAndMars, X } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { useProfiles } from '@/components/ProfilesProvider';
 import { useI18n } from '@/lib/i18n';
@@ -11,7 +11,8 @@ import { supabase } from '@/lib/supabase';
 import { Certificate, Profile, Review } from '@/lib/types';
 import { calculateAge, formatReviews } from '@/lib/text';
 import ResidentReputation from '@/components/tasks/ResidentReputation';
-import { calculateWorkingStatus, resolveOwnerOverride } from '@/lib/schedule';
+import InfoRow from '@/components/ui/InfoRow';
+import { compactWeekdays } from '@/lib/schedule';
 import Notice from '@/components/Notice';
 import ProfileBadges, { WorkingStatusBadge } from '@/components/ProfileBadges';
 import { cacheBustAvatarUrl } from '@/lib/media';
@@ -108,7 +109,7 @@ export default function ProfileModal({
 }: ProfileModalProps) {
   const { account } = useAuth();
   const { language, t } = useI18n();
-  const { profiles: allProfiles, users: allUsers, reputation, isProfileAdmin, createNotification } = useProfiles();
+  const { profiles: allProfiles, users: allUsers, isProfileAdmin, createNotification } = useProfiles();
   const [selectedCert, setSelectedCert] = useState<Certificate | null>(null);
   // A user card opened from a name link renders as a nested ProfileModal
   // on top of this one; closing it returns to this анкета instead of
@@ -639,8 +640,8 @@ export default function ProfileModal({
     <>
       <div className="fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/80 p-0 backdrop-blur-md sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label={`Анкета ${profile.fullName}`}>
       {notice && <Notice message={notice} type="error" onClose={() => setNotice('')} />}
-      <div className="smk-sheet flex max-h-[90vh] w-full flex-col overflow-hidden rounded-t-2xl shadow-2xl transition-colors sm:max-w-2xl sm:rounded-2xl border border-slate-200/50 dark:border-zinc-800">
-        <div className="smk-sheet-head relative shrink-0 p-4 text-slate-900 dark:text-white sm:p-5">
+      <div className="smk-sheet flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-3xl shadow-2xl transition-colors sm:max-w-2xl sm:rounded-3xl">
+        <div className="smk-sheet-head relative shrink-0 px-4 pb-3.5 pt-4 text-slate-900 dark:text-white">
           <button
             onClick={onClose}
             aria-label="Закрыть анкету"
@@ -686,142 +687,151 @@ export default function ProfileModal({
           </div>
         </div>
 
-        <div className="smk-sections flex-1 overflow-y-auto p-4 text-xs text-slate-800 dark:text-zinc-300 sm:p-5 no-scrollbar">
+        <div className="min-h-0 flex-1 overflow-y-auto text-xs text-slate-800 dark:text-zinc-300 no-scrollbar">
+          {(profile.isHidden || profile.isBanned) && (
+            <p className="mx-4 mt-3 rounded-xl bg-red-50 px-3.5 py-2.5 text-[11px] font-semibold leading-relaxed text-red-800 dark:bg-red-950/30 dark:text-red-300">
+              Эта анкета скрыта администратором и сейчас не видна в общем каталоге.
+            </p>
+          )}
+          {isViewerBlocked && (
+            <p className="mx-4 mt-3 rounded-xl bg-red-50 px-3.5 py-2.5 text-[11px] font-semibold leading-relaxed text-red-800 dark:bg-red-950/30 dark:text-red-300">
+              Ваш аккаунт заблокирован. Вы можете только просматривать информацию.
+            </p>
+          )}
+
+          {/* ── Факты одной сеткой ────────────────────────────────────
+              Раньше эти данные были раскиданы: строка статуса сверху,
+              бейджи «Возраст/Пол» в отдельной секции, стаж — зелёной
+              плашкой ниже. Статус к тому же дублировал бейдж в шапке
+              («Не работает» дважды на одном экране). Теперь всё это —
+              одна сетка строк «подпись — значение», как в задании. */}
           {(() => {
-            const isOwner = Boolean(account && profile.ownerId && account.id === profile.ownerId);
-            // Режим работы владельца виден всем: берём его из публичной
-            // репутации, а своё значение применяем мгновенно.
-            const effectiveOverride = resolveOwnerOverride({
-              isOwner,
-              viewerOverride: account?.statusOverride,
-              ownerOverride: profile.ownerId ? reputation[profile.ownerId]?.statusOverride : undefined,
-            });
-            const statusInfo = calculateWorkingStatus(profile, effectiveOverride);
+            // Пол и возраст берём из профиля аккаунта владельца
+            // (user_profiles), fallback — на данные анкеты.
+            const ownerUser = profile.ownerId ? allUsers.find((u) => u.id === profile.ownerId) : undefined;
+            const gender = profile.isPersonal ? (ownerUser?.gender || profile.gender) : undefined;
+            const birth = profile.isPersonal ? (ownerUser?.birthDate || profile.birthDate) : undefined;
+            // Точный возраст: по полной дате 'YYYY-MM-DD' (с учётом того,
+            // прошёл ли день рождения в этом году), иначе грубо по году.
+            const age = birth ? calculateAge(String(birth)) : null;
+
+            const rows: Array<{ key: string; icon: typeof Clock; label: string; value: string }> = [];
+
+            if (profile.isSpecialist && profile.experience) {
+              rows.push({ key: 'exp', icon: BriefcaseBusiness, label: t.experienceLabel, value: profile.experience });
+            }
+            // Дни недели и часы — в одной строке: «Пн–Пт · 09:00–18:00».
+            // Двумя строками они занимали половину экрана ради семи слов.
+            if (profile.isSpecialist) {
+              const days = profile.workDays && profile.workDays.length > 0
+                ? compactWeekdays(profile.workDays)
+                : '';
+              const hours = profile.workHoursStart && profile.workHoursEnd
+                ? `${profile.workHoursStart}–${profile.workHoursEnd}`
+                : '';
+              const schedule = [days, hours].filter(Boolean).join(' · ');
+              if (schedule) {
+                rows.push({ key: 'schedule', icon: Clock, label: t.workScheduleShort, value: schedule });
+              }
+            }
+            if (age !== null) {
+              rows.push({ key: 'age', icon: CalendarDays, label: t.ageLabel, value: String(age) });
+            }
+            if (gender) {
+              rows.push({
+                key: 'gender',
+                icon: VenusAndMars,
+                label: t.genderLabel,
+                value: gender === 'male' ? t.genderMale : t.genderFemale,
+              });
+            }
+            if (rows.length === 0) return null;
             return (
-              <div className="smk-sheet-row flex flex-wrap items-center justify-between gap-2 p-3 text-xs">
-                <div className="flex items-center gap-2">
-                  {/* Точка статуса — та же, что на карточке анкеты */}
-                  <span
-                    className={`smk-status-dot smk-status-dot--${statusInfo.status}`}
-                    aria-hidden
-                  />
-                  {/* Короткая подпись без details: рядом уже стоит
-                      расписание, и пара «Сейчас закрыто · Откроется в
-                      09:00» повторяла то же самое другими словами. */}
-                  <span className="font-bold text-slate-900 dark:text-white">
-                    {statusInfo.status === 'break'
-                      ? t.statusBreak
-                      : statusInfo.status === 'offline'
-                      ? t.statusOffline
-                      : statusInfo.status === 'flexible'
-                      ? t.statusFlexible
-                      : t.statusActive}
-                  </span>
-                </div>
-                {profile.isSpecialist && profile.workDays && profile.workDays.length > 0 && (
-                  <div className="flex items-center gap-1 text-slate-500 dark:text-zinc-500">
-                    <Clock className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                    <span>{profile.workDays.join(', ')}</span>
-                    {profile.workHoursStart && profile.workHoursEnd && (
-                      <span>({profile.workHoursStart}–{profile.workHoursEnd})</span>
-                    )}
-                  </div>
-                )}
+              <div className="grid grid-cols-2 gap-2 px-4 py-3.5 text-[11px]">
+                {rows.map((row) => (
+                  <InfoRow key={row.key} icon={row.icon} label={row.label} value={row.value} />
+                ))}
               </div>
             );
           })()}
 
-          {(profile.isHidden || profile.isBanned) && (
-            <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-800 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
-              Эта анкета скрыта администратором и сейчас не видна в общем каталоге.
-            </div>
-          )}
-          {isViewerBlocked && (
-            <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-800 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
-              Ваш аккаунт заблокирован. Вы можете только просматривать информацию.
-            </div>
-          )}
-          {/* Пол и возраст — только в ЛИЧНОЙ анкете (это личные данные владельца,
-              в анкетах специалистов/жителей они не показываются). */}
-          {profile.isPersonal && (
-            <section>
-              <h3 className="smk-sheet-label mb-1.5">{t.aboutPerson}</h3>
-              {(() => {
-                // Пол и возраст берём из профиля аккаунта владельца (user_profiles),
-                // fallback — на данные анкеты.
-                const ownerUser = profile.ownerId ? allUsers.find((u) => u.id === profile.ownerId) : undefined;
-                const gender = ownerUser?.gender || profile.gender;
-                const birth = ownerUser?.birthDate || profile.birthDate;
-                if (!birth && !gender) return null;
-                // Точный возраст: по полной дате 'YYYY-MM-DD' (с учётом того,
-                // прошёл ли день рождения в этом году), иначе грубо по году.
-                const age = birth ? calculateAge(String(birth)) : null;
-                return (
-                  <div className="mb-2 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-700 dark:text-zinc-300">
-                    {age !== null && (
-                      <span className="flex h-5 items-center rounded-md bg-slate-100 px-2 dark:bg-zinc-800">
-                        {t.ageLabel}: {age}
-                      </span>
-                    )}
-                    {gender && (
-                      <span className="flex h-5 items-center rounded-md bg-slate-100 px-2 dark:bg-zinc-800">
-                        {t.genderLabel}: {gender === 'male' ? t.genderMale : t.genderFemale}
-                      </span>
-                    )}
-                  </div>
-                );
-              })()}
+          {profile.bio && (
+            <section className="smk-sheet-section px-4 py-3.5">
+              <h3 className="smk-sheet-label mb-1.5">{t.profileAboutHeading}</h3>
+              <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-[13px] leading-relaxed text-slate-700 dark:text-zinc-300">
+                {profile.bio}
+              </p>
             </section>
           )}
-
-          <p className="break-words [overflow-wrap:anywhere] whitespace-pre-wrap smk-sheet-row p-3 text-xs leading-relaxed text-slate-700 dark:text-zinc-400">
-            {profile.bio}
-          </p>
 
           {/* Репутация жителя по заданиям — только в ЛИЧНОЙ анкете.
               У специалиста есть собственный рейтинг (profile.rating)
               про навыки; показывать рядом второй, «человеческий», —
               значит путать посетителя двумя разными оценками. */}
           {!profile.isSpecialist && <ResidentReputation ownerId={profile.ownerId} />}
-          {profile.experience && (
-            <p className="mt-2 rounded-lg bg-emerald-50 px-2.5 py-1.5 text-sm font-extrabold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">Стаж: {profile.experience}</p>
-          )}
 
           {/* Видео (YouTube) — показываем, если ссылка указана в анкете */}
           {(() => {
             const videoId = profile.videoUrl ? youtubeEmbedId(profile.videoUrl) : null;
             if (!videoId) return null;
             return (
-              <div className="mt-2 overflow-hidden rounded-2xl border border-slate-100 dark:border-zinc-800">
-                <iframe
-                  className="aspect-video w-full"
-                  src={`https://www.youtube-nocookie.com/embed/${videoId}`}
-                  title="Видео из анкеты"
-                  loading="lazy"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  referrerPolicy="strict-origin-when-cross-origin"
-                  allowFullScreen
-                />
-              </div>
+              <section className="smk-sheet-section px-4 py-3.5">
+                <h3 className="smk-sheet-label mb-1.5">{t.videoTitle}</h3>
+                <div className="overflow-hidden rounded-xl">
+                  <iframe
+                    className="aspect-video w-full"
+                    src={`https://www.youtube-nocookie.com/embed/${videoId}`}
+                    title="Видео из анкеты"
+                    loading="lazy"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    referrerPolicy="strict-origin-when-cross-origin"
+                    allowFullScreen
+                  />
+                </div>
+              </section>
             );
           })()}
 
           {profile.isSpecialist && (
-            <section className="smk-sheet-row overflow-hidden">
-              <div className="smk-sheet-section flex">
-                <button type="button" onClick={() => setActiveTab('reviews')} className={`flex-1 border-b-2 py-3 text-[11px] font-bold transition ${activeTab === 'reviews' ? 'border-emerald-500 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400' : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-zinc-500 dark:hover:text-zinc-300'}`}>ОТЗЫВЫ ({displayReviewCount})</button>
-                <button type="button" onClick={() => setActiveTab('questions')} className={`flex-1 border-b-2 py-3 text-[11px] font-bold transition ${activeTab === 'questions' ? 'border-emerald-500 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400' : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-zinc-500 dark:hover:text-zinc-300'}`}>ВОПРОСЫ ({questions.length})</button>
-                <button type="button" onClick={() => setActiveTab('ratings')} className={`flex-1 border-b-2 py-3 text-[11px] font-bold transition ${activeTab === 'ratings' ? 'border-emerald-500 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400' : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-zinc-500 dark:hover:text-zinc-300'}`}>ОЦЕНКИ</button>
+            <section className="smk-sheet-section px-4 py-3.5">
+              {/* Сегментированный переключатель вместо трёх «вкладок» с
+                  подчёркиванием: подчёркивание сливалось с разделителями
+                  секций, и было непонятно, где заканчивается блок. */}
+              <div className="smk-seg mb-3 grid grid-cols-3">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('reviews')}
+                  aria-pressed={activeTab === 'reviews'}
+                  className={`smk-seg-btn ${activeTab === 'reviews' ? 'smk-seg-btn--on' : ''}`}
+                >
+                  {t.reviewsTab} <span className="smk-seg-num">{displayReviewCount}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('questions')}
+                  aria-pressed={activeTab === 'questions'}
+                  className={`smk-seg-btn ${activeTab === 'questions' ? 'smk-seg-btn--on' : ''}`}
+                >
+                  {t.questionsTab} <span className="smk-seg-num">{questions.length}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('ratings')}
+                  aria-pressed={activeTab === 'ratings'}
+                  className={`smk-seg-btn ${activeTab === 'ratings' ? 'smk-seg-btn--on' : ''}`}
+                >
+                  {t.ratingsTab}
+                </button>
               </div>
 
-              <div className="p-3">
+              <div>
                 {activeTab === 'reviews' && (
                   <div className="space-y-2">
                     {displayReviews.length > 0 ? (
-                      <div className="space-y-2">
+                      <div className="space-y-1.5">
                         {displayReviews.map((review) => (
-                    <article key={review.id} className="smk-sheet-row p-3">
-                                            <div className="flex items-start justify-between gap-3">
+                          <article key={review.id} className="smk-sheet-row p-2.5">
+                            <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-2 min-w-0">
                           <div className="h-6 w-6 shrink-0 rounded-full bg-slate-200 dark:bg-zinc-700 overflow-hidden flex items-center justify-center">
                             {(review as any).authorAvatarUrl ? (
@@ -914,9 +924,9 @@ export default function ProfileModal({
               )}
 
               {isOwnProfile ? (
-                <p className="mt-2 rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-500">Это ваша анкета. Оставлять отзыв самому себе нельзя.</p>
+                <p className="smk-sheet-row mt-2 p-2.5 text-[11px] text-slate-500 dark:text-zinc-500">Это ваша анкета. Оставлять отзыв самому себе нельзя.</p>
               ) : canReview && (
-                <form onSubmit={handleReviewSubmit} className="smk-sheet-row mt-3 space-y-2.5 p-3">
+                <form onSubmit={handleReviewSubmit} className="smk-sheet-row mt-2 space-y-2 p-2.5">
                   <h4 className="smk-sheet-label">Оставить отзыв</h4>
                   <div className="flex items-center gap-1" aria-label="Выберите оценку">
                     {[1, 2, 3, 4, 5].map((rating) => (
@@ -951,9 +961,9 @@ export default function ProfileModal({
                 {activeTab === 'questions' && (
                   <div className="space-y-2">
                     {questions.length > 0 ? (
-                      <div className="space-y-2">
+                      <div className="space-y-1.5">
                         {questions.map((q) => (
-                          <article key={q.id} className="smk-sheet-row p-3">
+                          <article key={q.id} className="smk-sheet-row p-2.5">
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex min-w-0 items-center gap-2">
                                 <div className="h-6 w-6 shrink-0 overflow-hidden rounded-full bg-slate-200 dark:bg-zinc-700 flex items-center justify-center">
@@ -1171,9 +1181,9 @@ export default function ProfileModal({
                     )}
 
                     {isOwnProfile ? (
-                      <p className="mt-2 rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-500">Это ваша анкета. Задавать вопросы самому себе нельзя.</p>
+                      <p className="smk-sheet-row mt-2 p-2.5 text-[11px] text-slate-500 dark:text-zinc-500">Это ваша анкета. Задавать вопросы самому себе нельзя.</p>
                     ) : account && !account.isBlocked ? (
-                      <form onSubmit={handleQuestionSubmit} className="smk-sheet-row mt-3 space-y-2.5 p-3">
+                      <form onSubmit={handleQuestionSubmit} className="smk-sheet-row mt-2 space-y-2 p-2.5">
                         <h4 className="smk-sheet-label">Задать вопрос</h4>
                         <div>
                           <textarea
@@ -1191,38 +1201,58 @@ export default function ProfileModal({
                         </button>
                       </form>
                     ) : (
-                      <p className="mt-2 rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-500">Войдите, чтобы задать вопрос.</p>
+                      <p className="smk-sheet-row mt-2 p-2.5 text-[11px] text-slate-500 dark:text-zinc-500">Войдите, чтобы задать вопрос.</p>
                     )}
                   </div>
                 )}
                 {activeTab === 'ratings' && (
-                  <div className="py-4 px-2">
-                    <div className="flex items-center gap-4 mb-4">
-                      <span className="text-4xl font-black text-slate-900 dark:text-white">{displayRating > 0 ? displayRating.toFixed(1) : '0'}</span>
-                      <div className="flex flex-col gap-0.5">
-                        <div className="flex gap-0.5">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-star h-3.5 w-3.5 fill-amber-400 text-amber-400"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-star h-3.5 w-3.5 fill-amber-400 text-amber-400"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-star h-3.5 w-3.5 fill-amber-400 text-amber-400"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-star h-3.5 w-3.5 fill-amber-400 text-amber-400"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-star h-3.5 w-3.5 fill-amber-400 text-amber-400"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                  <div className="smk-sheet-row p-3">
+                    {/* Сводка: крупный балл слева, звёзды и счётчик справа.
+                        Пять одинаковых инлайн-SVG заменены на массив с
+                        компонентом Star — раньше это был копипаст на пять
+                        строк, где закрашенность не зависела от балла. */}
+                    <div className="flex items-center gap-3">
+                      <span className="text-3xl font-black leading-none text-slate-900 dark:text-white">
+                        {displayRating > 0 ? displayRating.toFixed(1) : '0'}
+                      </span>
+                      <div className="min-w-0">
+                        <div className="flex gap-0.5" aria-hidden>
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star
+                              key={star}
+                              className={`h-3.5 w-3.5 ${
+                                star <= Math.round(displayRating)
+                                  ? 'fill-amber-400 text-amber-400'
+                                  : 'text-slate-300 dark:text-zinc-600'
+                              }`}
+                            />
+                          ))}
                         </div>
-                        <span className="text-[10px] text-slate-500 dark:text-zinc-500">{displayReviewCount} оценок</span>
+                        <span className="text-[10px] text-slate-500 dark:text-zinc-500">
+                          {displayReviewCount} {t.profileRatingsCount}
+                        </span>
                       </div>
                     </div>
-                    <div className="space-y-1.5">
-                      {[5,4,3,2,1].map(stars => {
-                        const count = displayReviews.filter(r => r.rating === stars).length;
-                        const total = displayReviews.length || 1;
-                        const percent = Math.round((count / total) * 100);
+
+                    <hr className="smk-orn-soft my-2.5" />
+
+                    <div className="space-y-1">
+                      {[5, 4, 3, 2, 1].map((stars) => {
+                        const count = displayReviews.filter((r) => r.rating === stars).length;
+                        const totalCount = displayReviews.length || 1;
+                        const percent = Math.round((count / totalCount) * 100);
                         return (
                           <div key={stars} className="flex items-center gap-2 text-[10px]">
-                            <span className="w-2 text-right font-bold text-slate-700 dark:text-zinc-400">{stars}</span>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-star h-3 w-3 fill-slate-300 text-slate-300 dark:fill-zinc-600 dark:text-zinc-600"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                            <div className="h-1.5 flex-1 rounded-full bg-slate-100 dark:bg-zinc-800 overflow-hidden">
-                              <div className="h-full bg-amber-400 rounded-full" style={{ width: `${percent}%` }}></div>
+                            <span className="flex w-6 shrink-0 items-center gap-0.5 font-bold text-slate-600 dark:text-zinc-400">
+                              {stars}
+                              <Star className="h-2.5 w-2.5 fill-current" />
+                            </span>
+                            <div className="smk-bar flex-1">
+                              <span style={{ width: `${percent}%` }} />
                             </div>
-                            <span className="w-6 text-right text-slate-500 dark:text-zinc-500">{count}</span>
+                            <span className="w-5 shrink-0 text-right tabular-nums text-slate-500 dark:text-zinc-500">
+                              {count}
+                            </span>
                           </div>
                         );
                       })}
@@ -1238,7 +1268,7 @@ export default function ProfileModal({
               специалистов. Текущая (открытая) анкета некликабельна — клик по
               ней игнорируется, но можно переключаться на любую другую. */}
           {profile.ownerId && (
-            <section className="mt-4">
+            <section className="smk-sheet-section px-4 py-3.5">
               <h3 className="smk-sheet-label mb-2">
                 {language === 'ce' ? 'Лелорхочун анкеташ' : 'Анкеты пользователя'}
               </h3>
@@ -1302,9 +1332,9 @@ export default function ProfileModal({
             </section>
           )}
 
-          <section>
+          <section className="smk-sheet-section px-4 py-3.5">
             <h3 className="smk-sheet-label mb-1.5">Адрес</h3>
-            <div className="flex items-start gap-3 smk-sheet-row p-3">
+            <div className="smk-sheet-row flex items-start gap-3 p-2.5">
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
                 <MapPin className="h-4 w-4" />
               </div>
@@ -1324,7 +1354,7 @@ export default function ProfileModal({
           </section>
 
           {profile.certificates.length > 0 && (
-            <section>
+            <section className="smk-sheet-section px-4 py-3.5">
               <h3 className="smk-sheet-label mb-1.5">
                 Документы ({profile.certificates.length})
               </h3>
@@ -1354,7 +1384,7 @@ export default function ProfileModal({
           )}
 
           {profile.photos.length > 0 && (
-            <section>
+            <section className="smk-sheet-section px-4 py-3.5">
               <h3 className="smk-sheet-label mb-1.5">Фотографии работ</h3>
               <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
                 {profile.photos.map((photo, index) => (
