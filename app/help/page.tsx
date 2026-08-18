@@ -38,7 +38,7 @@ interface UserQuestion {
 }
 
 export default function HelpPage() {
-  const { language, setLanguage } = useI18n();
+  const { language } = useI18n();
   const { account } = useAuth();
   const ce = language === 'ce';
   const L = (ru: string, che: string) => (ce ? che : ru);
@@ -133,10 +133,6 @@ export default function HelpPage() {
           <ArrowLeft className="h-3.5 w-3.5" />
           {L('Назад', 'ЦIа')}
         </Link>
-        <button type="button" onClick={() => setLanguage(ce ? 'ru' : 'ce')}
-          className="smk-solid rounded-xl px-3 py-2 text-xs font-bold">
-          {ce ? 'Русский' : 'Нохчийн'}
-        </button>
       </div>
 
       <div className="mb-4 flex items-center gap-3">

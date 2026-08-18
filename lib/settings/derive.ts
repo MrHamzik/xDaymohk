@@ -442,3 +442,21 @@ export function derivePalette(ui: string, isDark: boolean): DerivedPalette {
     mapHouse: accent,
   };
 }
+
+/**
+ * Читаемый цвет текста/иконки поверх произвольной подложки.
+ *
+ * Нужен там, где фон задаёт ПОЛЬЗОВАТЕЛЬ через палитру, а контент
+ * поверх него рисуем мы. Жёстко белый значок ломался в теме «Чёрный»:
+ * там акцент — чистый #ffffff, и белая иконка на белой плитке давала
+ * контраст 1.00, то есть исчезала полностью.
+ *
+ * Сравниваем ФАКТИЧЕСКИЙ контраст обоих вариантов, а не яркость с
+ * порогом 0.5: на средних тонах (голубой #4cacf0, серо-синий #94a3b8)
+ * порог уверенно выбирает белый, хотя тёмный там читается лучше.
+ */
+export function readableOn(background: string): string {
+  const dark = '#0a0a0a';
+  const light = '#ffffff';
+  return contrastRatio(dark, background) >= contrastRatio(light, background) ? dark : light;
+}

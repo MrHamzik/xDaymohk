@@ -30,7 +30,7 @@ interface ReadingPageProps {
 export default function ReadingPage({
   section, icon: Icon, title, titleCe, subtitle, subtitleCe, emptyHint, emptyHintCe,
 }: ReadingPageProps) {
-  const { language, setLanguage } = useI18n();
+  const { language } = useI18n();
   const ce = language === 'ce';
 
   const [articles, setArticles] = useState<Article[] | null>(null);
@@ -78,13 +78,6 @@ export default function ReadingPage({
             {ce ? 'ЦIа' : 'Назад'}
           </Link>
         )}
-        <button
-          type="button"
-          onClick={() => setLanguage(ce ? 'ru' : 'ce')}
-          className="smk-solid rounded-xl px-3 py-2 text-xs font-bold"
-        >
-          {ce ? 'Русский' : 'Нохчийн'}
-        </button>
       </div>
 
       <div className="mb-4 flex items-center gap-3">

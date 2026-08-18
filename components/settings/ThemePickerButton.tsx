@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Check, Palette, Settings as SettingsIcon } from 'lucide-react';
 import { useSettings } from '@/components/SettingsProvider';
+import { readableOn } from '@/lib/settings/derive';
 import { PRESET_THEMES, resolveTheme } from '@/lib/settings/defaults';
 import { useI18n } from '@/lib/i18n';
 
@@ -53,10 +54,13 @@ export default function ThemePickerButton() {
         aria-expanded={isOpen}
         title={`${t.settingsThemes}: ${active.name}`}
         aria-label={t.settingsThemes}
-        className="flex h-11 w-11 items-center justify-center rounded-xl text-white shadow-sm transition-all active:scale-95"
-        // Иконка всегда белая: цвет фона страницы (прежнее значение) на
-        // светлых темах давал белую плитку с почти белым значком.
-        style={{ background: active.colors.accent }}
+        className="flex h-11 w-11 items-center justify-center rounded-xl shadow-sm transition-all active:scale-95"
+        // Цвет значка считается по яркости плитки, а не задаётся жёстко:
+        // сначала здесь был цвет фона страницы (пропадал на светлых
+        // темах), потом всегда белый — и он исчез в теме «Чёрный», где
+        // акцент это чистый #ffffff. Теперь белый на тёмном акценте и
+        // почти чёрный на светлом.
+        style={{ background: active.colors.accent, color: readableOn(active.colors.accent) }}
       >
         <Palette className="h-5 w-5" />
       </button>

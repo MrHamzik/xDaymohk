@@ -6,7 +6,6 @@ import { usePathname } from 'next/navigation';
 import {
   BookOpen,
   Bot,
-  Briefcase,
   CarFront,
   ChevronRight,
   Compass,
@@ -19,7 +18,7 @@ import {
   Sparkles,
   UserRound,
   Users,
-  Wrench, BookMarked } from 'lucide-react';
+  Wrench, BookMarked, Landmark } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import MenuProfileCard from '@/components/MenuProfileCard';
 import { useI18n } from '@/lib/i18n';
@@ -232,12 +231,12 @@ export default function SidebarNav({ onClose, isAdmin = false }: SidebarNavProps
                   <span className="rounded-md bg-orange-100 px-2 py-0.5 text-[9px] font-extrabold text-orange-800 dark:bg-orange-950/70 dark:text-orange-400">{t.inDevelopment}</span>
                 </Link>
 
-                <Link href="/" onClick={onClose} className="flex items-center justify-between rounded-xl px-3 py-2 text-xs font-bold text-slate-800 transition hover:bg-slate-100 dark:text-zinc-300 dark:hover:bg-zinc-800">
+                <Link href="/vaynakh" onClick={onClose} className="flex items-center justify-between rounded-xl px-3 py-2 text-xs font-bold text-slate-800 transition hover:bg-slate-100 dark:text-zinc-300 dark:hover:bg-zinc-800">
                   <div className="flex items-center gap-2.5">
-                    <Briefcase className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <Landmark className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                     <span>{t.vaynakhTitle}</span>
                   </div>
-                  <span className="rounded-md bg-orange-100 px-2 py-0.5 text-[9px] font-extrabold text-orange-800 dark:bg-orange-950/70 dark:text-orange-400">{t.inDevelopment}</span>
+                  <ChevronRight className="h-3.5 w-3.5 opacity-40" />
                 </Link>
 
                 <Link href="/vaygo" onClick={onClose} className="flex items-center justify-between rounded-xl px-3 py-2 text-xs font-bold text-slate-800 transition hover:bg-slate-100 dark:text-zinc-300 dark:hover:bg-zinc-800">
