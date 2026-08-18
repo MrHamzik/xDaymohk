@@ -9,7 +9,7 @@ import {
   type ThemeColors,
   type UserSettings,
 } from '@/lib/settings/types';
-import { deriveDivider } from '@/lib/settings/derive';
+import { deriveDivider, derivePanel } from '@/lib/settings/derive';
 
 /**
  * Умолчания живут здесь, а не в DEFAULT-ах колонок Postgres.
@@ -100,7 +100,7 @@ export const PRESET_THEMES: Record<
     colors: {
       bg: '#f8fafc',
       card: '#ffffff',
-      panel: '#f5f5f5',
+      panel: '#ececec',
       cardAlt: '#ffffff',
       cardLine: '#f5f5f5',
       divider: '#ebebeb',
@@ -283,7 +283,7 @@ export const PRESET_THEMES: Record<
     colors: {
       bg: '#f7f7f8',
       card: '#ffffff',
-      panel: '#f5f5f5',
+      panel: '#ececec',
       cardAlt: '#fbfbfc',
       cardLine: '#f5f5f5',
       divider: '#ebebeb',
@@ -329,7 +329,7 @@ export const PRESET_THEMES: Record<
     colors: {
       bg: '#e8edf2',
       card: '#ffffff',
-      panel: '#f5f5f5',
+      panel: '#ececec',
       cardAlt: '#f6f9fc',
       cardLine: '#f5f5f5',
       divider: '#ebebeb',
@@ -375,7 +375,7 @@ export const PRESET_THEMES: Record<
     colors: {
       bg: '#edf8f2',
       card: '#fbfefc',
-      panel: '#ecfaf1',
+      panel: '#dcf6e5',
       cardAlt: '#f4faf7',
       cardLine: '#ecfaf1',
       divider: '#e2efe6',
@@ -418,7 +418,7 @@ export const PRESET_THEMES: Record<
     colors: {
       bg: '#fbf6ea',
       card: '#fefdfb',
-      panel: '#faf5ec',
+      panel: '#f6eedc',
       cardAlt: '#fcfaf2',
       cardLine: '#faf5ec',
       divider: '#efebe2',
@@ -539,6 +539,12 @@ function normalizeCustomThemes(raw: unknown): CustomTheme[] {
       // самой темы, как и во всех пресетах.
       if (typeof stored.statusAuto !== 'string') {
         colors.statusAuto = colors.ui;
+      }
+      // Панель у светлых тем раньше считалась как обводка и упиралась в
+      // потолок — подвал карточки сливался с полотном. Пересчитываем
+      // только если пользователь не задал цвет вручную.
+      if (typeof stored.panel !== 'string') {
+        colors.panel = derivePanel(colors.card, isDark);
       }
       return {
         id: typeof entry.id === 'string' && entry.id ? entry.id : `theme-${index}`,

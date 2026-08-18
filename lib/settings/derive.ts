@@ -360,7 +360,9 @@ export function derivePalette(ui: string, isDark: boolean): DerivedPalette {
   // читается зеленоватой, а не белой.
   const bg = isDark ? tone(h, surfaceSat(0.64), 12) : tone(h, surfaceSat(0.93), 228);
   const card = isDark ? tone(h, surfaceSat(0.52), 26) : tone(h, surfaceSat(1.0), 238);
-  const panel = deriveCardLine(card);
+  // Панель на светлых темах уходит ВНИЗ от карточки: вверх упирается в
+  // потолок и подвал сливается с полотном.
+  const panel = derivePanel(card, isDark);
   const cardInset = isDark ? tone(h, surfaceSat(0.4), 36) : tone(h, surfaceSat(0.83), 223);
 
   // Текст: светлый на тёмной основе и наоборот. Светлота 228/63 взята
@@ -463,4 +465,27 @@ export function readableOn(background: string): string {
   const dark = '#0a0a0a';
   const light = '#ffffff';
   return contrastRatio(dark, background) >= contrastRatio(light, background) ? dark : light;
+}
+
+/** Шаг панели вниз на светлых темах, в единицах шкалы 0–240. */
+const PANEL_LIGHT_STEP = 18;
+
+/**
+ * Панель и подвал карточки.
+ *
+ * Раньше панель считалась той же формулой, что обводка (карточка +9), и
+ * на светлых темах упиралась в потолок: белая карточка #ffffff давала
+ * #f5f5f5 при контрасте 1.09 — подвал сливался с полотном и визуально
+ * пропадал.
+ *
+ * Направление зависит от основы. На тёмной теме панель светлее карточки
+ * (там есть куда расти вверх, и это выглядит как приподнятая
+ * поверхность). На светлой — темнее на 18 единиц: вверх от белого расти
+ * некуда, а лёгкая тень снизу читается как отдельный блок.
+ */
+export function derivePanel(card: string, isDark: boolean): string {
+  if (isDark) return deriveCardLine(card);
+  const { h, s, l } = hexToHsl(card);
+  const scaled = l * LIGHTNESS_SCALE - PANEL_LIGHT_STEP;
+  return hslToHex({ h, s, l: Math.max(0, scaled) / LIGHTNESS_SCALE });
 }

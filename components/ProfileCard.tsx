@@ -183,7 +183,7 @@ export default function ProfileCard({
               {profile.experience && (
                 <span className="flex min-w-0 items-center gap-1.5 text-slate-600 dark:text-zinc-300">
                   <BriefcaseBusiness className="smk-ico h-3.5 w-3.5" />
-                  <span className="text-slate-400 dark:text-zinc-500">{t.experienceLabel}:</span>
+                  <span className="smk-row-label">{t.experienceLabel}:</span>
                   <span className="truncate font-semibold">{profile.experience}</span>
                 </span>
               )}
@@ -207,7 +207,7 @@ export default function ProfileCard({
               {age !== null && (
                 <span className="flex min-w-0 items-center gap-1.5 text-slate-600 dark:text-zinc-300">
                   <CalendarDays className="smk-ico h-3.5 w-3.5" />
-                  <span className="text-slate-400 dark:text-zinc-500">{t.ageLabel}:</span>
+                  <span className="smk-row-label">{t.ageLabel}:</span>
                   <span className="font-semibold">{age}</span>
                 </span>
               )}

@@ -7,7 +7,6 @@ import {
   BookOpen,
   Bot,
   CarFront,
-  ChevronRight,
   Compass,
   Globe2,
   Home,
@@ -109,7 +108,6 @@ export default function MobileMenuDrawer({ isOpen, onClose, isAdmin = false }: M
                     <Home className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
                     <span>{language === 'ce' ? 'ЦIа' : 'Главная'}</span>
                   </div>
-                  <ChevronRight className="h-3.5 w-3.5 opacity-40" />
                 </Link>
 
                 <Link
@@ -125,7 +123,6 @@ export default function MobileMenuDrawer({ isOpen, onClose, isAdmin = false }: M
                     <Users className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
                     <span>{t.catalog}</span>
                   </div>
-                  <ChevronRight className="h-3.5 w-3.5 opacity-40" />
                 </Link>
 
                 <Link
@@ -141,7 +138,6 @@ export default function MobileMenuDrawer({ isOpen, onClose, isAdmin = false }: M
                     <MapPin className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
                     <span>{t.map}</span>
                   </div>
-                  <ChevronRight className="h-3.5 w-3.5 opacity-40" />
                 </Link>
 
                                 {isAdmin && (
@@ -158,7 +154,6 @@ export default function MobileMenuDrawer({ isOpen, onClose, isAdmin = false }: M
                       <ShieldAlert className="h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
                       <span>{t.admin}</span>
                     </div>
-                    <ChevronRight className="h-3.5 w-3.5 opacity-40" />
                   </Link>
                 )}
               <Link
@@ -174,7 +169,6 @@ export default function MobileMenuDrawer({ isOpen, onClose, isAdmin = false }: M
                     <Sparkles className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
                     <span>{t.about}</span>
                   </div>
-                  <ChevronRight className="h-3.5 w-3.5 opacity-40" />
                 </Link>
 
 
@@ -197,7 +191,6 @@ export default function MobileMenuDrawer({ isOpen, onClose, isAdmin = false }: M
                     <Compass className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                     <span>{language === 'ce' ? 'Къилба' : 'Кибла'}</span>
                   </div>
-                  <ChevronRight className="h-3.5 w-3.5 opacity-40" />
                 </button>
 
                 <Link href="/quran" onClick={onClose}
@@ -207,7 +200,6 @@ export default function MobileMenuDrawer({ isOpen, onClose, isAdmin = false }: M
                     <BookOpen className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                     <span>{language === 'ce' ? 'Сийлахь Къуръан' : 'Священный Коран'}</span>
                   </div>
-                  <ChevronRight className="h-3.5 w-3.5 opacity-40" />
                 </Link>
 
                 <button
@@ -219,7 +211,6 @@ export default function MobileMenuDrawer({ isOpen, onClose, isAdmin = false }: M
                     <Sparkles className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                     <span>{language === 'ce' ? 'Исламан сийлахь денош' : 'Особые дни по Хиджре'}</span>
                   </div>
-                  <ChevronRight className="h-3.5 w-3.5 opacity-40" />
                 </button>
 
                 <Link href="/sira" onClick={onClose}
@@ -229,7 +220,6 @@ export default function MobileMenuDrawer({ isOpen, onClose, isAdmin = false }: M
                     <BookMarked className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                     <span>{language === 'ce' ? 'Пайхамаран Сира ﷺ' : 'Сира Пророка ﷺ'}</span>
                   </div>
-                  <ChevronRight className="h-3.5 w-3.5 opacity-40" />
                 </Link>
 
                 
@@ -266,7 +256,6 @@ export default function MobileMenuDrawer({ isOpen, onClose, isAdmin = false }: M
                     <Landmark className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                     <span>{t.vaynakhTitle}</span>
                   </div>
-                  <ChevronRight className="h-3.5 w-3.5 opacity-40" />
                 </Link>
 
                 <Link href="/vaygo" onClick={onClose} className="flex items-center justify-between rounded-xl px-3 py-2 text-xs font-bold text-slate-800 transition hover:bg-slate-100 dark:text-zinc-300 dark:hover:bg-zinc-800">

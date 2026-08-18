@@ -264,13 +264,13 @@ export default function SettingsControlsBar() {
           className={`flex h-11 w-11 items-center justify-center rounded-xl shadow-sm transition-all active:scale-95 ${
             isThemeDark
               ? 'bg-sky-500 text-white shadow-sky-500/25 hover:bg-sky-400'
-              : 'bg-amber-400 text-amber-950 shadow-amber-400/25 hover:bg-amber-500'
+              : 'bg-amber-500 text-white shadow-amber-500/25 hover:bg-amber-600'
           }`}
         >
           {isThemeDark ? (
             <Moon className="h-5 w-5 fill-white text-white" />
           ) : (
-            <Sun className="h-5 w-5 fill-amber-950 text-amber-950" />
+            <Sun className="h-5 w-5 fill-white text-white" />
           )}
         </button>
         )}

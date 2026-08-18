@@ -747,11 +747,15 @@ html.dark .smk-lux {
     linear-gradient(112deg, transparent 61.4%, rgb(var(--smk-gold-rgb) / 0.10) 61.6%, transparent 61.9%),
     linear-gradient(58deg,  transparent 79.4%, rgb(var(--smk-gold-rgb) / 0.07) 79.6%, transparent 79.9%);
 }
+/* В тёмных темах штрихи заметнее, чем в светлых: белая линия на тёмном
+   фоне «звенит» сильнее золотой на белом. Снижаем непрозрачность на
+   55 % от прежних значений (0.10 → 0.045, 0.06 → 0.027, 0.04 → 0.018) —
+   узор остаётся, но перестаёт спорить с содержимым карточки. */
 html.dark .smk-rays::before {
   background-image:
-    linear-gradient(74deg,  transparent 48.6%, rgb(var(--smk-light-rgb) / 0.10) 48.8%, transparent 49.1%),
-    linear-gradient(112deg, transparent 61.4%, rgb(var(--smk-light-rgb) / 0.06) 61.6%, transparent 61.9%),
-    linear-gradient(58deg,  transparent 79.4%, rgb(var(--smk-light-rgb) / 0.04) 79.6%, transparent 79.9%);
+    linear-gradient(74deg,  transparent 48.6%, rgb(var(--smk-light-rgb) / 0.045) 48.8%, transparent 49.1%),
+    linear-gradient(112deg, transparent 61.4%, rgb(var(--smk-light-rgb) / 0.027) 61.6%, transparent 61.9%),
+    linear-gradient(58deg,  transparent 79.4%, rgb(var(--smk-light-rgb) / 0.018) 79.6%, transparent 79.9%);
 }
 
 /* --- Имя: без засечек, крупно ----------------------------------------------- */
@@ -878,6 +882,16 @@ html.smk-themed .bg-white {
 }
 
 /* Подвал карточки — та же поверхность, что панели бокового меню. */
+/* Подпись в строке данных карточки: «Стаж:», «Возраст:».
+   Раньше писалась классом text-slate-400 — ступень 400 тема выводит из
+   ФОНА страницы, поэтому подпись выпадала из палитры и выглядела
+   чужеродной рядом со значением. Теперь читает слот «Второстепенный
+   текст», как все остальные подписи в интерфейсе. */
+.smk-row-label {
+  color: var(--smk-muted);
+  font-weight: 600;
+}
+
 .smk-card-foot {
   background: var(--smk-panel, #f1f3f6);
   border-top: 1px solid var(--smk-divider, rgb(15 23 42 / 0.06));
