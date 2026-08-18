@@ -1,11 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Banknote, Check, Copy, ExternalLink, Wallet } from 'lucide-react';
+import { Banknote, Check, Copy, CreditCard, ExternalLink, Wallet } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useI18n } from '@/lib/i18n';
 import {
-  bankName, bankScheme, formatCard, formatPhone, yoomoneyLink,
+  bankName, bankScheme, formatCard, formatPhone, yoomoneyLink, yoomoneyWalletLink,
   type PayoutMethods,
 } from '@/lib/payments';
 
@@ -104,6 +104,8 @@ export default function PayoutPanel({ taskId, amount }: PayoutPanelProps) {
     );
   }
 
+  // Назначение платежа: без него исполнитель видит перевод без пояснения.
+  const comment = `Даймохк: оплата задания`;
   const bankId = hasSbp ? payout!.sbpBank : payout!.cardBank;
   const scheme = bankScheme(bankId);
   const requisite = hasSbp
@@ -137,42 +139,58 @@ export default function PayoutPanel({ taskId, amount }: PayoutPanelProps) {
         {t.taskPayoutTitleShort}
       </h3>
 
-      {/* Шаг 1 — копирование. Работает везде и всегда. */}
-      <p className="smk-meta mb-1.5 text-[11px] font-semibold">{t.taskPayoutStep1}</p>
-      <div className="space-y-1.5">
-        <CopyRow id="amount" label={t.taskPayoutCopyAmount} value={String(amount)} />
-        <CopyRow
-          id="req"
-          label={hasSbp ? t.taskPayoutCopyPhone : hasCard ? t.taskPayoutCopyCard : 'ЮMoney'}
-          value={requisite}
-        />
-        {bankId && (hasSbp || hasCard) && (
-          <p className="smk-meta px-1 text-[10px]">
-            {t.taskPayoutStep2.replace('Шаг 2. ', '')} — {bankName(bankId)}
-          </p>
-        )}
-      </div>
-
-      {/* Шаг 2 — открыть приложение. Для ЮMoney сумма подставится, для
-          банков нет: об этом сказано прямо под кнопкой. */}
-      <p className="smk-meta mb-1.5 mt-3 text-[11px] font-semibold">{t.taskPayoutStep2}</p>
+      {/* ЮMoney: сумма и получатель подставляются в форму оплаты, поэтому
+          копировать нечего — сразу кнопка. Два варианта, потому что
+          комиссия у них разная: с карты ЮMoney берёт около 1 %, между
+          кошельками — ноль. */}
       {hasWallet ? (
         <>
           <a
-            href={yoomoneyLink(payout!.yoomoneyWallet, amount)}
+            href={yoomoneyLink(payout!.yoomoneyWallet, amount, comment)}
             target="_blank"
             rel="noopener noreferrer"
             className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-emerald-600 py-2.5 text-xs font-bold text-white transition hover:bg-emerald-700"
           >
-            <ExternalLink className="h-3.5 w-3.5" />
-            {t.taskPayoutOpenYoomoney}
+            <CreditCard className="h-3.5 w-3.5" />
+            {t.taskPayoutYooCard}
           </a>
           <p className="smk-meta mt-1.5 text-[10px] leading-relaxed">
-            {t.taskPayoutYoomoneyNote}
+            {t.taskPayoutYooCardNote}
+          </p>
+
+          <a
+            href={yoomoneyWalletLink(payout!.yoomoneyWallet, amount, comment)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-bold text-emerald-700 transition hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
+          >
+            <Wallet className="h-3.5 w-3.5" />
+            {t.taskPayoutYooWallet}
+          </a>
+          <p className="smk-meta mt-1 text-[10px] leading-relaxed">
+            {t.taskPayoutYooWalletNote}
           </p>
         </>
       ) : (
         <>
+          {/* Карта и СБП: подставить сумму в приложение банка нельзя,
+              поэтому сначала копирование — оно работает всегда. */}
+          <p className="smk-meta mb-1.5 text-[11px] font-semibold">{t.taskPayoutStep1}</p>
+          <div className="space-y-1.5">
+            <CopyRow id="amount" label={t.taskPayoutCopyAmount} value={String(amount)} />
+            <CopyRow
+              id="req"
+              label={hasSbp ? t.taskPayoutCopyPhone : t.taskPayoutCopyCard}
+              value={requisite}
+            />
+            {bankId && (
+              <p className="smk-meta px-1 text-[10px]">
+                {t.taskPayoutBankLabel} — {bankName(bankId)}
+              </p>
+            )}
+          </div>
+
+          <p className="smk-meta mb-1.5 mt-3 text-[11px] font-semibold">{t.taskPayoutStep2}</p>
           <a
             href={scheme ?? 'https://www.nspk.ru/'}
             target="_blank"

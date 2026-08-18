@@ -145,10 +145,50 @@ export function isValidWallet(value: string): boolean {
  * ЮMoney принимает её прямо в пути ссылки. Открывается и в браузере, и
  * в приложении, если оно установлено.
  */
-export function yoomoneyLink(wallet: string, amount: number): string {
+export function yoomoneyLink(
+  wallet: string,
+  amount: number,
+  comment?: string,
+): string {
   const digits = digitsOnly(wallet);
   const sum = Math.max(1, Math.round(amount));
-  return `https://yoomoney.ru/to/${digits}/${sum}`;
+
+  // Форма Quickpay, а не короткая ссылка /to/<кошелёк>/<сумма>.
+  //
+  // Разница принципиальная: короткая ссылка ведёт на страницу перевода
+  // МЕЖДУ КОШЕЛЬКАМИ и требует войти в ЮMoney. Quickpay с
+  // paymentType=AC открывает оплату БАНКОВСКОЙ КАРТОЙ — регистрация не
+  // нужна, заказчик вводит только данные карты. Сумма и получатель уже
+  // подставлены, вручную ничего копировать не надо.
+  const params = new URLSearchParams({
+    receiver: digits,
+    'quickpay-form': 'button',
+    paymentType: 'AC',
+    sum: String(sum),
+  });
+  if (comment) params.set('targets', comment.slice(0, 150));
+  return `https://yoomoney.ru/quickpay/confirm?${params.toString()}`;
+}
+
+/**
+ * Та же оплата, но из кошелька ЮMoney (paymentType=PC).
+ *
+ * Нужна тем, у кого кошелёк уже есть: комиссии между кошельками нет,
+ * тогда как с карты ЮMoney берёт около 1 %.
+ */
+export function yoomoneyWalletLink(
+  wallet: string,
+  amount: number,
+  comment?: string,
+): string {
+  const params = new URLSearchParams({
+    receiver: digitsOnly(wallet),
+    'quickpay-form': 'button',
+    paymentType: 'PC',
+    sum: String(Math.max(1, Math.round(amount))),
+  });
+  if (comment) params.set('targets', comment.slice(0, 150));
+  return `https://yoomoney.ru/quickpay/confirm?${params.toString()}`;
 }
 
 /**

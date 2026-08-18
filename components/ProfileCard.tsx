@@ -121,7 +121,7 @@ export default function ProfileCard({
 
         <div className="min-w-0 flex-1">
           {/* Имя пишем полностью, без сокращений; не влезло — обрезаем */}
-          <h3 className="smk-title truncate text-base font-bold leading-tight sm:text-lg">
+          <h3 className="smk-title truncate text-[17px] font-bold leading-tight sm:text-xl">
             {profile.fullName}
           </h3>
 
@@ -154,7 +154,7 @@ export default function ProfileCard({
         <ProfileBadges profile={profile} adminStatus={profileIsAdmin} showPending={showPending} />
       </div>
 
-      <div className="smk-rows px-3.5 text-xs">
+      <div className="smk-rows px-3.5 text-[13px]">
         {profile.isSpecialist && profile.professionTitle && (
           <div className="flex items-start gap-2.5 py-2">
             <Briefcase className="smk-ico mt-0.5 h-3.5 w-3.5" />

@@ -157,11 +157,11 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
 
       {/* ── Суть задания ───────────────────────────────────────── */}
       <div className="px-4 py-3">
-        <h4 className="line-clamp-2 text-sm font-bold leading-snug text-slate-900 dark:text-white">
+        <h4 className="line-clamp-2 text-[15px] font-bold leading-snug text-slate-900 dark:text-white">
           {task.title}
         </h4>
         {task.description && (
-          <p className="mt-1.5 line-clamp-2 break-words text-xs leading-relaxed text-slate-600 dark:text-zinc-400">
+          <p className="mt-1.5 line-clamp-2 break-words text-[13px] leading-relaxed text-slate-600 dark:text-zinc-400">
             {task.description}
           </p>
         )}
