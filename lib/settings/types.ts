@@ -45,6 +45,11 @@ export function notificationGroup(type: NotificationType): NotificationGroup {
     case 'complaint_result':
       return 'complaint';
 
+    // Ответ поддержки — та же группа, что и жалобы: и то и другое
+    // «администрация ответила на моё обращение».
+    case 'support_answered':
+      return 'complaint';
+
     case 'taxi_request':
     case 'taxi_info':
       return 'taxi';

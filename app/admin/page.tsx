@@ -7,6 +7,7 @@ import { Archive, ArrowLeft, Ban, Check, ChevronDown, Clock3, Eye, EyeOff, Folde
 import AdminLetterEditorCard from '@/components/AdminLetterEditorCard';
 import AdminFiltersSection from '@/components/admin/AdminFiltersSection';
 import AdminArticlesSection from '@/components/admin/AdminArticlesSection';
+import AdminSupportSection from '@/components/admin/AdminSupportSection';
 import { cacheBustAvatarUrl } from '@/lib/media';
 import Navbar from '@/components/Navbar';
 import BottomNav from '@/components/BottomNav';
@@ -24,7 +25,7 @@ import { SAMASHKI_HOUSE_ADDRESSES, SamashkiHouseAddress, getEffectiveHouseAddres
 import { SAMASHKI_STREETS } from '@/lib/types';
 import { Complaint, NotificationLetterPayload, Profile, UserSummary } from '@/lib/types';
 
-type AdminSection = 'profiles' | 'complaints' | 'users' | 'addresses' | 'letters' | 'filters' | 'articles';
+type AdminSection = 'profiles' | 'complaints' | 'users' | 'addresses' | 'letters' | 'filters' | 'articles' | 'support';
 type ProfilesSubTab = 'active' | 'pending' | 'hidden';
 
 const CUSTOM_ADDRESSES_KEY = 'daymohk-custom-addresses';
@@ -294,7 +295,7 @@ export default function AdminPage() {
     if (typeof window === 'undefined') return 'profiles';
     try {
       const stored = window.localStorage.getItem('daymohk-admin-section');
-      if (stored && ['profiles', 'complaints', 'users', 'addresses', 'letters', 'filters', 'articles'].includes(stored)) {
+      if (stored && ['profiles', 'complaints', 'users', 'addresses', 'letters', 'filters', 'articles', 'support'].includes(stored)) {
         return stored as AdminSection;
       }
     } catch {}
@@ -1718,6 +1719,7 @@ export default function AdminPage() {
             ['letters', L('Письма', 'Кехаташ'), 0],
             ['filters', L('Фильтры', 'Фильтраш'), 0],
             ['articles', L('Статьи', 'Статьяш'), 0],
+            ['support', L('Помощь', 'ГIо'), 0],
           ] as const).map(([section, label, count]) => (
             <button key={section} type="button" onClick={() => setActiveSection(section)} className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition ${activeSection === section ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 dark:text-zinc-400 dark:hover:bg-zinc-800'}`}>{label}<span className={`rounded-full px-1.5 py-0.5 text-[10px] ${activeSection === section ? 'bg-white/20' : 'bg-slate-100 dark:bg-zinc-800'}`}>{count}</span></button>
           ))}
@@ -2487,6 +2489,9 @@ export default function AdminPage() {
 
         {/* Главы страниц-чтения: «Сира Пророка», «Нохчалла», «Руководство». */}
         {activeSection === 'articles' && <AdminArticlesSection />}
+
+        {/* Очередь вопросов из раздела «Помощь». */}
+        {activeSection === 'support' && <AdminSupportSection />}
       </main>
 
       <ProfileModal profile={viewProfile} isAdminStatus={viewProfile ? isProfileAdmin(viewProfile) : false} showPending={Boolean(viewProfile?.verificationStatus === 'pending')} isViewerBlocked={false} onClose={() => setViewProfile(null)} onReview={addReview} />

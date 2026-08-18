@@ -198,7 +198,7 @@ export default function SidebarNav({ onClose, isAdmin = false }: SidebarNavProps
                 >
                   <div className="flex items-center gap-2.5">
                     <BookMarked className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                    <span>{language === 'ce' ? 'Пайхамаран Сира' : 'Сира Пророка'}</span>
+                    <span>{language === 'ce' ? 'Пайхамаран Сира ﷺ' : 'Сира Пророка ﷺ'}</span>
                   </div>
                   <ChevronRight className="h-3.5 w-3.5 opacity-40" />
                 </Link>

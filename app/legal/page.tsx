@@ -28,14 +28,13 @@ type Doc = 'offer' | 'privacy' | 'ads';
 const DOCS: {
   id: Doc;
   label: string;
-  labelCe: string;
   icon: typeof FileText;
   text: string;
   updated: string;
 }[] = [
-  { id: 'offer', label: 'Публичная оферта', labelCe: 'Публични оферта', icon: ScrollText, text: OFFER_TEXT, updated: OFFER_UPDATED_AT },
-  { id: 'privacy', label: 'Конфиденциальность', labelCe: 'Къайлаха хаамаш', icon: Lock, text: PRIVACY_TEXT, updated: PRIVACY_UPDATED_AT },
-  { id: 'ads', label: 'Согласие на рекламу', labelCe: 'Рекламина бакъо', icon: Megaphone, text: ADS_TEXT, updated: ADS_UPDATED_AT },
+  { id: 'offer', label: 'Публичная оферта', icon: ScrollText, text: OFFER_TEXT, updated: OFFER_UPDATED_AT },
+  { id: 'privacy', label: 'Конфиденциальность', icon: Lock, text: PRIVACY_TEXT, updated: PRIVACY_UPDATED_AT },
+  { id: 'ads', label: 'Согласие на рекламу', icon: Megaphone, text: ADS_TEXT, updated: ADS_UPDATED_AT },
 ];
 
 function formatDate(iso: string) {
@@ -46,7 +45,7 @@ function formatDate(iso: string) {
 }
 
 export default function LegalPage() {
-  const { language, setLanguage } = useI18n();
+  const { language } = useI18n();
   const ce = language === 'ce';
   const [doc, setDoc] = useState<Doc>('offer');
   const active = DOCS.find((d) => d.id === doc)!;
@@ -59,13 +58,6 @@ export default function LegalPage() {
           <ArrowLeft className="h-3.5 w-3.5" />
           {ce ? 'ЦIа' : 'Назад'}
         </Link>
-        <button
-          type="button"
-          onClick={() => setLanguage(ce ? 'ru' : 'ce')}
-          className="smk-solid rounded-xl px-3 py-2 text-xs font-bold"
-        >
-          {ce ? 'Русский' : 'Нохчийн'}
-        </button>
       </div>
 
       <div className="mb-4 flex items-center gap-3">
@@ -95,21 +87,11 @@ export default function LegalPage() {
               className={`smk-seg-btn ${doc === d.id ? 'smk-seg-btn--on' : ''}`}
             >
               <IconD className="h-3.5 w-3.5 shrink-0" />
-              <span className="truncate">{ce ? d.labelCe : d.label}</span>
+              <span className="truncate">{d.label}</span>
             </button>
           );
         })}
       </div>
-
-      {/* Язык документа. Юридический текст ведётся на русском, и об этом
-          нужно сказать прямо, а не молча показать русский текст тому,
-          кто переключил интерфейс на чеченский. */}
-      {ce && (
-        <p className="smk-sheet-row mb-3 p-2.5 text-[11px] leading-relaxed text-slate-600 dark:text-zinc-400">
-          Бакъонан документаш оьрсийн маттахь ю: къастам хилча, оьрсийн
-          йоза ду бакъдолуш. <span className="font-semibold">Юридические документы ведутся на русском языке.</span>
-        </p>
-      )}
 
       <hr className="smk-orn mb-4" />
 
@@ -117,7 +99,7 @@ export default function LegalPage() {
         <div className="mb-3 flex items-center gap-2">
           <Icon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
           <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-            {ce ? active.labelCe : active.label}
+            {active.label}
           </h2>
         </div>
         <Prose text={active.text} />

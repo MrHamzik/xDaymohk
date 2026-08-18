@@ -87,7 +87,9 @@ export type NotificationType =
   // Одобрение исполнителя заказчиком (обновление 27)
   | 'task_join_request'
   | 'task_join_approved'
-  | 'task_join_rejected';
+  | 'task_join_rejected'
+  // Ответ поддержки на вопрос из раздела «Помощь»
+  | 'support_answered';
 
 /** Категории уведомлений (вкладки в центре уведомлений). */
 export type NotificationCategory = 'system' | 'activity' | 'complaint' | 'taxi' | 'task';
