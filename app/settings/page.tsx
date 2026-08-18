@@ -10,6 +10,7 @@ import BottomNav from '@/components/BottomNav';
 import MobileMenuDrawer from '@/components/MobileMenuDrawer';
 import CreateActionModal from '@/components/CreateActionModal';
 import ThemeEditor from '@/components/settings/ThemeEditor';
+import EffectsEditor from '@/components/settings/EffectsEditor';
 import PayoutSettings from '@/components/settings/PayoutSettings';
 import {
   SectionTitle, SettingRow, Toggle, WarningBox,
@@ -232,6 +233,10 @@ export default function SettingsPage() {
               {settings.advancedMode && (
                 <div className="space-y-5 pt-1">
                   <ThemeEditor />
+
+                  {/* Эффекты — под темами: сначала выбирают оформление,
+                      потом настраивают его «плотность». */}
+                  <EffectsEditor />
 
                   <section>
                     <SectionTitle title={t.settingsTypography} />

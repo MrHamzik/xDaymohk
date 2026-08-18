@@ -1,3 +1,4 @@
+import type { EffectSettings } from '@/lib/settings/types';
 import { FONT_FAMILIES, type FontFamilyId, type ThemeColors } from '@/lib/settings/types';
 
 /**
@@ -210,7 +211,11 @@ export function applyThemeColors(
   set('--color-zinc-950', colors.bg);
   // 900 — панели (мини-профиль, виджет намаза, блок иконок).
   set('--color-zinc-900', colors.panel);
-  set('--color-zinc-800', colors.card);
+  // zinc-800 в разметке означает «поле ввода», а не «карточка»: этим
+  // классом покрашены input, select и textarea в старых компонентах.
+  // Раньше сюда шёл colors.card, и слот «Карточки» тянул за собой поля
+  // — правка одного цвета меняла сразу несколько уровней интерфейса.
+  set('--color-zinc-800', colors.field);
   set('--color-zinc-700', surfaceStep);
 
   // Текстовые ступени. Разметка пишет dark:text-zinc-300/400 для
@@ -391,4 +396,37 @@ export function applyTypography(fontScale: number, fontFamily: FontFamilyId): vo
   }
 
   root.style.setProperty('--smk-font-family', FONT_FAMILIES[fontFamily] ?? FONT_FAMILIES.manrope);
+}
+
+/**
+ * Применение визуальных эффектов.
+ *
+ * Каждый эффект — это множитель 0…1 в CSS-переменной. Правила в
+ * globals.css умножают на него свои значения, поэтому выключение
+ * эффекта не требует отдельных классов и не ломает раскладку: тень
+ * просто становится нулевой, размытие — нулевым, анимация — мгновенной.
+ *
+ * Почему переменные, а не классы вроде .no-shadow: эффектов шесть, и
+ * комбинаций у них 2^6. Классами это превратилось бы в кашу, а
+ * множитель позволяет ещё и промежуточные значения — «тени послабее».
+ */
+export function applyEffects(effects: EffectSettings): void {
+  if (typeof document === 'undefined') return;
+  const root = document.documentElement;
+  const ratio = (value: number) => String(Math.min(100, Math.max(0, value)) / 100);
+
+  root.style.setProperty('--fx-shadow', ratio(effects.shadow));
+  root.style.setProperty('--fx-glow', ratio(effects.glow));
+  root.style.setProperty('--fx-gradient', ratio(effects.gradient));
+  root.style.setProperty('--fx-pattern', ratio(effects.pattern));
+  root.style.setProperty('--fx-motion', ratio(effects.motion));
+
+  // Размытие задаём в пикселях: backdrop-filter не умножается на
+  // безразмерный множитель, ему нужна конкретная длина.
+  root.style.setProperty('--fx-blur', `${(effects.blur / 100) * 18}px`);
+
+  // Полное отключение анимаций — отдельным классом: свойство
+  // animation-duration: 0s надёжнее множителя, оно останавливает и
+  // бесконечные анимации вроде пульсации статуса.
+  root.classList.toggle('fx-no-motion', effects.motion === 0);
 }

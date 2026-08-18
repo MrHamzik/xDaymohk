@@ -35,7 +35,7 @@ export function Toggle({
       className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-40 ${
         checked
           ? 'bg-emerald-600'
-          : 'bg-slate-300 dark:bg-zinc-700'
+          : 'smk-toggle-off'
       }`}
     >
       <span

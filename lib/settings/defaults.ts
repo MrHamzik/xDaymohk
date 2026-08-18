@@ -8,6 +8,9 @@ import {
   type NotificationPref,
   type ThemeColors,
   type UserSettings,
+  type EffectSettings,
+  DEFAULT_EFFECTS,
+  EFFECT_KEYS,
 } from '@/lib/settings/types';
 import { deriveCardInset, deriveDivider, deriveField, derivePanel } from '@/lib/settings/derive';
 
@@ -47,6 +50,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   customThemes: [],
   fontScale: 100,
   fontFamily: 'manrope',
+  effects: { ...DEFAULT_EFFECTS },
 };
 
 /** Настройка группы с подстановкой умолчания для незаполненных ключей. */
@@ -596,6 +600,24 @@ function normalizePrefs(raw: unknown): Partial<Record<NotificationGroup, Notific
   return result;
 }
 
+/**
+ * Эффекты: каждое значение 0–100.
+ *
+ * Отсутствующий ключ = включён полностью. Так новые эффекты начинают
+ * работать сразу, а не молчат из-за пустого объекта в старых записях.
+ */
+function normalizeEffects(raw: unknown): EffectSettings {
+  const input = (raw ?? {}) as Record<string, unknown>;
+  const result = { ...DEFAULT_EFFECTS };
+  for (const key of EFFECT_KEYS) {
+    const value = Number(input[key]);
+    if (Number.isFinite(value)) {
+      result[key] = Math.min(100, Math.max(0, Math.round(value)));
+    }
+  }
+  return result;
+}
+
 function normalizeFontFamily(raw: unknown): FontFamilyId {
   return typeof raw === 'string' && raw in FONT_FAMILIES
     ? (raw as FontFamilyId)
@@ -628,6 +650,7 @@ export function normalizeSettings(raw: unknown): UserSettings {
     customThemes,
     fontScale: normalizeFontScale(input.fontScale),
     fontFamily: normalizeFontFamily(input.fontFamily),
+    effects: normalizeEffects(input.effects),
   };
 }
 
@@ -643,6 +666,7 @@ export function settingsFromDb(row: Record<string, unknown> | null): UserSetting
     customThemes: row.custom_themes,
     fontScale: row.font_scale,
     fontFamily: row.font_family,
+    effects: row.effects,
   });
 }
 
@@ -657,5 +681,6 @@ export function settingsToDb(settings: UserSettings): Record<string, unknown> {
     custom_themes: settings.customThemes,
     font_scale: settings.fontScale,
     font_family: settings.fontFamily,
+    effects: settings.effects,
   };
 }

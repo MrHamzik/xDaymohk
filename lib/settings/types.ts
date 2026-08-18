@@ -297,4 +297,43 @@ export interface UserSettings {
   /** 50..150 (%) */
   fontScale: number;
   fontFamily: FontFamilyId;
+  /** Визуальные эффекты оформления. */
+  effects: EffectSettings;
 }
+
+/**
+ * Визуальные эффекты.
+ *
+ * Вынесены в отдельный раздел настроек, а не зашиты в темы: на слабом
+ * телефоне тени и размытие заметно тормозят прокрутку, и человек должен
+ * иметь возможность их выключить. Значение 0 означает «эффект
+ * отключён», 100 — максимум.
+ */
+export interface EffectSettings {
+  /** Мягкие тени под карточками и всплывающими слоями. */
+  shadow: number;
+  /** Свечение (блум) у акцентных элементов: статусы, кнопки. */
+  glow: number;
+  /** Градиенты на полотнах карточек и шапках. */
+  gradient: number;
+  /** Узоры и текстуры: лучи на карточках, орнаменты разделителей. */
+  pattern: number;
+  /** Размытие полупрозрачных слоёв (шапка, модалки, стекло). */
+  blur: number;
+  /** Анимации: появление карточек, блики, пульсация статусов. */
+  motion: number;
+}
+
+export const EFFECT_KEYS: Array<keyof EffectSettings> = [
+  'shadow', 'glow', 'gradient', 'pattern', 'blur', 'motion',
+];
+
+/** Значения по умолчанию: полный набор, как выглядит проект сейчас. */
+export const DEFAULT_EFFECTS: EffectSettings = {
+  shadow: 100,
+  glow: 100,
+  gradient: 100,
+  pattern: 100,
+  blur: 100,
+  motion: 100,
+};

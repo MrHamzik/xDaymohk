@@ -9,7 +9,7 @@ import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import {
   DEFAULT_SETTINGS, normalizeSettings, resolveTheme, settingsFromDb, settingsToDb,
 } from '@/lib/settings/defaults';
-import { applyThemeColors, applyTypography } from '@/lib/settings/apply-theme';
+import { applyEffects, applyThemeColors, applyTypography } from '@/lib/settings/apply-theme';
 import type { UserSettings } from '@/lib/settings/types';
 
 const SETTINGS_STORAGE_KEY = 'daymohk-settings';
@@ -158,6 +158,12 @@ export default function SettingsProvider({ children }: { children: React.ReactNo
   useEffect(() => {
     applyTypography(settings.fontScale, settings.fontFamily);
   }, [settings.fontScale, settings.fontFamily]);
+
+  // Эффекты тоже не зависят от темы: человек может выключить тени на
+  // слабом телефоне и оставить любое оформление.
+  useEffect(() => {
+    applyEffects(settings.effects);
+  }, [settings.effects]);
 
   const persist = useCallback((next: UserSettings) => {
     writeLocal(next);

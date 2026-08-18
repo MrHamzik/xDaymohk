@@ -8,7 +8,11 @@ import { createTask, fetchTaskFilters } from '@/lib/tasks/client';
 import { getUserCoords } from '@/lib/geo';
 import { useAuth } from '@/components/AuthProvider';
 import { useProfiles } from '@/components/ProfilesProvider';
-import { PAYMENT_METHODS, type PaymentMethod } from '@/lib/payments';
+import Link from 'next/link';
+import { supabase } from '@/lib/supabase';
+import {
+  canAcceptPayment, PAYMENT_METHODS, type PaymentMethod, type PayoutMethods,
+} from '@/lib/payments';
 import { findClosestSamashkiHouse } from '@/lib/samashki-addresses';
 import {
   taskCostBreakdown, TASK_MIN_REWARD, TASK_PRIORITY_SURCHARGE,
@@ -53,11 +57,37 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
   // Наличные по умолчанию: в селе это основной способ, и он не требует
   // от исполнителя вообще никаких реквизитов.
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
+  // Свои реквизиты: по ним решаем, какие способы расчёта доступны.
+  const [myPayout, setMyPayout] = useState<PayoutMethods | null>(null);
   const [minAccountDays, setMinAccountDays] = useState('0');
   const [minTasksDone, setMinTasksDone] = useState('0');
   const [allowNewcomers, setAllowNewcomers] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
+
+  // Реквизиты заказчика: способ расчёта, для которого их нет, выбрать
+  // нельзя — иначе задание создастся, а платить будет нечем.
+  useEffect(() => {
+    if (!isOpen || !supabase) return;
+    let cancelled = false;
+    void (async () => {
+      const session = await supabase!.auth.getSession();
+      const token = session.data.session?.access_token;
+      if (!token) return;
+      try {
+        const res = await fetch('/api/payout', {
+          cache: 'no-store',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) setMyPayout(data.payout ?? null);
+      } catch {
+        // Не загрузилось — доступны только наличные, это безопасно.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -411,22 +441,41 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
                 <div className="mt-3">
                   <span className={labelClass}>{t.taskPaymentMethod}</span>
                   <div className="grid grid-cols-2 gap-2">
-                    {PAYMENT_METHODS.map((method) => (
-                      <button
-                        key={method}
-                        type="button"
-                        onClick={() => setPaymentMethod(method)}
-                        aria-pressed={paymentMethod === method}
-                        className={`rounded-xl px-3 py-2 text-xs font-bold transition ${
-                          paymentMethod === method
-                            ? 'bg-emerald-600 text-white shadow-sm'
-                            : 'bg-slate-100/80 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-300'
-                        }`}
-                      >
-                        {t[`taskPay_${method}` as keyof typeof t] as string}
-                      </button>
-                    ))}
+                    {PAYMENT_METHODS.map((method) => {
+                      // Способ доступен, только если у ЗАКАЗЧИКА заполнены
+                      // соответствующие реквизиты: иначе он выберет СБП,
+                      // а платить будет нечем — задание зависнет.
+                      const ready = canAcceptPayment(method, myPayout);
+                      return (
+                        <button
+                          key={method}
+                          type="button"
+                          disabled={!ready}
+                          onClick={() => setPaymentMethod(method)}
+                          aria-pressed={paymentMethod === method}
+                          title={ready ? undefined : t.taskPayNeedOwnPayout}
+                          className={`rounded-xl px-3 py-2 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                            paymentMethod === method
+                              ? 'bg-emerald-600 text-white shadow-sm'
+                              : 'smk-field text-slate-600 hover:brightness-95 dark:text-zinc-300 dark:hover:brightness-110'
+                          }`}
+                        >
+                          {t[`taskPay_${method}` as keyof typeof t] as string}
+                        </button>
+                      );
+                    })}
                   </div>
+
+                  {/* Ссылка в настройки: неактивная кнопка без объяснения
+                      выглядит поломкой. */}
+                  {PAYMENT_METHODS.some((m) => !canAcceptPayment(m, myPayout)) && (
+                    <p className="mt-1.5 text-[10px] leading-relaxed text-amber-700 dark:text-amber-400">
+                      {t.taskPayNeedOwnPayout}{' '}
+                      <Link href="/settings" className="font-bold underline">
+                        {t.taskNeedPayoutLink}
+                      </Link>
+                    </p>
+                  )}
                   <p className="mt-1.5 text-[10px] leading-relaxed text-slate-500 dark:text-zinc-500">
                     {paymentMethod === 'cash'
                       ? t.taskPayHintCash

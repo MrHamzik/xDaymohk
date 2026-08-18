@@ -91,16 +91,33 @@ export async function GET(request: Request) {
       return NextResponse.json({ payout: EMPTY_PAYOUT, executorId: null });
     }
 
+    // Заказчик и исполнитель — один человек (так бывает при проверке
+    // на своём же аккаунте). Реквизиты не отдаём: ЮMoney на такой
+    // перевод отвечает «Нельзя перевести самому себе», и понять из
+    // этого, что не так, невозможно.
+    if (String(executor.user_id) === String(me.id)) {
+      return NextResponse.json({
+        payout: EMPTY_PAYOUT,
+        executorId: executor.user_id,
+        selfPayment: true,
+        paymentMethod: task.payment_method ?? 'cash',
+      });
+    }
+
     const { data } = await admin.from('payout_methods')
       .select('*').eq('user_id', executor.user_id).maybeSingle();
 
     // Тумблер выключен — реквизитов нет, даже если поля заполнены.
     // Решение принимает сервер: клиент мог бы просто не показать блок,
     // но данные всё равно ушли бы в ответе и были видны в DevTools.
-    const enabled = data?.is_enabled === true;
+    //
+    // Проверку берём ту же, что в mapRow: там `is_enabled ?? заполнено`,
+    // и жёсткое `=== true` здесь давало расхождение — на базе без
+    // миграции 34 реквизиты не показывались вовсе.
+    const mapped = data ? mapRow(data) : null;
 
     return NextResponse.json({
-      payout: enabled && data ? mapRow(data) : EMPTY_PAYOUT,
+      payout: mapped?.isEnabled ? mapped : EMPTY_PAYOUT,
       executorId: executor.user_id,
       paymentMethod: task.payment_method ?? 'cash',
     });

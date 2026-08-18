@@ -1839,3 +1839,131 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator:hover {
   opacity: 1;
   background-color: rgb(var(--smk-gold-rgb) / 0.16);
 }
+
+/* --- Выделение текста ---------------------------------------------------------
+   Раньше стояло selection:bg-emerald-500 selection:text-white на <body>.
+   Tailwind выдаёт text-white из переменной --color-white, а тема её
+   подменяет — в итоге выделенный текст красился в #432020 и был
+   нечитаем. Пишем правило напрямую из палитры. */
+::selection {
+  background-color: color-mix(in srgb, var(--color-emerald-600) 85%, transparent);
+  color: #ffffff;
+}
+
+/* Выключенный тумблер: раньше bg-slate-300 / dark:bg-zinc-700 — мимо
+   палитры, поэтому в цветных темах он оставался серым. Берём подложку
+   строк, она уже отличается от карточки в каждой теме. */
+.smk-toggle-off {
+  background-color: var(--smk-card-inset);
+}
+
+/* =============================================================================
+   ЭФФЕКТЫ ОФОРМЛЕНИЯ
+   -----------------------------------------------------------------------------
+   Каждый эффект управляется множителем 0…1 из настроек (lib/settings/
+   apply-theme.ts → applyEffects). Значения по умолчанию заданы здесь,
+   чтобы страница выглядела правильно до загрузки настроек.
+
+   Почему множители, а не классы: эффектов шесть, комбинаций 2^6.
+   Множитель позволяет ещё и промежуточные значения — «тени послабее».
+   ========================================================================== */
+:root {
+  --fx-shadow: 1;
+  --fx-glow: 1;
+  --fx-gradient: 1;
+  --fx-pattern: 1;
+  --fx-blur: 18px;
+  --fx-motion: 1;
+}
+
+/* --- Тени --------------------------------------------------------------------
+   Мягкая многослойная тень: близкий контактный слой даёт «прижатость» к
+   фону, дальний — объём. Один слой выглядит наклейкой. */
+.smk-lux {
+  box-shadow:
+    0 1px 2px -1px rgb(var(--smk-shadow-rgb) / calc(0.10 * var(--fx-shadow))),
+    0 8px 24px -12px rgb(var(--smk-shadow-rgb) / calc(0.22 * var(--fx-shadow))),
+    0 24px 48px -28px rgb(var(--smk-shadow-rgb) / calc(0.28 * var(--fx-shadow)));
+}
+.smk-lux:hover {
+  box-shadow:
+    0 1px 2px -1px rgb(var(--smk-shadow-rgb) / calc(0.12 * var(--fx-shadow))),
+    0 12px 32px -14px rgb(var(--smk-shadow-rgb) / calc(0.30 * var(--fx-shadow))),
+    0 32px 64px -32px rgb(var(--smk-shadow-rgb) / calc(0.34 * var(--fx-shadow)));
+}
+
+/* --- Свечение (блум) ---------------------------------------------------------
+   Только у смысловых точек: статус работы и активные акценты. Свечение
+   «на всём» превращается в мыло. */
+.smk-status-dot--active,
+.smk-status-dot--break {
+  box-shadow: 0 0 calc(10px * var(--fx-glow)) calc(-2px * var(--fx-glow))
+    currentColor;
+}
+.smk-close-orb {
+  box-shadow: 0 0 calc(28px * var(--fx-glow)) calc(-8px * var(--fx-glow))
+    var(--color-emerald-600);
+}
+
+/* --- Градиенты ---------------------------------------------------------------
+   Полотно карточки: почти незаметный переход сверху вниз. Плоская
+   заливка на большой площади выглядит мёртвой, но градиент обязан
+   оставаться на грани различимости. */
+.smk-lux {
+  background-image: linear-gradient(
+    170deg,
+    color-mix(in srgb, var(--smk-card-a) 100%, transparent) 0%,
+    color-mix(
+      in srgb,
+      var(--smk-card-b) calc(100% * var(--fx-gradient)),
+      var(--smk-card-a)
+    ) 100%
+  );
+}
+
+/* --- Узоры и текстуры --------------------------------------------------------
+   Диагональные лучи на карточках и ромбы разделителей. */
+.smk-rays::before {
+  opacity: var(--fx-pattern);
+}
+.smk-orn::after,
+.smk-sheet-section::before {
+  opacity: var(--fx-pattern);
+}
+
+/* --- Размытие ----------------------------------------------------------------
+   Шапка, нижняя навигация, модалки. На слабых устройствах это самый
+   дорогой эффект — потому и вынесен в настройки. */
+.site-header,
+.site-bottom-nav,
+.smk-close-orb {
+  backdrop-filter: blur(var(--fx-blur)) saturate(1.15);
+  -webkit-backdrop-filter: blur(var(--fx-blur)) saturate(1.15);
+}
+
+/* --- Анимации ----------------------------------------------------------------
+   Длительность умножается на множитель: при 50 % всё вдвое быстрее,
+   при 0 % класс fx-no-motion останавливает даже бесконечные анимации. */
+.smk-enter {
+  animation-duration: calc(0.42s * var(--fx-motion));
+}
+.smk-lux {
+  transition-duration: calc(0.28s * var(--fx-motion));
+}
+html.fx-no-motion *,
+html.fx-no-motion *::before,
+html.fx-no-motion *::after {
+  animation-duration: 0.001s !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001s !important;
+}
+
+/* Уважаем системную настройку: тому, кто просил меньше движения,
+   анимации не нужны независимо от наших ползунков. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001s !important;
+  }
+}

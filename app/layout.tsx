@@ -60,7 +60,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru" suppressHydrationWarning>
-      <body suppressHydrationWarning className="antialiased selection:bg-emerald-500 selection:text-white transition-colors duration-200">
+      <body suppressHydrationWarning className="antialiased transition-colors duration-200">
         <I18nProvider>
           <ThemeProvider>
             <AuthProvider>
