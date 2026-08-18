@@ -7,7 +7,6 @@ import { useAuth } from '@/components/AuthProvider';
 import { useTheme } from '@/components/ThemeProvider';
 import { useI18n } from '@/lib/i18n';
 import NotificationCenter from '@/components/NotificationCenter';
-import { HintMark } from '@/components/settings/SettingsPrimitives';
 import ThemePickerButton from '@/components/settings/ThemePickerButton';
 import { useSettings } from '@/components/SettingsProvider';
 import { UserMasterStatus } from '@/lib/types';
@@ -178,14 +177,10 @@ export default function SettingsControlsBar() {
               style={{ top: menuBox.top, left: menuBox.left }}
               className="smk-solid fixed z-[111] rounded-2xl p-2 shadow-2xl"
             >
-              <div className="mb-1.5 flex items-center gap-1.5 px-1">
+              <div className="mb-1.5 px-1">
                 <span className="smk-sheet-label">
                   {language === 'ce' ? 'Болхан раж' : 'Режим работы'}
                 </span>
-                <HintMark text={language === 'ce'
-                  ? 'ХIара низам массо хьайн говзанчин анкетина тIедоьрзу — анкетан расписани хийца. Сохьташца — расписанца; Болх беш ву — анкета схьайиллина; Сацар — ханна сацар; Болх ца бо — садаIар.'
-                  : 'Переключатель действует на все ваши анкеты специалиста и перекрывает их расписание. По расписанию — статус считается по рабочим часам; Работает — анкета открыта для звонков; Перерыв — временно отошли; Не работает — выходной.'}
-                />
               </div>
               <div className="flex items-center gap-1">
                 {statusOptions.map((opt) => {
@@ -210,6 +205,16 @@ export default function SettingsControlsBar() {
                   );
                 })}
               </div>
+
+              {/* Пояснение текстом под иконками: в подсказке под
+                  восклицательным знаком его приходилось искать, хотя
+                  это ключевая информация — тумблер перекрывает
+                  расписание анкет. */}
+              <p className="mt-2 max-w-[15rem] px-1 text-[10px] leading-relaxed text-slate-500 dark:text-zinc-400">
+                {language === 'ce'
+                  ? 'ХIара низам массо хьайн говзанчин анкетина тIедоьрзу — анкетан расписани хийца. Сохьташца — расписанца; Болх беш ву — схьайиллина; Сацар — ханна; Болх ца бо — садаIар.'
+                  : 'Действует на все ваши анкеты специалиста и перекрывает их расписание. По расписанию — статус по рабочим часам; Работает — открыт для звонков; Перерыв — временно отошли; Не работает — выходной.'}
+              </p>
             </div>
           </>,
           document.body,

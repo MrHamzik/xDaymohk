@@ -95,6 +95,7 @@ export const PRESET_THEMES: Record<
     colors: {
       bg: '#f8fafc',
       card: '#ffffff',
+      panel: '#ededed',
       cardAlt: '#ffffff',
       cardLine: '#e8d9b0',
       cardInset: '#f8fafc',
@@ -117,9 +118,10 @@ export const PRESET_THEMES: Record<
     colors: {
       bg: '#131313',
       card: '#1c1c20',
+      panel: '#2c2c30',
       cardAlt: '#161619',
       cardLine: '#0f0f12',
-      cardInset: '#26262c',
+      cardInset: '#26262a',
       text: '#ffffff',
       muted: '#96969e',
       icon: '#b3b3b9',
@@ -148,9 +150,10 @@ export const PRESET_THEMES: Record<
     colors: {
       bg: '#080713',
       card: '#121127',
+      panel: '#232236',
       cardAlt: '#0d0b1d',
       cardLine: '#06050f',
-      cardInset: '#222041',
+      cardInset: '#1d1c31',
       text: '#ebedfa',
       muted: '#9292bf',
       icon: '#81adda',
@@ -186,9 +189,10 @@ export const PRESET_THEMES: Record<
     colors: {
       bg: '#1b090e',
       card: '#2e151b',
+      panel: '#3d252b',
       cardAlt: '#250e14',
       cardLine: '#130609',
-      cardInset: '#4c2931',
+      cardInset: '#372025',
       text: '#fbf2e9',
       muted: '#cba79a',
       icon: '#e2ba8d',
@@ -226,9 +230,10 @@ export const PRESET_THEMES: Record<
     colors: {
       bg: '#000000',
       card: '#0a0a0a',
+      panel: '#1b1b1b',
       cardAlt: '#050505',
       cardLine: '#121212',
-      cardInset: '#1a1a1a',
+      cardInset: '#151515',
       text: '#fafafa',
       muted: '#8f8f8f',
       // Акцент — белый: на чёрном он работает как золото на светлом.
@@ -265,6 +270,7 @@ export const PRESET_THEMES: Record<
     colors: {
       bg: '#f7f7f8',
       card: '#ffffff',
+      panel: '#ededed',
       cardAlt: '#fbfbfc',
       cardLine: '#e0e0e4',
       cardInset: '#f2f2f4',
@@ -308,6 +314,7 @@ export const PRESET_THEMES: Record<
     colors: {
       bg: '#e8edf2',
       card: '#ffffff',
+      panel: '#ededed',
       cardAlt: '#f6f9fc',
       cardLine: '#c9d4e0',
       cardInset: '#eef3f8',
@@ -351,6 +358,7 @@ export const PRESET_THEMES: Record<
     colors: {
       bg: '#edf8f2',
       card: '#fbfefc',
+      panel: '#e9ecea',
       cardAlt: '#f4faf7',
       cardLine: '#cae2d6',
       cardInset: '#e6f4ed',
@@ -391,6 +399,7 @@ export const PRESET_THEMES: Record<
     colors: {
       bg: '#fbf6ea',
       card: '#fefdfb',
+      panel: '#ecebe9',
       cardAlt: '#fcfaf2',
       cardLine: '#e9dbc4',
       cardInset: '#f8f1e2',
@@ -461,6 +470,7 @@ export function normalizeColors(raw: unknown, base: ThemeColors): ThemeColors {
     cardAlt: pick('cardAlt'),
     cardLine: pick('cardLine'),
     cardInset: pick('cardInset'),
+    panel: pick('panel'),
     icon: pick('icon'),
     text: pick('text'),
     muted: pick('muted'),

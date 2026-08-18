@@ -37,12 +37,8 @@
   html.dark {
     --background: var(--color-zinc-950);
     --foreground: #fafafa;
-    /* Обводки в тёмной теме намеренно ТЁМНЫЕ — «утопленные»: линия
-       темнее карточки, а не светлее. Светлая рамка на тёмном полотне
-       выглядит дешёвой обводкой, поэтому отступаем в сторону фона, а
-       не текста. Прежнее rgb(28 28 31) давало контраст 1.00 к карточке
-       (линии не было вовсе) — берём чуть глубже. */
-    --border-dark-soft: #121215;
+    /* Обводка = штрих карточек. Один источник вместо двух. */
+    --border-dark-soft: var(--smk-hairline-strong);
     --border-green-dark: #2b7a64;
     color-scheme: dark;
   }
@@ -399,13 +395,19 @@ html.dark .bg-slate-50\/60 {
   border-color: var(--border-dark-soft);
 }
 
-html.dark .border-slate-200,
-html.dark .border-slate-100,
-html.dark .border-slate-200\/60,
-html.dark .border-slate-200\/80,
+/* Все обводки — один источник: --smk-hairline-strong, тот же штрих,
+   что на карточках. Раньше здесь стоял --border-dark-soft, отдельный
+   от штрихов, и «Обводка» в палитре меняла не всё: рамки панелей,
+   полей и списков жили своей жизнью. Правило действует в ОБЕИХ темах,
+   а не только в тёмной — иначе в светлой оставались классы Tailwind. */
+.border-slate-200,
+.border-slate-100,
+.border-slate-200\/60,
+.border-slate-200\/80,
+.border-slate-300,
 html.dark .border-zinc-800,
 html.dark .border-zinc-700 {
-  border-color: var(--border-dark-soft);
+  border-color: var(--smk-hairline-strong);
 }
 
 html.dark .shadow-sm {
@@ -684,10 +686,7 @@ html.dark .smk-price-teal {
   --smk-steel-b: #27272a;
   --smk-steel-c: #52525b;
 
-  /* Панели бокового меню: чуть ярче карточки, но не самостоятельный
-     цвет. Выводим через color-mix от --smk-card-a, поэтому во всех
-     темах соотношение одинаковое, а перезаписей в стилях нет. */
-  --smk-panel: color-mix(in srgb, var(--smk-card-a) 93%, var(--smk-text-mix, #000000));
+  --smk-panel: #f1f3f6;         /* панели и подвал карточек */
   --smk-icon: #465369;          /* иконки строк     */
   --smk-surface: #ffffff;
   --smk-surface-soft: rgb(248 250 252 / 0.9);
@@ -908,11 +907,9 @@ html.smk-themed .bg-white {
   background: var(--smk-card-inset, #f8fafc);
 }
 
-/* Подвал карточки. Берёт --smk-card-inset (подложку строк), а НЕ
-   --smk-panel: панели бокового меню — другой тип поверхности, и
-   правка их цвета не должна менять подвал карточек. */
+/* Подвал карточки — та же поверхность, что панели бокового меню. */
 .smk-card-foot {
-  background: var(--smk-card-inset, #f1f5f9);
+  background: var(--smk-panel, #f1f3f6);
   border-top: 1px solid var(--smk-hairline, rgb(15 23 42 / 0.06));
 }
 
@@ -972,6 +969,16 @@ html.smk-themed .bg-white {
   background: transparent;
 }
 
+/* --- Плотные всплывающие слои -----------------------------------------------
+   Меню шапки, компактная модалка режима работы, центр уведомлений.
+   Базовый фон нужен ВСЕГДА, а не только в стеклянной теме: раньше
+   правило жило внутри html.smk-glass, и в обычных темах модалка
+   оставалась без фона — сквозь неё просвечивала страница. */
+.smk-solid {
+  background-color: var(--smk-card-a, #ffffff);
+  border: 1px solid var(--smk-hairline-strong, rgb(15 23 42 / 0.12));
+}
+
 /* --- Панели бокового меню ----------------------------------------------------
    Мини-профиль, виджет времени намаза и панель четырёх иконок — это
    один тип поверхности, поэтому у них общий класс и общий слот темы.
@@ -992,13 +999,12 @@ html.dark .smk-panel {
 /* Тёмное значение объявляем в html.dark, а не в :root: обе переменные
    в одном блоке конфликтовали — последняя перебивала первую. */
 html.dark {
-  /* В тёмной теме «ярче» значит светлее — подмешиваем белый. */
-  --smk-text-mix: #ffffff;
   /* Тёмные поверхности: зеркало светлого блока из :root. */
   --smk-card-a: #1c1c20;        /* верх полотна   */
   --smk-card-b: #161619;        /* низ полотна    */
   --smk-card-line: #0f0f12;     /* обводка: темнее карточки */
-  --smk-card-inset: #26262c;    /* подложки строк */
+  --smk-card-inset: #202024;    /* подложки строк */
+  --smk-panel: #26262b;         /* панели и подвал карточек */
   --smk-muted: #96969e;         /* второстепенный текст */
   --smk-muted-bright: #c4c4cc;
   --smk-icon: #c4c4cc;

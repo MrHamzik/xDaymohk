@@ -101,6 +101,7 @@ function applyNeutralRamp(
 /** Все переменные, которыми управляет пользовательская тема. */
 const MANAGED_PROPERTIES = [
   '--background', '--foreground', '--border-dark-soft',
+  '--smk-panel',
   '--smk-card-a', '--smk-card-b', '--smk-card-line', '--smk-card-inset',
   '--smk-muted', '--smk-muted-bright', '--smk-icon',
   '--smk-surface', '--smk-surface-soft',
@@ -177,9 +178,9 @@ export function applyThemeColors(
   // ── Семантические слоты: именно они рисуют фон и текст страницы ──
   set('--background', colors.bg);
   set('--foreground', colors.text);
-  // Границы — утопленные: линия ТЕМНЕЕ карточки, а не светлее.
-  // Светлая рамка на тёмном полотне выглядит дешёвой обводкой, поэтому
-  // берём cardLine из палитры (он и задуман как «обводка темнее фона»).
+  // Все обводки читают один слот. --smk-hairline-strong задаётся ниже
+  // из cardLine, поэтому «Обводка» в палитре действительно меняет ВСЕ
+  // рамки: карточек, панелей, полей и списков.
   set('--border-dark-soft', colors.cardLine);
 
   // ── Источники, на которые ссылаются утилиты zinc ────────────────
@@ -192,11 +193,8 @@ export function applyThemeColors(
   // меню — пользователь справедливо не понимал, где этот цвет вообще
   // применяется.
   set('--color-zinc-950', colors.bg);
-  // 900 — панели (мини-профиль, виджет намаза, панель иконок).
-  // Выводим из карточки тем же шагом, что и --smk-panel в globals.css:
-  // «чуть ярче карточки». Отдельного слота в палитре нет — иначе в
-  // каждой теме приходилось бы подбирать цвет заново.
-  set('--color-zinc-900', mix(colors.card, isDark ? '#ffffff' : '#000000', 0.07));
+  // 900 — панели (мини-профиль, виджет намаза, блок иконок).
+  set('--color-zinc-900', colors.panel);
   set('--color-zinc-800', colors.card);
   set('--color-zinc-700', surfaceStep);
 
@@ -227,6 +225,7 @@ export function applyThemeColors(
   }
 
   // ── Карточка ────────────────────────────────────────────────────
+  set('--smk-panel', colors.panel);
   set('--smk-card-a', colors.card);
   set('--smk-card-b', colors.cardAlt);
   set('--smk-card-line', colors.cardLine);
@@ -242,9 +241,10 @@ export function applyThemeColors(
 
   // Волосяные линии выводим из основы: на тёмной теме нужен белый
   // штрих, на светлой — чёрный, иначе разделители пропадают.
-  const hair = isDark ? '255 255 255' : '15 23 42';
-  set('--smk-hairline', `rgb(${hair} / 0.08)`);
-  set('--smk-hairline-strong', `rgb(${hair} / 0.16)`);
+  // Штрих выводим из слота «Обводка»: он и есть единственный источник
+  // для всех линий. Слабый вариант — тот же цвет с меньшей плотностью.
+  set('--smk-hairline', mix(colors.card, colors.cardLine, 0.55));
+  set('--smk-hairline-strong', colors.cardLine);
 
   // ── Акцент ──────────────────────────────────────────────────────
   set('--smk-gold', colors.accent);

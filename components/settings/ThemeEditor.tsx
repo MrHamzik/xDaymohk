@@ -38,7 +38,8 @@ const GROUP_TITLES: Record<ThemeColorGroup, { ru: string; ce: string; hint: stri
 /** Подписи только для слотов, показанных в редакторе (cardAlt скрыт). */
 const COLOR_LABELS: Partial<Record<keyof ThemeColors, { ru: string; ce: string }>> = {
   bg: { ru: 'Фон страницы', ce: 'АгIонан букъ' },
-  card: { ru: 'Карточки, шапка, поля', ce: 'Карточкаш, корта, меттигаш' },
+  card: { ru: 'Карточки и поля', ce: 'Карточкаш а, меттигаш а' },
+  panel: { ru: 'Панели и подвал карточек', ce: 'Панелаш а, карточкийн бух а' },
   cardInset: { ru: 'Подложка строк', ce: 'МогIанийн бухъ' },
   cardLine: { ru: 'Обводка', ce: 'Йоза' },
   text: { ru: 'Основной текст', ce: 'Коьрта йоза' },
