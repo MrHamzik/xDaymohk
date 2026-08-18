@@ -508,6 +508,8 @@ export interface Task {
   minAccountDays: number;
   minTasksDone: number;
   allowNewcomers: boolean;
+  /** Как заказчик рассчитается: 'cash' | 'sbp' | 'card' | 'yoomoney'. */
+  paymentMethod?: string;
   status: TaskStatus;
   paymentStatus: TaskPaymentStatus;
   submittedAt?: string | null;

@@ -8,6 +8,7 @@ import {
   formatTimeLeft, formatTaskDateTime,
 } from '@/lib/tasks/client';
 import AttendanceModal from '@/components/tasks/AttendanceModal';
+import PayoutPanel from '@/components/tasks/PayoutPanel';
 import { useI18n } from '@/lib/i18n';
 import { useTaskRealtime } from '@/lib/tasks/realtime';
 import {
@@ -349,6 +350,14 @@ export default function TaskDetailModal({
                     {t.taskPayoutNote}
                   </p>
                 </div>
+              )}
+
+              {/* Реквизиты исполнителя — заказчику, когда работа сдана.
+                  Показываются только ему и только после одобрения
+                  отклика: проверку делает сервер (/api/payout). */}
+              {isAuthor && task.isPaid
+                && ['awaiting_confirm', 'completed'].includes(task.status) && (
+                <PayoutPanel taskId={task.id} amount={total} />
               )}
 
               {task.status === 'awaiting_confirm' && (

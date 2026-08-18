@@ -10,6 +10,7 @@ import BottomNav from '@/components/BottomNav';
 import MobileMenuDrawer from '@/components/MobileMenuDrawer';
 import CreateActionModal from '@/components/CreateActionModal';
 import ThemeEditor from '@/components/settings/ThemeEditor';
+import PayoutSettings from '@/components/settings/PayoutSettings';
 import {
   SectionTitle, SettingRow, Toggle, WarningBox,
 } from '@/components/settings/SettingsPrimitives';
@@ -153,6 +154,9 @@ export default function SettingsPage() {
                 </SettingRow>
               </div>
             </section>
+
+            {/* ── Реквизиты для оплаты заданий ──────────────────── */}
+            <PayoutSettings />
 
             {/* ── Уведомления ───────────────────────────────────── */}
             <section>

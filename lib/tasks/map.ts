@@ -27,6 +27,7 @@ export function mapTaskRow(row: Record<string, unknown>) {
     minAccountDays: Number(row.min_account_days ?? 0),
     minTasksDone: Number(row.min_tasks_done ?? 0),
     allowNewcomers: Boolean(row.allow_newcomers),
+    paymentMethod: row.payment_method ?? 'cash',
     status: row.status,
     paymentStatus: row.payment_status,
     submittedAt: row.submitted_at,

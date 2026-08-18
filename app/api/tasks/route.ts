@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { rateLimit, withRateLimitHeaders } from '@/lib/rate-limit';
+import { isPaymentMethod } from '@/lib/payments';
 import { log } from '@/lib/logger';
 import {
   authenticateTaskRequest,
@@ -275,6 +276,9 @@ export async function POST(request: Request) {
       min_account_days: minAccountDays,
       min_tasks_done: minTasksDone,
       allow_newcomers: allowNewcomers,
+      // Способ расчёта. Значение проверяем: клиент мог прислать что
+      // угодно, а колонка ограничена CHECK-ом в миграции 33.
+      payment_method: isPaymentMethod(body.paymentMethod) ? body.paymentMethod : 'cash',
       status: 'open',
       payment_status: 'offline',
     })

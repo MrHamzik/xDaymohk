@@ -6,6 +6,7 @@ import AddressAutocomplete from '@/components/AddressAutocomplete';
 import { useI18n } from '@/lib/i18n';
 import { createTask, fetchTaskFilters } from '@/lib/tasks/client';
 import { getUserCoords } from '@/lib/geo';
+import { PAYMENT_METHODS, type PaymentMethod } from '@/lib/payments';
 import { findClosestSamashkiHouse } from '@/lib/samashki-addresses';
 import {
   taskCostBreakdown, TASK_MIN_REWARD, TASK_PRIORITY_SURCHARGE,
@@ -45,6 +46,9 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
   // исполнителя, а ноль пропускал вообще всех и обнаруживался только
   // после первого неудачного отклика. Планку видно и её можно снизить.
   const [minRating, setMinRating] = useState('4.5');
+  // Наличные по умолчанию: в селе это основной способ, и он не требует
+  // от исполнителя вообще никаких реквизитов.
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [minAccountDays, setMinAccountDays] = useState('0');
   const [minTasksDone, setMinTasksDone] = useState('0');
   const [allowNewcomers, setAllowNewcomers] = useState(true);
@@ -138,6 +142,7 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
         lat: coords?.lat ?? null,
         lng: coords?.lng ?? null,
         minRating: Number(minRating) || 0,
+        paymentMethod: isPaid ? paymentMethod : 'cash',
         minAccountDays: Number(minAccountDays) || 0,
         minTasksDone: Number(minTasksDone) || 0,
         allowNewcomers,
@@ -351,12 +356,6 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
                       </dd>
                     </div>
                   )}
-                  <div className="flex items-center justify-between">
-                    <dt className="text-slate-500 dark:text-zinc-400">
-                      {t.taskCostFee}
-                    </dt>
-                    <dd className="font-bold text-slate-800 dark:text-zinc-200">{cost.fee} ₽</dd>
-                  </div>
                   <div className="mt-1 flex items-center justify-between border-t border-slate-200 pt-1.5 dark:border-zinc-700">
                     <dt className="font-bold text-slate-700 dark:text-zinc-300">{t.taskCostTotal}</dt>
                     <dd className="text-sm font-extrabold text-emerald-700 dark:text-emerald-400">
@@ -368,6 +367,37 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
                     {cost.budget > 0 && ` ${t.taskCostBudgetIncluded}`}. {t.taskCostTaxNote}
                   </p>
                 </dl>
+              )}
+
+              {/* Способ оплаты. Сервис деньги НЕ принимает и не переводит:
+                  расчёт идёт напрямую между жителями, поэтому здесь
+                  выбирается лишь то, как удобнее рассчитаться. */}
+              {isPaid && (
+                <div className="mt-3">
+                  <span className={labelClass}>{t.taskPaymentMethod}</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    {PAYMENT_METHODS.map((method) => (
+                      <button
+                        key={method}
+                        type="button"
+                        onClick={() => setPaymentMethod(method)}
+                        aria-pressed={paymentMethod === method}
+                        className={`rounded-xl px-3 py-2 text-xs font-bold transition ${
+                          paymentMethod === method
+                            ? 'bg-emerald-600 text-white shadow-sm'
+                            : 'bg-slate-100/80 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-300'
+                        }`}
+                      >
+                        {t[`taskPay_${method}` as keyof typeof t] as string}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mt-1.5 text-[10px] leading-relaxed text-slate-500 dark:text-zinc-500">
+                    {paymentMethod === 'cash'
+                      ? t.taskPayHintCash
+                      : t.taskPayHintTransfer}
+                  </p>
+                </div>
               )}
             </div>
           )}

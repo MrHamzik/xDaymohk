@@ -1,3 +1,4 @@
+import type { PaymentMethod } from '@/lib/payments';
 'use client';
 
 /**
@@ -95,6 +96,8 @@ export interface CreateTaskInput {
   minAccountDays: number;
   minTasksDone: number;
   allowNewcomers: boolean;
+  /** Как заказчик рассчитается: наличные, СБП, карта, ЮMoney. */
+  paymentMethod: PaymentMethod;
 }
 
 export async function createTask(input: CreateTaskInput): Promise<string> {
