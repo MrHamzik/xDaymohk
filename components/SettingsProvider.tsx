@@ -9,7 +9,7 @@ import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import {
   DEFAULT_SETTINGS, normalizeSettings, resolveTheme, settingsFromDb, settingsToDb,
 } from '@/lib/settings/defaults';
-import { applyThemeColors, applyTypography, clearThemeColors } from '@/lib/settings/apply-theme';
+import { applyThemeColors, applyTypography } from '@/lib/settings/apply-theme';
 import type { UserSettings } from '@/lib/settings/types';
 
 const SETTINGS_STORAGE_KEY = 'daymohk-settings';
@@ -109,40 +109,31 @@ export default function SettingsProvider({ children }: { children: React.ReactNo
   // Пока настройки грузятся с диска, DOM не трогаем: иначе на первом
   // кадре успел бы примениться light из значения по умолчанию и тема
   // моргала бы при каждой перезагрузке.
-  // «Расширенная» тема — любая, кроме базовой пары light/dark: и
-  // пресеты (Космос, Чёрный, Стеклянный…), и пользовательские. Все они
-  // применяются одинаково — через подстановку переменных.
+  // ВСЕ темы — включая светлую и тёмную — применяются одинаково:
+  // через подстановку переменных из палитры.
+  //
+  // Раньше light/dark шли отдельной веткой (clearThemeColors + класс
+  // .dark), а значения брались из globals.css. Два источника истины
+  // разъезжались: в CSS --smk-panel был #f1f3f6, а в пресете #ededed.
+  // Из-за этого «создать свою тему» от светлой или тёмной подставляло
+  // не те оттенки, что видел пользователь.
+  // Вне расширенного режима доступны только светлая и тёмная: если
+  // выбрана «Космос», а тумблер выключили — возвращаемся к паре.
+  const activeThemeId = settings.advancedMode
+    ? settings.themeId
+    : (settings.themeId === 'dark' ? 'dark' : 'light');
+
   const resolved = isLoading
     ? null
-    : resolveTheme(settings.themeId, settings.customThemes);
-  const isThemedMode = Boolean(
-    settings.advancedMode
-    && settings.themeId !== 'light'
-    && settings.themeId !== 'dark',
-  );
-  // Тёмная основа: у расширенной темы — её собственный флаг,
-  // у базовой пары — сам идентификатор.
-  const effectiveDark = isThemedMode
-    ? Boolean(resolved?.isDark)
-    : settings.themeId === 'dark';
+    : resolveTheme(activeThemeId, settings.customThemes);
 
   useEffect(() => {
-    if (isLoading) return;
-
-    if (isThemedMode && resolved) {
-      applyThemeColors(resolved.colors, resolved.isDark, resolved.glass === true);
-      return;
-    }
-
-    // Обычный режим: снимаем инлайновые переменные кастомной темы,
-    // иначе они остаются на :root и перебивают каскад globals.css.
-    clearThemeColors();
-    document.documentElement.classList.toggle('dark', effectiveDark);
-    document.documentElement.style.colorScheme = effectiveDark ? 'dark' : 'light';
+    if (isLoading || !resolved) return;
+    applyThemeColors(resolved.colors, resolved.isDark, resolved.glass === true);
     // resolved пересоздаётся каждый рендер — в зависимостях держим его
     // первоисточники, иначе эффект крутился бы бесконечно.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoading, isThemedMode, effectiveDark, settings.themeId, settings.customThemes]);
+  }, [isLoading, activeThemeId, settings.customThemes]);
 
   // Первый вход: themeId ещё не выбирали, берём системную/сохранённую
   // тему из ThemeProvider, чтобы поведение не изменилось для тех, кто
