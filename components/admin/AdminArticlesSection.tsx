@@ -5,6 +5,7 @@ import {
   ChevronDown, ChevronUp, Eye, EyeOff, Loader2, Plus, Save, Trash2,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/components/AuthProvider';
 import { useI18n } from '@/lib/i18n';
 import Prose from '@/components/reading/Prose';
 import {
@@ -40,6 +41,7 @@ export default function AdminArticlesSection() {
   const { language } = useI18n();
   const L = (ru: string, ce: string) => (language === 'ce' ? ce : ru);
 
+  const { account } = useAuth();
   const [section, setSection] = useState<ArticleSection>('sira');
   const [articles, setArticles] = useState<Article[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -59,14 +61,25 @@ export default function AdminArticlesSection() {
   };
 
   const load = useCallback(async () => {
+    // Запрос уходит ТОЛЬКО с токеном. Раньше при отсутствии токена
+    // заголовок просто не добавлялся, и сервер честно отвечал 401 —
+    // в консоли это выглядело как ошибка приложения. Сессия Supabase
+    // восстанавливается асинхронно, поэтому на первом рендере токена
+    // ещё нет: ждём и повторяем, а не шлём заведомо неудачный запрос.
+    const accessToken = await token();
+    if (!accessToken) return;
+
     setIsLoading(true);
     setError('');
     try {
-      const accessToken = await token();
       const res = await fetch(`/api/articles?section=${section}&all=1`, {
         cache: 'no-store',
-        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
+      if (res.status === 401 || res.status === 403) {
+        setError(L('Нужен вход администратора', 'Администраторан чувалар оьшу'));
+        return;
+      }
       const data = await res.json();
       setArticles(Array.isArray(data.articles) ? data.articles : []);
     } catch {
@@ -77,7 +90,12 @@ export default function AdminArticlesSection() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [section]);
 
-  useEffect(() => { void load(); }, [load]);
+  // account в зависимостях: пока сессия не восстановлена, грузить
+  // нечего — эффект перезапустится, когда появится пользователь.
+  useEffect(() => {
+    if (!account) return;
+    void load();
+  }, [load, account]);
 
   /** Значение поля с учётом несохранённого черновика. */
   const value = <K extends keyof Article>(a: Article, key: K): Article[K] =>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Calendar, Timer } from 'lucide-react';
 import { getCurrentDayPrayerTimes, DEFAULT_LAT, DEFAULT_LNG } from '@/lib/islamic';
+import { getUserCoords } from '@/lib/geo';
 import { useI18n } from '@/lib/i18n';
 import PrayerTimesModal from '@/components/PrayerTimesModal';
 
@@ -21,21 +22,20 @@ export default function PrayerTimesBar() {
   // Geolocation lookup per DUM RF standard
   useEffect(() => { setMounted(true); }, []);
 
+  // Виджет живёт в боковом меню и монтируется на КАЖДОЙ странице.
+  // Раньше он на каждом монтировании вызывал getCurrentPosition — Chrome
+  // после нескольких проигнорированных окон блокировал разрешение и
+  // засыпал консоль предупреждениями даже на /admin.
+  //
+  // Теперь берём координаты из общего кеша (lib/geo.ts) и НЕ показываем
+  // окно запроса сами: без разрешения считаем время по Самашкам, что для
+  // сельского сервиса — правильное умолчание, а не ошибка.
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setCoords({
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-          });
-        },
-        () => {
-          // Keep default Samashki/Chechnya coordinates
-        },
-        { timeout: 8000 },
-      );
-    }
+    let cancelled = false;
+    void getUserCoords().then((position) => {
+      if (!cancelled && position) setCoords(position);
+    });
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Check, Eye, EyeOff, Loader2, Send, Trash2, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/components/AuthProvider';
 import { useI18n } from '@/lib/i18n';
 
 interface Question {
@@ -27,6 +28,7 @@ export default function AdminSupportSection() {
   const { language } = useI18n();
   const L = (ru: string, ce: string) => (language === 'ce' ? ce : ru);
 
+  const { account } = useAuth();
   const [items, setItems] = useState<Question[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -40,12 +42,16 @@ export default function AdminSupportSection() {
   };
 
   const load = useCallback(async () => {
+    // Без токена запрос бессмыслен: очередь вопросов видна только
+    // администратору. См. пояснение в AdminArticlesSection.
+    const accessToken = await token();
+    if (!accessToken) return;
+
     setIsLoading(true);
     try {
-      const accessToken = await token();
       const res = await fetch('/api/support', {
         cache: 'no-store',
-        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
       const data = await res.json();
       setItems(Array.isArray(data.pending) ? data.pending : []);
@@ -57,7 +63,10 @@ export default function AdminSupportSection() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    if (!account) return;
+    void load();
+  }, [load, account]);
 
   const patch = async (id: string, body: Record<string, unknown>) => {
     setBusyId(id);
