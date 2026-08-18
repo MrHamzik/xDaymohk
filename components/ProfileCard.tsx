@@ -2,7 +2,8 @@
 
 import Image from 'next/image';
 import {
-  Award, Ban, ChevronRight, Flag, MapPin, Star, VenusAndMars,
+  Award, Ban, Briefcase, BriefcaseBusiness, CalendarDays, ChevronRight, FileText,
+  Flag, MapPin, Star, VenusAndMars,
 } from 'lucide-react';
 import { Profile } from '@/lib/types';
 import { calculateAge, formatCount, formatReviews } from '@/lib/text';
@@ -99,12 +100,12 @@ export default function ProfileCard({
       className="smk-lux smk-rays smk-enter group flex h-full cursor-pointer flex-col overflow-hidden text-slate-900 dark:text-white"
     >
       {/* ── Шапка: аватар · имя · рейтинг ─────────────────────────
-             Структура повторяет карточку задания: шапка, разделитель,
-             суть, разделитель, чипы, подвал. Отступы и размеры те же. */}
-      <div className="flex items-start gap-3 py-3.5 pl-4 pr-3.5">
+             Рабочий статус — цвет кольца вокруг аватара, отдельной
+             строки под него не нужно. */}
+      <div className="flex items-center gap-3 px-3.5 pb-2.5 pt-3">
         <div className="shrink-0">
           <div
-            className={`smk-ring h-11 w-11 ${statusRing.className}`}
+            className={`smk-ring h-11 w-11 sm:h-12 sm:w-12 ${statusRing.className}`}
             title={statusRing.label ?? undefined}
             aria-label={statusRing.label ?? undefined}
           >
@@ -120,104 +121,130 @@ export default function ProfileCard({
 
         <div className="min-w-0 flex-1">
           {/* Имя пишем полностью, без сокращений; не влезло — обрезаем */}
-          <h3 className="smk-title truncate text-base font-bold leading-tight text-slate-900 dark:text-white">
+          <h3 className="smk-title truncate text-base font-bold leading-tight sm:text-lg">
             {profile.fullName}
           </h3>
 
-          {/* Метаданные с ромбами-разделителями — как у задания */}
-          <div className="smk-meta mt-1.5 flex flex-wrap items-center text-[11px] leading-relaxed text-slate-500 dark:text-zinc-400">
-            {showHeadRating && (
-              <span className="inline-flex items-center gap-1 font-bold text-amber-600 dark:text-amber-400">
-                <Star className="h-3 w-3 smk-star" />
+          {showHeadRating && (
+            <div className="mt-0.5 flex items-baseline gap-1.5">
+              <Star className="h-4 w-4 shrink-0 translate-y-0.5 smk-star" />
+              <span className="smk-rating-value text-sm font-extrabold">
                 {headRating.toFixed(1)}
               </span>
-            )}
-            {showHeadRating && (
-              <span>
+              <span className="truncate text-[11px] text-slate-500 dark:text-zinc-400">
                 {profile.isSpecialist
                   ? formatReviews(headCount)
                   : formatCount(headCount, t.cardRatingOne, t.cardRatingFew, t.cardRatingMany)}
               </span>
-            )}
-            {profile.isSpecialist && profile.experience && (
-              <span>{t.experienceLabel}: {profile.experience}</span>
-            )}
-            {!profile.isSpecialist && age !== null && (
-              <span>{t.ageLabel}: {age}</span>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
+        <ChevronRight className="h-5 w-5 shrink-0 self-center smk-arrow" />
       </div>
 
-      {/* Разделитель на всю ширину, затухающий к краям */}
-      <hr className="smk-rule mx-4" />
+      {/* Золотой разделитель, затухающий к краям */}
+      <hr className="smk-rule mx-3.5" />
 
-      {/* ── Суть: профессия и описание ─────────────────────────── */}
-      <div className="px-4 py-3">
-        {profile.isSpecialist && profile.professionTitle && (
-          <h4 className="line-clamp-2 text-sm font-bold leading-snug text-emerald-700 dark:text-emerald-400">
-            {profile.professionTitle}
-          </h4>
-        )}
-        {profile.bio && (
-          <p className={`line-clamp-2 break-words [overflow-wrap:anywhere] text-xs leading-relaxed text-slate-600 dark:text-zinc-400 ${
-            profile.isSpecialist && profile.professionTitle ? 'mt-1.5' : ''
-          }`}>
-            {profile.bio}
-          </p>
-        )}
-        {!profile.bio && !(profile.isSpecialist && profile.professionTitle) && (
-          <p className="text-xs leading-relaxed text-slate-400 dark:text-zinc-500">
-            {profile.isSpecialist ? t.roleSpecialist : t.filterResidents}
-          </p>
-        )}
-      </div>
-
-      <hr className="smk-rule mx-4" />
-
-      {/* ── Чипы: роли и статусы, как метки у задания ──────────── */}
-      <div className="mt-auto flex flex-wrap items-center gap-1.5 px-4 py-3 text-[10px] font-bold">
+      {/* ── Строки данных ───────────────────────────────────────── */}
+      <div className="space-y-1.5 px-3.5 py-2.5 text-sm">
+        {/* Первая строка под линией — роли и статусы */}
         <ProfileBadges profile={profile} adminStatus={profileIsAdmin} showPending={showPending} />
 
-        {/* Рабочий статус специалиста — чип с пульсирующей точкой */}
-        {statusRing.status && (
-          <span className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-2 py-1 text-slate-600 dark:bg-zinc-700/70 dark:text-zinc-300">
-            <span
-              className={`smk-status-dot smk-status-dot--${statusRing.status}`}
-              aria-hidden
-            />
-            {statusRing.shortLabel}
-          </span>
+        {profile.isSpecialist && profile.professionTitle && (
+          <div className="smk-field flex items-start gap-2.5 px-2.5 py-1.5">
+            <Briefcase className="smk-ico mt-0.5 h-4 w-4" />
+            <p className="line-clamp-2 font-bold leading-snug text-emerald-700 dark:text-emerald-400">
+              {profile.professionTitle}
+            </p>
+          </div>
         )}
 
-        {/* Пол — только у жителей: у специалиста место занимает статус */}
-        {!profile.isSpecialist && profile.gender && (
-          <span className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-slate-600 dark:bg-zinc-700/70 dark:text-zinc-300">
-            <VenusAndMars className="h-3 w-3" />
-            {profile.gender === 'male' ? t.genderMale : t.genderFemale}
-          </span>
+        {profile.bio && (
+          <div className="smk-field flex items-start gap-2.5 px-2.5 py-1.5">
+            <FileText className="smk-ico mt-0.5 h-4 w-4" />
+            <p className="line-clamp-2 break-words [overflow-wrap:anywhere] leading-snug text-slate-700 dark:text-zinc-200">
+              {profile.bio}
+            </p>
+          </div>
         )}
 
-        {profile.certificates.length > 0 && (
-          <span className="inline-flex items-center gap-1 rounded-lg bg-sky-50 px-2 py-1 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300">
-            <Award className="h-3 w-3" />
-            {t.cardDocuments}: {profile.certificates.length}
-          </span>
+        {/* У специалиста — стаж и рабочий статус: возраст мастера
+            клиенту неинтересен, а «сколько лет в деле» и «работает ли
+            сейчас» решают, звонить или нет.
+            У жителя остаются возраст и пол. */}
+        {profile.isSpecialist ? (
+          (profile.experience || statusRing.status) && (
+            <div className="smk-field flex items-center gap-2 px-2.5 py-1.5">
+              {profile.experience && (
+                <span className="flex min-w-0 items-center gap-1.5 text-slate-600 dark:text-zinc-300">
+                  <BriefcaseBusiness className="smk-ico h-4 w-4" />
+                  <span className="text-slate-400 dark:text-zinc-500">{t.experienceLabel}:</span>
+                  <span className="truncate font-semibold">{profile.experience}</span>
+                </span>
+              )}
+              {profile.experience && statusRing.status && <span className="smk-sep" aria-hidden />}
+              {statusRing.status && (
+                <span className="flex min-w-0 items-center gap-1.5 text-slate-600 dark:text-zinc-300">
+                  {/* Точка пульсирует только у «живых» статусов —
+                      мигающий «выходной» выглядел бы как ошибка. */}
+                  <span
+                    className={`smk-status-dot smk-status-dot--${statusRing.status}`}
+                    aria-hidden
+                  />
+                  <span className="truncate font-semibold">{statusRing.shortLabel}</span>
+                </span>
+              )}
+            </div>
+          )
+        ) : (
+          (age !== null || profile.gender) && (
+            <div className="smk-field flex items-center gap-2 px-2.5 py-1.5">
+              {age !== null && (
+                <span className="flex min-w-0 items-center gap-1.5 text-slate-600 dark:text-zinc-300">
+                  <CalendarDays className="smk-ico h-4 w-4" />
+                  <span className="text-slate-400 dark:text-zinc-500">{t.ageLabel}:</span>
+                  <span className="font-semibold">{age}</span>
+                </span>
+              )}
+              {age !== null && profile.gender && <span className="smk-sep" aria-hidden />}
+              {profile.gender && (
+                <span className="flex min-w-0 items-center gap-1.5 text-slate-600 dark:text-zinc-300">
+                  <VenusAndMars className="smk-ico h-4 w-4" />
+                  <span className="truncate font-semibold">
+                    {profile.gender === 'male' ? t.genderMale : t.genderFemale}
+                  </span>
+                </span>
+              )}
+            </div>
+          )
+        )}
+
+        {profile.workplaceAddress && (
+          <div className="smk-field flex items-start gap-2.5 px-2.5 py-1.5">
+            {/* Булавка зелёная — единственный цветной акцент в блоке */}
+            <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+            <span className="line-clamp-2 break-words leading-snug text-slate-700 dark:text-zinc-200">
+              {profile.workplaceAddress}
+            </span>
+          </div>
         )}
       </div>
 
       {/* ── Подвал: документы · действие ────────────────────────── */}
-      {/* Подвал как у задания: слева адрес, справа действие.
-          «Документы» переехали в чипы — там для них есть место, а
-          подвал получил осмысленное содержимое вместо счётчика. */}
-      <div className="smk-card-foot flex items-center justify-between gap-2 py-2.5 pl-4 pr-3.5">
-        <span className="flex min-w-0 items-center gap-1.5 text-[11px] text-slate-500 dark:text-zinc-400">
-          <MapPin className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
-          <span className="truncate">
-            {profile.workplaceAddress || t.taskAddressMissing}
-          </span>
-        </span>
+      <div className={`smk-card-foot mt-auto flex items-center justify-between gap-2 px-3.5 ${
+        hasAction ? 'py-2' : 'py-1.5'
+      }`}>
+        <div className="min-w-0">
+          {profile.certificates.length > 0 ? (
+            <span className="inline-flex min-w-0 items-center gap-1.5 whitespace-nowrap text-[11px] font-bold text-slate-500 dark:text-zinc-400">
+              <Award className="smk-ico h-3.5 w-3.5" />
+              {t.cardDocuments}: {profile.certificates.length}
+            </span>
+          ) : (
+            <span aria-hidden>&nbsp;</span>
+          )}
+        </div>
 
         <div className="flex min-w-0 shrink-0 items-center gap-2">
           {isAdmin && !profileIsAdmin && onBlock ? (
@@ -245,9 +272,7 @@ export default function ProfileCard({
               <Flag className="h-3.5 w-3.5 shrink-0" />
               {t.cardReport}
             </button>
-          ) : (
-            <ChevronRight className="h-4 w-4 shrink-0 smk-arrow" />
-          )}
+          ) : null}
         </div>
       </div>
     </article>
