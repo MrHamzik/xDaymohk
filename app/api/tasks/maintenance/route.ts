@@ -199,5 +199,32 @@ export async function POST(request: Request) {
     disputesReleased += 1;
   }
 
-  return NextResponse.json({ success: true, autoConfirmed, expired, disputesReleased });
+  // ── Отменённые: прячем после недели показа ─────────────────────
+  // Отмена больше не архивирует задание сразу — обе стороны должны
+  // увидеть пометку «Отменено» (см. обновление 38). Через неделю запись
+  // уходит из лент, но остаётся в БД: на ней держатся счётчики и
+  // разбор жалоб.
+  let cancelledArchived = 0;
+  const { data: staleCancelled, error: cancelledError } = await admin
+    .from('tasks')
+    .select('id')
+    .eq('status', 'cancelled')
+    .eq('is_archived', false)
+    .lt('visible_until', new Date(now).toISOString())
+    .limit(100);
+
+  // Колонки visible_until может не быть, пока не применено обновление
+  // 38 — тогда просто пропускаем шаг, остальное обслуживание работает.
+  if (cancelledError) {
+    log.warn('maintenance: visible_until missing', { message: cancelledError.message });
+  } else {
+    for (const task of staleCancelled ?? []) {
+      await admin.from('tasks').update({ is_archived: true }).eq('id', String(task.id));
+      cancelledArchived += 1;
+    }
+  }
+
+  return NextResponse.json({
+    success: true, autoConfirmed, expired, disputesReleased, cancelledArchived,
+  });
 }

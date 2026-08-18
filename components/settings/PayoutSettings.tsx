@@ -222,7 +222,7 @@ export default function PayoutSettings() {
           </div>
 
           {error && (
-            <p className="rounded-xl bg-rose-50 px-3 py-2 text-[11px] font-semibold text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
+            <p className="smk-note smk-note-danger px-3 py-2 text-[11px] font-semibold">
               {error}
             </p>
           )}
@@ -245,7 +245,7 @@ export default function PayoutSettings() {
             )}
           </div>
 
-          <p className="flex items-start gap-1.5 rounded-xl bg-amber-50 px-3 py-2 text-[10px] leading-relaxed text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+          <p className="smk-note smk-note-info flex items-start gap-1.5 px-3 py-2 text-[10px] leading-relaxed">
             <Wallet className="mt-0.5 h-3 w-3 shrink-0" />
             {t.payoutPrivacyNote}
           </p>

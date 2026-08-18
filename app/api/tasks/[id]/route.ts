@@ -23,7 +23,9 @@ import {
   makeId,
   type ExecutorProfile,
 } from '@/lib/tasks/server';
-import { TASK_AUTO_CONFIRM_HOURS, TASK_DISPUTE_HOURS } from '@/lib/types';
+import {
+  TASK_AUTO_CONFIRM_HOURS, TASK_CANCELLED_VISIBLE_DAYS, TASK_DISPUTE_HOURS,
+} from '@/lib/types';
 import { mapTaskRow } from '@/lib/tasks/map';
 
 /**
@@ -38,6 +40,7 @@ import { mapTaskRow } from '@/lib/tasks/map';
  *   decline  — заказчик отклоняет заявку, задание снова открыто
  *   exclude  — заказчик исключает участника (обратно не записаться)
  *   submit   — исполнитель нажал «Выполнил» (пошли 3 часа)
+ *   paid     — исполнитель отметил «Оплата получена» (открывает confirm)
  *   confirm  — заказчик подтвердил (сделка закрыта)
  *   reject   — заказчик не принял (спор: 24 часа на разбор)
  *   cancel   — отмена задания
@@ -46,7 +49,7 @@ import { mapTaskRow } from '@/lib/tasks/map';
 
 type Action =
   | 'take' | 'join' | 'leave' | 'approve' | 'decline' | 'exclude'
-  | 'submit' | 'confirm' | 'reject' | 'cancel' | 'attend';
+  | 'submit' | 'paid' | 'confirm' | 'reject' | 'cancel' | 'attend';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /** Идёт ли по заданию спор, который запрещает отмену и удаление. */
@@ -69,9 +72,44 @@ function disputeBlockMessage(task: any): string {
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/**
+ * Требуется ли отметка исполнителя «Оплата получена», чтобы заказчик мог
+ * подтвердить задание.
+ *
+ * Только для ПЛАТНЫХ заданий с ПЕРЕВОДОМ. На наличных деньги передаются
+ * из рук в руки при встрече: там второй клик ничего не доказывает, зато
+ * вешает задание, если исполнитель уже ушёл. В «ГIончалла» денег нет
+ * вовсе.
+ */
+function needsPaymentProof(task: any): boolean {
+  if (!task?.is_paid) return false;
+  const method = String(task?.payment_method ?? 'cash');
+  return method !== 'cash';
+}
+
+/**
+ * Снята ли блокировка «Подтвердить».
+ *
+ * Открывает кнопку одно из двух:
+ *   • исполнитель отметил получение денег (payment_received_at);
+ *   • истекло окно автоподтверждения (3 ч с «Выполнил») — страховка от
+ *     исполнителя, который пропал и отметку так и не поставил. Без неё
+ *     задание зависло бы навсегда, а заказчик получил бы блокировку на
+ *     создание новых за чужое бездействие.
+ */
+function canConfirmTask(task: any): boolean {
+  if (!needsPaymentProof(task)) return true;
+  if (task?.payment_received_at) return true;
+  const submitted = task?.submitted_at ? Date.parse(task.submitted_at) : 0;
+  if (!submitted) return false;
+  return Date.now() - submitted >= TASK_AUTO_CONFIRM_HOURS * 3600_000;
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
 const ACTIONS: Action[] = [
   'take', 'join', 'leave', 'approve', 'decline', 'exclude',
-  'submit', 'confirm', 'reject', 'cancel', 'attend',
+  'submit', 'paid', 'confirm', 'reject', 'cancel', 'attend',
 ];
 
 /** GET /api/tasks/:id — карточка с участниками. */
@@ -694,6 +732,69 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     }
 
     // ---------------------------------------------------------------
+    // «Оплата получена» — отметку ставит ИСПОЛНИТЕЛЬ
+    //
+    // Это единственный след платежа на стороне сервиса: сам он в
+    // расчётах не участвует (ИП на НПД, ст. 4 ч. 2 п. 5 закона 422-ФЗ),
+    // деньги идут напрямую между людьми. Отметка нужна, чтобы заказчик
+    // не мог закрыть задание, не заплатив.
+    // ---------------------------------------------------------------
+    case 'paid': {
+      const { data: participant } = await admin
+        .from('task_participants')
+        .select('id, status')
+        .eq('task_id', id)
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (!participant || !['joined', 'attended', 'done'].includes(String(participant.status))) {
+        return NextResponse.json({ error: 'Вы не исполнитель этого задания' }, { status: 403 });
+      }
+      // Отметка имеет смысл только после сдачи работы: до этого платить
+      // ещё не за что, а на закрытом задании она уже ничего не меняет.
+      if (!['awaiting_confirm', 'disputed'].includes(String(task.status))) {
+        return NextResponse.json(
+          { error: 'Отметить оплату можно после того, как работа сдана' },
+          { status: 409 },
+        );
+      }
+      if (!needsPaymentProof(task)) {
+        return NextResponse.json(
+          { error: 'На этом задании расчёт наличными — отметка не нужна' },
+          { status: 409 },
+        );
+      }
+      if (task.payment_received_at) {
+        // Повторный клик не ошибка: отметка уже стоит.
+        return NextResponse.json({ success: true });
+      }
+
+      const { error: paidError } = await admin
+        .from('tasks')
+        .update({ payment_received_at: new Date().toISOString() })
+        .eq('id', id);
+      // Колонка появляется в миграции 38. Без неё отметку сохранить
+      // некуда, но и блокировки «Подтвердить» тоже нет (см.
+      // canConfirmTask) — поведение остаётся прежним, а не ломается.
+      if (paidError) {
+        log.warn('task paid: column missing', { message: paidError.message });
+        return NextResponse.json(
+          { error: 'Отметка оплаты пока недоступна: примените обновление 38' },
+          { status: 503 },
+        );
+      }
+
+      await notifyTaskEvent(admin, {
+        recipientId: String(task.author_id),
+        type: 'task_payment_received',
+        title: 'Исполнитель подтвердил оплату',
+        message: `«${task.title}» — теперь можно подтвердить выполнение.`,
+        titleCe: 'Кхочушдийриг ахча тIеэцна ву',
+      });
+
+      return NextResponse.json({ success: true });
+    }
+
+    // ---------------------------------------------------------------
     // Подтверждение заказчиком
     // ---------------------------------------------------------------
     case 'confirm': {
@@ -702,6 +803,23 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       }
       if (task.status !== 'awaiting_confirm') {
         return NextResponse.json({ error: 'Задание не ожидает подтверждения' }, { status: 409 });
+      }
+      // Задание с ПЕРЕВОДОМ нельзя закрыть, пока исполнитель не
+      // подтвердил, что деньги пришли. Иначе заказчик нажимал
+      // «Подтвердить», сделка закрывалась как успешная, счётчики
+      // исполнителя росли — а денег он не видел.
+      //
+      // Администратор исключён: он разбирает жалобы и должен уметь
+      // закрыть зависшее задание вручную.
+      if (!isAdmin && !canConfirmTask(task)) {
+        return NextResponse.json(
+          {
+            error: 'Исполнитель ещё не отметил, что получил оплату. '
+              + 'Переведите деньги и дождитесь его отметки.',
+            needsPaymentProof: true,
+          },
+          { status: 409 },
+        );
       }
 
       await completeTask(admin, id, String(task.title));
@@ -787,15 +905,45 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       }
       const reason = String(body.reason ?? '').trim().slice(0, 500);
 
-      await admin
+      // Отменённое задание НЕ прячем сразу.
+      //
+      // Раньше здесь стоял is_archived = true: задание мгновенно
+      // выпадало из ленты у заказчика (вьюха v_tasks_feed скрывает
+      // архивные), а у исполнителя продолжало висеть в «В работе» как
+      // живое — он даже не понимал, что заказ отменён. Ни следа, ни
+      // объяснения ни у одной стороны.
+      //
+      // Теперь оно остаётся видимым ОБЕИМ сторонам с пометкой
+      // «Отменено» и уходит из списков через неделю (visible_until).
+      // В архив его переводит обслуживание по расписанию.
+      const visibleUntil = new Date(
+        Date.now() + TASK_CANCELLED_VISIBLE_DAYS * 24 * 3600_000,
+      ).toISOString();
+      const { error: cancelError } = await admin
         .from('tasks')
         .update({
           status: 'cancelled',
           cancelled_at: new Date().toISOString(),
           cancel_reason: reason || null,
-          is_archived: true,
+          is_archived: false,
+          visible_until: visibleUntil,
         })
         .eq('id', id);
+
+      // Колонка visible_until появляется в миграции 38. Пока её нет —
+      // возвращаемся к прежнему поведению, чтобы отмена не отказывала.
+      if (cancelError) {
+        log.warn('task cancel: visible_until missing', { message: cancelError.message });
+        await admin
+          .from('tasks')
+          .update({
+            status: 'cancelled',
+            cancelled_at: new Date().toISOString(),
+            cancel_reason: reason || null,
+            is_archived: true,
+          })
+          .eq('id', id);
+      }
 
       const { data: parts } = await admin
         .from('task_participants')

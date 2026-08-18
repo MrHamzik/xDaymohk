@@ -270,7 +270,7 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
                 </div>
               </section>
             ) : (
-              <p className="rounded-xl bg-amber-50 p-3 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">{t.signInToCreate}</p>
+              <p className="smk-note smk-note-warn p-3 text-xs">{t.signInToCreate}</p>
             )}
 
             {!profile?.isPersonal && !profile?.id && (
@@ -331,7 +331,7 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
                     <label htmlFor="profile-video" className="text-xs font-semibold text-slate-700 dark:text-zinc-400">{t.videoTitle}</label>
                     <button type="button" onClick={() => setShowVideoHint((isShown) => !isShown)} aria-label="Пояснение о видео" className="text-amber-500 transition hover:text-amber-600"><Info className="h-3.5 w-3.5" /></button>
                   </div>
-                  {showVideoHint && <p className="mb-2 rounded-xl bg-amber-50 p-2 text-xs leading-relaxed text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">{t.videoHint}</p>}
+                  {showVideoHint && <p className="smk-note smk-note-warn mb-2 p-2 text-xs leading-relaxed">{t.videoHint}</p>}
                   <input id="profile-video" type="url" value={videoUrl} onChange={(event) => setVideoUrl(event.target.value)} placeholder="https://youtu.be/..." className="smk-field w-full px-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:text-white" />
                 </div>
 
@@ -371,7 +371,7 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
 
             <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-600 dark:text-zinc-400"><input type="checkbox" checked={hidePhone} onChange={(event) => setHidePhone(event.target.checked)} className="h-3.5 w-3.5 rounded text-emerald-600 focus:ring-emerald-500" />{t.hidePhoneLabel}</label>
 
-            <div className="rounded-xl border border-amber-200/80 bg-amber-50/80 p-2.5 text-[11px] text-amber-800 dark:border-amber-200/80 dark:bg-amber-50/80">
+            <div className="smk-note smk-note-warn p-2.5 text-[11px]">
               {t.emptyContactsWarning}
             </div>
 

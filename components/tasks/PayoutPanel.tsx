@@ -206,7 +206,7 @@ export default function PayoutPanel({ taskId, amount }: PayoutPanelProps) {
         </>
       )}
 
-      <p className="mt-2.5 rounded-xl bg-amber-50 px-3 py-2 text-[10px] leading-relaxed text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+      <p className="smk-note smk-note-danger mt-2.5 px-3 py-2 text-[10px] leading-relaxed">
         {t.taskPayoutSafety}
       </p>
     </div>

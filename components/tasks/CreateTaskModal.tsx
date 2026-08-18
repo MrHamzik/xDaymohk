@@ -1,8 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { X, Loader2, ExternalLink } from 'lucide-react';
+import { X, Loader2, MapPin } from 'lucide-react';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
+import InteractiveMap from '@/components/InteractiveMapLazy';
+import MapSegmentedControl from '@/components/MapSegmentedControl';
+import { type MapLayerMode } from '@/components/InteractiveMap';
 import { useI18n } from '@/lib/i18n';
 import { createTask, fetchTaskFilters } from '@/lib/tasks/client';
 import { getUserCoords } from '@/lib/geo';
@@ -38,6 +41,8 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
   const { account } = useAuth();
   const { profiles } = useProfiles();
   const [categories, setCategories] = useState<AppFilter[]>([]);
+  const [isMapOpen, setIsMapOpen] = useState(false);
+  const [mapLayerMode, setMapLayerMode] = useState<MapLayerMode>('streets');
   const [kind, setKind] = useState<TaskKind>('urgent');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -427,7 +432,7 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
                       {cost.total} ₽
                     </dd>
                   </div>
-                  <p className="pt-0.5 text-[10px] text-slate-400">
+                  <p className="smk-note smk-note-info mt-1.5 px-2.5 py-2 text-[10px] leading-relaxed">
                     {t.taskCostExecutorGets} {cost.executorGets} ₽
                     {cost.budget > 0 && ` ${t.taskCostBudgetIncluded}`}. {t.taskCostTaxNote}
                   </p>
@@ -469,14 +474,14 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
                   {/* Ссылка в настройки: неактивная кнопка без объяснения
                       выглядит поломкой. */}
                   {PAYMENT_METHODS.some((m) => !canAcceptPayment(m, myPayout)) && (
-                    <p className="mt-1.5 text-[10px] leading-relaxed text-amber-700 dark:text-amber-400">
+                    <p className="smk-note smk-note-warn mt-1.5 px-2.5 py-2 text-[10px] leading-relaxed">
                       {t.taskPayNeedOwnPayout}{' '}
                       <Link href="/settings" className="font-bold underline">
                         {t.taskNeedPayoutLink}
                       </Link>
                     </p>
                   )}
-                  <p className="mt-1.5 text-[10px] leading-relaxed text-slate-500 dark:text-zinc-500">
+                  <p className="smk-note smk-note-info mt-1.5 px-2.5 py-2 text-[10px] leading-relaxed">
                     {paymentMethod === 'cash'
                       ? t.taskPayHintCash
                       : t.taskPayHintTransfer}
@@ -529,16 +534,19 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
             <div className="flex items-center justify-between gap-2">
               <label htmlFor="task-address" className={labelClass}>{t.taskAddressLabel}</label>
               {/* Как в анкете: ссылка появляется, когда координаты выбраны */}
+              {/* Наша карта прямо в форме — как в редакторе анкеты.
+                  Раньше ссылка уводила во внешние Яндекс.Карты, и точку
+                  приходилось сверять в другом приложении. */}
               {coords && (
-                <a
-                  href={`https://yandex.ru/maps/?pt=${coords.lng},${coords.lat}&z=17&l=map`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  type="button"
+                  onClick={() => setIsMapOpen((open) => !open)}
+                  aria-expanded={isMapOpen}
                   className="mb-1.5 inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:underline dark:text-emerald-400"
                 >
-                  {t.openOnMap}
-                  <ExternalLink className="h-3 w-3" />
-                </a>
+                  <MapPin className="h-3 w-3" />
+                  {isMapOpen ? t.hideMap : t.openOnMap}
+                </button>
               )}
             </div>
             <AddressAutocomplete
@@ -550,6 +558,50 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
                 setCoords({ lat: s.lat, lng: s.lng });
               }}
             />
+
+            {/* Карта на выбор точки: клик по ней уточняет адрес — тот же
+                сценарий, что в анкете. Грузим только после раскрытия:
+                Leaflet тянет свой бандл и тайлы. */}
+            {isMapOpen && coords && (
+              <div className="mt-2.5 space-y-2">
+                <div className="flex items-center gap-1.5">
+                  <span className="smk-sheet-label">{t.showLabel}</span>
+                  <MapSegmentedControl
+                    ariaLabel={t.mapTypeAria}
+                    active={[mapLayerMode]}
+                    onSelect={setMapLayerMode}
+                    options={[
+                      { value: 'streets' as MapLayerMode, label: t.mapLayerStreets },
+                      { value: 'satellite' as MapLayerMode, label: t.mapLayerSatellite },
+                      { value: 'hybrid' as MapLayerMode, label: t.mapLayerHybrid },
+                    ]}
+                  />
+                </div>
+                <InteractiveMap
+                  selectedPosition={coords}
+                  onSelect={(position, explicitAddress) => {
+                    // Точку приводим к ближайшему известному дому, как в
+                    // анкете: свободный клик по полю давал координаты без
+                    // адреса, и исполнитель не понимал, куда ехать.
+                    if (explicitAddress) {
+                      setCoords(position);
+                      setAddress(explicitAddress);
+                      return;
+                    }
+                    const closest = findClosestSamashkiHouse(position);
+                    setCoords({ lat: closest.lat, lng: closest.lng });
+                    setAddress(closest.fullAddress);
+                  }}
+                  showControls={false}
+                  showProfiles={false}
+                  showHouses
+                  showPlaces
+                  mapLayerMode={mapLayerMode}
+                  onMapLayerModeChange={setMapLayerMode}
+                  className="h-56 overflow-hidden rounded-xl sm:h-72"
+                />
+              </div>
+            )}
           </div>
 
           {/* Требования: кого пускать на задание.
@@ -605,7 +657,7 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
 
           {error && (
             <div className="px-4 pb-4">
-              <p className="rounded-xl bg-rose-50 px-3.5 py-2.5 text-xs font-semibold text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
+              <p className="smk-note smk-note-danger px-3.5 py-2.5 text-xs font-semibold">
                 {error}
               </p>
             </div>

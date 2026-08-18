@@ -83,7 +83,17 @@ export async function GET(request: Request) {
   if (status) {
     query = query.in('status', status.split(',').map((s) => s.trim()).filter(Boolean));
   } else {
-    query = query.in('status', ['open', 'in_progress', 'awaiting_confirm']);
+    // 'disputed' и 'cancelled' входят в набор по умолчанию намеренно.
+    //
+    // Спор — это активное состояние: обе стороны должны видеть задание,
+    // пока идут сутки на разбор. Отменённое остаётся в ленте неделю
+    // (обновление 38): раньше оно исчезало у заказчика мгновенно, и он
+    // не мог даже посмотреть, что именно отменил. Скрывает такие
+    // записи вьюха — по флагу is_archived, который ставит обслуживание
+    // по истечении visible_until.
+    query = query.in('status', [
+      'open', 'in_progress', 'awaiting_confirm', 'disputed', 'cancelled',
+    ]);
   }
 
   const { data, error } = await query;

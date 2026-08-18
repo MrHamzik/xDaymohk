@@ -291,6 +291,94 @@ function tint(
   return hslToHex({ h: hue, s: sat, l: lightness });
 }
 
+/* ---------------------------------------------------------------------------
+   Подсказки и предупреждения
+   ---------------------------------------------------------------------------
+   Блок-подсказка — это НЕ поверхность и не поле: у него своя задача —
+   объяснить правило или предостеречь. Поэтому пять отдельных слотов:
+   один общий фон и четыре цвета текста по смыслу сообщения.
+
+   Почему фон один. Раньше каждый блок красился своей утилитой
+   (bg-sky-50, bg-amber-50, bg-rose-50, bg-emerald-50) — в карточке
+   задания подряд шли четыре разных по яркости пятна, и она рябила.
+   Общий фон даёт им читаться одной семьёй, а смысл различают цвет
+   текста и золотая засечка слева.
+
+   Требование к контрасту: текст подсказки — мелкий (11 px), значит по
+   WCAG AA нужен коэффициент 4.5. Ниже он и обеспечивается доводкой
+   через ensureContrast.
+--------------------------------------------------------------------------- */
+
+/** Светлота фона подсказки по шкале 0–240: отход от карточки. */
+const NOTE_BG_DARK_FACTOR = 1.5;
+const NOTE_BG_LIGHT_STEP = 8;
+/** Минимальный контраст текста подсказки к её фону (WCAG AA, мелкий текст). */
+const NOTE_TEXT_MIN_CONTRAST = 4.5;
+
+/**
+ * Фон блока-подсказки: между полотном карточки и полем.
+ *
+ * Заметнее разделителя (иначе блок не читается как отдельный), но
+ * мягче поля — подсказку не заполняют, её читают.
+ */
+export function deriveNoteBg(card: string, isDark: boolean): string {
+  const { h, s, l } = hexToHsl(card);
+  const scaled = l * LIGHTNESS_SCALE;
+  const next = isDark
+    ? Math.min(LIGHTNESS_SCALE, scaled * NOTE_BG_DARK_FACTOR)
+    : Math.max(0, scaled - NOTE_BG_LIGHT_STEP);
+  // Насыщенность чуть выше карточки: подтон темы в подсказке должен
+  // читаться, иначе на светлых темах блок выходит просто серым.
+  return hslToHex({ h, s: Math.min(s * 1.35, 0.7), l: next / LIGHTNESS_SCALE });
+}
+
+/** Опорные тона текста подсказок: смысл одинаков во всех темах. */
+const NOTE_TEXT_BASE = {
+  info: '#0369a1',
+  warn: '#b45309',
+  danger: '#be123c',
+  success: '#047857',
+};
+
+/**
+ * Цвет текста подсказки: смысловой тон, подтонированный темой и
+ * доведённый по контрасту к фону подсказки.
+ *
+ * Подтон слабый (0.14) и с узким потолком: «опасно» обязано остаться
+ * красным, иначе предупреждение перестаёт работать как сигнал.
+ */
+function deriveNoteText(
+  base: string,
+  noteBg: string,
+  uiHue: number,
+  uiSat: number,
+  isDark: boolean,
+): string {
+  const tinted = tint(base, uiHue, uiSat, isDark, 0.14, 14);
+  return ensureContrast(tinted, noteBg, NOTE_TEXT_MIN_CONTRAST, !isDark);
+}
+
+/** Все пять слотов подсказок разом: фон из карточки, тексты — из главного цвета. */
+export interface NoteColors {
+  noteBg: string;
+  noteInfo: string;
+  noteWarn: string;
+  noteDanger: string;
+  noteSuccess: string;
+}
+
+export function deriveNotes(card: string, ui: string, isDark: boolean): NoteColors {
+  const noteBg = deriveNoteBg(card, isDark);
+  const { h, s } = hexToHsl(ui);
+  return {
+    noteBg,
+    noteInfo: deriveNoteText(NOTE_TEXT_BASE.info, noteBg, h, s, isDark),
+    noteWarn: deriveNoteText(NOTE_TEXT_BASE.warn, noteBg, h, s, isDark),
+    noteDanger: deriveNoteText(NOTE_TEXT_BASE.danger, noteBg, h, s, isDark),
+    noteSuccess: deriveNoteText(NOTE_TEXT_BASE.success, noteBg, h, s, isDark),
+  };
+}
+
 /** Готовые смысловые цвета: одинаковый смысл во всех темах. */
 const SEMANTIC_BASE = {
   statusActive: '#10b981',
@@ -332,6 +420,11 @@ export interface DerivedPalette {
   heroTo: string;
   mapCluster: string;
   mapHouse: string;
+  noteBg: string;
+  noteInfo: string;
+  noteWarn: string;
+  noteDanger: string;
+  noteSuccess: string;
 }
 
 /**
@@ -373,6 +466,8 @@ export function derivePalette(ui: string, isDark: boolean): DerivedPalette {
   // Подложка блоков заметнее разделителя: иначе карточка выглядит
   // одним сплошным пятном (см. deriveCardInset).
   const cardInset = deriveCardInset(card, isDark);
+  // Подсказки: фон из карточки, тексты доводятся по контрасту к нему.
+  const notes = deriveNotes(card, ui, isDark);
 
   // Текст: светлый на тёмной основе и наоборот. Светлота 228/63 взята
   // из эталонов — она даёт контраст к карточке около 15 на тёмных
@@ -456,6 +551,9 @@ export function derivePalette(ui: string, isDark: boolean): DerivedPalette {
     // разных типов различаются и без подписи.
     mapCluster: ui,
     mapHouse: accent,
+    // Подсказки: общий фон плюс четыре смысловых цвета текста,
+    // доведённых по контрасту именно к этому фону.
+    ...notes,
   };
 }
 
@@ -526,8 +624,27 @@ export function deriveCardInset(card: string, isDark: boolean): string {
   return hslToHex({ h, s, l: next / LIGHTNESS_SCALE });
 }
 
-/** Шаг поля ввода вниз на светлых темах, шкала 0–240. */
-const FIELD_LIGHT_STEP = 14;
+/**
+ * Светлота поля на светлых темах — почти белая, но не белая (шкала 0–240).
+ *
+ * Раньше поле считалось шагом ВНИЗ от карточки (−14). У светлых тем фон
+ * страницы (228) оказывался светлее поля (224): поле сливалось с фоном,
+ * и форма читалась как одно пятно. Теперь поле — самая светлая
+ * поверхность темы: выше карточки и заметно выше фона.
+ *
+ * 237 из 240 — «почти белый»: до чистого белого остаётся ровно тот зазор,
+ * который нужен, чтобы поле не спорило с белыми иконками и текстом.
+ */
+const FIELD_LIGHT_TARGET = 237;
+/**
+ * Насыщенность поля на светлых темах — множитель к насыщенности карточки.
+ *
+ * На светлоте 237 подтон почти не виден: без усиления «Природа» и
+ * «Янтарь» получали одинаково белые поля. Множитель возвращает оттенок
+ * темы, потолок 0.6 не даёт полю стать цветным пятном.
+ */
+const FIELD_LIGHT_SAT_FACTOR = 1.6;
+const FIELD_LIGHT_SAT_MAX = 0.6;
 /** Множитель светлоты поля ввода на тёмных темах. */
 const FIELD_DARK_FACTOR = 1.65;
 
@@ -536,16 +653,23 @@ const FIELD_DARK_FACTOR = 1.65;
  * читаются как «место для данных» — адрес в карточке задания, сведения
  * о человеке в анкете.
  *
- * Мягче подложки строк (`cardInset`) и заметнее разделителя: получается
- * три уровня глубины — полотно карточки, поле, акцентная строка.
- * Раньше поля брали bg-white, тема подменяла его цветом карточки, и
- * поле сливалось с полотном, оставляя одну рамку.
+ * Направление РАЗНОЕ у тёмных и светлых тем, и это намеренно.
+ *
+ *  • Тёмные: поле светлее карточки (×1.65) — «углубление» на тёмном
+ *    подсвечивается, иначе его вовсе не видно.
+ *  • Светлые: поле — самая светлая поверхность (237 из 240, почти
+ *    белая), с усиленным подтоном темы. Прежний шаг вниз (−14) делал
+ *    поле темнее фона страницы, и оно с ним сливалось.
  */
 export function deriveField(card: string, isDark: boolean): string {
   const { h, s, l } = hexToHsl(card);
-  const scaled = l * LIGHTNESS_SCALE;
-  const next = isDark
-    ? Math.min(LIGHTNESS_SCALE, scaled * FIELD_DARK_FACTOR)
-    : Math.max(0, scaled - FIELD_LIGHT_STEP);
-  return hslToHex({ h, s, l: next / LIGHTNESS_SCALE });
+  if (isDark) {
+    const next = Math.min(LIGHTNESS_SCALE, l * LIGHTNESS_SCALE * FIELD_DARK_FACTOR);
+    return hslToHex({ h, s, l: next / LIGHTNESS_SCALE });
+  }
+  return hslToHex({
+    h,
+    s: Math.min(s * FIELD_LIGHT_SAT_FACTOR, FIELD_LIGHT_SAT_MAX),
+    l: FIELD_LIGHT_TARGET / LIGHTNESS_SCALE,
+  });
 }

@@ -114,7 +114,9 @@ export type TaskAction =
   | 'take' | 'join' | 'leave' | 'exclude'
   // Одобрение исполнителя заказчиком на платных заданиях (обновление 27).
   | 'approve' | 'decline'
-  | 'submit' | 'confirm' | 'reject' | 'cancel' | 'attend';
+  // 'paid' — отметка ИСПОЛНИТЕЛЯ «Оплата получена»: без неё заказчик
+  // не может подтвердить задание с переводом (обновление 38).
+  | 'submit' | 'paid' | 'confirm' | 'reject' | 'cancel' | 'attend';
 
 export interface TaskActionPayload {
   userId?: string;

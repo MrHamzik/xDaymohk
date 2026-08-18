@@ -87,7 +87,7 @@ function applyNeutralRamp(
   // паре с text-white, а bg-slate-900/60 — это затемняющая подложка
   // модальных окон. Инвертировав их в тёмных темах, мы сделали бы
   // подсказку белой с белым текстом, а подложку — светлой вспышкой.
-  const steps = [50, 100, 200, 300, 400];
+  const steps = [50, 100, 200, 300];
   for (const [index, step] of steps.entries()) {
     const t = index / (steps.length - 1); // 0 → ближе к фону, 1 → к тексту
     const value = isDark
@@ -97,6 +97,17 @@ function applyNeutralRamp(
       : mix(colors.bg, colors.text, 0.02 + t * 0.34);
     set(`--color-slate-${step}`, value);
   }
+
+  // Ступень 400 — исключение: в разметке это ТЕКСТ, а не поверхность.
+  // 115 упоминаний text-slate-400 (счётчик символов «120/500», подписи
+  // «Категория:», плейсхолдеры) против одного bg-slate-400.
+  //
+  // Пока она считалась по общей формуле, на тёмных темах выходила
+  // mix(bg, text, 0.21) — то есть почти цвет фона. Отсюда замечание:
+  // подписи под полями «описание», «WhatsApp», «Telegram» оставались
+  // тёмными и не подчинялись теме. Берём приглушённый текст темы и
+  // гасим его на четверть — он остаётся тише основного, но читается.
+  set('--color-slate-400', mix(colors.muted, colors.card, 0.25));
 }
 
 /** Все переменные, которыми управляет пользовательская тема. */
@@ -120,6 +131,8 @@ const MANAGED_PROPERTIES = [
   '--smk-status-offline', '--smk-status-offline-deep',
   '--smk-role-specialist', '--smk-role-admin', '--smk-role-verified',
   '--smk-map-cluster',
+  '--smk-note-bg', '--smk-note-info', '--smk-note-warn',
+  '--smk-note-danger', '--smk-note-success',
   '--smk-danger-rgb',
   // Акцент интерфейса: Tailwind v4 держит палитру в переменных, поэтому
   // подмена --color-emerald-* перекрашивает все утилиты emerald разом.
@@ -298,6 +311,16 @@ export function applyThemeColors(
   set('--smk-role-verified', colors.roleVerified);
 
   set('--smk-danger-rgb', hexToRgbChannels(colors.danger));
+
+  // ── Подсказки и предупреждения ──────────────────────────────────
+  // Один фон на все типы, четыре цвета текста по смыслу. Раньше эти
+  // блоки красились утилитами bg-sky-50 / bg-amber-50 / bg-rose-50 и
+  // в тёмных темах оставались светлыми пятнами с нечитаемым текстом.
+  set('--smk-note-bg', colors.noteBg);
+  set('--smk-note-info', colors.noteInfo);
+  set('--smk-note-warn', colors.noteWarn);
+  set('--smk-note-danger', colors.noteDanger);
+  set('--smk-note-success', colors.noteSuccess);
 
   // ── Акцент интерфейса (зелёный по умолчанию) ────────────────────
   // Утилиты вида bg-emerald-600 компилируются в var(--color-emerald-600),

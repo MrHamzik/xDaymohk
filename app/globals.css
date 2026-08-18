@@ -652,7 +652,8 @@ html.dark .smk-price-teal {
   --smk-card-line: #f5f5f5;     /* обводка: контур карточек и полей */
   --smk-divider: #ebebeb;       /* разделители: линии внутри блоков */
   --smk-card-inset: #eaeaea;    /* подложки строк   */
-  --smk-field: #f0f0f0;         /* поля заполнения  */
+  --smk-field: #fcfcfc;         /* поля заполнения: почти белые, но не белые —
+                                   иначе поле сливается с фоном страницы */
   --smk-muted: #57667c;         /* второстепенный текст */
   --smk-muted-bright: #465369;  /* акцентный текст  */
   --smk-steel-a: #3f3f46;       /* сталь: кольцо, кнопка (тёмная тема) */
@@ -688,6 +689,16 @@ html.dark .smk-price-teal {
   --smk-status-flexible-deep: #0284c7;
   --smk-status-offline: #d4d4d8;
   --smk-status-offline-deep: #a1a1aa;
+
+  /* --- Подсказки и предупреждения (светлая тема) -------------------------
+     Один фон на все четыре типа, различает их цвет текста и засечка
+     слева. Контраст текста к фону не ниже 4.5 — блоки набраны 11 px,
+     а это по WCAG AA «мелкий текст». */
+  --smk-note-bg: #f7f7f7;
+  --smk-note-info: #0c7398;
+  --smk-note-warn: #97690c;
+  --smk-note-danger: #c01012;
+  --smk-note-success: #097354;
 }
 
 /* --- Полотно карточки ------------------------------------------------------ */
@@ -1144,6 +1155,13 @@ html.dark {
   --smk-surface: #1c1c20;
   --smk-hairline: rgb(255 255 255 / 0.08);
   --smk-hairline-strong: rgb(255 255 255 / 0.16);
+
+  /* Подсказки: тёмное зеркало блока из :root. */
+  --smk-note-bg: #292931;
+  --smk-note-info: #2fbcee;
+  --smk-note-warn: #eeae2f;
+  --smk-note-danger: #f5898a;
+  --smk-note-success: #2feeb7;
 }
 
 /* --- Стеклянный режим ---------------------------------------------------------
@@ -2020,8 +2038,12 @@ html.fx-no-motion *::after {
   opacity: var(--fx-pattern);
 }
 
-/* Поля внутри формы: собственная глубина вместо плоской заливки.
-   Мягкая внутренняя тень читается как «углубление», куда пишут. */
+/* Поля внутри формы: та же ПРИПОДНЯТАЯ глубина, что у блоков данных.
+   Раньше здесь стояла inset-тень — поле выглядело «вдавленным», а
+   соседний блок телефона с обычной тенью — приподнятым. В одной форме
+   рядом оказывались две противоположные метафоры глубины, и это
+   бросалось в глаза («ФИО, пол, дата рождения словно вдавлены»).
+   Оставляем один язык на всю форму: поле лежит НА полотне. */
 .smk-field input,
 .smk-field select,
 .smk-field textarea,
@@ -2029,15 +2051,15 @@ input.smk-field,
 select.smk-field,
 textarea.smk-field {
   box-shadow:
-    inset 0 1px 2px rgb(var(--smk-shadow-rgb) / calc(0.10 * var(--fx-shadow))),
-    0 1px 0 rgb(var(--smk-light-rgb) / calc(0.04 * var(--fx-shadow)));
+    0 1px 2px -1px rgb(var(--smk-shadow-rgb) / calc(0.10 * var(--fx-shadow))),
+    0 4px 12px -8px rgb(var(--smk-shadow-rgb) / calc(0.18 * var(--fx-shadow)));
   transition: box-shadow 0.18s ease, background-color 0.18s ease;
 }
 input.smk-field:focus,
 select.smk-field:focus,
 textarea.smk-field:focus {
   box-shadow:
-    inset 0 1px 2px rgb(var(--smk-shadow-rgb) / calc(0.06 * var(--fx-shadow))),
+    0 1px 2px -1px rgb(var(--smk-shadow-rgb) / calc(0.10 * var(--fx-shadow))),
     0 0 0 3px rgb(var(--smk-gold-rgb) / calc(0.16 * var(--fx-glow)));
 }
 
@@ -2053,4 +2075,65 @@ textarea.smk-field:focus {
     color-mix(in srgb, var(--smk-light-rgb-color, transparent) 0%, transparent) 0%,
     color-mix(in srgb, var(--smk-card-a) calc(14% * var(--fx-gradient)), transparent) 100%
   );
+}
+
+/* --- Подсказки, предупреждения, примечания ------------------------------------
+   Блоки текста, которые объясняют правило или предостерегают: «Деньги
+   идут напрямую исполнителю», «Если не подтвердить за 3 ч…», «Работа не
+   принята». Раньше каждый такой блок красился утилитами Tailwind
+   (bg-sky-50 / bg-amber-50 / bg-rose-50 / text-amber-800) мимо палитры:
+   в тёмных темах они оставались светлыми пятнами с нечитаемым тёмным
+   текстом, а в карточке задания подряд шли четыре разных по яркости
+   плашки — она рябила.
+
+   Устройство: ОДИН фон на все типы (--smk-note-bg) и четыре цвета
+   текста по смыслу. Тип различают цвет текста и вертикальная засечка
+   слева — тем же приёмом, что подписи .smk-sheet-label. Так блоки
+   читаются одной семьёй, но смысл виден до чтения.
+
+   Контраст текста к фону не ниже 4.5 (WCAG AA для мелкого текста) —
+   он обеспечивается в lib/settings/derive.ts на этапе вывода палитры. */
+.smk-note {
+  position: relative;
+  border-radius: 0.75rem;
+  background: var(--smk-note-bg);
+  color: var(--smk-note-info);
+  padding-left: 0.875rem;
+  box-shadow:
+    0 1px 2px -1px rgb(var(--smk-shadow-rgb) / calc(0.10 * var(--fx-shadow))),
+    0 4px 12px -8px rgb(var(--smk-shadow-rgb) / calc(0.16 * var(--fx-shadow)));
+  background-image: linear-gradient(
+    168deg,
+    transparent 0%,
+    color-mix(in srgb, var(--smk-card-a) calc(16% * var(--fx-gradient)), transparent) 100%
+  );
+}
+
+/* Засечка слева — цветом типа подсказки. Не border: рамок в проекте нет,
+   а засечка «прирастает» к блоку и не образует контур. */
+.smk-note::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.5rem;
+  bottom: 0.5rem;
+  width: 3px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.75;
+}
+
+/* Заголовок внутри подсказки наследует её цвет, поэтому отдельного
+   класса под него не нужно. */
+.smk-note-info { color: var(--smk-note-info); }
+.smk-note-warn { color: var(--smk-note-warn); }
+.smk-note-danger { color: var(--smk-note-danger); }
+.smk-note-success { color: var(--smk-note-success); }
+
+/* Ссылка внутри подсказки: тот же цвет, подчёркивание оставляем —
+   это единственный признак кликабельности внутри плашки. */
+.smk-note a {
+  color: inherit;
+  font-weight: 700;
+  text-decoration: underline;
 }

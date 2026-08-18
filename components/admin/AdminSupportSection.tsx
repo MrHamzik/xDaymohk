@@ -118,7 +118,7 @@ export default function AdminSupportSection() {
       </div>
 
       {error && (
-        <p className="rounded-xl bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
+        <p className="smk-note smk-note-danger px-3 py-2 text-xs font-semibold">
           {error}
         </p>
       )}

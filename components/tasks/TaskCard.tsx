@@ -1,7 +1,7 @@
 'use client';
 
 import {
-  Clock, MapPin, Star, Users, Zap, AlertTriangle,
+  Clock, MapPin, Star, Users, Zap, AlertTriangle, Ban,
   Banknote, CalendarDays, ChevronRight, CreditCard, ShieldCheck, Wallet,
 } from 'lucide-react';
 import Avatar from '@/components/Avatar';
@@ -94,6 +94,11 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
       aria-label={`${t.taskOpenAria}: ${task.title}`}
       className={`smk-lux smk-rays smk-enter group flex h-full cursor-pointer flex-col overflow-hidden text-slate-900 dark:text-white ${
         needsReview ? 'ring-1 ring-amber-300/70 dark:ring-amber-700/60' : ''
+      } ${
+        // Отменённое гасим прозрачностью, а не серым цветом: серый
+        // пришлось бы задавать литералом мимо палитры, и в тёмных
+        // темах карточка стала бы светлее живых.
+        task.status === 'cancelled' ? 'opacity-60' : ''
       }`}
     >
       {/* Слой 3: «корешок» — цвет говорит о срочности до чтения текста */}
@@ -171,6 +176,16 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
 
       {/* ── Метки ──────────────────────────────────────────────── */}
       <div className="mt-auto flex flex-wrap items-center gap-1.5 px-4 py-3 text-[10px] font-bold">
+        {/* Отменённое задание остаётся в списках неделю — обе стороны
+            должны увидеть, что случилось. Метка идёт первой: она
+            отменяет смысл всех остальных (срок, места, оплата). */}
+        {task.status === 'cancelled' && (
+          <span className="smk-note smk-note-danger inline-flex items-center gap-1 px-2 py-1">
+            <Ban className="h-3 w-3" />
+            {t.taskCancelledBadge}
+          </span>
+        )}
+
         {needsReview && (
           <span className="inline-flex items-center gap-1 rounded-lg bg-amber-100 px-2 py-1 text-amber-900 dark:bg-amber-900/60 dark:text-amber-200">
             <Star className="h-3 w-3 fill-current" />

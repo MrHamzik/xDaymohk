@@ -27,6 +27,7 @@ import {
   distanceMeters,
 } from '@/lib/tasks/client';
 import { TASK_NEARBY_RADIUS_M, type AppFilter, type Task } from '@/lib/types';
+import { isTaskStillVisible } from '@/lib/tasks/visibility';
 import { useTasksRealtime } from '@/lib/tasks/realtime';
 
 /** Вкладки ленты. «Близко» — по умолчанию, 1 км от текущей позиции. */
@@ -189,7 +190,12 @@ export default function VayghullakhPage() {
    */
   const takenTasks = useMemo(() => myTasks.filter(
     (t) => !['completed', 'cancelled', 'expired'].includes(t.status)
-      || pendingReview.includes(t.id),
+      || pendingReview.includes(t.id)
+      // Отменённое заказчиком задание остаётся здесь с пометкой
+      // «Отменено», пока не истёк срок показа. Раньше оно просто
+      // пропадало из «В работе», и исполнитель не понимал, куда делся
+      // заказ; либо, наоборот, висело как живое (см. обновление 38).
+      || (t.status === 'cancelled' && isTaskStillVisible(t)),
   ), [myTasks, pendingReview]);
 
   const visibleTasks = useMemo(() => {
@@ -201,6 +207,13 @@ export default function VayghullakhPage() {
       list = takenTasks;
     } else if (tab === 'nearby' && position) {
       list = list.filter((t) => typeof t.distanceM === 'number' && t.distanceM <= TASK_NEARBY_RADIUS_M);
+    }
+
+    // Отменённые видны только СТОРОНАМ сделки: заказчику в «Мои» и
+    // исполнителю в «В работе». В общей ленте им делать нечего — это
+    // закрытые заказы, а не предложения работы.
+    if (tab !== 'mine' && tab !== 'taken') {
+      list = list.filter((t) => t.status !== 'cancelled');
     }
 
     if (category) list = list.filter((t) => t.category === category);

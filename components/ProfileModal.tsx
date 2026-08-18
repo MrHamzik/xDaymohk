@@ -3,7 +3,7 @@
 import Avatar from '@/components/Avatar';
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { Ban, BriefcaseBusiness, CalendarDays, ChevronDown, Clock, ExternalLink, Flag, MapPin, MessageSquare, Pencil, Phone, Send, ShieldBan, Star, Trash2, VenusAndMars, X } from 'lucide-react';
+import { Ban, BriefcaseBusiness, CalendarDays, ChevronDown, Clock, Flag, MapPin, MessageSquare, Pencil, Phone, Send, ShieldBan, Star, Trash2, VenusAndMars, X } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { useProfiles } from '@/components/ProfilesProvider';
 import { useBlacklist } from '@/components/BlacklistProvider';
@@ -17,6 +17,9 @@ import { compactWeekdays } from '@/lib/schedule';
 import Notice from '@/components/Notice';
 import ProfileBadges, { WorkingStatusBadge } from '@/components/ProfileBadges';
 import { cacheBustAvatarUrl } from '@/lib/media';
+import InteractiveMap from '@/components/InteractiveMapLazy';
+import MapSegmentedControl from '@/components/MapSegmentedControl';
+import { type MapLayerMode } from '@/components/InteractiveMap';
 
 interface ProfileModalProps {
   profile: Profile | null;
@@ -112,6 +115,10 @@ export default function ProfileModal({
   const { t } = useI18n();
   const { profiles: allProfiles, users: allUsers, isProfileAdmin, createNotification } = useProfiles();
   const [selectedCert, setSelectedCert] = useState<Certificate | null>(null);
+  // Карта рабочего адреса — по кнопке: Leaflet тянет свой бандл и тайлы,
+  // а анкету открывают чаще ради контактов, чем ради точки.
+  const [isMapOpen, setIsMapOpen] = useState(false);
+  const [mapLayerMode, setMapLayerMode] = useState<MapLayerMode>('streets');
   // A user card opened from a name link renders as a nested ProfileModal
   // on top of this one; closing it returns to this анкета instead of
   // closing everything and dropping back to the catalog.
@@ -1380,17 +1387,48 @@ export default function ProfileModal({
               </div>
               <div className="flex-1 min-w-0">
                 <p className="truncate text-xs font-bold text-slate-900 dark:text-white">{profile.workplaceAddress}</p>
-                <a
-                  href={`https://yandex.ru/maps/?pt=${profile.workplaceCoords.lng},${profile.workplaceCoords.lat}&z=16&l=map`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                {/* Наша карта прямо в анкете вместо ухода во внешние
+                    Яндекс.Карты: точку мы и так умеем показать. */}
+                <button
+                  type="button"
+                  onClick={() => setIsMapOpen((open) => !open)}
+                  aria-expanded={isMapOpen}
                   className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:underline dark:text-emerald-400"
                 >
-                  {t.openOnMap}
-                  <ExternalLink className="h-3 w-3" />
-                </a>
+                  <MapPin className="h-3 w-3" />
+                  {isMapOpen ? t.hideMap : t.openOnMap}
+                </button>
               </div>
             </div>
+
+            {isMapOpen && (
+              <div className="mt-2.5 space-y-2">
+                <div className="flex items-center gap-1.5">
+                  <span className="smk-sheet-label">{t.showLabel}</span>
+                  <MapSegmentedControl
+                    ariaLabel={t.mapTypeAria}
+                    active={[mapLayerMode]}
+                    onSelect={setMapLayerMode}
+                    options={[
+                      { value: 'streets' as MapLayerMode, label: t.mapLayerStreets },
+                      { value: 'satellite' as MapLayerMode, label: t.mapLayerSatellite },
+                      { value: 'hybrid' as MapLayerMode, label: t.mapLayerHybrid },
+                    ]}
+                  />
+                </div>
+                {/* Только просмотр: адрес задаёт владелец анкеты. */}
+                <InteractiveMap
+                  selectedPosition={profile.workplaceCoords}
+                  showControls={false}
+                  showProfiles={false}
+                  showHouses
+                  showPlaces
+                  mapLayerMode={mapLayerMode}
+                  onMapLayerModeChange={setMapLayerMode}
+                  className="h-56 overflow-hidden rounded-xl sm:h-72"
+                />
+              </div>
+            )}
           </section>
 
           {profile.certificates.length > 0 && (

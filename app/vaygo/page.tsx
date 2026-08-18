@@ -119,6 +119,13 @@ export default function VaygoPage() {
     else if (tab === 'nearby' && position) {
       list = list.filter((t) => typeof t.distanceM === 'number' && t.distanceM <= TASK_NEARBY_RADIUS_M);
     }
+    // Отменённые видны только СТОРОНАМ сделки: заказчику в «Мои» и
+    // исполнителю в «В работе». В общей ленте им делать нечего — это
+    // закрытые заказы, а не предложения работы.
+    if (tab !== 'mine') {
+      list = list.filter((t) => t.status !== 'cancelled');
+    }
+
     if (category) list = list.filter((t) => t.category === category);
     if (priorityFilter) list = list.filter((t) => t.priority === priorityFilter);
     // Сравниваем с чистой наградой: надбавка за срочность и деньги

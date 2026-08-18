@@ -4,7 +4,10 @@ import { useState } from 'react';
 import { Check, ChevronDown, Palette, Plus, Trash2 } from 'lucide-react';
 import { useSettings } from '@/components/SettingsProvider';
 import { PRESET_THEMES, normalizeColors } from '@/lib/settings/defaults';
-import { deriveCardInset, deriveCardLine, deriveDivider, deriveField, derivePalette, derivePanel } from '@/lib/settings/derive';
+import {
+  deriveCardInset, deriveCardLine, deriveDivider, deriveField, deriveNotes,
+  derivePalette, derivePanel,
+} from '@/lib/settings/derive';
 import {
   MAX_CUSTOM_THEMES, THEME_COLOR_GROUPS,
   type CustomTheme, type ThemeColorGroup, type ThemeColors,
@@ -84,6 +87,12 @@ const COLOR_LABELS: Partial<Record<keyof ThemeColors, { ru: string; ce: string }
   heroTo: { ru: 'Шапка каталога (конец)', ce: 'МогIаман корта (чаккхе)' },
   mapCluster: { ru: 'Кластеры на карте', ce: 'Картин кластераш' },
   mapHouse: { ru: 'Дома на карте', ce: 'Картин цIенош' },
+
+  noteBg: { ru: 'Подсказки — фон', ce: 'Хаамаш — букъ' },
+  noteInfo: { ru: 'Подсказка — текст', ce: 'Хаам — йоза' },
+  noteWarn: { ru: 'Предупреждение — текст', ce: 'Тидам — йоза' },
+  noteDanger: { ru: 'Опасность — текст', ce: 'Кхерам — йоза' },
+  noteSuccess: { ru: 'Подтверждение — текст', ce: 'ТIечIагIдар — йоза' },
 };
 
 /** Смешивание цветов — для производных значений (нижняя точка градиента). */
@@ -368,6 +377,13 @@ export default function ThemeEditor() {
                               next.panel = derivePanel(e.target.value, editing.isDark);
                               next.cardInset = deriveCardInset(e.target.value, editing.isDark);
                               next.field = deriveField(e.target.value, editing.isDark);
+                              // Подсказки тоже привязаны к карточке: их
+                              // фон выводится из неё, а цвета текста
+                              // доводятся по контрасту к этому фону.
+                              Object.assign(
+                                next,
+                                deriveNotes(e.target.value, next.ui, editing.isDark),
+                              );
                             }
                             patchTheme(editing.id, {
                               colors: normalizeColors(next, editing.colors),

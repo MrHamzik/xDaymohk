@@ -12,7 +12,9 @@ import {
   DEFAULT_EFFECTS,
   EFFECT_KEYS,
 } from '@/lib/settings/types';
-import { deriveCardInset, deriveDivider, deriveField, derivePanel } from '@/lib/settings/derive';
+import {
+  deriveCardInset, deriveDivider, deriveField, deriveNotes, derivePanel,
+} from '@/lib/settings/derive';
 
 /**
  * Умолчания живут здесь, а не в DEFAULT-ах колонок Postgres.
@@ -110,7 +112,7 @@ export const PRESET_THEMES: Record<
       cardLine: '#f5f5f5',
       divider: '#f3f3f3',
       cardInset: '#eaeaea',
-      field: '#f0f0f0',
+      field: '#fcfcfc',
       text: '#0f172a',
       muted: '#57667c',
       icon: '#465369',
@@ -122,6 +124,13 @@ export const PRESET_THEMES: Record<
       heroTo: '#14b8a6',
       mapCluster: '#059669',
       mapHouse: '#f59e0b',
+      // Подсказки: общий фон и четыре смысловых цвета текста
+      // (контраст к фону не ниже 4.5 — текст мелкий).
+      noteBg: '#f7f7f7',
+      noteInfo: '#0c7398',
+      noteWarn: '#97690c',
+      noteDanger: '#c01012',
+      noteSuccess: '#097354',
     },
   },
   dark: {
@@ -148,6 +157,13 @@ export const PRESET_THEMES: Record<
       heroTo: '#0f766e',
       mapCluster: '#059669',
       mapHouse: '#f59e0b',
+      // Подсказки: общий фон и четыре смысловых цвета текста
+      // (контраст к фону не ниже 4.5 — текст мелкий).
+      noteBg: '#292931',
+      noteInfo: '#2fbcee',
+      noteWarn: '#eeae2f',
+      noteDanger: '#f26365',
+      noteSuccess: '#2feeb7',
     },
   },
   /**
@@ -192,6 +208,13 @@ export const PRESET_THEMES: Record<
       heroTo: '#2a6fa8',
       mapCluster: '#6552e0',
       mapHouse: '#4cacf0',
+      // Подсказки: общий фон и четыре смысловых цвета текста
+      // (контраст к фону не ниже 4.5 — текст мелкий).
+      noteBg: '#161440',
+      noteInfo: '#2f96ee',
+      noteWarn: '#eb5733',
+      noteDanger: '#e73d8d',
+      noteSuccess: '#31eddd',
     },
   },
   /**
@@ -235,6 +258,13 @@ export const PRESET_THEMES: Record<
       heroTo: '#e58c2b',
       mapCluster: '#e5472e',
       mapHouse: '#f6ae31',
+      // Подсказки: общий фон и четыре смысловых цвета текста
+      // (контраст к фону не ниже 4.5 — текст мелкий).
+      noteBg: '#4c1925',
+      noteInfo: '#5092f1',
+      noteWarn: '#ee7a2f',
+      noteDanger: '#ee627d',
+      noteSuccess: '#2fee8b',
     },
   },
   /**
@@ -281,6 +311,13 @@ export const PRESET_THEMES: Record<
       heroTo: '#000000',
       mapCluster: '#3f3f46',
       mapHouse: '#a3a3a3',
+      // Подсказки: общий фон и четыре смысловых цвета текста
+      // (контраст к фону не ниже 4.5 — текст мелкий).
+      noteBg: '#0f0f0f',
+      noteInfo: '#4c96d2',
+      noteWarn: '#ce6950',
+      noteDanger: '#c9558c',
+      noteSuccess: '#4dd0c2',
     },
   },
   /**
@@ -303,7 +340,7 @@ export const PRESET_THEMES: Record<
       cardLine: '#f5f5f5',
       divider: '#f3f3f3',
       cardInset: '#eaeaea',
-      field: '#f0f0f0',
+      field: '#fcfcfc',
       // Самый тёмный тон — графит, а не почти-чёрный: тема должна
       // читаться как «серая бумага», а не как чёрный текст на белом.
       text: '#3a3a42',
@@ -329,6 +366,13 @@ export const PRESET_THEMES: Record<
       heroTo: '#b4b4bc',
       mapCluster: '#6e6e78',
       mapHouse: '#b4b4bc',
+      // Подсказки: общий фон и четыре смысловых цвета текста
+      // (контраст к фону не ниже 4.5 — текст мелкий).
+      noteBg: '#f7f7f7',
+      noteInfo: '#215783',
+      noteWarn: '#933f2a',
+      noteDanger: '#9d3366',
+      noteSuccess: '#1a625a',
     },
   },
   /**
@@ -351,7 +395,7 @@ export const PRESET_THEMES: Record<
       cardLine: '#f5f5f5',
       divider: '#f3f3f3',
       cardInset: '#eaeaea',
-      field: '#f0f0f0',
+      field: '#fcfcfc',
       text: '#1e293b',
       muted: '#526177',
       // Серебро с холодным отливом.
@@ -373,6 +417,13 @@ export const PRESET_THEMES: Record<
       heroTo: '#0ea5e9',
       mapCluster: '#0ea5e9',
       mapHouse: '#94a3b8',
+      // Подсказки: общий фон и четыре смысловых цвета текста
+      // (контраст к фону не ниже 4.5 — текст мелкий).
+      noteBg: '#f7f7f7',
+      noteInfo: '#0c6798',
+      noteWarn: '#97690c',
+      noteDanger: '#c01064',
+      noteSuccess: '#09735d',
     },
   },
   /**
@@ -399,7 +450,7 @@ export const PRESET_THEMES: Record<
       cardLine: '#ecfaf1',
       divider: '#edf5ef',
       cardInset: '#d9f6e3',
-      field: '#e3f8ea',
+      field: '#fafefb',
       text: '#305545',
       muted: '#4b6f5e',
       icon: '#476c5b',
@@ -420,6 +471,13 @@ export const PRESET_THEMES: Record<
       heroTo: '#36a2c9',
       mapCluster: '#389f5d',
       mapHouse: '#36a2c9',
+      // Подсказки: общий фон и четыре смысловых цвета текста
+      // (контраст к фону не ниже 4.5 — текст мелкий).
+      noteBg: '#ecfcf1',
+      noteInfo: '#137691',
+      noteWarn: '#926916',
+      noteDanger: '#b02022',
+      noteSuccess: '#0f6d4d',
     },
   },
   /**
@@ -444,7 +502,7 @@ export const PRESET_THEMES: Record<
       cardLine: '#faf5ec',
       divider: '#f5f2ed',
       cardInset: '#f6ecd9',
-      field: '#f8f1e3',
+      field: '#fefcfa',
       text: '#58442d',
       muted: '#78664c',
       icon: '#6f5d44',
@@ -465,6 +523,13 @@ export const PRESET_THEMES: Record<
       heroTo: '#edb91d',
       mapCluster: '#db7924',
       mapHouse: '#edb91d',
+      // Подсказки: общий фон и четыре смысловых цвета текста
+      // (контраст к фону не ниже 4.5 — текст мелкий).
+      noteBg: '#fcf7ec',
+      noteInfo: '#0b7a8a',
+      noteWarn: '#ad5510',
+      noteDanger: '#b9172e',
+      noteSuccess: '#09733c',
     },
   },
 };
@@ -537,6 +602,11 @@ export function normalizeColors(raw: unknown, base: ThemeColors): ThemeColors {
     heroTo: pick('heroTo'),
     mapCluster: pick('mapCluster'),
     mapHouse: pick('mapHouse'),
+    noteBg: pick('noteBg'),
+    noteInfo: pick('noteInfo'),
+    noteWarn: pick('noteWarn'),
+    noteDanger: pick('noteDanger'),
+    noteSuccess: pick('noteSuccess'),
   };
 }
 
@@ -589,6 +659,16 @@ function normalizeCustomThemes(raw: unknown): CustomTheme[] {
       if (typeof stored.surface !== 'string') {
         colors.surface = colors.card;
       }
+      // Подсказки — новые слоты. У старых тем их нет, и без вывода
+      // подставились бы цвета пресета-основы: светлый фон подсказки
+      // внутри тёмной пользовательской темы. Считаем из её же карточки
+      // и главного цвета.
+      const notes = deriveNotes(colors.card, colors.ui, isDark);
+      if (typeof stored.noteBg !== 'string') colors.noteBg = notes.noteBg;
+      if (typeof stored.noteInfo !== 'string') colors.noteInfo = notes.noteInfo;
+      if (typeof stored.noteWarn !== 'string') colors.noteWarn = notes.noteWarn;
+      if (typeof stored.noteDanger !== 'string') colors.noteDanger = notes.noteDanger;
+      if (typeof stored.noteSuccess !== 'string') colors.noteSuccess = notes.noteSuccess;
       return {
         id: typeof entry.id === 'string' && entry.id ? entry.id : `theme-${index}`,
         name: typeof entry.name === 'string' && entry.name.trim()

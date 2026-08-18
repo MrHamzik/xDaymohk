@@ -1,7 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { X, Loader2, Star, MapPin, Clock, Users, CalendarDays, ShieldAlert, Trash2, ExternalLink, Wallet } from 'lucide-react';
+import {
+  X, Loader2, Star, MapPin, Clock, Users, CalendarDays, ShieldAlert, Trash2,
+  Ban, Wallet,
+} from 'lucide-react';
 import Link from 'next/link';
 import Avatar from '@/components/Avatar';
 import { supabase } from '@/lib/supabase';
@@ -14,6 +17,9 @@ import {
 } from '@/lib/tasks/client';
 import AttendanceModal from '@/components/tasks/AttendanceModal';
 import PayoutPanel from '@/components/tasks/PayoutPanel';
+import InteractiveMap from '@/components/InteractiveMapLazy';
+import MapSegmentedControl from '@/components/MapSegmentedControl';
+import { type MapLayerMode } from '@/components/InteractiveMap';
 import { useI18n } from '@/lib/i18n';
 import { useTaskRealtime } from '@/lib/tasks/realtime';
 import {
@@ -52,6 +58,11 @@ export default function TaskDetailModal({
   // Модалка отметки явки (только для запланированных заданий).
   const [isAttendanceOpen, setIsAttendanceOpen] = useState(false);
   const [myPayout, setMyPayout] = useState<PayoutMethods | null>(null);
+  // Карта адреса разворачивается по кнопке, а не грузится сразу:
+  // Leaflet тянет свой бандл и тайлы, а адрес нужен не в каждом
+  // открытии карточки.
+  const [isMapOpen, setIsMapOpen] = useState(false);
+  const [mapLayerMode, setMapLayerMode] = useState<MapLayerMode>('streets');
 
   const load = useCallback(async () => {
     if (!taskId) return;
@@ -125,9 +136,14 @@ export default function TaskDetailModal({
   const activeParticipants = participants.filter((p) => ['joined', 'attended', 'done'].includes(p.status));
   const pendingParticipants = participants.filter((p) => p.status === 'pending');
 
-  // Исключить можно только до сдачи работы: после «Выполнил» спор
-  // решается кнопкой «Не принято» (сервер это же и проверяет).
-  const canExclude = Boolean(task && ['open', 'in_progress'].includes(task.status));
+  // «Исключить» после одобрения отклика больше нет.
+  //
+  // Раньше кнопка висела рядом с уже одобренным исполнителем: заказчик
+  // сам выбрал человека, тот приступил к работе — и его можно было
+  // выкинуть одним кликом без объяснений. Теперь расстаться с
+  // одобренным можно только через «Не принято» (спор с окном 24 ч) или
+  // отмену задания с уведомлением. Сервер проверяет то же самое:
+  // исключать разрешено, лишь пока статус участника — pending.
 
   // Заказчик закрывает задание «на дату» через отметку явки — там он
   // уже ставит оценки и бонусы каждому. Показывать ему ещё и общую
@@ -141,6 +157,20 @@ export default function TaskDetailModal({
     : 'cash';
   // Взять задание с переводом можно только с заполненными реквизитами.
   const canTake = !task?.isPaid || canAcceptPayment(payMethod, myPayout);
+
+  // ── Отметка «Оплата получена» ────────────────────────────────────
+  // Нужна только на ПЛАТНЫХ заданиях с переводом: наличные передаются
+  // из рук в руки при встрече, там второй клик ничего не доказывает.
+  const needsPaymentProof = Boolean(task?.isPaid) && payMethod !== 'cash';
+  const isPaymentReceived = Boolean(task?.paymentReceivedAt);
+  // Страховка от зависания: если исполнитель отметку так и не поставил,
+  // через окно автоподтверждения кнопка заказчика открывается сама —
+  // иначе пропавший исполнитель заморозил бы задание навсегда.
+  const autoConfirmDue = Boolean(
+    task?.submittedAt
+    && Date.now() - Date.parse(task.submittedAt) >= TASK_AUTO_CONFIRM_HOURS * 3600_000,
+  );
+  const canConfirm = !needsPaymentProof || isPaymentReceived || autoConfirmDue;
 
 
   const act = async (label: string, fn: () => Promise<void>) => {
@@ -281,19 +311,55 @@ export default function TaskDetailModal({
                       <p className="truncate text-xs font-bold text-slate-900 dark:text-white">
                         {task.address || t.taskAddressMissing}
                       </p>
+                      {/* «Открыть на карте» открывает НАШУ карту прямо
+                          в карточке — как в анкете (WorkplaceSection).
+                          Раньше ссылка уводила во внешние Яндекс.Карты:
+                          человек уходил из приложения ради точки,
+                          которую мы и так умеем показать. */}
                       {typeof task.lat === 'number' && typeof task.lng === 'number' && (
-                        <a
-                          href={`https://yandex.ru/maps/?pt=${task.lng},${task.lat}&z=16&l=map`}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                        <button
+                          type="button"
+                          onClick={() => setIsMapOpen((open) => !open)}
+                          aria-expanded={isMapOpen}
                           className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:underline dark:text-emerald-400"
                         >
-                          {t.openOnMap}
-                          <ExternalLink className="h-3 w-3" />
-                        </a>
+                          <MapPin className="h-3 w-3" />
+                          {isMapOpen ? t.hideMap : t.openOnMap}
+                        </button>
                       )}
                     </div>
                   </div>
+
+                  {isMapOpen && typeof task.lat === 'number' && typeof task.lng === 'number' && (
+                    <div className="mt-2.5 space-y-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className="smk-sheet-label">{t.showLabel}</span>
+                        <MapSegmentedControl
+                          ariaLabel={t.mapTypeAria}
+                          active={[mapLayerMode]}
+                          onSelect={setMapLayerMode}
+                          options={[
+                            { value: 'streets' as MapLayerMode, label: t.mapLayerStreets },
+                            { value: 'satellite' as MapLayerMode, label: t.mapLayerSatellite },
+                            { value: 'hybrid' as MapLayerMode, label: t.mapLayerHybrid },
+                          ]}
+                        />
+                      </div>
+                      {/* Карта только на просмотр: точку задал заказчик,
+                          менять её из чужой карточки нельзя — поэтому
+                          без onSelect. */}
+                      <InteractiveMap
+                        selectedPosition={{ lat: task.lat, lng: task.lng }}
+                        showControls={false}
+                        showProfiles={false}
+                        showHouses
+                        showPlaces
+                        mapLayerMode={mapLayerMode}
+                        onMapLayerModeChange={setMapLayerMode}
+                        className="h-56 overflow-hidden rounded-xl sm:h-72"
+                      />
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -342,7 +408,7 @@ export default function TaskDetailModal({
 
               {/* Моя заявка ждёт решения заказчика */}
               {isPendingMe && (
-                <p className="mx-4 mb-4 rounded-xl bg-amber-50 px-3.5 py-2.5 text-[11px] font-semibold leading-relaxed text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+                <p className="smk-note smk-note-warn mx-4 mb-4 px-3.5 py-2.5 text-[11px] font-semibold leading-relaxed">
                   {t.taskPendingMine}
                 </p>
               )}
@@ -368,16 +434,11 @@ export default function TaskDetailModal({
                             ★ {(p.rating ?? 0) > 0 ? p.rating?.toFixed(1) : '—'} · выполнено: {p.tasksDoneCount ?? 0}
                           </p>
                         </div>
-                        {isAuthor && canExclude && (
-                          <button
-                            type="button"
-                            disabled={Boolean(busy)}
-                            onClick={() => act('exclude', () => runTaskAction(task.id, 'exclude', { userId: p.userId }))}
-                            className="shrink-0 rounded-lg px-2 py-1 text-[10px] font-bold text-rose-600 transition hover:bg-rose-50 dark:hover:bg-rose-950/40"
-                          >
-                            {t.taskExcludeBtn}
-                          </button>
-                        )}
+                        {/* «Исключить» здесь больше нет: этот список —
+                            уже ОДОБРЕННЫЕ исполнители. Кнопка живёт
+                            только в блоке заявок на рассмотрении
+                            («Отклонить»), а расстаться с одобренным
+                            можно через «Не принято» или отмену. */}
                       </div>
                     ))}
                   </div>
@@ -388,12 +449,12 @@ export default function TaskDetailModal({
                   обе стороны ждут, что деньги переведёт сервис. */}
               {task.isPaid && (isAuthor || isExecutor)
                 && ['open', 'in_progress', 'awaiting_confirm'].includes(task.status) && (
-                <div className="mx-4 mb-4 rounded-2xl bg-sky-50/80 px-3.5 py-3 dark:bg-sky-950/30">
-                  <h3 className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-sky-900 dark:text-sky-300">
+                <div className="smk-note smk-note-info mx-4 mb-4 px-3.5 py-3">
+                  <h3 className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide">
                     <Wallet className="h-3.5 w-3.5" />
                     {t.taskPayoutTitle}
                   </h3>
-                  <p className="text-[11px] leading-relaxed text-sky-800/90 dark:text-sky-200/80">
+                  <p className="text-[11px] leading-relaxed">
                     {t.taskPayoutNote}
                   </p>
                 </div>
@@ -408,9 +469,30 @@ export default function TaskDetailModal({
               )}
 
               {task.status === 'awaiting_confirm' && (
-                <p className="mx-4 mb-4 rounded-xl bg-amber-50 px-3.5 py-2.5 text-[11px] font-semibold leading-relaxed text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+                <p className="smk-note smk-note-warn mx-4 mb-4 px-3.5 py-2.5 text-[11px] font-semibold leading-relaxed">
                   {t.taskAwaitConfirmNote.replace('{hours}', String(TASK_AUTO_CONFIRM_HOURS))}
                 </p>
+              )}
+
+              {/* Отменённое задание: объясняем обеим сторонам, что
+                  произошло и сколько оно ещё будет видно. Раньше оно
+                  просто пропадало у заказчика и висело как живое у
+                  исполнителя. */}
+              {task.status === 'cancelled' && (
+                <div className="smk-note smk-note-danger mx-4 mb-4 px-3.5 py-3">
+                  <h3 className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide">
+                    <Ban className="h-3.5 w-3.5" />
+                    {t.taskCancelledBadge}
+                  </h3>
+                  {task.cancelReason && (
+                    <p className="mb-1.5 break-words text-[11px] leading-relaxed">
+                      «{task.cancelReason}»
+                    </p>
+                  )}
+                  <p className="text-[11px] leading-relaxed">
+                    {t.taskCancelledNote}
+                  </p>
+                </div>
               )}
 
               {/* Спор об оплате: заказчик не принял работу.
@@ -418,21 +500,21 @@ export default function TaskDetailModal({
                   причину, заказчику — что задание заморожено и удалить
                   его сейчас нельзя. */}
               {task.status === 'disputed' && (
-                <div className="mx-4 mb-4 rounded-2xl bg-rose-50 px-3.5 py-3 dark:bg-rose-950/30">
-                  <h3 className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-rose-900 dark:text-rose-300">
+                <div className="smk-note smk-note-danger mx-4 mb-4 px-3.5 py-3">
+                  <h3 className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide">
                     <ShieldAlert className="h-3.5 w-3.5" />
                     {t.taskDisputeTitle}
                   </h3>
                   {task.disputeReason && (
-                    <p className="mb-1.5 break-words text-[11px] leading-relaxed text-rose-800/90 dark:text-rose-200/80">
+                    <p className="mb-1.5 break-words text-[11px] leading-relaxed">
                       «{task.disputeReason}»
                     </p>
                   )}
-                  <p className="text-[11px] leading-relaxed text-rose-800/90 dark:text-rose-200/80">
+                  <p className="text-[11px] leading-relaxed">
                     {isAuthor ? t.taskDisputeAuthor : t.taskDisputeExecutor}
                   </p>
                   {disputeLeft && (
-                    <p className="mt-1.5 text-[11px] font-bold text-rose-900 dark:text-rose-200">
+                    <p className="mt-1.5 text-[11px] font-bold">
                       {t.taskDisputeLeft.replace('{time}', disputeLeft)}
                     </p>
                   )}
@@ -442,7 +524,7 @@ export default function TaskDetailModal({
               {/* Подтверждение вместо исчезающей формы */}
               {task.status === 'completed' && ratingSubmitted
                 && !(isAuthor && authorRatesViaAttendance) && (
-                <p className="mx-4 mb-4 rounded-2xl bg-emerald-50/70 px-3.5 py-3 text-xs font-bold text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
+                <p className="smk-note smk-note-success mx-4 mb-4 px-3.5 py-3 text-xs font-bold">
                   {t.taskRatingSaved}
                 </p>
               )}
@@ -503,7 +585,7 @@ export default function TaskDetailModal({
               )}
 
               {error && (
-                <p className="mx-4 mb-4 rounded-xl bg-rose-50 px-3.5 py-2.5 text-xs font-semibold text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
+                <p className="smk-note smk-note-danger mx-4 mb-4 px-3.5 py-2.5 text-xs font-semibold">
                   {error}
                 </p>
               )}
@@ -532,7 +614,7 @@ export default function TaskDetailModal({
                     решению: неактивная кнопка без причины выглядит как
                     поломка. */}
                 {!canTake && (
-                  <p className="w-full rounded-xl bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+                  <p className="smk-note smk-note-warn w-full px-3 py-2 text-[11px] leading-relaxed">
                     {t.taskNeedPayout.replace(
                       '{method}',
                       t[`taskPay_${payMethod}` as keyof typeof t] as string,
@@ -573,6 +655,33 @@ export default function TaskDetailModal({
               </button>
             )}
 
+            {/* Отметка исполнителя «Оплата получена».
+                Пока её нет, заказчик не может закрыть задание с
+                переводом: иначе он нажимал «Подтвердить», сделка
+                считалась успешной, а денег исполнитель не видел. */}
+            {isExecutor && needsPaymentProof && task.status === 'awaiting_confirm' && (
+              isPaymentReceived ? (
+                <p className="smk-note smk-note-success w-full px-3 py-2 text-[11px] font-bold">
+                  {t.taskPaymentReceivedDone}
+                </p>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    disabled={Boolean(busy)}
+                    onClick={() => act('paid', () => runTaskAction(task.id, 'paid'))}
+                    className={`${btn} bg-emerald-600 text-white hover:bg-emerald-700`}
+                  >
+                    {busy === 'paid' && <Loader2 className="h-4 w-4 animate-spin" />}
+                    {t.taskPaymentReceivedBtn}
+                  </button>
+                  <p className="smk-note smk-note-warn w-full px-3 py-2 text-[11px] leading-relaxed">
+                    {t.taskPaymentReceivedHint}
+                  </p>
+                </>
+              )
+            )}
+
             {isExecutor && ['open', 'in_progress'].includes(task.status) && (
               <button
                 type="button"
@@ -588,7 +697,7 @@ export default function TaskDetailModal({
               <>
                 <button
                   type="button"
-                  disabled={Boolean(busy)}
+                  disabled={Boolean(busy) || !canConfirm}
                   onClick={() => act('confirm', () => runTaskAction(task.id, 'confirm'))}
                   className={`${btn} bg-emerald-600 text-white hover:bg-emerald-700`}
                 >
@@ -603,6 +712,17 @@ export default function TaskDetailModal({
                 >
                   {t.taskRejectBtn}
                 </button>
+
+                {/* Неактивная кнопка без причины выглядит поломкой —
+                    объясняем, чего ждём и что нужно сделать. */}
+                {!canConfirm && (
+                  <p className="smk-note smk-note-warn w-full px-3 py-2 text-[11px] leading-relaxed">
+                    {t.taskConfirmLockedNote.replace(
+                      '{hours}',
+                      String(TASK_AUTO_CONFIRM_HOURS),
+                    )}
+                  </p>
+                )}
               </>
             )}
 

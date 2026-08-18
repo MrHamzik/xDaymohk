@@ -30,6 +30,11 @@ export function mapTaskRow(row: Record<string, unknown>) {
     paymentMethod: row.payment_method ?? 'cash',
     disputeUntil: row.dispute_until ?? null,
     disputeReason: row.dispute_reason ?? null,
+    // Обновление 38: отметка исполнителя об оплате и срок показа
+    // отменённого задания. У заданий, созданных до миграции, колонок
+    // нет — undefined трактуем как «не отмечено» / «без ограничения».
+    paymentReceivedAt: row.payment_received_at ?? null,
+    visibleUntil: row.visible_until ?? null,
     status: row.status,
     paymentStatus: row.payment_status,
     submittedAt: row.submitted_at,

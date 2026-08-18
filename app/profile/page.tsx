@@ -259,7 +259,16 @@ export default function ProfilePage() {
               </p>
             )}
 
-            {/* Sleek Profile Card with Avatar */}
+            {/* Общий контейнер личных данных.
+                Аватар, ФИО, телефон, пол и дата рождения — это ОДИН
+                блок «кто я», а не пять независимых полос на полотне
+                страницы. Раньше они лежали прямо на фоне, и цвет фона
+                смешивался с цветом полей: границы блока не читались.
+                Контейнер берёт слот «Панели и подвал карточек», поля
+                внутри остаются на своём слоте — получается два уровня
+                глубины вместо одного пятна. */}
+            <section className="smk-panel space-y-3.5 p-3.5">
+              {/* Sleek Profile Card with Avatar */}
             <div className="smk-field flex items-center gap-3.5 rounded-2xl p-3.5">
               <img
                 src={cacheBustAvatarUrl(avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop')}
@@ -326,9 +335,13 @@ export default function ProfilePage() {
                 <input id="account-birthDate" type="date" value={birthDate} onChange={(event) => setBirthDate(event.target.value)} className="smk-field w-full px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-zinc-100" />
               </div>
             </div>
+            </section>
 
-            {/* My Questionnaires list */}
-            <section className="smk-group">
+            {/* Мои анкеты — тот же контейнер-панель, что и личные данные:
+                это второй смысловой блок страницы, и он не должен
+                висеть прямо на фоне. Внутри — .smk-group: прозрачная
+                группа с орнаментальными разделителями между строками. */}
+            <section className="smk-panel smk-group p-3.5">
               <div className="flex items-center justify-between gap-3 pb-1">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-400">{t.myProfiles}</h3>
                 <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300">{ownProfiles.length}</span>
