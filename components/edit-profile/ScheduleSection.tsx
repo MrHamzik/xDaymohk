@@ -35,7 +35,7 @@ export default function ScheduleSection({
 }: ScheduleSectionProps) {
   const { t } = useI18n();
   return (
-    <div className="space-y-2.5 border-t border-slate-200/80 pt-2.5 dark:border-zinc-800">
+    <div className="space-y-2.5 border-t border-[color:var(--smk-divider)] pt-2.5">
       <div className="flex items-center justify-between gap-3">
         <div>
           <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-400">{t.workScheduleTitle}</h4>
@@ -96,7 +96,7 @@ export default function ScheduleSection({
                 type="time"
                 value={workHoursStart}
                 onChange={(event) => setWorkHoursStart(event.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white shadow-sm px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white"
+                className="w-full smk-field px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:text-white"
               />
             </div>
             <div>
@@ -106,7 +106,7 @@ export default function ScheduleSection({
                 type="time"
                 value={workHoursEnd}
                 onChange={(event) => setWorkHoursEnd(event.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white shadow-sm px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white"
+                className="w-full smk-field px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:text-white"
               />
             </div>
           </div>
@@ -119,7 +119,7 @@ export default function ScheduleSection({
                 type="time"
                 value={breakStart}
                 onChange={(event) => setBreakStart(event.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white shadow-sm px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white"
+                className="w-full smk-field px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:text-white"
               />
             </div>
             <div>
@@ -129,7 +129,7 @@ export default function ScheduleSection({
                 type="time"
                 value={breakEnd}
                 onChange={(event) => setBreakEnd(event.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white shadow-sm px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white"
+                className="w-full smk-field px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:text-white"
               />
             </div>
           </div>

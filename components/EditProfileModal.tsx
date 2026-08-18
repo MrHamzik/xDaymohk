@@ -246,7 +246,7 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
       {notice && <Notice message={notice} type="error" onClose={() => setNotice('')} />}
       <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/60 p-0 backdrop-blur-sm sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label={profile ? t.editProfileTitle : t.newProfileTitle}>
         <div className="smk-sheet flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-3xl shadow-2xl transition-colors sm:max-w-2xl sm:rounded-3xl">
-          <div className="flex shrink-0 items-center justify-between border-b border-slate-100 p-4 dark:border-zinc-800 dark:bg-zinc-950">
+          <div className="flex shrink-0 items-center justify-between smk-sheet-head border-b border-[color:var(--smk-divider)] p-4">
             <div className="flex items-center gap-2.5">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-sm">
                 <UserPlus className="h-4 w-4" />
@@ -256,7 +256,7 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
                 <p className="text-[11px] text-slate-500 dark:text-zinc-500">{profile ? t.editProfileSubtitle : t.newProfileSubtitle}</p>
               </div>
             </div>
-            <button onClick={onClose} aria-label="Закрыть форму" className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400"><X className="h-3.5 w-3.5" /></button>
+            <button onClick={onClose} aria-label="Закрыть форму" className="smk-act flex h-7 w-7 items-center justify-center"><X className="h-3.5 w-3.5" /></button>
           </div>
 
           <form onSubmit={handleSubmit} className="flex-1 space-y-4 overflow-y-auto p-4 text-xs text-slate-800 dark:text-zinc-300 no-scrollbar">
@@ -283,7 +283,7 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
             )}
 
             {isSpecialist && (
-              <section className="space-y-3.5 rounded-xl border border-slate-100 bg-slate-50/60 p-3.5 dark:border-zinc-800 dark:bg-zinc-950">
+              <section className="smk-field space-y-3.5 p-3.5">
                 <div>
                   <label htmlFor="profile-category" className="mb-1 block text-xs font-bold text-slate-700 dark:text-zinc-400">{t.professionCategory}</label>
                   <select id="profile-category" value={professionCategory} onChange={(event) => setProfessionCategory(event.target.value)} className="smk-field w-full pl-3 pr-10 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:text-white">
@@ -326,7 +326,7 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
                   onNotice={setNotice}
                 />
 
-                <div className="border-t border-slate-200/80 pt-2.5 dark:border-zinc-800">
+                <div className="border-t border-[color:var(--smk-divider)] pt-2.5">
                   <div className="mb-1 flex items-center justify-between gap-2">
                     <label htmlFor="profile-video" className="text-xs font-semibold text-slate-700 dark:text-zinc-400">{t.videoTitle}</label>
                     <button type="button" onClick={() => setShowVideoHint((isShown) => !isShown)} aria-label="Пояснение о видео" className="text-amber-500 transition hover:text-amber-600"><Info className="h-3.5 w-3.5" /></button>
@@ -351,7 +351,7 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
 
             <div>
               <label htmlFor="profile-bio" className="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-400">{t.bioLabel}</label>
-              <textarea id="profile-bio" rows={3} maxLength={MAX_BIO_LENGTH} value={bio} onChange={(event) => setBio(event.target.value)} placeholder={t.bioPlaceholder} className="w-full resize-y break-words [overflow-wrap:anywhere] rounded-xl border border-slate-200 bg-white shadow-sm px-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white" />
+              <textarea id="profile-bio" rows={3} maxLength={MAX_BIO_LENGTH} value={bio} onChange={(event) => setBio(event.target.value)} placeholder={t.bioPlaceholder} className="w-full resize-y break-words [overflow-wrap:anywhere] smk-field px-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:text-white" />
               <p className="mt-0.5 text-right text-[10px] text-slate-400">{bio.length}/{MAX_BIO_LENGTH}</p>
             </div>
 

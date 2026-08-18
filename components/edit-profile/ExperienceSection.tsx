@@ -71,7 +71,7 @@ export default function ExperienceSection({
             type="date"
             value={experienceStart}
             onChange={(event) => setExperienceStart(event.target.value)}
-            className="mt-1 w-full rounded-xl border border-slate-200 bg-white shadow-sm px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white"
+            className="mt-1 w-full smk-field px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:text-white"
           />
         </label>
         <label className="text-[11px] font-semibold text-slate-500 dark:text-zinc-500">
@@ -81,7 +81,7 @@ export default function ExperienceSection({
             value={experienceEnd}
             disabled={experienceCurrent}
             onChange={(event) => setExperienceEnd(event.target.value)}
-            className="mt-1 w-full rounded-xl border border-slate-200 bg-white shadow-sm px-3 py-2.5 text-xs text-slate-900 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white"
+            className="mt-1 w-full smk-field px-3 py-2.5 text-xs text-slate-900 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:text-white"
           />
         </label>
       </div>
