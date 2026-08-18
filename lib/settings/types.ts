@@ -202,6 +202,16 @@ export interface ThemeColors {
   ui: string;
 
   // ── Специфические ───────────────────────────────────────────────
+  /**
+   * Статус «Автоматический» — расписание решает само.
+   *
+   * Отдельный слот, а не переиспользование «Работает»: это разные по
+   * смыслу состояния. «Работает» — утверждение мастера «я на месте
+   * сейчас», «Автоматический» — «смотрите моё расписание». Раньше
+   * второе брало зелёный первого, и по кнопке нельзя было понять,
+   * включён режим по часам или человек вручную открыл приём.
+   */
+  statusAuto: string;
   /** Статус «Работает». */
   statusActive: string;
   /** Статус «На перерыве». */
@@ -236,7 +246,7 @@ export const THEME_COLOR_GROUPS: Record<ThemeColorGroup, Array<keyof ThemeColors
   global: ['bg', 'card', 'panel', 'cardInset', 'cardLine', 'divider', 'text', 'muted', 'icon'],
   details: ['accent', 'accentSoft', 'accentDeep', 'ui', 'danger'],
   specific: [
-    'statusActive', 'statusBreak', 'statusFlexible', 'statusOffline',
+    'statusAuto', 'statusActive', 'statusBreak', 'statusFlexible', 'statusOffline',
     'roleSpecialist', 'roleAdmin', 'roleVerified',
     'heroFrom', 'heroTo', 'mapCluster', 'mapHouse',
   ],

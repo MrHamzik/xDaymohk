@@ -70,6 +70,7 @@ const COLOR_LABELS: Partial<Record<keyof ThemeColors, { ru: string; ce: string }
   ui: { ru: 'Главный цвет (кнопки, меню)', ce: 'Коьрта бос (кнопкаш, меню)' },
   danger: { ru: 'Опасное действие', ce: 'Кхерамен гIуллакх' },
 
+  statusAuto: { ru: 'Статус «Автоматический»', ce: '«Автоматан раж»' },
   statusActive: { ru: 'Статус «Работает»', ce: '«Болх беш ву»' },
   statusBreak: { ru: 'Статус «Перерыв»', ce: '«Сацар»' },
   statusFlexible: { ru: 'Статус «Произвольный»', ce: '«Мукъа график»' },

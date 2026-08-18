@@ -312,6 +312,7 @@ export interface DerivedPalette {
   accent: string;
   accentSoft: string;
   accentDeep: string;
+  statusAuto: string;
   statusActive: string;
   statusBreak: string;
   statusFlexible: string;
@@ -412,8 +413,11 @@ export function derivePalette(ui: string, isDark: boolean): DerivedPalette {
     accent,
     accentSoft,
     accentDeep,
-    // Статусы тянем к теме слабо (0.18): «работает» обязан остаться
-    // узнаваемо зелёным, иначе значение статуса теряется.
+    // «Автоматический» — это режим по умолчанию, а не сигнал: он
+    // берёт ровно главный цвет темы и потому всегда «свой».
+    statusAuto: ui,
+    // Остальные статусы тянем к теме слабо (0.18): «работает» обязан
+    // остаться узнаваемо зелёным, иначе значение статуса теряется.
     statusActive: tint(SEMANTIC_BASE.statusActive, h, s, isDark, 0.18),
     statusBreak: tint(SEMANTIC_BASE.statusBreak, h, s, isDark, 0.18),
     statusFlexible: tint(SEMANTIC_BASE.statusFlexible, h, s, isDark, 0.18),

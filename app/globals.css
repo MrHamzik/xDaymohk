@@ -673,6 +673,8 @@ html.dark .smk-price-teal {
      Только base и -deep: варианты -dark и -glow остались от прежней
      версии колец и ни одним селектором не читались. Свечение теперь
      строится из base через color-mix. */
+  --smk-status-auto: #059669;
+  --smk-status-auto-deep: #04724f;
   --smk-status-active: #34d399;
   --smk-status-active-deep: #059669;
   --smk-status-break: #fbbf24;
@@ -1486,6 +1488,14 @@ html.dark .group:hover .smk-arrow { color: var(--smk-muted-bright); }
    «Статус «Работает»» в редакторе тем, а плитка оставалась зелёной.
    Теперь читаем те же переменные, что и точка статуса на карточке
    анкеты, — цвет один во всех местах, где он означает одно и то же. */
+/* «Автоматический» — отдельный слот: режим по расписанию не то же
+   самое, что «работаю сейчас», и цвет у него свой, под тему. */
+.smk-status-bg--auto {
+  background: var(--smk-status-auto);
+}
+.smk-status-bg--auto:hover {
+  background: var(--smk-status-auto-deep);
+}
 .smk-status-bg--active {
   background: var(--smk-status-active);
 }

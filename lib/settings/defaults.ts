@@ -75,6 +75,10 @@ export function prefFor(
 
 /** Общие смысловые цвета: одинаковы во всех пресетах, но правятся в своих темах. */
 const SEMANTIC = {
+  // «Автоматический» = главный цвет темы: режим по расписанию — это
+  // состояние «по умолчанию», и оно должно читаться как часть темы,
+  // а не как ещё один смысловой сигнал.
+  statusAuto: '#059669',
   statusActive: '#10b981',
   statusBreak: '#f59e0b',
   statusFlexible: '#0ea5e9',
@@ -165,6 +169,7 @@ export const PRESET_THEMES: Record<
       accentSoft: '#bfe0fb',
       accentDeep: '#2a6fa8',
       ui: '#6552e0',
+      statusAuto: '#6552e0',
       statusActive: '#3fc9b0',
       statusBreak: '#e0a63c',
       statusFlexible: '#4cacf0',
@@ -205,6 +210,7 @@ export const PRESET_THEMES: Record<
       accentSoft: '#fcdfa8',
       accentDeep: '#ad421f',
       ui: '#e5472e',
+      statusAuto: '#e5472e',
       statusActive: '#e58c2b',
       statusBreak: '#f6ae31',
       statusFlexible: '#3f9fa8',
@@ -248,6 +254,7 @@ export const PRESET_THEMES: Record<
       accentSoft: '#e5e5e5',
       accentDeep: '#a3a3a3',
       ui: '#3f3f46',
+      statusAuto: '#3f3f46',
       statusActive: '#4ade80',
       statusBreak: '#facc15',
       statusFlexible: '#60a5fa',
@@ -293,6 +300,7 @@ export const PRESET_THEMES: Record<
       // Единственные цветные элементы: без них статус читался бы
       // только по подписи, а точка теряет смысл. Тона приглушены,
       // чтобы не спорить с серой гаммой.
+      statusAuto: '#6e6e78',
       statusActive: '#4b9e6a',
       statusBreak: '#c0954a',
       statusFlexible: '#5b83b8',
@@ -334,6 +342,7 @@ export const PRESET_THEMES: Record<
       accentSoft: '#e2e8f0',
       accentDeep: '#64748b',
       ui: '#0ea5e9',
+      statusAuto: '#0ea5e9',
       statusActive: '#0d9488',
       statusBreak: '#f59e0b',
       statusFlexible: '#0ea5e9',
@@ -378,6 +387,7 @@ export const PRESET_THEMES: Record<
       accentSoft: '#d6edf5',
       accentDeep: '#2f7893',
       ui: '#389f5d',
+      statusAuto: '#389f5d',
       statusActive: '#38a85e',
       statusBreak: '#e49e25',
       statusFlexible: '#3ea6cc',
@@ -420,6 +430,7 @@ export const PRESET_THEMES: Record<
       accentSoft: '#fbf0d0',
       accentDeep: '#af7a1d',
       ui: '#db7924',
+      statusAuto: '#db7924',
       statusActive: '#7c9f38',
       statusBreak: '#ecab13',
       statusFlexible: '#3d9ec2',
@@ -490,6 +501,7 @@ export function normalizeColors(raw: unknown, base: ThemeColors): ThemeColors {
     accentDeep: pick('accentDeep'),
     danger: pick('danger'),
     ui: pick('ui'),
+    statusAuto: pick('statusAuto'),
     statusActive: pick('statusActive'),
     statusBreak: pick('statusBreak'),
     statusFlexible: pick('statusFlexible'),
@@ -520,6 +532,13 @@ function normalizeCustomThemes(raw: unknown): CustomTheme[] {
       const stored = (entry.colors ?? {}) as Record<string, unknown>;
       if (typeof stored.divider !== 'string') {
         colors.divider = deriveDivider(colors.card, isDark);
+      }
+      // То же для слота «Автоматический»: у тем, созданных до его
+      // появления, он подтянулся бы от пресета-основы — зелёный из
+      // светлой темы в фиолетовой пользовательской. Берём главный цвет
+      // самой темы, как и во всех пресетах.
+      if (typeof stored.statusAuto !== 'string') {
+        colors.statusAuto = colors.ui;
       }
       return {
         id: typeof entry.id === 'string' && entry.id ? entry.id : `theme-${index}`,

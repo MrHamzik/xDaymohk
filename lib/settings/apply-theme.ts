@@ -111,6 +111,7 @@ const MANAGED_PROPERTIES = [
   '--color-zinc-950', '--color-zinc-900', '--color-zinc-800', '--color-zinc-700',
   '--color-zinc-100', '--color-zinc-200', '--color-zinc-300',
   '--color-zinc-400', '--color-zinc-500', '--color-zinc-600',
+  '--smk-status-auto', '--smk-status-auto-deep',
   '--smk-status-active', '--smk-status-active-deep',
   '--smk-status-break', '--smk-status-break-deep',
   '--smk-status-flexible', '--smk-status-flexible-deep',
@@ -270,6 +271,8 @@ export function applyThemeColors(
   set('--smk-gold-rgb', hexToRgbChannels(colors.accent));
 
   // ── Статусы и роли ──────────────────────────────────────────────
+  set('--smk-status-auto', colors.statusAuto);
+  set('--smk-status-auto-deep', mix(colors.statusAuto, '#000000', 0.28));
   set('--smk-status-active', colors.statusActive);
   set('--smk-status-active-deep', mix(colors.statusActive, '#000000', 0.28));
   set('--smk-status-break', colors.statusBreak);

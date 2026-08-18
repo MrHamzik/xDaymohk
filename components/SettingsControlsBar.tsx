@@ -87,9 +87,10 @@ export default function SettingsControlsBar() {
       case 'offline':
         return 'smk-status-bg--offline text-white';
       case 'active':
+        return 'smk-status-bg--active text-white';
       case 'auto':
       default:
-        return 'smk-status-bg--active text-white';
+        return 'smk-status-bg--auto text-white';
     }
   };
 
@@ -116,7 +117,7 @@ export default function SettingsControlsBar() {
     offline: PowerOff,
   };
   const STATUS_ACTIVE_BG: Partial<Record<UserMasterStatus, string>> = {
-    auto: 'smk-status-bg--active',
+    auto: 'smk-status-bg--auto',
     active: 'smk-status-bg--active',
     break: 'smk-status-bg--break',
     offline: 'smk-status-bg--offline',
@@ -133,7 +134,7 @@ export default function SettingsControlsBar() {
       id: 'auto',
       label: language === 'ce' ? '🟢 Автоматан раж' : '🟢 Автоматическое',
       description: language === 'ce' ? 'Расписанца ша шех хийцало' : 'Переключается автоматически по часам',
-      dotColor: 'smk-status-bg--active',
+      dotColor: 'smk-status-bg--auto',
     },
     {
       id: 'active',
