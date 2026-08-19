@@ -3,16 +3,14 @@ import { createClient } from '@supabase/supabase-js';
 import { rateLimit, withRateLimitHeaders } from '@/lib/rate-limit';
 import { log } from '@/lib/logger';
 import { notifyTaskEvent } from '@/lib/tasks/server';
-import {
-  TASK_AUTO_CONFIRM_HOURS, TASK_BLOCK_HOURS, TASK_EXPIRED_DELETE_DAYS,
-} from '@/lib/types';
+import { TASK_AUTO_CONFIRM_HOURS, TASK_BLOCK_HOURS } from '@/lib/types';
 
 /**
  * Обслуживание заданий по расписанию:
  *   1. автоподтверждение — заказчик молчит 3 часа после «Выполнил»;
- *   2. просрочка — срок вышел, задание никто не взял;
- *   3. уборка — отменённые уходят в архив, просроченные удаляются
- *      из базы через неделю.
+ *   2. просрочка — срок вышел, задание никто не взял: такое удаляется
+ *      из базы сразу, оно уже никому не нужно;
+ *   3. уборка — отменённые уходят в архив после срока показа.
  *
  * Вызывается тихо при открытии раздела (как раздел «Письма» в админке) и
  * может дублироваться pg_cron. Идемпотентен: выбираются только строки в
@@ -149,30 +147,37 @@ export async function POST(request: Request) {
   }
 
   for (const task of overdue ?? []) {
-    // visible_until — точка отсчёта для последующего удаления: сама
-    // deadline_at не годится, задание могло провисеть открытым дольше.
-    const expiresAt = new Date(
-      now + TASK_EXPIRED_DELETE_DAYS * 24 * 3_600_000,
-    ).toISOString();
-    const { error: expireError } = await admin
+    // Уведомляем ДО удаления: после него строка исчезнет вместе с
+    // заголовком, а заказчик должен понять, какое задание закрылось.
+    // notifications на tasks не ссылаются, поэтому запись переживёт
+    // удаление самого задания.
+    await notifyTaskEvent(admin, {
+      recipientId: String(task.author_id),
+      type: 'task_expired',
+      title: 'Срок задания истёк',
+      message: `«${task.title}»: задание никто не взял, оно удалено.`,
+    });
+
+    // Удаляем сразу, а не помечаем 'expired': задание, которое никто
+    // не взял, никому больше не нужно. Раньше оно оставалось в базе
+    // (сначала навсегда, потом на неделю) и копилось без пользы.
+    //
+    // Безопасно: исполнителей нет, task_participants уходят каскадом
+    // (on delete cascade, миграция 18), а resident_reviews ставятся
+    // только по завершённой сделке.
+    const { error: deleteError } = await admin
       .from('tasks')
-      .update({ status: 'expired', is_archived: true, visible_until: expiresAt })
+      .delete()
       .eq('id', String(task.id));
-    // Колонка появляется в миграции 38 — без неё просто помечаем
-    // просроченным, как раньше.
-    if (expireError) {
+
+    if (deleteError) {
+      // Не смогли удалить — хотя бы уводим из ленты, как раньше.
+      log.warn('maintenance: expired delete failed', { message: deleteError.message });
       await admin
         .from('tasks')
         .update({ status: 'expired', is_archived: true })
         .eq('id', String(task.id));
     }
-
-    await notifyTaskEvent(admin, {
-      recipientId: String(task.author_id),
-      type: 'task_expired',
-      title: 'Срок задания истёк',
-      message: `«${task.title}»: задание никто не взял.`,
-    });
 
     expired += 1;
   }
@@ -241,40 +246,12 @@ export async function POST(request: Request) {
     }
   }
 
-  // ── Просроченные: удаляем из базы через неделю ─────────────────
-  // Задание, которое никто не взял, не несёт истории: исполнителей у
-  // него нет, отзывов тоже (они ставятся только по завершённой
-  // сделке). Раньше такие записи оставались в базе навсегда с флагом
-  // is_archived и копились без пользы.
-  //
-  // Удаляем физически: task_participants уходят каскадом
-  // (on delete cascade в миграции 18).
-  let expiredDeleted = 0;
-  const { data: staleExpired, error: staleExpiredError } = await admin
-    .from('tasks')
-    .select('id')
-    .eq('status', 'expired')
-    .lt('visible_until', new Date(now).toISOString())
-    .limit(100);
-
-  if (staleExpiredError) {
-    log.warn('maintenance: expired cleanup skipped', { message: staleExpiredError.message });
-  } else if ((staleExpired ?? []).length > 0) {
-    const ids = (staleExpired ?? []).map((t) => String(t.id));
-    const { error: deleteError } = await admin.from('tasks').delete().in('id', ids);
-    if (deleteError) {
-      log.warn('maintenance: expired delete failed', { message: deleteError.message });
-    } else {
-      expiredDeleted = ids.length;
-    }
-  }
-
   return NextResponse.json({
     success: true,
     autoConfirmed,
+    // expired — сколько просроченных удалено в этом прогоне.
     expired,
     disputesReleased,
     cancelledArchived,
-    expiredDeleted,
   });
 }
