@@ -179,22 +179,35 @@ export function CollapsibleSection({
 }) {
   return (
     <section>
+      {/* Знак подсказки стоит сразу за подписью, а не в конце строки:
+          иначе он оказывался за разделительной линией и читался как
+          часть чужого блока. Внутрь кнопки его вложить нельзя (кнопка
+          в кнопке), поэтому строка собрана из двух кнопок-половинок:
+          подпись слева и линия со стрелкой справа — обе переключают. */}
       <div className="mb-2 flex items-center gap-2">
         <button
           type="button"
           onClick={onToggle}
           aria-expanded={isOpen}
-          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+          className="min-w-0 text-left"
         >
-          <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+          <h2 className="truncate text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
             {title}
           </h2>
+        </button>
+        {hint && <HintMark text={hint} />}
+        <button
+          type="button"
+          onClick={onToggle}
+          tabIndex={-1}
+          aria-hidden
+          className="flex min-w-0 flex-1 items-center gap-2"
+        >
           <span className="smk-rule h-px flex-1" aria-hidden />
           <ChevronDown
             className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
           />
         </button>
-        {hint && <HintMark text={hint} />}
       </div>
       {isOpen && children}
     </section>
