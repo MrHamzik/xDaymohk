@@ -9,6 +9,7 @@ import SidebarNav from '@/components/SidebarNav';
 import BottomNav from '@/components/BottomNav';
 import MobileMenuDrawer from '@/components/MobileMenuDrawer';
 import CreateActionModal from '@/components/CreateActionModal';
+import MapSegmentedControl from '@/components/MapSegmentedControl';
 import ThemeEditor from '@/components/settings/ThemeEditor';
 import EffectsEditor from '@/components/settings/EffectsEditor';
 import PayoutSettings from '@/components/settings/PayoutSettings';
@@ -32,11 +33,27 @@ import { useI18n } from '@/lib/i18n';
  * Расширенный блок скрыт за тумблером: темы и шрифты легко довести до
  * нечитаемого состояния, поэтому они не должны попадаться случайно.
  */
+/** Разделы страницы настроек. 'all' — прежний вид целиком. */
+type SettingsSection = 'all' | 'tasks' | 'notifications' | 'payout' | 'advanced';
+
 export default function SettingsPage() {
   const { t } = useI18n();
   const { account } = useAuth();
   const { isCurrentUserAdmin } = useProfiles();
   const { settings, update, reset } = useSettings();
+
+  /**
+   * Разделы настроек — тот же сегмент-переключатель, что и вкладки
+   * фильтров в лентах заданий.
+   *
+   * Страница выросла: задания, уведомления, реквизиты, темы, эффекты,
+   * типографика — всё подряд одним свитком. Чтобы поправить одну
+   * настройку, приходилось прокручивать мимо остальных. «Все»
+   * оставляет прежний вид целиком, остальные вкладки скрывают лишнее.
+   */
+  const [section, setSection] = useState<SettingsSection>('all');
+  const shows = (name: Exclude<SettingsSection, 'all'>) =>
+    section === 'all' || section === name;
   const router = useRouter();
 
   const [isMenuDrawerOpen, setIsMenuDrawerOpen] = useState(false);
@@ -134,8 +151,24 @@ export default function SettingsPage() {
             </p>
           )}
 
+          {/* Разделы: скрывают лишнее, не меняя порядок блоков. */}
+          <MapSegmentedControl
+            ariaLabel={t.settingsSectionsAria}
+            active={[section]}
+            onSelect={setSection}
+            options={[
+              { value: 'tasks' as const, label: t.settingsSectionTasks },
+              { value: 'notifications' as const, label: t.settingsSectionNotifications },
+              { value: 'payout' as const, label: t.settingsSectionPayout },
+              { value: 'advanced' as const, label: t.settingsSectionAdvanced },
+              { value: 'all' as const, label: t.settingsSectionAll },
+            ]}
+            className="mb-3 w-full"
+          />
+
           <div className="smk-lux space-y-5 p-4">
             {/* ── Задания ───────────────────────────────────────── */}
+            {shows('tasks') && (
             <section>
               <SectionTitle title={t.settingsTasksSection} />
               <div className="space-y-1.5">
@@ -155,8 +188,10 @@ export default function SettingsPage() {
                 </SettingRow>
               </div>
             </section>
+            )}
 
             {/* ── Уведомления ───────────────────────────────────── */}
+            {shows('notifications') && (
             <section>
               <SectionTitle
                 title={t.settingsNotificationsSection}
@@ -210,13 +245,15 @@ export default function SettingsPage() {
                 })}
               </div>
             </section>
+            )}
 
             {/* ── Реквизиты для оплаты заданий ──────────────────────
                  После уведомлений: это не ежедневная настройка, а то,
                  что заполняют один раз перед первым платным заданием. */}
-            <PayoutSettings />
+            {shows('payout') && <PayoutSettings />}
 
             {/* ── Расширенные ───────────────────────────────────── */}
+            {shows('advanced') && (
             <section>
               <SectionTitle
                 title={t.settingsAdvanced}
@@ -292,6 +329,7 @@ export default function SettingsPage() {
                 </div>
               )}
             </section>
+            )}
 
             {/* ── Сброс ─────────────────────────────────────────── */}
             <section className="space-y-2">

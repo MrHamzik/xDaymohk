@@ -1821,6 +1821,14 @@ html.dark .group:hover .smk-arrow { color: var(--smk-muted-bright); }
   color: var(--foreground);
   white-space: nowrap;
 }
+
+/* Нейтральная метка: срок, занятые места, обычный приоритет. Берёт
+   подложку строк — она заметна на полотне, но не спорит со смысловыми
+   цветами соседних меток. */
+.smk-chip--muted {
+  background: var(--smk-card-inset);
+  color: var(--smk-muted);
+}
 .smk-read-table td {
   padding: 0.55rem 0.7rem;
   border-top: 1px solid var(--smk-divider);

@@ -361,15 +361,10 @@ export default function VayghullakhPage() {
               { value: 'all', label: t.tasksTabAll },
               { value: 'mine', label: t.tasksTabMine },
               { value: 'taken', label: t.tasksTabTaken, count: takenTasks.length || undefined },
-              // Скрытые разделы: вкладка появляется, только когда есть
-              // что показать. Пустая вкладка «На рассмотрении» у
-              // большинства жителей была бы просто шумом.
-              ...(disputedTasks.length > 0
-                ? [{ value: 'disputed', label: t.tasksTabDisputed, count: disputedTasks.length }]
-                : []),
-              ...(reviewTasks.length > 0
-                ? [{ value: 'review', label: t.tasksTabReview, count: reviewTasks.length }]
-                : []),
+              // «На рассмотрении» и «Ожидают оценки» СКРЫТЫЕ: их нет
+              // среди вкладок, попасть туда можно только с красной или
+              // жёлтой плашки выше. Постоянные вкладки были бы шумом —
+              // у большинства жителей эти разделы всегда пусты.
             ]}
             categories={categories}
             category={category}
@@ -382,29 +377,39 @@ export default function VayghullakhPage() {
             setPayment={setPayment}
           />
 
-          {/* Споры — «опасность»: ведёт в свой раздел, а не в «В работе». */}
-          {disputedTasks.length > 0 && tab !== 'disputed' && (
+          {/* Споры — «опасность». Плашка висит, ПОКА есть нерешённые
+              вопросы: и внутри раздела тоже, иначе, зайдя в него,
+              человек терял единственное напоминание. Внутри она
+              работает на выход. */}
+          {disputedTasks.length > 0 && (
             <button
               type="button"
-              onClick={() => setTab('disputed')}
+              onClick={() => setTab(tab === 'disputed' ? 'all' : 'disputed')}
               className="smk-note smk-note-danger mb-3 flex w-full items-center gap-2 px-3 py-2 text-left"
             >
               <ShieldAlert className="h-3.5 w-3.5 shrink-0" />
-              {t.tasksDisputedBanner}: {disputedTasks.length} — {t.tasksDisputedHint}
+              <span className="min-w-0 flex-1">
+                {t.tasksDisputedBanner}: {disputedTasks.length} —{' '}
+                {tab === 'disputed' ? t.tasksHiddenBack : t.tasksDisputedHint}
+              </span>
             </button>
           )}
 
-          {/* Оценки — «предупреждение»: свой скрытый раздел, где видны
-              только задания без оценки. Раньше кнопка вела в «В работе»
-              и они терялись среди живых. */}
-          {reviewTasks.length > 0 && tab !== 'review' && (
+          {/* Оценки — «предупреждение». Тоже скрытый раздел: попасть в
+              него можно только отсюда, там видны лишь задания без
+              оценки. Раньше кнопка вела в «В работе», где они терялись
+              среди живых. */}
+          {reviewTasks.length > 0 && (
             <button
               type="button"
-              onClick={() => setTab('review')}
+              onClick={() => setTab(tab === 'review' ? 'all' : 'review')}
               className="smk-note smk-note-warn mb-3 flex w-full items-center gap-2 px-3 py-2 text-left"
             >
               <Star className="h-3.5 w-3.5 shrink-0" />
-              {t.tasksPendingReview}: {reviewTasks.length} — {t.tasksPendingReviewHint}
+              <span className="min-w-0 flex-1">
+                {t.tasksPendingReview}: {reviewTasks.length} —{' '}
+                {tab === 'review' ? t.tasksHiddenBack : t.tasksPendingReviewHint}
+              </span>
             </button>
           )}
 

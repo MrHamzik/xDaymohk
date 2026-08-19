@@ -16,6 +16,7 @@ import {
   formatTimeLeft, formatTaskDateTime,
 } from '@/lib/tasks/client';
 import AttendanceModal from '@/components/tasks/AttendanceModal';
+import DisputeComplaintModal from '@/components/tasks/DisputeComplaintModal';
 import PayoutPanel from '@/components/tasks/PayoutPanel';
 import InteractiveMap from '@/components/InteractiveMapLazy';
 import MapSegmentedControl from '@/components/MapSegmentedControl';
@@ -66,6 +67,9 @@ export default function TaskDetailModal({
   // Leaflet тянет свой бандл и тайлы, а адрес нужен не в каждом
   // открытии карточки.
   const [isMapOpen, setIsMapOpen] = useState(false);
+  // Жалоба по спору: модалка поверх карточки, чтобы не терять контекст.
+  const [isComplaintOpen, setIsComplaintOpen] = useState(false);
+  const [complaintSent, setComplaintSent] = useState(false);
   const [mapLayerMode, setMapLayerMode] = useState<MapLayerMode>('streets');
 
   const load = useCallback(async () => {
@@ -288,12 +292,22 @@ export default function TaskDetailModal({
               )}
 
               <div className="smk-sheet-section grid grid-cols-2 gap-2 px-4 py-4 text-[11px]">
+                {/* У спора срока нет: работа уже сдана, идёт разбор.
+                    Раньше здесь выводилось «Осталось · просрочено» —
+                    отсчёт по дедлайну, который к этому моменту давно
+                    прошёл и ничего не значит. */}
                 <InfoRow
-                  icon={task.kind === 'scheduled' ? CalendarDays : Clock}
-                  label={task.kind === 'scheduled' ? t.taskWhenLabel : t.taskTimeLeftLabel}
-                  value={(task.kind === 'scheduled'
-                    ? formatTaskDateTime(task.scheduledAt)
-                    : formatTimeLeft(task.deadlineAt, timeLabels)) || '—'}
+                  icon={task.status === 'disputed'
+                    ? ShieldAlert
+                    : task.kind === 'scheduled' ? CalendarDays : Clock}
+                  label={task.status === 'disputed'
+                    ? t.taskStatusLabel
+                    : task.kind === 'scheduled' ? t.taskWhenLabel : t.taskTimeLeftLabel}
+                  value={task.status === 'disputed'
+                    ? t.taskDisputeShort
+                    : (task.kind === 'scheduled'
+                      ? formatTaskDateTime(task.scheduledAt)
+                      : formatTimeLeft(task.deadlineAt, timeLabels)) || '—'}
                 />
                 {task.kind === 'scheduled' && (
                   <InfoRow icon={Users} label={t.taskSlotsTaken} value={`${task.takenSlots ?? 0} / ${task.slots}`} />
@@ -541,13 +555,21 @@ export default function TaskDetailModal({
 
                   {/* Возможности решить: договориться самим либо позвать
                       администратора. */}
+                  {complaintSent && (
+                    <p className="mt-2 font-bold">{t.taskComplaintSent}</p>
+                  )}
+
                   <div className="mt-2.5 flex flex-wrap gap-1.5">
-                    {/* Заказчик закрывает спор сам, если договорились —
-                        это и есть «решить между собой». */}
+                    {/* Заказчик закрывает спор, если договорились.
+                        Кнопка НЕ блокируется отметкой об оплате: спор
+                        и так означает, что расчёт под вопросом, и
+                        требовать отметку значило бы сделать спор
+                        нерешаемым — заказчик не может принять работу,
+                        исполнитель не может её сдать. */}
                     {isAuthor && (
                       <button
                         type="button"
-                        disabled={Boolean(busy) || !canConfirm}
+                        disabled={Boolean(busy)}
                         onClick={() => act('confirm', () => runTaskAction(task.id, 'confirm'))}
                         className="smk-act rounded-lg px-2.5 py-1.5"
                       >
@@ -558,12 +580,36 @@ export default function TaskDetailModal({
                       </button>
                     )}
 
-                    {/* Жалоба администратору села — через раздел
-                        «Помощь», там форма обращения и связь. */}
-                    <Link href="/help" className="smk-act rounded-lg px-2.5 py-1.5">
+                    {/* Исполнителю — своя кнопка: отметить, что деньги
+                        всё-таки получены. Без неё у него был только
+                        путь «пожаловаться», и договориться миром было
+                        нечем. */}
+                    {isExecutor && needsPaymentProof && !isPaymentReceived && (
+                      <button
+                        type="button"
+                        disabled={Boolean(busy)}
+                        onClick={() => act('paid', () => runTaskAction(task.id, 'paid'))}
+                        className="smk-act rounded-lg px-2.5 py-1.5"
+                      >
+                        {busy === 'paid'
+                          ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          : <Check className="h-3.5 w-3.5" />}
+                        {t.taskPaymentReceivedBtn}
+                      </button>
+                    )}
+
+                    {/* Жалоба администратору — модальное окно прямо
+                        здесь, а не переход в «Помощь»: уводить человека
+                        со спора в раздел вопросов значило терять
+                        контекст задания. */}
+                    <button
+                      type="button"
+                      onClick={() => setIsComplaintOpen(true)}
+                      className="smk-act rounded-lg px-2.5 py-1.5"
+                    >
                       <ShieldAlert className="h-3.5 w-3.5" />
                       {t.taskDisputeComplain}
-                    </Link>
+                    </button>
                   </div>
                 </div>
               )}
@@ -841,6 +887,15 @@ export default function TaskDetailModal({
           </div>
         )}
       </div>
+
+      {isComplaintOpen && task && (
+        <DisputeComplaintModal
+          task={task}
+          role={isAuthor ? 'author' : 'executor'}
+          onClose={() => setIsComplaintOpen(false)}
+          onSent={() => setComplaintSent(true)}
+        />
+      )}
 
       {isAttendanceOpen && task && (
         <AttendanceModal

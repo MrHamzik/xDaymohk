@@ -24,17 +24,19 @@ interface TaskCardProps {
 const PRIORITY_META = {
   normal: {
     spine: 'bg-slate-200 dark:bg-zinc-700',
-    chip: '',
+    chip: 'smk-chip--muted',
     Icon: Clock,
   },
   high: {
     spine: 'bg-gradient-to-b from-amber-300 to-amber-500',
-    chip: 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300',
+    // Цвета меток — из палитры темы, а не литералами Tailwind:
+    // иначе в тёмных темах они оставались светлыми пятнами.
+    chip: 'smk-note-warn',
     Icon: Zap,
   },
   critical: {
     spine: 'bg-gradient-to-b from-rose-400 to-rose-600',
-    chip: 'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300',
+    chip: 'smk-note-danger',
     Icon: AlertTriangle,
   },
 } as const;
@@ -179,47 +181,44 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
 
       <hr className="smk-orn mx-4" />
 
-      {/* ── Метки ──────────────────────────────────────────────── */}
-      <div className="mt-auto flex flex-wrap items-center gap-1.5 px-4 py-3 text-[10px] font-bold">
+      {/* ── Метки ───────────────────────────────────────────────
+          Все метки — один класс .smk-chip: одинаковый размер, скругление
+          и отступы. Отличаются только иконка, текст и цвет. Раньше здесь
+          мешались .smk-chip (скругление 999px) и rounded-lg с разными
+          gap — ряд выглядел собранным из кусков. */}
+      <div className="mt-auto flex flex-wrap items-center gap-1.5 px-4 py-3">
         {/* Отменённое задание остаётся в списках неделю — обе стороны
             должны увидеть, что случилось. Метка идёт первой: она
             отменяет смысл всех остальных (срок, места, оплата). */}
         {task.status === 'cancelled' && (
-          <span className="smk-note smk-note-danger inline-flex items-center gap-1 px-2 py-1">
+          <span className="smk-chip smk-note-danger">
             <Ban className="h-3 w-3" />
             {t.taskCancelledBadge}
           </span>
         )}
 
         {needsReview && (
-          <span className="inline-flex items-center gap-1 rounded-lg bg-amber-100 px-2 py-1 text-amber-900 dark:bg-amber-900/60 dark:text-amber-200">
-            <Star className="h-3 w-3 fill-current" />
+          <span className="smk-chip smk-note-warn">
+            <Star className="h-3 w-3" />
             {t.taskAwaitingReview}
           </span>
         )}
 
         {priorityLabel && (
-          <span className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 ${priority.chip}`}>
+          <span className={`smk-chip ${priority.chip}`}>
             <priority.Icon className="h-3 w-3" />
             {priorityLabel}
           </span>
         )}
 
         {isDisputed ? (
-          /* Своя метка со своей иконкой и цветом «опасность»: у спора
-             нет обратного отсчёта, ему важно состояние. */
+          /* У спора нет обратного отсчёта — важно состояние. */
           <span className="smk-chip smk-note-danger">
             <ShieldAlert className="h-3 w-3" />
             {t.taskDisputeShort}
           </span>
         ) : (
-          <span
-            className={`inline-flex items-center gap-1.5 rounded-lg px-2 py-1 ${
-              isOverdue
-                ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300'
-                : 'bg-slate-100 text-slate-600 dark:bg-zinc-700/70 dark:text-zinc-300'
-            }`}
-          >
+          <span className={`smk-chip ${isOverdue ? 'smk-note-danger' : 'smk-chip--muted'}`}>
             {/* Слой 7: пульсирующая точка у «горящих» заданий */}
             {task.priority === 'critical' && !isOverdue && (
               <span className="smk-urgent-dot h-1.5 w-1.5 rounded-full bg-rose-500" aria-hidden />
@@ -230,13 +229,7 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
         )}
 
         {task.kind === 'scheduled' && (
-          <span
-            className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 ${
-              isFull
-                ? 'bg-slate-100 text-slate-500 dark:bg-zinc-700/70 dark:text-zinc-400'
-                : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'
-            }`}
-          >
+          <span className={`smk-chip ${isFull ? 'smk-chip--muted' : 'smk-note-success'}`}>
             <Users className="h-3 w-3" />
             {takenSlots} / {task.slots}
           </span>
@@ -245,13 +238,7 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
         {/* Способ расчёта — только у платных заданий: в «ГIончалла»
             денег нет, и метка «наличными» там сбивала бы с толку. */}
         {task.isPaid && (
-          <span
-            className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 ${
-              payMethod === 'cash'
-                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'
-                : 'bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300'
-            }`}
-          >
+          <span className={`smk-chip ${payMethod === 'cash' ? 'smk-note-success' : 'smk-note-info'}`}>
             {payMethod === 'cash'
               ? <Banknote className="h-3 w-3" />
               : <CreditCard className="h-3 w-3" />}
@@ -260,17 +247,14 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
         )}
 
         {(task.purchaseBudget ?? 0) > 0 && (
-          <span
-            title={t.taskPurchaseTip}
-            className="inline-flex items-center gap-1 rounded-lg bg-violet-50 px-2 py-1 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300"
-          >
+          <span title={t.taskPurchaseTip} className="smk-chip smk-note-warn">
             <Wallet className="h-3 w-3" />
             {t.taskPurchaseShort} {task.purchaseBudget} ₽
           </span>
         )}
 
         {typeof task.distanceM === 'number' && (
-          <span className="inline-flex items-center gap-1 rounded-lg bg-sky-50 px-2 py-1 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300">
+          <span className="smk-chip smk-note-info">
             <MapPin className="h-3 w-3" />
             {task.distanceM < 1000 ? `${task.distanceM} м` : `${(task.distanceM / 1000).toFixed(1)} км`}
           </span>
