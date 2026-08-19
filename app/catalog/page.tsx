@@ -23,6 +23,7 @@ import { formatCount } from '@/lib/text';
 import { filterProfiles } from '@/lib/profile-filters';
 import { useI18n } from '@/lib/i18n';
 import { AudienceFilter, Profile } from '@/lib/types';
+import EmptyState from '@/components/ui/EmptyState';
 
 const PAGE_SIZE_DESKTOP = 30;
 const PAGE_SIZE_TABLET = 24;
@@ -282,21 +283,19 @@ export default function Home() {
             ))}
           </div>
         ) : (
-          <div className="my-4 rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm dark:border-zinc-700 dark:bg-zinc-800">
-            <div className="mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-zinc-800 dark:text-emerald-400">
-              <Users className="h-5 w-5" />
-            </div>
-            <h4 className="mb-1 text-sm font-bold text-slate-800 dark:text-white">{t.nothingFound}</h4>
-            <p className="mx-auto mb-3 max-w-sm text-xs text-slate-500 dark:text-zinc-500">
-              {t.searchEmptyHint}
-            </p>
-            <button
-              onClick={openAddProfile}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white transition hover:bg-emerald-700"
-            >
-              {account?.isBlocked ? t.addUnavailable : account ? t.addProfileBtn : t.signInToAdd}
-            </button>
-          </div>
+          <EmptyState
+            title={t.nothingFound}
+            hint={t.searchEmptyHint}
+            action={
+              <button
+                type="button"
+                onClick={openAddProfile}
+                className="smk-btn-gold smk-shine inline-flex items-center px-3.5 py-2 smk-text-label"
+              >
+                {account?.isBlocked ? t.addUnavailable : account ? t.addProfileBtn : t.signInToAdd}
+              </button>
+            }
+          />
         )}
 
         {/* Infinite scroll sentinel + explicit "load more" button for accessibility */}

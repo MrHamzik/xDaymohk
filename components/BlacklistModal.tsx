@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Loader2, ShieldBan, UserRoundX, X } from 'lucide-react';
+import { Loader2, ShieldBan, X } from 'lucide-react';
 import Avatar from '@/components/Avatar';
 import { useI18n } from '@/lib/i18n';
 import { useBlacklist } from '@/components/BlacklistProvider';
+import EmptyState from '@/components/ui/EmptyState';
+import { ListSkeleton } from '@/components/ui/FeedSkeleton';
 
 interface BlacklistModalProps {
   isOpen: boolean;
@@ -100,19 +102,13 @@ export default function BlacklistModal({ isOpen, onClose }: BlacklistModalProps)
             </p>
           )}
 
-          {isLoading && list.length === 0 && (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-5 w-5 animate-spin text-emerald-600" />
-            </div>
-          )}
+          {isLoading && list.length === 0 && <ListSkeleton count={3} />}
 
           {!isLoading && list.length === 0 && (
-            <div className="smk-dashed flex flex-col items-center gap-2 p-6 text-center">
-              <UserRoundX className="h-6 w-6 text-slate-400 dark:text-zinc-600" />
-              <p className="text-xs text-slate-500 dark:text-zinc-500">
-                {L('Ваш чёрный список пуст.', 'Хьан IаьржамогIам баьржина бац.')}
-              </p>
-            </div>
+            <EmptyState
+              title={L('Список пуст', 'МогIам баьржина бац')}
+              hint={L('Ваш чёрный список пуст.', 'Хьан IаьржамогIам баьржина бац.')}
+            />
           )}
 
           <div className="space-y-1.5">

@@ -444,6 +444,11 @@ export const translations = {
     tasksEmptyHint: 'Создайте первое — его увидят жители Даймохк.',
     tasksEmptyGo: 'Просьб о помощи пока нет',
     tasksEmptyGoHint: '«Кто поможет брату своему — тому поможет Аллах»',
+    emptyFiltered: 'По фильтрам ничего нет',
+    emptyFilteredHint: 'Сбросьте фильтры или измените поиск — записи на месте.',
+    emptyResetFilters: 'Сбросить фильтры',
+    emptyCreateTask: 'Создать задание',
+    emptyCreateGo: 'Попросить помощь',
     tasksLoadError: 'Не удалось загрузить задания',
     tasksStatusError: 'Не удалось изменить статус',
 
@@ -1115,6 +1120,11 @@ export const translations = {
     tasksEmptyHint: 'Хьалхара кхолла — Даймехкан бахархошна гур ду иза.',
     tasksEmptyGo: 'ГIо деха дехарш хIинццалц дац',
     tasksEmptyGoHint: '«Ша везачу вешина гIо дархочунна Дала гIо дийр ду»',
+    emptyFiltered: 'Литтаршца хIумма а дац',
+    emptyFilteredHint: 'Литтарш дIабаха я лахар хийца — яздарш меттахь ду.',
+    emptyResetFilters: 'Литтарш дIабаха',
+    emptyCreateTask: 'ТIедиллар кхолла',
+    emptyCreateGo: 'ГIо деха',
     tasksLoadError: 'ТIедилларш схьаэца ца делира',
     tasksStatusError: 'Хьал хийца ца делира',
 

@@ -6,6 +6,8 @@ import { ArrowLeft, ChevronRight, List, type LucideIcon } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import Prose from '@/components/reading/Prose';
 import type { Article, ArticleSection } from '@/lib/articles';
+import EmptyState from '@/components/ui/EmptyState';
+import { ListSkeleton } from '@/components/ui/FeedSkeleton';
 
 interface ReadingPageProps {
   section: ArticleSection;
@@ -96,18 +98,15 @@ export default function ReadingPage({
 
       <hr className="smk-orn mb-4" />
 
-      {articles === null && (
-        <p className="smk-meta py-8 text-center text-xs">
-          {ce ? 'Чуоьцуш ду…' : 'Загружаем…'}
-        </p>
-      )}
+      {articles === null && <ListSkeleton count={4} />}
 
       {articles !== null && articles.length === 0 && (
-        <p className="smk-dashed p-4 text-center text-xs text-slate-500 dark:text-zinc-500">
-          {ce
+        <EmptyState
+          title={ce ? 'Дийцарш дац' : 'Глав пока нет'}
+          hint={ce
             ? (emptyHintCe ?? 'Дийцарш кечдина дац.')
             : (emptyHint ?? 'Материалы готовятся.')}
-        </p>
+        />
       )}
 
       {/* Оглавление */}

@@ -76,12 +76,20 @@
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* Focus rings exclusively for fillable inputs (search, name, phone, inputs, textarea), NEVER for article cards */
+  /* Фокус клавиатуры: только :focus-visible, мышь кольцо не рисует.
+     Раньше кольцо было у полей ввода, а кнопки и ссылки его не имели —
+     человек с Tab не видел, где стоит. Цвет — акцент темы, не зелёный. */
+  :focus {
+    outline: none;
+  }
+  :focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--smk-gold) 80%, var(--color-emerald-500));
+    outline-offset: 2px;
+  }
   input:focus-visible,
   textarea:focus-visible,
   select:focus-visible {
-    /* Кольцо фокуса — акцент интерфейса, а не зашитый зелёный. */
-    outline: 2px solid color-mix(in srgb, var(--color-emerald-500) 60%, transparent);
+    outline: 2px solid color-mix(in srgb, var(--smk-gold) 80%, var(--color-emerald-500));
     outline-offset: 1px;
   }
 
@@ -366,11 +374,8 @@ html.dark .bg-radial-gradient {
   outline: none;
 }
 .site-bottom-nav button:focus,
-.site-bottom-nav a:focus,
-.site-bottom-nav button:focus-visible,
-.site-bottom-nav a:focus-visible {
+.site-bottom-nav a:focus {
   outline: none;
-  box-shadow: none;
 }
 
 /* Dark theme soft borders as requested */
@@ -1604,7 +1609,9 @@ html.dark .smk-btn-gold {
 @supports not (color: color-mix(in srgb, red 50%, blue)) {
   .smk-star { color: var(--smk-gold-soft); }
 }
-.smk-rating-value { color: var(--smk-gold); }
+/* Светлая латунь как текст на карточке даёт ~1.9. Подмешиваем основной
+   текст: золотой оттенок остаётся, контраст проходит AA. */
+.smk-rating-value { color: color-mix(in srgb, var(--smk-gold) 35%, var(--foreground)); }
 html.dark .smk-rating-value { color: var(--smk-muted-bright); }
 
 .smk-arrow { color: var(--smk-arrow-color); transition: color 0.2s ease, transform 0.2s ease; }
@@ -2388,4 +2395,18 @@ textarea.smk-field:focus {
     /* свечение и посадочная тень */
     0 0 22px -6px color-mix(in srgb, var(--smk-gold) calc(60% * var(--fx-glow)), transparent),
     0 18px 45px -18px rgb(var(--smk-shadow-rgb) / calc(0.55 * var(--fx-shadow)));
+}
+
+/* Силуэт загрузки: мягкая пульсация подложки вместо спиннера.
+   Цвета из палитры, чтобы скелетон не выпадал из темы. */
+.smk-skel-bar {
+  background: color-mix(in srgb, var(--smk-muted) 16%, var(--smk-card-inset));
+  animation: smk-skel 1.4s ease-in-out infinite;
+}
+@keyframes smk-skel {
+  0%, 100% { opacity: 0.52; }
+  50% { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .smk-skel-bar { animation: none; opacity: 0.7; }
 }

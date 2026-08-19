@@ -13,6 +13,7 @@ import { Certificate, Profile, Review } from '@/lib/types';
 import { calculateAge, formatReviews } from '@/lib/text';
 import ResidentReputation from '@/components/tasks/ResidentReputation';
 import InfoRow from '@/components/ui/InfoRow';
+import EmptyState from '@/components/ui/EmptyState';
 import { compactWeekdays } from '@/lib/schedule';
 import Notice from '@/components/Notice';
 import ConfirmDialog from '@/components/ConfirmDialog';
@@ -980,7 +981,7 @@ export default function ProfileModal({
                   ))}
                 </div>
               ) : (
-                <p className="smk-dashed p-3 text-center text-xs text-slate-500 dark:text-zinc-500">{t.profileNoReviews}</p>
+                <EmptyState title={t.profileNoReviews} />
               )}
 
               {isOwnProfile ? (
@@ -1237,7 +1238,7 @@ export default function ProfileModal({
                         ))}
                       </div>
                     ) : (
-                      <p className="smk-dashed p-3 text-center text-xs text-slate-500 dark:text-zinc-500">{t.profileNoQuestions}</p>
+                      <EmptyState title={t.profileNoQuestions} />
                     )}
 
                     {isOwnProfile ? (
@@ -1337,11 +1338,7 @@ export default function ProfileModal({
                   (p) => p.ownerId === profile.ownerId && !p.isHidden && !p.isBanned
                 );
                 if (ownerProfiles.length === 0) {
-                  return (
-                    <p className="smk-dashed p-3 text-center text-xs text-slate-500 dark:text-zinc-500">
-                      {t.profileOwnerProfilesEmpty}
-                    </p>
-                  );
+                  return <EmptyState title={t.profileOwnerProfilesEmpty} />;
                 }
                 return (
                   <div className="space-y-1.5">

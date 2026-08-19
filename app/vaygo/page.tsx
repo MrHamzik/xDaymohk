@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2, HandHeart, Search } from 'lucide-react';
+import { ArrowLeft, HandHeart } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import SidebarNav from '@/components/SidebarNav';
 import BottomNav from '@/components/BottomNav';
@@ -13,6 +13,8 @@ import TaskCard from '@/components/tasks/TaskCard';
 import CreateTaskModal from '@/components/tasks/CreateTaskModal';
 import TaskDetailModal from '@/components/tasks/TaskDetailModal';
 import TaskFilterBar from '@/components/tasks/TaskFilterBar';
+import EmptyState from '@/components/ui/EmptyState';
+import FeedSkeleton from '@/components/ui/FeedSkeleton';
 import { useAuth } from '@/components/AuthProvider';
 import { useProfiles } from '@/components/ProfilesProvider';
 import { useI18n } from '@/lib/i18n';
@@ -230,9 +232,7 @@ export default function VaygoPage() {
           )}
 
           {isLoading ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="h-7 w-7 animate-spin text-teal-600" />
-            </div>
+            <FeedSkeleton />
           ) : visibleTasks.length > 0 ? (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {visibleTasks.map((task) => (
@@ -240,14 +240,43 @@ export default function VaygoPage() {
               ))}
             </div>
           ) : (
-            <div className="smk-dashed p-8 text-center">
-              <p className="text-sm font-semibold text-slate-600 dark:text-zinc-400">
-                {t.tasksEmptyGo}
-              </p>
-              <p className="mt-1 text-xs text-slate-400">
-                {t.tasksEmptyGoHint}
-              </p>
-            </div>
+            <EmptyState
+              title={
+                query || category || priorityFilter || minReward > 0 || payment
+                  ? t.emptyFiltered
+                  : t.tasksEmptyGo
+              }
+              hint={
+                query || category || priorityFilter || minReward > 0 || payment
+                  ? t.emptyFilteredHint
+                  : t.tasksEmptyGoHint
+              }
+              action={
+                query || category || priorityFilter || minReward > 0 || payment ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQuery('');
+                      setCategory('');
+                      setPriorityFilter('');
+                      setMinReward(0);
+                      setPayment('');
+                    }}
+                    className="smk-btn-gold smk-shine inline-flex items-center px-3.5 py-2 smk-text-label"
+                  >
+                    {t.emptyResetFilters}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => { setEditingTask(null); setIsCreateOpen(true); }}
+                    className="smk-btn-gold smk-shine inline-flex items-center px-3.5 py-2 smk-text-label"
+                  >
+                    {t.emptyCreateGo}
+                  </button>
+                )
+              }
+            />
           )}
         </main>
       </div>

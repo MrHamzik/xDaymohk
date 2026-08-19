@@ -19,6 +19,8 @@ import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/lib/supabase';
 import Prose from '@/components/reading/Prose';
 import { parseDisputeQuestion, shortRequestId } from '@/lib/support/format';
+import EmptyState from '@/components/ui/EmptyState';
+import { ListSkeleton } from '@/components/ui/FeedSkeleton';
 
 /** Телеграм поддержки — единственный внешний канал связи. */
 const SUPPORT_TELEGRAM = 'https://t.me/+Zx6xmc5g_a5hZmEy';
@@ -194,18 +196,17 @@ export default function HelpPage() {
           />
         </div>
 
-        {isLoading && (
-          <div className="flex justify-center py-6">
-            <Loader2 className="h-5 w-5 animate-spin text-emerald-600" />
-          </div>
-        )}
+        {isLoading && <ListSkeleton count={3} />}
 
         {!isLoading && questions.length === 0 && (
-          <p className="smk-dashed p-4 text-center text-xs text-slate-500 dark:text-zinc-500">
-            {search
-              ? L('Ничего не нашлось. Задайте свой вопрос ниже.', 'ХIумма а ца карийна. Лахахь хаттар де.')
-              : L('Пока нет опубликованных вопросов.', 'Зорбане яьхна хаттарш дац.')}
-          </p>
+          <EmptyState
+            title={search
+              ? L('Ничего не нашлось', 'ХIумма а ца карийна')
+              : L('Пока нет опубликованных вопросов', 'Зорбане яьхна хаттарш дац')}
+            hint={search
+              ? L('Задайте свой вопрос ниже.', 'Лахахь хаттар де.')
+              : L('Напишите ниже — ответим.', 'Лахахь язде — жоп лур ду.')}
+          />
         )}
 
         <div className="space-y-1.5">
