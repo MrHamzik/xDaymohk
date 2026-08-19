@@ -71,6 +71,10 @@ export default function TaskFilterBar({
     setCategory('');
     setPriority('');
     setMinReward(0);
+    // Способ расчёта тоже сбрасываем: он считается в activeCount, и без
+    // этого счётчик оставался «1» после «Сбросить всё», а лента молча
+    // продолжала фильтроваться по невидимому условию.
+    setPayment('');
     setIsOpen(false);
   };
 

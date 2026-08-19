@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2, Power, MapPin, Search, Star } from 'lucide-react';
+import { ArrowLeft, Loader2, Power, MapPin, Search, ShieldAlert, Star } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import SidebarNav from '@/components/SidebarNav';
 import BottomNav from '@/components/BottomNav';
@@ -31,7 +31,7 @@ import { isTaskStillVisible } from '@/lib/tasks/visibility';
 import { useTasksRealtime } from '@/lib/tasks/realtime';
 
 /** Вкладки ленты. «Близко» — по умолчанию, 1 км от текущей позиции. */
-type FeedTab = 'nearby' | 'all' | 'mine' | 'taken';
+type FeedTab = 'nearby' | 'all' | 'mine' | 'taken' | 'disputed' | 'review';
 
 export default function VayghullakhPage() {
   const { t } = useI18n();
@@ -205,14 +205,45 @@ export default function VayghullakhPage() {
    * висело «4», а внутри после фильтрации не оставалось ничего.
    */
   const takenTasks = useMemo(() => myTasks.filter(
-    (t) => !['completed', 'cancelled', 'expired'].includes(t.status)
-      || pendingReview.includes(t.id)
+    (t) => (
+      !['completed', 'cancelled', 'expired', 'disputed'].includes(t.status)
       // Отменённое заказчиком задание остаётся здесь с пометкой
       // «Отменено», пока не истёк срок показа. Раньше оно просто
       // пропадало из «В работе», и исполнитель не понимал, куда делся
       // заказ; либо, наоборот, висело как живое (см. обновление 38).
-      || (t.status === 'cancelled' && isTaskStillVisible(t)),
-  ), [myTasks, pendingReview]);
+      || (t.status === 'cancelled' && isTaskStillVisible(t))
+    ),
+  ), [myTasks]);
+
+  /**
+   * Скрытый раздел «На рассмотрении».
+   *
+   * Спор — это не работа: сдавать там нечего, идёт разбирательство.
+   * Пока такие задания лежали в «В работе», они мешали видеть реальные
+   * дела. Раздел появляется только когда споры есть, и виден ОБЕИМ
+   * сторонам: исполнителю (он в myTasks) и заказчику (его задания
+   * приходят общей лентой).
+   */
+  const disputedTasks = useMemo(() => {
+    const mine = myTasks.filter((t) => t.status === 'disputed');
+    const authored = tasks.filter(
+      (t) => t.status === 'disputed' && t.authorId === account?.id,
+    );
+    // Одно задание может попасть в оба списка (например, у админа) —
+    // склеиваем по id, иначе карточка задвоится.
+    const byId = new Map([...mine, ...authored].map((t) => [t.id, t]));
+    return [...byId.values()];
+  }, [myTasks, tasks, account?.id]);
+
+  /**
+   * Скрытый раздел «Ожидают оценки» — только закрытые задания, по
+   * которым я ещё не поставил оценку. Раньше кнопка вела в «В работе»,
+   * где они терялись среди живых.
+   */
+  const reviewTasks = useMemo(
+    () => myTasks.filter((t) => pendingReview.includes(t.id)),
+    [myTasks, pendingReview],
+  );
 
   const visibleTasks = useMemo(() => {
     let list = withDistance;
@@ -221,6 +252,10 @@ export default function VayghullakhPage() {
       list = list.filter((t) => t.authorId === account?.id);
     } else if (tab === 'taken') {
       list = takenTasks;
+    } else if (tab === 'disputed') {
+      list = disputedTasks;
+    } else if (tab === 'review') {
+      list = reviewTasks;
     } else if (tab === 'nearby' && position) {
       list = list.filter((t) => typeof t.distanceM === 'number' && t.distanceM <= TASK_NEARBY_RADIUS_M);
     }
@@ -228,8 +263,12 @@ export default function VayghullakhPage() {
     // Отменённые видны только СТОРОНАМ сделки: заказчику в «Мои» и
     // исполнителю в «В работе». В общей ленте им делать нечего — это
     // закрытые заказы, а не предложения работы.
-    if (tab !== 'mine' && tab !== 'taken') {
+    if (!['mine', 'taken', 'disputed', 'review'].includes(tab)) {
       list = list.filter((t) => t.status !== 'cancelled');
+    }
+    // Споры живут в своём разделе и в общей ленте не мешаются.
+    if (!['disputed', 'mine'].includes(tab)) {
+      list = list.filter((t) => t.status !== 'disputed');
     }
 
     if (category) list = list.filter((t) => t.category === category);
@@ -252,7 +291,8 @@ export default function VayghullakhPage() {
       return [...list].sort((a, b) => (a.distanceM ?? 1e9) - (b.distanceM ?? 1e9));
     }
     return list;
-  }, [withDistance, takenTasks, tab, category, priorityFilter, minReward, payment, query, account?.id, position]);
+  }, [withDistance, takenTasks, disputedTasks, reviewTasks, tab, category,
+    priorityFilter, minReward, payment, query, account?.id, position]);
 
   return (
     <div className="flex min-h-[100dvh] min-w-0 flex-col overflow-x-hidden bg-slate-50 bg-radial-gradient transition-colors dark:bg-zinc-950">
@@ -321,6 +361,15 @@ export default function VayghullakhPage() {
               { value: 'all', label: t.tasksTabAll },
               { value: 'mine', label: t.tasksTabMine },
               { value: 'taken', label: t.tasksTabTaken, count: takenTasks.length || undefined },
+              // Скрытые разделы: вкладка появляется, только когда есть
+              // что показать. Пустая вкладка «На рассмотрении» у
+              // большинства жителей была бы просто шумом.
+              ...(disputedTasks.length > 0
+                ? [{ value: 'disputed', label: t.tasksTabDisputed, count: disputedTasks.length }]
+                : []),
+              ...(reviewTasks.length > 0
+                ? [{ value: 'review', label: t.tasksTabReview, count: reviewTasks.length }]
+                : []),
             ]}
             categories={categories}
             category={category}
@@ -333,14 +382,29 @@ export default function VayghullakhPage() {
             setPayment={setPayment}
           />
 
-          {pendingReview.length > 0 && (
+          {/* Споры — «опасность»: ведёт в свой раздел, а не в «В работе». */}
+          {disputedTasks.length > 0 && tab !== 'disputed' && (
             <button
               type="button"
-              onClick={() => setTab('taken')}
-              className="mb-3 flex w-full items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-left text-[11px] font-semibold text-amber-800 transition hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-950/60"
+              onClick={() => setTab('disputed')}
+              className="smk-note smk-note-danger mb-3 flex w-full items-center gap-2 px-3 py-2 text-left"
             >
-              <Star className="h-3.5 w-3.5 shrink-0 fill-amber-400 text-amber-400" />
-              {t.tasksPendingReview}: {pendingReview.length} — {t.tasksPendingReviewHint}
+              <ShieldAlert className="h-3.5 w-3.5 shrink-0" />
+              {t.tasksDisputedBanner}: {disputedTasks.length} — {t.tasksDisputedHint}
+            </button>
+          )}
+
+          {/* Оценки — «предупреждение»: свой скрытый раздел, где видны
+              только задания без оценки. Раньше кнопка вела в «В работе»
+              и они терялись среди живых. */}
+          {reviewTasks.length > 0 && tab !== 'review' && (
+            <button
+              type="button"
+              onClick={() => setTab('review')}
+              className="smk-note smk-note-warn mb-3 flex w-full items-center gap-2 px-3 py-2 text-left"
+            >
+              <Star className="h-3.5 w-3.5 shrink-0" />
+              {t.tasksPendingReview}: {reviewTasks.length} — {t.tasksPendingReviewHint}
             </button>
           )}
 

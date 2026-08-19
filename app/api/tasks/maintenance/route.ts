@@ -134,12 +134,20 @@ export async function POST(request: Request) {
   // ---------------------------------------------------------------
   // 2. Просрочка: срок вышел, задание так и не взяли.
   // ---------------------------------------------------------------
+  // ВАЖНО: срок у заданий хранится в РАЗНЫХ колонках — deadline_at у
+  // срочных, scheduled_at у заданий «на дату» (см. ограничение в
+  // миграции 18). Прежний фильтр .lt('deadline_at', …) молча пропускал
+  // все запланированные: у них deadline_at = NULL, а NULL не проходит
+  // сравнение. Поэтому «на дату» никогда не помечались просроченными и
+  // висели в ленте вечно — при этом cleanup_closed_tasks() честно
+  // возвращала 0, ведь до статуса 'expired' они не доходили.
+  const nowIso = new Date(now).toISOString();
   const { data: overdue, error: overdueError } = await admin
     .from('tasks')
     .select('id, title, author_id')
     .eq('status', 'open')
     .eq('is_archived', false)
-    .lt('deadline_at', new Date(now).toISOString())
+    .or(`deadline_at.lt.${nowIso},scheduled_at.lt.${nowIso}`)
     .limit(100);
 
   if (overdueError) {

@@ -2,7 +2,7 @@
 
 import {
   Clock, MapPin, Star, Users, Zap, AlertTriangle, Ban,
-  Banknote, CalendarDays, ChevronRight, CreditCard, ShieldCheck, Wallet,
+  Banknote, CalendarDays, ChevronRight, CreditCard, ShieldAlert, ShieldCheck, Wallet,
 } from 'lucide-react';
 import Avatar from '@/components/Avatar';
 import { useI18n } from '@/lib/i18n';
@@ -74,6 +74,11 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
     ? formatTaskDateTime(task.scheduledAt)
     : formatTimeLeft(task.deadlineAt, timeLabels);
   const isOverdue = timeLeft === t.timeOverdue;
+  // Спор — самостоятельное состояние, а не срок. Раньше такая карточка
+  // показывала часы и «просрочено»: дата у неё уже неактуальна, а
+  // иконка и цвет совпадали с обычным отсчётом, и отличить спор от
+  // просрочки было нельзя.
+  const isDisputed = task.status === 'disputed';
   const takenSlots = task.takenSlots ?? 0;
   const isFull = takenSlots >= task.slots;
   const rating = task.authorRating ?? 0;
@@ -200,20 +205,29 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
           </span>
         )}
 
-        <span
-          className={`inline-flex items-center gap-1.5 rounded-lg px-2 py-1 ${
-            isOverdue
-              ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300'
-              : 'bg-slate-100 text-slate-600 dark:bg-zinc-700/70 dark:text-zinc-300'
-          }`}
-        >
-          {/* Слой 7: пульсирующая точка у «горящих» заданий */}
-          {task.priority === 'critical' && !isOverdue && (
-            <span className="smk-urgent-dot h-1.5 w-1.5 rounded-full bg-rose-500" aria-hidden />
-          )}
-          {task.kind === 'scheduled' ? <CalendarDays className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
-          {timeLeft || '—'}
-        </span>
+        {isDisputed ? (
+          /* Своя метка со своей иконкой и цветом «опасность»: у спора
+             нет обратного отсчёта, ему важно состояние. */
+          <span className="smk-chip smk-note-danger">
+            <ShieldAlert className="h-3 w-3" />
+            {t.taskDisputeShort}
+          </span>
+        ) : (
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-lg px-2 py-1 ${
+              isOverdue
+                ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300'
+                : 'bg-slate-100 text-slate-600 dark:bg-zinc-700/70 dark:text-zinc-300'
+            }`}
+          >
+            {/* Слой 7: пульсирующая точка у «горящих» заданий */}
+            {task.priority === 'critical' && !isOverdue && (
+              <span className="smk-urgent-dot h-1.5 w-1.5 rounded-full bg-rose-500" aria-hidden />
+            )}
+            {task.kind === 'scheduled' ? <CalendarDays className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+            {timeLeft || '—'}
+          </span>
+        )}
 
         {task.kind === 'scheduled' && (
           <span

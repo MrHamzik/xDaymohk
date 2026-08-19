@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   X, Loader2, Star, MapPin, Clock, Users, CalendarDays, ShieldAlert, Trash2,
-  Ban, Pencil, Wallet,
+  Ban, Check, Pencil, Wallet,
 } from 'lucide-react';
 import Link from 'next/link';
 import Avatar from '@/components/Avatar';
@@ -25,6 +25,7 @@ import { useTaskRealtime } from '@/lib/tasks/realtime';
 import {
   taskTotalReward,
   TASK_AUTO_CONFIRM_HOURS,
+  TASK_DISPUTE_HOURS,
   type Task,
   type TaskParticipant,
 } from '@/lib/types';
@@ -313,7 +314,7 @@ export default function TaskDetailModal({
                   <h3 className="smk-sheet-label mb-1.5">
                     {t.taskAddressHeading}
                   </h3>
-                  <div className="smk-field flex items-start gap-3 p-3">
+                  <div className="smk-inset flex items-start gap-3 p-3">
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
                       <MapPin className="h-4 w-4" />
                     </div>
@@ -524,10 +525,46 @@ export default function TaskDetailModal({
                     {isAuthor ? t.taskDisputeAuthor : t.taskDisputeExecutor}
                   </p>
                   {disputeLeft && (
-                    <p className="mt-1.5 text-[11px] font-bold">
+                    <p className="mt-1.5 font-bold">
                       {t.taskDisputeLeft.replace('{time}', disputeLeft)}
                     </p>
                   )}
+
+                  {/* Объясняем МЕХАНИКУ: раньше блок сообщал «идёт
+                      рассмотрение», но не говорил, что это за
+                      рассмотрение, кто его ведёт и что будет дальше. */}
+                  <p className="mt-2 pt-2 opacity-90" style={{ borderTop: '1px solid currentColor' }}>
+                    <span className="font-bold">{t.taskDisputeHowTitle}. </span>
+                    {t.taskDisputeHow.replace('{hours}', String(TASK_DISPUTE_HOURS))}
+                  </p>
+                  <p className="mt-1.5 opacity-90">{t.taskDisputeAfter}</p>
+
+                  {/* Возможности решить: договориться самим либо позвать
+                      администратора. */}
+                  <div className="mt-2.5 flex flex-wrap gap-1.5">
+                    {/* Заказчик закрывает спор сам, если договорились —
+                        это и есть «решить между собой». */}
+                    {isAuthor && (
+                      <button
+                        type="button"
+                        disabled={Boolean(busy) || !canConfirm}
+                        onClick={() => act('confirm', () => runTaskAction(task.id, 'confirm'))}
+                        className="smk-act rounded-lg px-2.5 py-1.5"
+                      >
+                        {busy === 'confirm'
+                          ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          : <Check className="h-3.5 w-3.5" />}
+                        {t.taskDisputeResolve}
+                      </button>
+                    )}
+
+                    {/* Жалоба администратору села — через раздел
+                        «Помощь», там форма обращения и связь. */}
+                    <Link href="/help" className="smk-act rounded-lg px-2.5 py-1.5">
+                      <ShieldAlert className="h-3.5 w-3.5" />
+                      {t.taskDisputeComplain}
+                    </Link>
+                  </div>
                 </div>
               )}
 
