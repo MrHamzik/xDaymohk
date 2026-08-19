@@ -111,6 +111,18 @@ export function checkExecutorEligibility(
   if (profile.is_blocked) {
     return { ok: false, reason: 'Ваш аккаунт заблокирован' };
   }
+  // Временная блокировка распространяется и на ВЗЯТИЕ заданий, не
+  // только на создание. Иначе наказанный за нерешённый спор исполнитель
+  // просто брал следующее задание — блокировка ничего не значила.
+  if (isTaskCreationBlocked(profile.tasks_blocked_until ?? null)) {
+    const until = new Date(profile.tasks_blocked_until!);
+    return {
+      ok: false,
+      reason: `Действия с заданиями заблокированы до ${until.toLocaleString('ru-RU', {
+        day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
+      })}.`,
+    };
+  }
   if (profile.id === task.author_id) {
     return { ok: false, reason: 'Нельзя взять собственное задание' };
   }

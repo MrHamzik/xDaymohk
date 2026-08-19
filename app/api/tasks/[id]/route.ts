@@ -1043,7 +1043,11 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       if (!isAuthor && !isAdmin) {
         return NextResponse.json({ error: 'Только заказчик может подтвердить' }, { status: 403 });
       }
-      if (task.status !== 'awaiting_confirm') {
+      // 'disputed' здесь обязателен. Кнопка «Договорились — принять
+      // работу» в блоке спора шлёт то же действие confirm, а проверка
+      // пропускала только awaiting_confirm: сервер отвечал 409, и
+      // задание висело, хотя обе стороны уже договорились.
+      if (!['awaiting_confirm', 'disputed'].includes(String(task.status))) {
         return NextResponse.json({ error: 'Задание не ожидает подтверждения' }, { status: 409 });
       }
       // Задание с ПЕРЕВОДОМ нельзя закрыть, пока исполнитель не
@@ -1051,9 +1055,13 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       // «Подтвердить», сделка закрывалась как успешная, счётчики
       // исполнителя росли — а денег он не видел.
       //
+      // В споре проверку не применяем: спор и так означает, что расчёт
+      // под вопросом, и требовать отметку значило бы запереть обе
+      // стороны — ровно то, из-за чего спор был нерешаемым.
+      //
       // Администратор исключён: он разбирает жалобы и должен уметь
       // закрыть зависшее задание вручную.
-      if (!isAdmin && !canConfirmTask(task)) {
+      if (!isAdmin && task.status !== 'disputed' && !canConfirmTask(task)) {
         return NextResponse.json(
           {
             error: 'Исполнитель ещё не отметил, что получил оплату. '
@@ -1065,6 +1073,14 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       }
 
       await completeTask(admin, id, String(task.title));
+      // Спор закрыт согласием — снимаем его следы, чтобы карточка не
+      // показывала «идёт рассмотрение» у завершённого задания.
+      if (task.status === 'disputed') {
+        await admin
+          .from('tasks')
+          .update({ dispute_until: null })
+          .eq('id', id);
+      }
       return NextResponse.json({ success: true });
     }
 

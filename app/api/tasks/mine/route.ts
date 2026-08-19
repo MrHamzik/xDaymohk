@@ -42,7 +42,24 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Не удалось загрузить задания' }, { status: 500 });
   }
 
-  const taskIds = (parts ?? []).map((p) => String(p.task_id));
+  // 1b. Задания, где я ЗАКАЗЧИК и они уже закрыты.
+  //
+  // Без них заказчик не мог поставить оценку: завершённое задание
+  // уходит в архив, вьюха ленты архивные скрывает, а этот роут искал
+  // только участие в task_participants. Форма оценки в карточке была,
+  // но открыть карточку было неоткуда — «задание просто исчезало».
+  const { data: authored } = await admin
+    .from('tasks')
+    .select('id')
+    .eq('author_id', userId)
+    .eq('status', 'completed')
+    .order('completed_at', { ascending: false })
+    .limit(100);
+
+  const taskIds = [...new Set([
+    ...(parts ?? []).map((p) => String(p.task_id)),
+    ...(authored ?? []).map((r) => String(r.id)),
+  ])];
   if (taskIds.length === 0) {
     return NextResponse.json({ tasks: [], pendingReview: [] });
   }
@@ -72,8 +89,13 @@ export async function GET(request: Request) {
   const ratedTaskIds = new Set((myReviews ?? []).map((r) => String(r.task_id)));
 
   const tasks = (rows ?? []).map(mapTaskRow);
+  // «Ожидает оценки» — завершённое задание, где я ещё не высказался.
+  // Заказчику задания «на дату» оценку ставить не нужно: он уже
+  // оценил каждого в отметке явки, и вторая форма просила бы то же
+  // самое повторно.
   const pendingReview = tasks
     .filter((t) => t.status === 'completed' && !ratedTaskIds.has(t.id))
+    .filter((t) => !(t.authorId === userId && t.kind === 'scheduled'))
     .map((t) => t.id);
 
   return NextResponse.json({ tasks, pendingReview });

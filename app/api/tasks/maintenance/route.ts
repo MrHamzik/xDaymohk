@@ -3,7 +3,10 @@ import { createClient } from '@supabase/supabase-js';
 import { rateLimit, withRateLimitHeaders } from '@/lib/rate-limit';
 import { log } from '@/lib/logger';
 import { notifyTaskEvent } from '@/lib/tasks/server';
-import { TASK_AUTO_CONFIRM_HOURS, TASK_BLOCK_HOURS } from '@/lib/types';
+import {
+  TASK_AUTO_CONFIRM_HOURS, TASK_BLOCK_HOURS,
+  TASK_DISPUTE_BLOCK_HOURS, TASK_DISPUTE_HOURS,
+} from '@/lib/types';
 
 /**
  * Обслуживание заданий по расписанию:
@@ -212,10 +215,17 @@ export async function POST(request: Request) {
     }
   }
 
-  // ── Споры: возвращаем в работу по истечении суток ──────────────
-  // Спор не должен висеть вечно: если стороны не договорились и никто
-  // не подал жалобу, исполнитель снова может сдать работу, а заказчик —
-  // принять или отменить.
+  // ── Споры: истёк срок — задание в работу, обе стороны наказаны ──
+  //
+  // Спор не должен висеть вечно: если за сутки не договорились и никто
+  // не подал жалобу, задание возвращается в работу.
+  //
+  // Но безнаказанно это оставлять нельзя. Спор — несостоявшаяся
+  // договорённость, и виноват в ней редко кто-то один: заказчик не
+  // принял работу, исполнитель не доказал, что сделал. Раньше обе
+  // стороны просто игнорировали друг друга сутки и расходились без
+  // последствий. Теперь обе получают блокировку действий с заданиями
+  // на 24 часа — она закрывает и создание, и взятие.
   let disputesReleased = 0;
   const { data: staleDisputes } = await admin
     .from('tasks')
@@ -239,13 +249,37 @@ export async function POST(request: Request) {
       .eq('task_id', task.id)
       .in('status', ['joined', 'attended']);
 
+    const blockedUntilDispute = new Date(
+      now + TASK_DISPUTE_BLOCK_HOURS * 3_600_000,
+    ).toISOString();
+
     for (const p of [...(parts ?? []), { user_id: task.author_id }]) {
       if (!p.user_id) continue;
+
+      // Блокировку не продлеваем поверх более долгой существующей: если
+      // человек уже наказан дольше, новая метка не должна её сокращать.
+      const { data: current } = await admin
+        .from('user_profiles')
+        .select('tasks_blocked_until')
+        .eq('id', String(p.user_id))
+        .maybeSingle();
+      const existing = current?.tasks_blocked_until
+        ? Date.parse(current.tasks_blocked_until)
+        : 0;
+      if (!existing || existing < Date.parse(blockedUntilDispute)) {
+        await admin
+          .from('user_profiles')
+          .update({ tasks_blocked_until: blockedUntilDispute })
+          .eq('id', String(p.user_id));
+      }
+
       await notifyTaskEvent(admin, {
         recipientId: String(p.user_id),
         type: 'task_dispute_released',
         title: 'Срок рассмотрения истёк',
-        message: `«${task.title}» снова в работе.`,
+        message: `«${task.title}» снова в работе. Спор не был решён за `
+          + `${TASK_DISPUTE_HOURS} ч, поэтому действия с заданиями `
+          + `заблокированы на ${TASK_DISPUTE_BLOCK_HOURS} ч для обеих сторон.`,
       });
     }
     disputesReleased += 1;
