@@ -293,7 +293,7 @@ export default function OnboardingModal() {
 
   return (
     <div className="fixed inset-0 z-[95] flex items-center justify-center bg-zinc-950/70 p-4 backdrop-blur-md" role="dialog" aria-modal="true" aria-labelledby="onb-title">
-      <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-zinc-700 dark:bg-zinc-950">
+      <div className="smk-sheet relative w-full max-w-md overflow-hidden rounded-3xl shadow-2xl">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-24 overflow-hidden opacity-60 dark:opacity-40" aria-hidden="true">
           <div className="absolute -top-10 -left-10 h-28 w-28 rounded-full bg-emerald-200/60 blur-2xl dark:bg-emerald-900/40" />
           <div className="absolute -top-6 right-0 h-24 w-24 rounded-full bg-teal-200/50 blur-2xl dark:bg-teal-900/30" />

@@ -1514,7 +1514,7 @@ export default function ProfileModal({
 
       {selectedCert && (
         <div className="fixed inset-0 z-[65] flex items-center justify-center bg-zinc-950/80 p-4 backdrop-blur-md" role="dialog" aria-modal="true" aria-label={selectedCert.title}>
-          <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white p-4 shadow-2xl dark:bg-zinc-800 border border-slate-200/50 dark:border-zinc-800">
+          <div className="smk-sheet w-full max-w-md overflow-hidden rounded-2xl p-4 shadow-2xl">
             <div className="mb-2.5 flex items-center justify-between">
               <h3 className="text-xs font-bold text-slate-900 dark:text-white">{selectedCert.title}</h3>
               <button

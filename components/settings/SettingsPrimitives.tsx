@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Info } from 'lucide-react';
+import { ChevronDown, Info } from 'lucide-react';
 
 /**
  * Мелкие блоки страницы настроек.
@@ -150,6 +150,54 @@ export function SectionTitle({
       <span className="smk-rule h-px flex-1" aria-hidden />
       {action}
     </div>
+  );
+}
+
+/**
+ * Сворачиваемый раздел настроек.
+ *
+ * Расширенный режим открывает сразу три больших блока — темы, эффекты,
+ * шрифты, — и страница превращалась в бесконечный свиток: чтобы дойти
+ * до шрифтов, нужно было прокрутить всю палитру из 30 пикеров.
+ *
+ * По умолчанию закрыт: человек сам выбирает, что настраивать.
+ * Состояние держит родитель, поэтому его можно запомнить или открыть
+ * нужный раздел программно.
+ */
+export function CollapsibleSection({
+  title,
+  hint,
+  isOpen,
+  onToggle,
+  children,
+}: {
+  title: string;
+  hint?: string;
+  isOpen: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <section>
+      <div className="mb-2 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={isOpen}
+          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+        >
+          <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+            {title}
+          </h2>
+          <span className="smk-rule h-px flex-1" aria-hidden />
+          <ChevronDown
+            className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          />
+        </button>
+        {hint && <HintMark text={hint} />}
+      </div>
+      {isOpen && children}
+    </section>
   );
 }
 

@@ -28,7 +28,7 @@ export default function ConfirmDialog({ isOpen, title, message, confirmLabel, on
 
   return (
     <div className="fixed inset-0 z-[90] flex items-center justify-center bg-zinc-950/60 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
-      <div className="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl dark:bg-zinc-950">
+      <div className="smk-sheet w-full max-w-sm rounded-3xl p-5 shadow-2xl">
         <div className="flex items-start gap-3">
           <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${danger ? 'bg-red-50 text-red-600 dark:bg-red-950/50 dark:text-red-400' : 'bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400'}`}>
             <AlertTriangle className="h-5 w-5" />

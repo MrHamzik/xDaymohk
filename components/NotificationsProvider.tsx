@@ -7,7 +7,7 @@ import { AppNotification, NotificationType } from '@/lib/types';
 import { useSettings } from '@/components/SettingsProvider';
 import { notificationGroup } from '@/lib/settings/types';
 import { prefFor } from '@/lib/settings/defaults';
-import { playNotificationSound } from '@/lib/settings/sound';
+import { DEFAULT_GROUP_SOUND, playSound, type SoundId } from '@/lib/notification-sounds';
 
 interface NotificationsContextValue {
   notifications: AppNotification[];
@@ -95,9 +95,14 @@ export default function NotificationsProvider({ children }: { children: React.Re
       }, (payload) => {
         const nextNotification = fromDbRow(payload.new as Record<string, any>);
         // Звук по группе из настроек. Сервер уже отфильтровал скрытые
-        // группы (обновление 28), здесь решается только «звучать ли».
-        if (prefFor(settings, notificationGroup(nextNotification.type)).sound) {
-          playNotificationSound();
+        // группы (обновление 28), здесь решается «звучать ли» и «чем».
+        //
+        // Мелодия своя у каждой группы: по сигналу понятно, задание это
+        // или жалоба, не доставая телефон.
+        const group = notificationGroup(nextNotification.type);
+        const pref = prefFor(settings, group);
+        if (pref.sound) {
+          playSound((pref.soundId ?? DEFAULT_GROUP_SOUND[group] ?? 'chime') as SoundId);
         }
         if (nextNotification.type === 'user_blocked' || nextNotification.type === 'user_unblocked') {
           window.dispatchEvent(new CustomEvent('daymohk-account-status', { detail: { userId: account.id, isBlocked: nextNotification.type === 'user_blocked' } }));

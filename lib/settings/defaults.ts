@@ -1,3 +1,4 @@
+import { SOUND_IDS } from '@/lib/notification-sounds';
 import {
   FONT_FAMILIES,
   MAX_CUSTOM_THEMES,
@@ -68,6 +69,7 @@ export function prefFor(
   return {
     show: stored.show !== false,
     sound: stored.sound === true,
+    soundId: stored.soundId,
   };
 }
 
@@ -729,9 +731,16 @@ function normalizePrefs(raw: unknown): Partial<Record<NotificationGroup, Notific
   for (const group of NOTIFICATION_GROUPS) {
     const entry = input[group] as Record<string, unknown> | undefined;
     if (!entry || typeof entry !== 'object') continue;
+    // soundId проверяем по закрытому списку: значение приходит из БД
+    // и попадает в проигрыватель, произвольные строки не принимаем.
+    const soundId = typeof entry.soundId === 'string'
+      && (SOUND_IDS as string[]).includes(entry.soundId)
+      ? entry.soundId
+      : undefined;
     result[group] = {
       show: entry.show !== false,
       sound: entry.sound === true,
+      ...(soundId ? { soundId } : {}),
     };
   }
   return result;

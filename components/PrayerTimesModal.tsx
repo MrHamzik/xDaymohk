@@ -74,7 +74,7 @@ export default function PrayerTimesModal({ isOpen, onClose }: PrayerTimesModalPr
       onClick={onClose}
     >
       <div
-        className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl transition-all dark:bg-zinc-800"
+        className="smk-sheet flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl shadow-2xl transition-all"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

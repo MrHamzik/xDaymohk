@@ -241,7 +241,7 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
 
   return createPortal(
     <div className="fixed inset-0 z-[85] flex items-center justify-center bg-zinc-950/70 p-4 backdrop-blur-md" role="dialog" aria-modal="true" aria-labelledby="qibla-title">
-      <div className="w-full max-w-md overflow-hidden rounded-3xl bg-white p-6 shadow-2xl dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800">
+      <div className="smk-sheet w-full max-w-md overflow-hidden rounded-3xl p-6 shadow-2xl">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3 dark:border-zinc-800">
           <div className="flex items-center gap-3">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-md">

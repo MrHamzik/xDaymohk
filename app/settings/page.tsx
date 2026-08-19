@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, RotateCcw, Settings as SettingsIcon } from 'lucide-react';
+import { ArrowLeft, RotateCcw, Settings as SettingsIcon, Volume2 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import SidebarNav from '@/components/SidebarNav';
 import BottomNav from '@/components/BottomNav';
@@ -14,7 +14,7 @@ import ThemeEditor from '@/components/settings/ThemeEditor';
 import EffectsEditor from '@/components/settings/EffectsEditor';
 import PayoutSettings from '@/components/settings/PayoutSettings';
 import {
-  SectionTitle, SettingRow, Toggle, WarningBox,
+  CollapsibleSection, SectionTitle, SettingRow, Toggle, WarningBox,
 } from '@/components/settings/SettingsPrimitives';
 import { useAuth } from '@/components/AuthProvider';
 import { useProfiles } from '@/components/ProfilesProvider';
@@ -22,9 +22,12 @@ import { useSettings } from '@/components/SettingsProvider';
 import { prefFor } from '@/lib/settings/defaults';
 import {
   LOCKED_NOTIFICATION_GROUPS, NOTIFICATION_GROUPS,
-  type FontFamilyId, type NotificationGroup,
+  type FontFamilyId, type NotificationGroup, type NotificationPref,
 } from '@/lib/settings/types';
 import { useI18n } from '@/lib/i18n';
+import {
+  DEFAULT_GROUP_SOUND, playSound, SOUND_IDS, SOUND_LABELS, type SoundId,
+} from '@/lib/notification-sounds';
 
 /**
  * Страница настроек.
@@ -37,7 +40,7 @@ import { useI18n } from '@/lib/i18n';
 type SettingsSection = 'all' | 'tasks' | 'notifications' | 'payout' | 'advanced';
 
 export default function SettingsPage() {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const { account } = useAuth();
   const { isCurrentUserAdmin } = useProfiles();
   const { settings, update, reset } = useSettings();
@@ -52,6 +55,11 @@ export default function SettingsPage() {
    * оставляет прежний вид целиком, остальные вкладки скрывают лишнее.
    */
   const [section, setSection] = useState<SettingsSection>('all');
+  // Какой из больших блоков расширенного режима раскрыт. Один за раз:
+  // иначе страница снова превращается в бесконечный свиток.
+  const [openBlock, setOpenBlock] = useState<'themes' | 'effects' | 'fonts' | null>(null);
+  const toggleBlock = (name: 'themes' | 'effects' | 'fonts') =>
+    setOpenBlock((current) => (current === name ? null : name));
   const shows = (name: Exclude<SettingsSection, 'all'>) =>
     section === 'all' || section === name;
   const router = useRouter();
@@ -99,7 +107,7 @@ export default function SettingsPage() {
     },
   ];
 
-  const setPref = (group: NotificationGroup, patch: { show?: boolean; sound?: boolean }) => {
+  const setPref = (group: NotificationGroup, patch: Partial<NotificationPref>) => {
     const current = prefFor(settings, group);
     update({
       notificationPrefs: {
@@ -226,7 +234,7 @@ export default function SettingsPage() {
                   return (
                     <div
                       key={group}
-                      className="smk-field flex items-center justify-between gap-3 px-3 py-2.5"
+                      className="smk-field flex flex-wrap items-center justify-between gap-3 px-3 py-2.5"
                     >
                       <div className="min-w-0">
                         <p className="truncate text-xs font-bold text-slate-800 dark:text-zinc-200">
@@ -253,6 +261,42 @@ export default function SettingsPage() {
                           />
                         </span>
                       </div>
+
+                      {/* Выбор мелодии — только когда звук включён.
+                          Разные звуки у групп нужны, чтобы понимать
+                          источник, не доставая телефон. Кнопка рядом
+                          проигрывает выбранное: без прослушивания имя
+                          «Двойной» ничего не говорит. */}
+                      {pref.sound && (
+                        <div className="mt-2 flex w-full items-center gap-2">
+                          <select
+                            aria-label={`${groupLabels[group].title}: ${t.settingsSoundPick}`}
+                            value={pref.soundId ?? DEFAULT_GROUP_SOUND[group] ?? 'chime'}
+                            onChange={(e) => {
+                              setPref(group, { soundId: e.target.value });
+                              playSound(e.target.value as SoundId);
+                            }}
+                            className="smk-field min-w-0 flex-1 px-2.5 py-1.5 text-[11px] text-slate-900 outline-none dark:text-white"
+                          >
+                            {SOUND_IDS.map((id) => (
+                              <option key={id} value={id}>
+                                {language === 'ce' ? SOUND_LABELS[id].ce : SOUND_LABELS[id].ru}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            onClick={() => playSound(
+                              (pref.soundId ?? DEFAULT_GROUP_SOUND[group] ?? 'chime') as SoundId,
+                            )}
+                            aria-label={t.settingsSoundPlay}
+                            title={t.settingsSoundPlay}
+                            className="smk-act flex h-8 w-8 shrink-0 items-center justify-center"
+                          >
+                            <Volume2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -282,14 +326,32 @@ export default function SettingsPage() {
 
               {settings.advancedMode && (
                 <div className="space-y-5 pt-1">
-                  <ThemeEditor />
+                  {/* Три больших блока — сворачиваемые: вместе они дают
+                      несколько экранов прокрутки, и до шрифтов
+                      приходилось листать всю палитру. */}
+                  <CollapsibleSection
+                    title={t.settingsThemes}
+                    isOpen={openBlock === 'themes'}
+                    onToggle={() => toggleBlock('themes')}
+                  >
+                    <ThemeEditor />
+                  </CollapsibleSection>
 
                   {/* Эффекты — под темами: сначала выбирают оформление,
                       потом настраивают его «плотность». */}
-                  <EffectsEditor />
+                  <CollapsibleSection
+                    title={t.settingsEffects}
+                    isOpen={openBlock === 'effects'}
+                    onToggle={() => toggleBlock('effects')}
+                  >
+                    <EffectsEditor />
+                  </CollapsibleSection>
 
-                  <section>
-                    <SectionTitle title={t.settingsTypography} />
+                  <CollapsibleSection
+                    title={t.settingsTypography}
+                    isOpen={openBlock === 'fonts'}
+                    onToggle={() => toggleBlock('fonts')}
+                  >
 
                     <div className="smk-field px-3 py-3">
                       <div className="mb-2 flex items-center justify-between">
@@ -338,7 +400,7 @@ export default function SettingsPage() {
                       </select>
 
                     </div>
-                  </section>
+                  </CollapsibleSection>
                 </div>
               )}
             </section>

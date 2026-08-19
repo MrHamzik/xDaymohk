@@ -41,7 +41,7 @@ export default function QuranModal({ isOpen, onClose }: QuranModalProps) {
       aria-modal="true"
       aria-labelledby="quran-title"
     >
-      <div className="flex max-h-[90vh] w-full max-w-xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl transition-all dark:bg-zinc-950">
+      <div className="smk-sheet flex max-h-[90vh] w-full max-w-xl flex-col overflow-hidden rounded-3xl shadow-2xl transition-all">
         <div className="flex items-center justify-between border-b border-slate-100 bg-gradient-to-r from-emerald-800 via-teal-800 to-slate-900 p-5 text-white dark:border-zinc-800">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 shadow-sm">

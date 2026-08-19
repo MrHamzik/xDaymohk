@@ -19,7 +19,10 @@ export type NotificationGroup =
   | 'system';     // системные и админские
 
 export const NOTIFICATION_GROUPS: NotificationGroup[] = [
-  'profile', 'activity', 'tasks', 'complaint', 'taxi', 'system',
+  // «Системные» первыми: это единственная группа, которую нельзя
+  // отключить (см. LOCKED_NOTIFICATION_GROUPS), и логично, что она
+  // возглавляет список, а не прячется в его конце.
+  'system', 'profile', 'activity', 'tasks', 'complaint', 'taxi',
 ];
 
 /**
@@ -99,6 +102,14 @@ export interface NotificationPref {
   show: boolean;
   /** Проигрывать звук при получении. */
   sound: boolean;
+  /**
+   * Какой звук играть. Пусто — звук группы по умолчанию.
+   *
+   * Хранится отдельно от `sound`, чтобы выбор мелодии не терялся при
+   * выключении звука: человек глушит уведомления на время встречи и
+   * потом возвращает всё как было.
+   */
+  soundId?: string;
 }
 
 /**

@@ -613,12 +613,6 @@ export default function TaskDetailModal({
                   <p className="text-[11px] leading-relaxed">
                     {isAuthor ? t.taskDisputeAuthor : t.taskDisputeExecutor}
                   </p>
-                  {disputeLeft && (
-                    <p className="mt-1.5 font-bold">
-                      {t.taskDisputeLeft.replace('{time}', disputeLeft)}
-                    </p>
-                  )}
-
                   {/* Объясняем МЕХАНИКУ: раньше блок сообщал «идёт
                       рассмотрение», но не говорил, что это за
                       рассмотрение, кто его ведёт и что будет дальше. */}
@@ -632,55 +626,59 @@ export default function TaskDetailModal({
                     </>
                   )}
 
-                  {/* Возможности решить: договориться самим либо позвать
-                      администратора. */}
+                </div>
+              )}
+
+              {/* Срок рассмотрения — отдельной тонкой строкой под блоком:
+                  внутри красной плашки он тонул среди текста, хотя это
+                  главное число в споре. */}
+              {task.status === 'disputed' && disputeLeft && (
+                <div className="smk-inset mx-4 mb-3 flex items-center justify-between gap-2 px-3 py-2">
+                  <span className="smk-sheet-label">{t.taskDisputeLeftLabel}</span>
+                  <span className="text-xs font-bold text-slate-900 dark:text-white">
+                    {disputeLeft}
+                  </span>
+                </div>
+              )}
+
+              {/* Действия по спору — обычные кнопки под блоком, а не
+                  ссылки внутри него: зелёная решает спор, красная зовёт
+                  администратора. Внутри плашки они читались как часть
+                  предупреждения и терялись. */}
+              {task.status === 'disputed' && (isAuthor || isExecutor) && (
+                <div className="mx-4 mb-4 space-y-2">
                   {complaintSent && (
-                    <p className="mt-2 font-bold">{t.taskComplaintSent}</p>
+                    <p className="smk-note smk-note-success px-3 py-2">
+                      {t.taskComplaintSent}
+                    </p>
                   )}
 
-                  <div className="mt-2.5 flex flex-wrap gap-1.5">
-                    {/* «Договорились» — у ОБЕИХ сторон. Задание
-                        закрывается, только когда нажали оба: раньше
-                        кнопку жал заказчик, и сделка закрывалась, даже
-                        если исполнитель денег не видел.
-
-                        Отметкой об оплате кнопка не блокируется: спор
-                        и так означает, что расчёт под вопросом. */}
-                    {(isAuthor || isExecutor) && (
-                      iAgreedDispute ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 font-bold">
-                          <Check className="h-3.5 w-3.5" />
-                          {t.taskDisputeWaitingOther}
-                        </span>
-                      ) : (
-                        <button
-                          type="button"
-                          disabled={Boolean(busy)}
-                          onClick={() => act('confirm', () => runTaskAction(task.id, 'confirm'))}
-                          className="smk-act rounded-lg px-2.5 py-1.5"
-                        >
-                          {busy === 'confirm'
-                            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            : <Check className="h-3.5 w-3.5" />}
-                          {otherAgreedDispute ? t.taskDisputeResolveLast : t.taskDisputeResolve}
-                        </button>
-                      )
+                  <div className="flex flex-wrap gap-2">
+                    {iAgreedDispute ? (
+                      <p className="smk-note smk-note-success flex flex-1 items-center gap-1.5 px-3 py-2.5">
+                        <Check className="h-4 w-4 shrink-0" />
+                        {t.taskDisputeWaitingOther}
+                      </p>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={Boolean(busy)}
+                        onClick={() => act('confirm', () => runTaskAction(task.id, 'confirm'))}
+                        className={`${btn} bg-emerald-600 text-white hover:bg-emerald-700`}
+                      >
+                        {busy === 'confirm'
+                          ? <Loader2 className="h-4 w-4 animate-spin" />
+                          : <Check className="h-4 w-4" />}
+                        {otherAgreedDispute ? t.taskDisputeResolveLast : t.taskDisputeResolve}
+                      </button>
                     )}
 
-                    {/* Кнопки «Оплата получена» здесь нет: в споре она
-                        ничего не меняла — закрытие всё равно требует
-                        согласия обеих сторон через «Договорились». */}
-
-                    {/* Жалоба администратору — модальное окно прямо
-                        здесь, а не переход в «Помощь»: уводить человека
-                        со спора в раздел вопросов значило терять
-                        контекст задания. */}
                     <button
                       type="button"
                       onClick={() => setIsComplaintOpen(true)}
-                      className="smk-act rounded-lg px-2.5 py-1.5"
+                      className={`${btn} border border-rose-200 text-rose-700 hover:bg-rose-50 dark:border-rose-900 dark:text-rose-300`}
                     >
-                      <ShieldAlert className="h-3.5 w-3.5" />
+                      <ShieldAlert className="h-4 w-4" />
                       {t.taskDisputeComplain}
                     </button>
                   </div>
