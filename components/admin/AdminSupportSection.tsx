@@ -1,11 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { ChevronDown, Eye, EyeOff, Loader2, Send, Trash2, X } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ChevronDown, Eye, EyeOff, Loader2, Search, Send, Trash2, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
 import { useI18n } from '@/lib/i18n';
 import { parseDisputeQuestion, shortRequestId } from '@/lib/support/format';
+import MapSegmentedControl from '@/components/MapSegmentedControl';
 
 interface Question {
   id: string;
@@ -25,6 +26,9 @@ interface Question {
  * поиск. По умолчанию вопрос НЕ публичный: в нём могут быть личные
  * подробности, и публиковать их молча нельзя.
  */
+/** Разделы списка обращений в админ-панели. */
+type SupportScope = 'all' | 'pinned' | 'hidden';
+
 export default function AdminSupportSection() {
   const { language } = useI18n();
   const L = (ru: string, ce: string) => (language === 'ce' ? ce : ru);
@@ -34,6 +38,8 @@ export default function AdminSupportSection() {
   // Развёрнутое обращение — только одно за раз: список остаётся
   // обозримым, а не превращается в стену текста.
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [scope, setScope] = useState<SupportScope>('all');
   const [isLoading, setIsLoading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
@@ -108,7 +114,46 @@ export default function AdminSupportSection() {
   };
 
   const isNew = (q: Question) => q.status === 'new';
-  const sorted = [...items].sort((a, b) => Number(isNew(b)) - Number(isNew(a)));
+
+  /**
+   * Поиск и разделы.
+   *
+   * Обращений накапливается много, а найти нужное было нечем: список
+   * шёл сплошняком, и ориентироваться приходилось глазами. Ищем сразу
+   * по всему, что человек может помнить: тексту вопроса, ответу, имени
+   * автора, номеру обращения и id задания из жалобы.
+   */
+  const filtered = useMemo(() => {
+    const needle = search.trim().toLowerCase();
+    let list = items;
+
+    // «Закреплённые» — с открытым глазиком: именно они попадают в
+    // публичный раздел «Помощь». «Скрытые» — видны только автору.
+    if (scope === 'pinned') list = list.filter((q) => q.isPublic);
+    if (scope === 'hidden') list = list.filter((q) => !q.isPublic);
+
+    if (!needle) return list;
+    return list.filter((q) => {
+      const dispute = parseDisputeQuestion(q.question);
+      return [
+        q.question,
+        q.answer,
+        q.authorName,
+        shortRequestId(q.id),
+        q.id,
+        dispute?.taskId,
+        dispute?.title,
+      ]
+        .filter(Boolean)
+        .some((field) => String(field).toLowerCase().includes(needle));
+    });
+  }, [items, search, scope]);
+
+  // Новые сверху: на них ждут ответа.
+  const sorted = useMemo(
+    () => [...filtered].sort((a, b) => Number(isNew(b)) - Number(isNew(a))),
+    [filtered],
+  );
 
   return (
     <section className="space-y-3">
@@ -120,6 +165,54 @@ export default function AdminSupportSection() {
           {L('Новых: ', 'Керланаш: ')}{items.filter(isNew).length}
         </span>
       </div>
+
+      {/* Поиск по вопросу, ответу, автору, номеру обращения и id
+          задания из жалобы. */}
+      <div className="relative">
+        <span className="smk-ico pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+          <Search className="h-3.5 w-3.5" />
+        </span>
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={L('Поиск: вопрос, автор, #id, задание…', 'Лахар: хаттар, автор, #id…')}
+          aria-label={L('Поиск по обращениям', 'Арзаша юкъахь лахар')}
+          className="smk-field w-full py-2 pl-9 pr-9 text-xs text-slate-900 outline-none dark:text-white"
+        />
+        {search && (
+          <button
+            type="button"
+            onClick={() => setSearch('')}
+            aria-label={L('Очистить', 'ЦIанъе')}
+            className="smk-act absolute inset-y-0 right-0 flex w-9 items-center justify-center"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+
+      {/* Разделы: закреплённые видны всем в «Помощи», скрытые — только
+          автору обращения. */}
+      <MapSegmentedControl
+        ariaLabel={L('Разделы обращений', 'Арзийн декъаш')}
+        active={[scope]}
+        onSelect={setScope}
+        options={[
+          { value: 'all' as const, label: L('Все', 'Дерриг'), count: items.length || undefined },
+          {
+            value: 'pinned' as const,
+            label: L('Закреплённые', 'ЧIагIдина'),
+            count: items.filter((q) => q.isPublic).length || undefined,
+          },
+          {
+            value: 'hidden' as const,
+            label: L('Скрытые', 'Къайлаха'),
+            count: items.filter((q) => !q.isPublic).length || undefined,
+          },
+        ]}
+        className="w-full"
+      />
 
       {error && (
         <p className="smk-note smk-note-danger px-3 py-2">
@@ -133,9 +226,11 @@ export default function AdminSupportSection() {
         </div>
       )}
 
-      {!isLoading && items.length === 0 && (
+      {!isLoading && sorted.length === 0 && (
         <p className="smk-dashed p-4 text-center text-xs text-slate-500 dark:text-zinc-500">
-          {L('Вопросов нет.', 'Хаттарш дац.')}
+          {items.length === 0
+            ? L('Вопросов нет.', 'Хаттарш дац.')
+            : L('Ничего не нашлось.', 'ХIумма а ца карийна.')}
         </p>
       )}
 

@@ -99,7 +99,8 @@ export type NotificationType =
   | 'support_answered';
 
 /** Категории уведомлений (вкладки в центре уведомлений). */
-export type NotificationCategory = 'system' | 'activity' | 'complaint' | 'taxi' | 'task';
+export type NotificationCategory =
+  | 'system' | 'activity' | 'complaint' | 'taxi' | 'task' | 'support';
 
 export function notificationCategory(type: NotificationType): NotificationCategory {
   switch (type) {
@@ -110,6 +111,12 @@ export function notificationCategory(type: NotificationType): NotificationCatego
       return 'activity';
     case 'complaint_result':
       return 'complaint';
+    // Ответ поддержки — своя вкладка «Помощь», а не «Система».
+    // Раньше case отсутствовал вовсе, тип падал в default и письмо
+    // подписывалось «Система»: человек искал ответ на свой вопрос в
+    // системных уведомлениях.
+    case 'support_answered':
+      return 'support';
     case 'taxi_request':
     case 'taxi_info':
       return 'taxi';
