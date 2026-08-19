@@ -257,6 +257,7 @@ export default function MapPage() {
             <p className="text-sm text-slate-500 dark:text-zinc-500">{t.mapPageSubtitle}</p>
           </div>
         </div>
+        <hr className="smk-orn mb-5" />
 
         <SearchFilter
           searchQuery={searchQuery}

@@ -67,6 +67,7 @@ export default function AboutPage() {
             <h2 className="text-lg font-extrabold text-slate-900 dark:text-white">{t.aboutTitle}</h2>
           </div>
         </div>
+        <hr className="smk-orn" />
 
         <section className="w-full rounded-3xl border border-rose-100 bg-rose-50/70 p-5 dark:border-zinc-700 dark:bg-zinc-950/80 sm:p-6" aria-labelledby="about-support-title">
           <h3 id="about-support-title" className="text-base font-extrabold text-slate-900 dark:text-white">{t.aboutNonProfitTitle}</h3>

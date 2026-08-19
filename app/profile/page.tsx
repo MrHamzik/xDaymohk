@@ -266,6 +266,7 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
+        <hr className="smk-orn mb-4" />
 
         {isLoading ? (
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 text-center text-xs text-slate-500 shadow-sm dark:border-zinc-700/60 dark:bg-zinc-900">
@@ -417,7 +418,7 @@ export default function ProfilePage() {
               type="button"
               onClick={handleGoogleSignIn}
               disabled={isSaving}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50 dark:border-zinc-700/60 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
+              className="smk-btn-google smk-text-label"
             >
               <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white smk-text-label font-black text-blue-600">G</span>
               Войти через Google

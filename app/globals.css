@@ -810,6 +810,27 @@ html.dark .smk-rays::before {
     linear-gradient(58deg,  transparent 79.4%, rgb(var(--smk-light-rgb) / 0.018) 79.6%, transparent 79.9%);
 }
 
+/* Водяной знак: крест из ромбов в углу карточки.
+   Лучи — фон, это — печать. Густота только через --fx-pattern. */
+.smk-rays::after {
+  content: '';
+  position: absolute;
+  right: 22px;
+  bottom: 34px;
+  width: 8px;
+  height: 8px;
+  rotate: 45deg;
+  background: var(--smk-gold);
+  opacity: calc(0.22 * var(--fx-pattern));
+  pointer-events: none;
+  z-index: 0;
+  box-shadow:
+    13px 0 0 0 var(--smk-gold),
+    -13px 0 0 0 var(--smk-gold),
+    0 13px 0 0 var(--smk-gold),
+    0 -13px 0 0 var(--smk-gold);
+}
+
 /* --- Имя: без засечек, крупно ----------------------------------------------- */
 .smk-title {
   /* Читаем ту же переменную, что и body: раньше здесь было жёстко
@@ -1367,7 +1388,8 @@ html.smk-glass [role="dialog"] > div {
 }
 
 /* Узор-лучи на стекле превращается в грязь: убираем. */
-html.smk-glass .smk-rays::before { display: none; }
+html.smk-glass .smk-rays::before,
+html.smk-glass .smk-rays::after { display: none; }
 
 /* Доступность: у кого выключена прозрачность в системе — получают
    плотные поверхности без размытия. */
@@ -2410,3 +2432,74 @@ textarea.smk-field:focus {
 @media (prefers-reduced-motion: reduce) {
   .smk-skel-bar { animation: none; opacity: 0.7; }
 }
+
+/* --- Фирменный знак и вход -------------------------------------------------
+   Вайнахский ромб — не картинка, а CSS. Знак на входе всегда виден:
+   это опознавательный знак, а не декор. Фон и водяные знаки гаснут
+   вместе с --fx-pattern. Рамок нет. */
+.smk-emblem {
+  position: relative;
+  width: 4rem;
+  height: 4rem;
+  margin-inline: auto;
+}
+.smk-emblem::before {
+  content: '';
+  position: absolute;
+  inset: 1.1rem;
+  rotate: 45deg;
+  background: linear-gradient(140deg, var(--smk-gold), var(--smk-gold-deep));
+  box-shadow: 0 0 18px -4px var(--smk-gold);
+}
+.smk-emblem::after {
+  content: '';
+  position: absolute;
+  inset: 1.4rem;
+  rotate: 45deg;
+  background: var(--smk-card-a);
+  box-shadow:
+    1.35rem 0 0 -0.55rem var(--smk-gold),
+    -1.35rem 0 0 -0.55rem var(--smk-gold),
+    0 1.35rem 0 -0.55rem var(--smk-gold),
+    0 -1.35rem 0 -0.55rem var(--smk-gold);
+}
+
+.smk-sign {
+  position: relative;
+  isolation: isolate;
+}
+.smk-sign::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  opacity: calc(0.55 * var(--fx-pattern));
+  background-image:
+    linear-gradient(74deg, transparent 48.6%, rgb(var(--smk-gold-rgb) / 0.18) 48.8%, transparent 49.1%),
+    linear-gradient(112deg, transparent 61.4%, rgb(var(--smk-gold-rgb) / 0.10) 61.6%, transparent 61.9%);
+}
+.smk-sign > * {
+  position: relative;
+  z-index: 1;
+}
+
+.smk-btn-google {
+  position: relative;
+  display: inline-flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.75rem;
+  background: var(--smk-field);
+  color: var(--foreground);
+  font-weight: 700;
+  box-shadow: var(--smk-field-shadow);
+  padding: 0.65rem 1rem;
+  transition: filter 0.18s ease, transform 0.18s ease;
+}
+.smk-btn-google:hover { filter: brightness(1.04); }
+.smk-btn-google:active { transform: scale(0.98); }
+.smk-btn-google:disabled { opacity: 0.5; }

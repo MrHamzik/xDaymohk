@@ -202,6 +202,7 @@ export default function VaygoPage() {
               </p>
             </div>
           </div>
+          <hr className="smk-orn mb-4" />
 
           <TaskFilterBar
             query={query}

@@ -342,6 +342,7 @@ export default function VayghullakhPage() {
               </p>
             </div>
           </div>
+          <hr className="smk-orn mb-4" />
 
           {/* Тумблер «Активен»: без него нельзя брать задания */}
           {account && (

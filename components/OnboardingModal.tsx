@@ -15,7 +15,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, BookOpen, Check, Globe2, LogIn, PartyPopper, Sparkles, UserRound } from 'lucide-react';
+import { ArrowLeft, BookOpen, Check, Globe2, LogIn } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { useI18n } from '@/lib/i18n';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
@@ -293,19 +293,11 @@ export default function OnboardingModal() {
 
   return (
     <div className="fixed inset-0 z-[95] flex items-center justify-center bg-zinc-950/70 p-4 backdrop-blur-md" role="dialog" aria-modal="true" aria-labelledby="onb-title">
-      <div className="smk-sheet relative w-full max-w-md overflow-hidden rounded-3xl shadow-2xl">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-24 overflow-hidden opacity-60 dark:opacity-40" aria-hidden="true">
-          <div className="absolute -top-10 -left-10 h-28 w-28 rounded-full bg-emerald-200/60 blur-2xl dark:bg-emerald-900/40" />
-          <div className="absolute -top-6 right-0 h-24 w-24 rounded-full bg-teal-200/50 blur-2xl dark:bg-teal-900/30" />
-          <div className="absolute left-1/2 top-2 h-10 w-10 -translate-x-1/2 rotate-45 rounded-md border border-emerald-300/70 dark:border-emerald-700/50" />
-        </div>
-
+      <div className="smk-sheet smk-sign relative w-full max-w-md overflow-hidden rounded-3xl shadow-2xl">
         {step === 'welcome' && (
-          <div className="relative px-6 pb-6 pt-14">
+          <div className="relative px-6 pb-6 pt-12">
             <div className="mb-5 text-center">
-              <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg">
-                <PartyPopper className="h-8 w-8" />
-              </div>
+              <div className="smk-emblem mb-3" aria-hidden="true" />
               <h2 id="onb-title" className="text-xl font-black leading-tight text-slate-900 dark:text-white">
                 {ce
                   ? (modalText.title_ce || 'Марша догIийла хьомечу Даймохка')
@@ -313,11 +305,7 @@ export default function OnboardingModal() {
               </h2>
             </div>
 
-            <div className="mb-4 flex items-center gap-2 text-emerald-500/70" aria-hidden="true">
-              <span className="h-px flex-1 bg-gradient-to-r from-transparent to-emerald-300/60 dark:to-emerald-800" />
-              <Sparkles className="h-4 w-4" />
-              <span className="h-px flex-1 bg-gradient-to-l from-transparent to-emerald-300/60 dark:to-emerald-800" />
-            </div>
+            <hr className="smk-orn mb-4" />
 
             <p className="text-center text-sm leading-relaxed text-slate-600 dark:text-zinc-300">
               {ce
@@ -406,7 +394,7 @@ export default function OnboardingModal() {
                 </>
               )}
             </p>
-            <button type="button" onClick={() => void handleGoogleAuth()} className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-zinc-800/60 dark:bg-zinc-800 dark:text-white">
+            <button type="button" onClick={() => void handleGoogleAuth()} className="smk-btn-google mt-2 smk-text-label">
               <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white smk-text-label font-black text-blue-600">G</span>
               {ce ? 'Google чуйаха' : 'Войти через Google'}
             </button>
