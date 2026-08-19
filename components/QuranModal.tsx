@@ -60,7 +60,7 @@ export default function QuranModal({ isOpen, onClose }: QuranModalProps) {
             type="button"
             onClick={onClose}
             aria-label="Закрыть"
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-black/20 text-white transition hover:bg-black/40"
+            className="smk-hit flex h-8 w-8 items-center justify-center rounded-full bg-black/20 text-white transition hover:bg-black/40"
           >
             <X className="h-4 w-4" />
           </button>
@@ -97,7 +97,7 @@ export default function QuranModal({ isOpen, onClose }: QuranModalProps) {
                   <p className="truncate text-xs text-emerald-700 dark:text-emerald-400">
                     {language === 'ce' ? surah.nameCe : surah.nameRu}
                   </p>
-                  <p className="text-[10px] text-slate-400">
+                  <p className="smk-text-label text-slate-400">
                     {surah.versesCount} {language === 'ce' ? 'аят' : 'аятов'} · {surah.place}
                   </p>
                 </div>

@@ -320,7 +320,7 @@ export default function TaskDetailModal({
                   <p className="truncate text-sm font-bold text-slate-900 dark:text-white">
                     {task.authorName || t.taskCustomerDefault}
                   </p>
-                  <div className="mt-1.5 flex flex-wrap items-center gap-x-2 text-[11px] leading-relaxed text-slate-500 dark:text-zinc-400">
+                  <div className="mt-1.5 flex flex-wrap items-center gap-x-2 smk-text-label leading-relaxed text-slate-500 dark:text-zinc-400">
                     <span className="inline-flex items-center gap-0.5 font-bold text-amber-600 dark:text-amber-400">
                       <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
                       {(task.authorRating ?? 0) > 0 ? task.authorRating?.toFixed(1) : t.taskNoRatings}
@@ -341,13 +341,13 @@ export default function TaskDetailModal({
                   <h3 className="smk-sheet-label mb-1.5">
                     {t.taskDetailsHeading}
                   </h3>
-                  <p className="whitespace-pre-wrap break-words text-[13px] leading-relaxed text-slate-700 dark:text-zinc-300">
+                  <p className="whitespace-pre-wrap break-words smk-text-body leading-relaxed text-slate-700 dark:text-zinc-300">
                     {task.description}
                   </p>
                 </div>
               )}
 
-              <div className="smk-sheet-section grid grid-cols-1 gap-2 px-4 py-4 text-[11px] sm:grid-cols-2">
+              <div className="smk-sheet-section grid grid-cols-1 gap-2 px-4 py-4 smk-text-label sm:grid-cols-2">
                 {/* У спора срока нет: работа уже сдана, идёт разбор.
                     Раньше здесь выводилось «Осталось · просрочено» —
                     отсчёт по дедлайну, который к этому моменту давно
@@ -404,7 +404,7 @@ export default function TaskDetailModal({
                           type="button"
                           onClick={() => setIsMapOpen((open) => !open)}
                           aria-expanded={isMapOpen}
-                          className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:underline dark:text-emerald-400"
+                          className="mt-1.5 inline-flex items-center gap-1 smk-text-label font-bold text-emerald-600 hover:underline dark:text-emerald-400"
                         >
                           <MapPin className="h-3 w-3" />
                           {isMapOpen ? t.hideMap : t.openOnMap}
@@ -480,7 +480,7 @@ export default function TaskDetailModal({
                           <p className="truncate text-xs font-bold text-slate-900 dark:text-white">
                             {p.fullName || t.attendanceResident}
                           </p>
-                          <p className="text-[10px] text-slate-500 dark:text-zinc-500">
+                          <p className="smk-text-label text-slate-500 dark:text-zinc-500">
                             ★ {(p.rating ?? 0) > 0 ? p.rating?.toFixed(1) : '—'} · {t.attendanceDoneCount}: {p.tasksDoneCount ?? 0}
                           </p>
                         </div>
@@ -488,7 +488,7 @@ export default function TaskDetailModal({
                           type="button"
                           disabled={Boolean(busy)}
                           onClick={() => act('approve', () => runTaskAction(task.id, 'approve', { userId: p.userId }))}
-                          className="shrink-0 rounded-lg bg-emerald-600 px-2.5 py-1 text-[10px] font-bold text-white transition hover:bg-emerald-700 disabled:opacity-60"
+                          className="shrink-0 rounded-lg bg-emerald-600 px-2.5 py-1 smk-text-label font-bold text-white transition hover:bg-emerald-700 disabled:opacity-60"
                         >
                           {t.taskApproveBtn}
                         </button>
@@ -496,7 +496,7 @@ export default function TaskDetailModal({
                           type="button"
                           disabled={Boolean(busy)}
                           onClick={() => act('decline', () => runTaskAction(task.id, 'decline', { userId: p.userId }))}
-                          className="shrink-0 rounded-lg px-2 py-1 text-[10px] font-bold text-rose-600 transition hover:bg-rose-50 disabled:opacity-60 dark:hover:bg-rose-950/40"
+                          className="shrink-0 rounded-lg px-2 py-1 smk-text-label font-bold text-rose-600 transition hover:bg-rose-50 disabled:opacity-60 dark:hover:bg-rose-950/40"
                         >
                           {t.taskDeclineBtn}
                         </button>
@@ -530,7 +530,7 @@ export default function TaskDetailModal({
                           <p className="truncate text-xs font-bold text-slate-900 dark:text-white">
                             {p.fullName || t.attendanceResident}
                           </p>
-                          <p className="text-[10px] text-slate-500 dark:text-zinc-500">
+                          <p className="smk-text-label text-slate-500 dark:text-zinc-500">
                             ★ {(p.rating ?? 0) > 0 ? p.rating?.toFixed(1) : '—'} · выполнено: {p.tasksDoneCount ?? 0}
                           </p>
                         </div>
@@ -550,11 +550,11 @@ export default function TaskDetailModal({
               {task.isPaid && (isAuthor || isExecutor) && showHints
                 && ['open', 'in_progress', 'awaiting_confirm'].includes(task.status) && (
                 <div className="smk-note smk-note-info mx-4 mb-4 px-3.5 py-3">
-                  <h3 className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide">
+                  <h3 className="mb-1 flex items-center gap-1.5 smk-text-label font-bold uppercase tracking-wide">
                     <Wallet className="h-3.5 w-3.5" />
                     {t.taskPayoutTitle}
                   </h3>
-                  <p className="text-[11px] leading-relaxed">
+                  <p className="smk-text-label leading-relaxed">
                     {t.taskPayoutNote}
                   </p>
                 </div>
@@ -580,16 +580,16 @@ export default function TaskDetailModal({
                   исполнителя. */}
               {task.status === 'cancelled' && (
                 <div className="smk-note smk-note-danger mx-4 mb-4 px-3.5 py-3">
-                  <h3 className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide">
+                  <h3 className="mb-1 flex items-center gap-1.5 smk-text-label font-bold uppercase tracking-wide">
                     <Ban className="h-3.5 w-3.5" />
                     {t.taskCancelledBadge}
                   </h3>
                   {task.cancelReason && (
-                    <p className="mb-1.5 break-words text-[11px] leading-relaxed">
+                    <p className="mb-1.5 break-words smk-text-label leading-relaxed">
                       «{task.cancelReason}»
                     </p>
                   )}
-                  <p className="text-[11px] leading-relaxed">
+                  <p className="smk-text-label leading-relaxed">
                     {t.taskCancelledNote}
                   </p>
                 </div>
@@ -601,16 +601,16 @@ export default function TaskDetailModal({
                   его сейчас нельзя. */}
               {task.status === 'disputed' && (
                 <div className="smk-note smk-note-danger mx-4 mb-4 px-3.5 py-3">
-                  <h3 className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide">
+                  <h3 className="mb-1 flex items-center gap-1.5 smk-text-label font-bold uppercase tracking-wide">
                     <ShieldAlert className="h-3.5 w-3.5" />
                     {t.taskDisputeTitle}
                   </h3>
                   {task.disputeReason && (
-                    <p className="mb-1.5 break-words text-[11px] leading-relaxed">
+                    <p className="mb-1.5 break-words smk-text-label leading-relaxed">
                       «{task.disputeReason}»
                     </p>
                   )}
-                  <p className="text-[11px] leading-relaxed">
+                  <p className="smk-text-label leading-relaxed">
                     {isAuthor ? t.taskDisputeAuthor : t.taskDisputeExecutor}
                   </p>
                   {/* Объясняем МЕХАНИКУ: раньше блок сообщал «идёт

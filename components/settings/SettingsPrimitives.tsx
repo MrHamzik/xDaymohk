@@ -101,7 +101,7 @@ export function HintMark({ text }: { text: string }) {
           event.stopPropagation();
           setIsOpen((value) => !value);
         }}
-        className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-slate-200 text-[10px] font-black text-slate-600 transition hover:bg-slate-300 dark:bg-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-600"
+        className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-slate-200 smk-text-label font-black text-slate-600 transition hover:bg-slate-300 dark:bg-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-600"
       >
         !
       </button>
@@ -120,7 +120,7 @@ export function HintMark({ text }: { text: string }) {
           <span
             role="tooltip"
             style={{ top: box.top, left: box.left, width: box.width }}
-            className="fixed z-[96] rounded-xl bg-slate-900 px-3 py-2 text-[11px] font-medium leading-relaxed text-white shadow-xl dark:bg-zinc-700"
+            className="fixed z-[96] rounded-xl bg-slate-900 px-3 py-2 smk-text-label font-medium leading-relaxed text-white shadow-xl dark:bg-zinc-700"
           >
             {text}
           </span>
@@ -143,7 +143,7 @@ export function SectionTitle({
 }) {
   return (
     <div className="mb-2 flex items-center gap-2">
-      <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+      <h2 className="smk-text-label font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
         {title}
       </h2>
       {hint && <HintMark text={hint} />}
@@ -191,7 +191,7 @@ export function CollapsibleSection({
           aria-expanded={isOpen}
           className="min-w-0 text-left"
         >
-          <h2 className="truncate text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+          <h2 className="truncate smk-text-label font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
             {title}
           </h2>
         </button>
@@ -234,7 +234,7 @@ export function SettingRow({
           {hint && <HintMark text={hint} />}
         </div>
         {description && (
-          <p className="mt-0.5 text-[11px] leading-relaxed text-slate-500 dark:text-zinc-500">
+          <p className="mt-0.5 smk-text-label leading-relaxed text-slate-500 dark:text-zinc-500">
             {description}
           </p>
         )}

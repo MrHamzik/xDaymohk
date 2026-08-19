@@ -702,7 +702,7 @@ export default function ProfileModal({
             <button
               onClick={onClose}
               aria-label={t.profileCloseSheet}
-              className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400"
+              className="smk-hit flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400"
             >
               <X className="h-4 w-4" />
             </button>
@@ -807,7 +807,7 @@ export default function ProfileModal({
             // Одна колонка на телефоне: в две «Стаж» и «График» не
             // помещались и обрезались.
             return (
-              <div className="grid grid-cols-1 gap-2 px-4 py-3.5 text-[11px] sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-2 px-4 py-3.5 smk-text-label sm:grid-cols-2">
                 {rows.map((row) => (
                   <InfoRow key={row.key} icon={row.icon} label={row.label} value={row.value} />
                 ))}
@@ -818,7 +818,7 @@ export default function ProfileModal({
           {profile.bio && (
             <section className="smk-sheet-section px-4 py-3.5">
               <h3 className="smk-sheet-label mb-1.5">{t.profileAboutHeading}</h3>
-              <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-[13px] leading-relaxed text-slate-700 dark:text-zinc-300">
+              <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere] smk-text-body leading-relaxed text-slate-700 dark:text-zinc-300">
                 {profile.bio}
               </p>
             </section>
@@ -897,7 +897,7 @@ export default function ProfileModal({
                             {(review as any).authorAvatarUrl ? (
                               <img src={(review as any).authorAvatarUrl} alt="" className="h-full w-full object-cover" />
                             ) : (
-                              <span className="text-[10px] font-bold text-slate-500">{review.author.charAt(0)}</span>
+                              <span className="smk-text-label font-bold text-slate-500">{review.author.charAt(0)}</span>
                             )}
                           </div>
                           <button
@@ -910,7 +910,7 @@ export default function ProfileModal({
                           </button>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          <time className="smk-meta text-[10px] font-medium">{formatReviewDate(review.createdAt)}</time>
+                          <time className="smk-meta smk-text-label font-medium">{formatReviewDate(review.createdAt)}</time>
                           <span className="flex items-center gap-1 text-xs font-bold text-amber-500">
                             <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
                             {review.rating.toFixed(1)}
@@ -965,10 +965,10 @@ export default function ProfileModal({
                             className="w-full resize-y break-words rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white"
                           />
                           <div className="flex items-center gap-2">
-                            <button type="submit" disabled={busyId === review.id} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-[11px] font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50">
+                            <button type="submit" disabled={busyId === review.id} className="rounded-lg bg-emerald-600 px-3 py-1.5 smk-text-label font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50">
                               {busyId === review.id ? t.saving : t.save}
                             </button>
-                            <button type="button" onClick={() => setEditingReviewId(null)} disabled={busyId === review.id} className="rounded-lg bg-slate-100 px-3 py-1.5 text-[11px] font-bold text-slate-600 transition hover:bg-slate-200 disabled:opacity-50 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700">
+                            <button type="button" onClick={() => setEditingReviewId(null)} disabled={busyId === review.id} className="rounded-lg bg-slate-100 px-3 py-1.5 smk-text-label font-bold text-slate-600 transition hover:bg-slate-200 disabled:opacity-50 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700">
                               {t.cancel}
                             </button>
                           </div>
@@ -984,7 +984,7 @@ export default function ProfileModal({
               )}
 
               {isOwnProfile ? (
-                <p className="smk-sheet-row mt-2 p-2.5 text-[11px] text-slate-500 dark:text-zinc-500">{t.profileOwnReviewBlocked}</p>
+                <p className="smk-sheet-row mt-2 p-2.5 smk-text-label text-slate-500 dark:text-zinc-500">{t.profileOwnReviewBlocked}</p>
               ) : canReview && (
                 <form onSubmit={handleReviewSubmit} className="smk-sheet-row mt-2 space-y-2 p-2.5">
                   <h4 className="smk-sheet-label">{t.leaveReview}</h4>
@@ -1030,7 +1030,7 @@ export default function ProfileModal({
                                   {q.author_avatar_url ? (
                                     <img src={q.author_avatar_url} alt="" className="h-full w-full object-cover" />
                                   ) : (
-                                    <span className="text-[10px] font-bold text-slate-500">{(q.author_name || 'Ж').charAt(0)}</span>
+                                    <span className="smk-text-label font-bold text-slate-500">{(q.author_name || 'Ж').charAt(0)}</span>
                                   )}
                                 </div>
                                 <button
@@ -1043,7 +1043,7 @@ export default function ProfileModal({
                                 </button>
                               </div>
                               <div className="flex shrink-0 items-center gap-2">
-                                <time className="smk-meta text-[10px] font-medium">{formatReviewDate(q.created_at)}</time>
+                                <time className="smk-meta smk-text-label font-medium">{formatReviewDate(q.created_at)}</time>
                                 {canEditBy(q.author_id) && editingQuestionId !== q.id && (
                                   <button
                                     type="button"
@@ -1081,10 +1081,10 @@ export default function ProfileModal({
                                   className="w-full resize-y break-words rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white"
                                 />
                                 <div className="flex items-center gap-2">
-                                  <button type="submit" disabled={busyId === q.id} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-[11px] font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50">
+                                  <button type="submit" disabled={busyId === q.id} className="rounded-lg bg-emerald-600 px-3 py-1.5 smk-text-label font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50">
                                     {busyId === q.id ? t.saving : t.save}
                                   </button>
-                                  <button type="button" onClick={() => setEditingQuestionId(null)} disabled={busyId === q.id} className="rounded-lg bg-slate-100 px-3 py-1.5 text-[11px] font-bold text-slate-600 transition hover:bg-slate-200 disabled:opacity-50 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700">
+                                  <button type="button" onClick={() => setEditingQuestionId(null)} disabled={busyId === q.id} className="rounded-lg bg-slate-100 px-3 py-1.5 smk-text-label font-bold text-slate-600 transition hover:bg-slate-200 disabled:opacity-50 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700">
                                     {t.cancel}
                                   </button>
                                 </div>
@@ -1097,7 +1097,7 @@ export default function ProfileModal({
                               type="button"
                               onClick={() => toggleDiscussion(q.id)}
                               aria-expanded={expandedQuestion === q.id}
-                              className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 transition hover:underline dark:text-emerald-400"
+                              className="mt-1.5 inline-flex items-center gap-1 smk-text-label font-bold text-emerald-600 transition hover:underline dark:text-emerald-400"
                             >
                               <MessageSquare className="h-3 w-3" />
                               {t.profileDiscussion} ({q.comment_count ?? commentsByQuestion[q.id]?.length ?? 0})
@@ -1107,7 +1107,7 @@ export default function ProfileModal({
                             {expandedQuestion === q.id && (
                               <div className="mt-2 space-y-2 rounded-lg smk-sheet-row p-2.5">
                                 {commentsLoading === q.id ? (
-                                  <p className="smk-meta text-[10px]">{t.profileCommentsLoading}</p>
+                                  <p className="smk-meta smk-text-label">{t.profileCommentsLoading}</p>
                                 ) : (commentsByQuestion[q.id] ?? []).length > 0 ? (
                                   <div className="space-y-2">
                                     {(commentsByQuestion[q.id] ?? []).map((comment) => (
@@ -1116,7 +1116,7 @@ export default function ProfileModal({
                                           {comment.author_avatar_url ? (
                                             <img src={comment.author_avatar_url} alt="" className="h-full w-full object-cover" />
                                           ) : (
-                                            <span className="text-[10px] font-bold text-slate-500">{(comment.author_name || 'Ж').charAt(0)}</span>
+                                            <span className="smk-text-label font-bold text-slate-500">{(comment.author_name || 'Ж').charAt(0)}</span>
                                           )}
                                         </div>
                                         <div className="min-w-0 flex-1">
@@ -1124,19 +1124,19 @@ export default function ProfileModal({
                                             <button
                                               type="button"
                                               onClick={() => openUserCard(comment.author_id)}
-                                              className="min-w-0 truncate text-[11px] font-bold text-slate-900 hover:text-emerald-600 hover:underline dark:text-white dark:hover:text-emerald-400"
+                                              className="min-w-0 truncate smk-text-label font-bold text-slate-900 hover:text-emerald-600 hover:underline dark:text-white dark:hover:text-emerald-400"
                                               title={t.profileOpenUserCard}
                                             >
                                               {comment.author_name || 'Житель Даймохк'}
                                             </button>
                                             {comment.author_id === profile.ownerId && (
-                                              <span className="shrink-0 rounded bg-emerald-100 px-1 py-px text-[9px] font-bold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">
+                                              <span className="shrink-0 rounded bg-emerald-100 px-1 py-px smk-text-label font-bold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">
                                                 {t.profileSheetOwner}
                                               </span>
                                             )}
-                                            <time className="smk-meta shrink-0 text-[9px] font-medium">{formatReviewDate(comment.created_at)}</time>
+                                            <time className="smk-meta shrink-0 smk-text-label font-medium">{formatReviewDate(comment.created_at)}</time>
                                           </div>
-                                          <p className="mt-0.5 break-words [overflow-wrap:anywhere] whitespace-pre-wrap text-[11px] leading-relaxed text-slate-600 dark:text-zinc-400">
+                                          <p className="mt-0.5 break-words [overflow-wrap:anywhere] whitespace-pre-wrap smk-text-label leading-relaxed text-slate-600 dark:text-zinc-400">
                                             {comment.reply_to_author_name && comment.comment.startsWith(`${comment.reply_to_author_name}, `) ? (
                                               <>
                                                 <button
@@ -1184,7 +1184,7 @@ export default function ProfileModal({
                                     ))}
                                   </div>
                                 ) : (
-                                  <p className="smk-meta text-[10px]">{t.profileNoComments}</p>
+                                  <p className="smk-meta smk-text-label">{t.profileNoComments}</p>
                                 )}
 
                                 {account && !account.isBlocked ? (
@@ -1193,7 +1193,7 @@ export default function ProfileModal({
                                     className="space-y-1.5"
                                   >
                                     {replyTargets[q.id] && (
-                                      <div className="flex items-center justify-between rounded-lg bg-emerald-50 px-2 py-1 text-[10px] text-slate-600 dark:bg-emerald-950/40 dark:text-zinc-300">
+                                      <div className="flex items-center justify-between rounded-lg bg-emerald-50 px-2 py-1 smk-text-label text-slate-600 dark:bg-emerald-950/40 dark:text-zinc-300">
                                         <span>
                                           {t.profileReplyTo} <span className="font-bold text-emerald-700 dark:text-emerald-400">@{replyTargets[q.id]?.name}</span>
                                         </span>
@@ -1222,14 +1222,14 @@ export default function ProfileModal({
                                       <button
                                         type="submit"
                                         disabled={busyId === `comment-${q.id}`}
-                                        className="shrink-0 rounded-lg bg-emerald-600 px-3 py-1.5 text-[11px] font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+                                        className="shrink-0 rounded-lg bg-emerald-600 px-3 py-1.5 smk-text-label font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50"
                                       >
                                         {busyId === `comment-${q.id}` ? t.profileSending : t.profileSend}
                                       </button>
                                     </div>
                                   </form>
                                 ) : (
-                                  <p className="smk-meta text-[10px]">{t.profileSignInToComment}</p>
+                                  <p className="smk-meta smk-text-label">{t.profileSignInToComment}</p>
                                 )}
                               </div>
                             )}
@@ -1241,7 +1241,7 @@ export default function ProfileModal({
                     )}
 
                     {isOwnProfile ? (
-                      <p className="smk-sheet-row mt-2 p-2.5 text-[11px] text-slate-500 dark:text-zinc-500">{t.profileOwnQuestionBlocked}</p>
+                      <p className="smk-sheet-row mt-2 p-2.5 smk-text-label text-slate-500 dark:text-zinc-500">{t.profileOwnQuestionBlocked}</p>
                     ) : account && !account.isBlocked ? (
                       <form onSubmit={handleQuestionSubmit} className="smk-sheet-row mt-2 space-y-2 p-2.5">
                         <h4 className="smk-sheet-label">{t.profileAskQuestion}</h4>
@@ -1254,14 +1254,14 @@ export default function ProfileModal({
                             placeholder={t.profileQuestionPlaceholder}
                             className="w-full resize-y break-words rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white"
                           />
-                          <p className="smk-meta mt-0.5 text-right text-[10px]">{questionText.length}/500</p>
+                          <p className="smk-meta mt-0.5 text-right smk-text-label">{questionText.length}/500</p>
                         </div>
                         <button type="submit" disabled={questionBusy} className="rounded-xl bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50">
                           {questionBusy ? t.profileSending : t.profileSend}
                         </button>
                       </form>
                     ) : (
-                      <p className="smk-sheet-row mt-2 p-2.5 text-[11px] text-slate-500 dark:text-zinc-500">{t.profileSignInToAsk}</p>
+                      <p className="smk-sheet-row mt-2 p-2.5 smk-text-label text-slate-500 dark:text-zinc-500">{t.profileSignInToAsk}</p>
                     )}
                   </div>
                 )}
@@ -1288,7 +1288,7 @@ export default function ProfileModal({
                             />
                           ))}
                         </div>
-                        <span className="text-[10px] text-slate-500 dark:text-zinc-500">
+                        <span className="smk-text-label text-slate-500 dark:text-zinc-500">
                           {displayReviewCount} {t.profileRatingsCount}
                         </span>
                       </div>
@@ -1302,7 +1302,7 @@ export default function ProfileModal({
                         const totalCount = displayReviews.length || 1;
                         const percent = Math.round((count / totalCount) * 100);
                         return (
-                          <div key={stars} className="flex items-center gap-2 text-[10px]">
+                          <div key={stars} className="flex items-center gap-2 smk-text-label">
                             <span className="flex w-6 shrink-0 items-center gap-0.5 font-bold text-slate-600 dark:text-zinc-400">
                               {stars}
                               <Star className="h-2.5 w-2.5 fill-current" />
@@ -1364,7 +1364,7 @@ export default function ProfileModal({
                               // eslint-disable-next-line @next/next/no-img-element
                               <Avatar src={other.avatarUrl} className="h-full w-full object-cover" />
                             ) : (
-                              <span className="flex h-full w-full items-center justify-center text-[10px] font-bold text-slate-500">
+                              <span className="flex h-full w-full items-center justify-center smk-text-label font-bold text-slate-500">
                                 {other.fullName.charAt(0)}
                               </span>
                             )}
@@ -1374,12 +1374,12 @@ export default function ProfileModal({
                             {other.isPersonal ? ` (${t.personalProfile.toLowerCase()})` : ''}
                           </span>
                           {other.isVerified || other.verificationStatus === 'verified' ? (
-                            <span className="shrink-0 rounded bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold text-blue-700 dark:bg-blue-950/60 dark:text-blue-300">
+                            <span className="shrink-0 rounded bg-blue-100 px-1.5 py-0.5 smk-text-label font-bold text-blue-700 dark:bg-blue-950/60 dark:text-blue-300">
                               {t.roleVerified}
                             </span>
                           ) : null}
                           {isCurrent && (
-                            <span className="shrink-0 rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
+                            <span className="shrink-0 rounded bg-emerald-100 px-1.5 py-0.5 smk-text-label font-bold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
                               {t.profileOpenedBadge}
                             </span>
                           )}
@@ -1409,7 +1409,7 @@ export default function ProfileModal({
                   type="button"
                   onClick={() => setIsMapOpen((open) => !open)}
                   aria-expanded={isMapOpen}
-                  className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:underline dark:text-emerald-400"
+                  className="mt-1.5 inline-flex items-center gap-1 smk-text-label font-bold text-emerald-600 hover:underline dark:text-emerald-400"
                 >
                   <MapPin className="h-3 w-3" />
                   {isMapOpen ? t.hideMap : t.openOnMap}
@@ -1470,7 +1470,7 @@ export default function ProfileModal({
                       />
                     </div>
                     <h4 className="truncate text-xs font-bold text-slate-900 dark:text-white">{cert.title}</h4>
-                    <p className="text-[10px] text-slate-500 dark:text-zinc-500">{cert.issuer} · {cert.year}</p>
+                    <p className="smk-text-label text-slate-500 dark:text-zinc-500">{cert.issuer} · {cert.year}</p>
                   </button>
                 ))}
               </div>
@@ -1546,7 +1546,7 @@ export default function ProfileModal({
               <button
                 onClick={() => setSelectedCert(null)}
                 aria-label={t.profileCloseDocument}
-                className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-700 transition hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400"
+                className="smk-hit flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-700 transition hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -1554,7 +1554,7 @@ export default function ProfileModal({
             <div className="relative mb-2.5 h-72 w-full overflow-hidden rounded-xl bg-slate-100 dark:bg-zinc-800">
               <Image src={selectedCert.imageUrl} alt={selectedCert.title} fill sizes="400px" className="object-contain" />
             </div>
-            <p className="text-center text-[11px] font-medium text-slate-500 dark:text-zinc-500">
+            <p className="text-center smk-text-label font-medium text-slate-500 dark:text-zinc-500">
               {selectedCert.issuer} · {selectedCert.year}
             </p>
           </div>

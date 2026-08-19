@@ -107,7 +107,7 @@ export default function LegalPage() {
 
       <hr className="smk-orn my-5" />
 
-      <p className="smk-meta text-center text-[11px]">
+      <p className="smk-meta text-center smk-text-label">
         {ce ? 'ТIаьххьара хийцам: ' : 'Последнее обновление: '}
         {formatDate(active.updated)}
       </p>

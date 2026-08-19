@@ -87,7 +87,7 @@ export default function BlacklistModal({ isOpen, onClose }: BlacklistModalProps)
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
-          <p className="smk-meta mb-3 text-[11px] leading-relaxed">
+          <p className="smk-meta mb-3 smk-text-label leading-relaxed">
             {L(
               'Вы не видите анкеты этих людей, а они — ваши. Они не могут оставлять отзывы и вопросы у вас и откликаться на ваши задания.',
               'Ахьа хIокху нехан анкеташ ца го, цара хьан а. Цара хьуна хастамаш, хаттарш яздан а, хьан тIедилларш тIеэца а ца ло.',
@@ -124,14 +124,14 @@ export default function BlacklistModal({ isOpen, onClose }: BlacklistModalProps)
                     {person.fullName || L('Житель', 'Бахархо')}
                   </p>
                   {person.reason && (
-                    <p className="smk-meta truncate text-[10px]">{person.reason}</p>
+                    <p className="smk-meta truncate smk-text-label">{person.reason}</p>
                   )}
                 </div>
                 <button
                   type="button"
                   onClick={() => handleUnblock(person.userId)}
                   disabled={busyId === person.userId}
-                  className="shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-bold text-emerald-700 transition hover:bg-emerald-50 disabled:opacity-50 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
+                  className="shrink-0 rounded-lg px-2.5 py-1 smk-text-label font-bold text-emerald-700 transition hover:bg-emerald-50 disabled:opacity-50 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
                 >
                   {busyId === person.userId
                     ? <Loader2 className="h-3.5 w-3.5 animate-spin" />

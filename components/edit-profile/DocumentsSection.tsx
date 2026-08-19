@@ -62,7 +62,7 @@ export default function DocumentsSection({ certificates, setCertificates, onNoti
       <div className="flex items-center justify-between gap-3">
         <div>
           <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-400">{t.documentsTitle}</h4>
-          <p className="text-[10px] text-slate-500 dark:text-zinc-500">{t.documentsHint}</p>
+          <p className="smk-text-label text-slate-500 dark:text-zinc-500">{t.documentsHint}</p>
         </div>
         <Award className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
       </div>
@@ -74,12 +74,12 @@ export default function DocumentsSection({ certificates, setCertificates, onNoti
               <img src={certificate.imageUrl} alt="" className="h-8 w-8 rounded-lg object-cover" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-xs font-semibold text-slate-900 dark:text-white">{certificate.title}</p>
-                <p className="truncate text-[10px] text-slate-500 dark:text-zinc-500">{certificate.issuer} · {certificate.year}</p>
+                <p className="truncate smk-text-label text-slate-500 dark:text-zinc-500">{certificate.issuer} · {certificate.year}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setCertificates((items) => items.filter((item) => item.id !== certificate.id))}
-                className="shrink-0 px-2 py-1 text-[11px] font-semibold text-red-600 hover:underline dark:text-red-400"
+                className="shrink-0 px-2 py-1 smk-text-label font-semibold text-red-600 hover:underline dark:text-red-400"
               >
                 {t.delete}
               </button>

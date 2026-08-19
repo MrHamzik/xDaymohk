@@ -290,7 +290,7 @@ export default function MapPage() {
                   onClick={() => setSelectedAddress(null)}
                   aria-label="Сбросить выбранный адрес"
                   title="Сбросить адрес"
-                  className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200 dark:bg-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-600"
+                  className="smk-hit flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200 dark:bg-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-600"
                 >
                   ✕
                 </button>
@@ -313,9 +313,9 @@ export default function MapPage() {
                     <Avatar src={profile.avatarUrl} className="h-10 w-10 shrink-0 rounded-lg object-cover" />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-xs font-bold text-slate-900 dark:text-white">{profile.professionTitle || 'Личная анкета'}</span>
-                      <span className="block truncate text-[11px] text-slate-500 dark:text-zinc-500">{profile.workplaceAddress || 'Адрес не указан'}</span>
+                      <span className="block truncate smk-text-label text-slate-500 dark:text-zinc-500">{profile.workplaceAddress || 'Адрес не указан'}</span>
                     </span>
-                    {profile.verificationStatus === 'pending' && <span className="shrink-0 text-[10px] text-slate-500 dark:text-zinc-500">На проверке</span>}
+                    {profile.verificationStatus === 'pending' && <span className="shrink-0 smk-text-label text-slate-500 dark:text-zinc-500">На проверке</span>}
                   </button>
                 );
               })}
@@ -395,7 +395,7 @@ export default function MapPage() {
             
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 px-2 pt-3 dark:border-zinc-700">
               <div className="flex flex-wrap items-center gap-1.5" aria-label="Слои объектов">
-                <span className="text-[11px] font-bold text-slate-400">{t.mapShowLayers}</span>
+                <span className="smk-text-label font-bold text-slate-400">{t.mapShowLayers}</span>
                 {/* Ровно тот же компонент, что и «Карта/Спутник/Гибрид»
                     сверху — одинаковое оформление гарантировано. Число
                     показывается только у активного слоя. */}
@@ -415,7 +415,7 @@ export default function MapPage() {
               {/* Фильтр категорий для слоя «Другое» (как в админке) */}
               {objectMode === 'places' && (
                 <div className="mt-1 flex flex-wrap items-center gap-2">
-                  <label htmlFor="map-place-category" className="text-[11px] font-bold text-slate-400">
+                  <label htmlFor="map-place-category" className="smk-text-label font-bold text-slate-400">
                     Категория:
                   </label>
                   {/* Выпадающий список: категорий могут быть десятки,
@@ -424,7 +424,7 @@ export default function MapPage() {
                     id="map-place-category"
                     value={placesCategory}
                     onChange={(e) => setPlacesCategory(e.target.value)}
-                    className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-bold text-slate-700 outline-none transition focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 smk-text-label font-bold text-slate-700 outline-none transition focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
                   >
                     <option value="">Все категории</option>
                     {placeCategories.map((cat) => (

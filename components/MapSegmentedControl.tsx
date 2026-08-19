@@ -65,7 +65,7 @@ export default function MapSegmentedControl<T extends string>({
             aria-selected={radio ? isActive : undefined}
             aria-pressed={radio ? undefined : isActive}
             onClick={() => onSelect(option.value)}
-            className={`rounded-lg px-2 py-1 text-[11px] font-bold transition ${
+            className={`rounded-lg px-2 py-1 smk-text-label font-bold transition ${
               scrollable
                 ? 'shrink-0 whitespace-nowrap '
                 : className.includes('w-full') ? 'flex-1 ' : ''
@@ -77,7 +77,7 @@ export default function MapSegmentedControl<T extends string>({
           >
             {option.label}
             {isActive && typeof option.count === 'number' && (
-              <span className="ml-1 rounded-full bg-slate-100 px-1.5 text-[9px] text-slate-500 dark:bg-zinc-600 dark:text-zinc-200">
+              <span className="ml-1 rounded-full bg-slate-100 px-1.5 smk-text-label text-slate-500 dark:bg-zinc-600 dark:text-zinc-200">
                 {option.count}
               </span>
             )}

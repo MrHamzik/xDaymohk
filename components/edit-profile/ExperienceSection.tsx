@@ -65,7 +65,7 @@ export default function ExperienceSection({
     <div className="space-y-2.5">
       <p className="text-xs font-bold text-slate-700 dark:text-zinc-400">{t.workExperience}</p>
       <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-        <label className="text-[11px] font-semibold text-slate-500 dark:text-zinc-500">
+        <label className="smk-text-label font-semibold text-slate-500 dark:text-zinc-500">
           {t.workDateFrom}
           <input
             type="date"
@@ -74,7 +74,7 @@ export default function ExperienceSection({
             className="mt-1 w-full smk-field px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:text-white"
           />
         </label>
-        <label className="text-[11px] font-semibold text-slate-500 dark:text-zinc-500">
+        <label className="smk-text-label font-semibold text-slate-500 dark:text-zinc-500">
           {t.workDateTo}
           <input
             type="date"

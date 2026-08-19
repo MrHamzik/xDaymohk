@@ -72,7 +72,7 @@ export default function EffectsEditor() {
           <button
             type="button"
             onClick={() => update({ effects: { ...DEFAULT_EFFECTS } })}
-            className="rounded-lg px-2.5 py-1 text-[11px] font-bold text-emerald-700 transition hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
+            className="rounded-lg px-2.5 py-1 smk-text-label font-bold text-emerald-700 transition hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
           >
             {ce ? 'Юха дIахIотто' : 'Сбросить'}
           </button>
@@ -90,7 +90,7 @@ export default function EffectsEditor() {
                     <Sparkles className="h-3 w-3 shrink-0 text-emerald-600 dark:text-emerald-400" />
                     {ce ? LABELS[key].ce : LABELS[key].ru}
                   </p>
-                  <p className="mt-0.5 text-[11px] leading-relaxed text-slate-500 dark:text-zinc-500">
+                  <p className="mt-0.5 smk-text-label leading-relaxed text-slate-500 dark:text-zinc-500">
                     {ce ? LABELS[key].hintCe : LABELS[key].hintRu}
                   </p>
                 </div>
@@ -114,7 +114,7 @@ export default function EffectsEditor() {
         })}
       </div>
 
-      <p className="smk-meta mt-2 text-[10px] leading-relaxed">
+      <p className="smk-meta mt-2 smk-text-label leading-relaxed">
         {ce
           ? 'Хьайн телефонан нисдаршкахь «хийцамаш кIезиг бе» хаьржина делахь, анимацеш шаьш дIаоьху.'
           : 'Если в системе включено «уменьшить движение», анимации отключаются автоматически.'}

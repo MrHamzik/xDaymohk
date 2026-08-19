@@ -218,7 +218,7 @@ export default function Home() {
         {/* Compact, clean Hero Banner */}
         <section className="relative mb-4 overflow-hidden rounded-2xl bg-hero-gradient p-4 text-white shadow-md sm:p-5" aria-labelledby="hero-title">
           <div className="relative z-10 max-w-2xl">
-            <span className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-600/60 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-100 backdrop-blur-md">
+            <span className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-600/60 px-2.5 py-0.5 smk-text-label font-semibold text-emerald-100 backdrop-blur-md">
               <Sparkles className="h-3 w-3 text-emerald-300" />
               {t.heroBadge}
             </span>
@@ -318,7 +318,7 @@ export default function Home() {
         )}
 
         {!hasMore && filteredProfiles.length > pageSize && (
-          <p className="mt-4 text-center text-[10px] text-slate-400 dark:text-zinc-500">
+          <p className="mt-4 text-center smk-text-label text-slate-400 dark:text-zinc-500">
             Вы просмотрели все {filteredProfiles.length} анкет
           </p>
         )}

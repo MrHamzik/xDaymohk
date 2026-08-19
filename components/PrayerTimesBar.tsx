@@ -68,7 +68,7 @@ export default function PrayerTimesBar() {
           </div>
 
           <div className="flex items-center gap-1.5">
-            <span className="rounded-lg bg-emerald-100 px-2 py-0.5 font-mono text-[11px] font-black text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300">
+            <span className="rounded-lg bg-emerald-100 px-2 py-0.5 font-mono smk-text-label font-black text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300">
               {mounted ? countdownText : '— мин'}
             </span>
 
@@ -77,7 +77,7 @@ export default function PrayerTimesBar() {
               onClick={() => setIsCalendarOpen(true)}
               title="Открыть календарь намазов (ДУМ РФ)"
               aria-label="Календарь намазов"
-              className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-950/80 dark:text-emerald-400 dark:hover:bg-emerald-900 transition"
+              className="smk-hit flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-950/80 dark:text-emerald-400 dark:hover:bg-emerald-900 transition"
             >
               <Calendar className="h-3.5 w-3.5" />
             </button>
@@ -85,7 +85,7 @@ export default function PrayerTimesBar() {
         </div>
 
         {/* Horizontal All-in-One Row (Фаджр, Восход, Зухр, Аср, Магриб, Иша strictly in one line) */}
-        <div className="grid grid-cols-6 gap-1 text-[10px] sm:text-[11px] font-semibold text-center">
+        <div className="grid grid-cols-6 gap-1 smk-text-label sm:smk-text-label font-semibold text-center">
           {data.items.map((prayer) => {
             const isActive = prayer.id === data.activePrayer?.id;
             const name = language === 'ce' ? prayer.nameCe : prayer.nameRu;
@@ -98,8 +98,8 @@ export default function PrayerTimesBar() {
                     : 'bg-slate-50 text-slate-700 dark:bg-zinc-900 dark:text-zinc-400'
                 }`}
               >
-                <span className="text-[9px] sm:text-[10px] leading-tight truncate w-full opacity-90">{name}</span>
-                <span className="font-mono text-[10px] sm:text-xs leading-tight">{prayer.time}</span>
+                <span className="smk-text-label sm:smk-text-label leading-tight truncate w-full opacity-90">{name}</span>
+                <span className="font-mono smk-text-label sm:text-xs leading-tight">{prayer.time}</span>
               </div>
             );
           })}

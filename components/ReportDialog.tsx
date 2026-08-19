@@ -66,7 +66,7 @@ export default function ReportDialog({ profile, isOpen, onClose, onSubmit }: Rep
               <p className="truncate text-xs text-slate-500 dark:text-zinc-500">Анкета: {profile.fullName}</p>
             </div>
           </div>
-          <button type="button" onClick={onClose} aria-label="Закрыть" className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400"><X className="h-4 w-4" /></button>
+          <button type="button" onClick={onClose} aria-label="Закрыть" className="smk-hit flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400"><X className="h-4 w-4" /></button>
         </div>
 
         {profile.isVerified ? (
@@ -75,7 +75,7 @@ export default function ReportDialog({ profile, isOpen, onClose, onSubmit }: Rep
           <>
             <label htmlFor="complaint-reason" className="mt-3 block text-xs font-bold text-slate-700 dark:text-zinc-400">Причина жалобы</label>
             <textarea id="complaint-reason" maxLength={500} rows={3} value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Например: неверные контакты или описание услуги" className="mt-1 w-full resize-y break-words rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-white" />
-            <p className="mt-0.5 text-right text-[10px] text-slate-400">{reason.length}/500</p>
+            <p className="mt-0.5 text-right smk-text-label text-slate-400">{reason.length}/500</p>
           </>
         )}
         

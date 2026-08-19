@@ -176,7 +176,7 @@ export default function SearchFilter({
             <Filter className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
             {t.filterButton}
             {activeFilterCount > 0 && (
-              <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-black text-white">
+              <span className="rounded-full bg-emerald-600 px-2 py-0.5 smk-text-label font-black text-white">
                 {activeFilterCount}
               </span>
             )}
@@ -190,7 +190,7 @@ export default function SearchFilter({
             <div className="mb-3 flex items-center justify-between border-b border-slate-100 pb-2 dark:border-zinc-800">
               <div>
                 <h3 className="text-xs font-bold text-slate-900 dark:text-white">{t.filterSettings}</h3>
-                <p className="text-[10px] text-slate-500 dark:text-zinc-500">{t.filterSettingsHint}</p>
+                <p className="smk-text-label text-slate-500 dark:text-zinc-500">{t.filterSettingsHint}</p>
               </div>
               {activeFilterCount > 0 && (
                 <button
@@ -210,7 +210,7 @@ export default function SearchFilter({
                 <button
                   type="button"
                   onClick={() => setIsRegionOpen((prev) => !prev)}
-                  className="flex w-full items-center justify-between text-left text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-400"
+                  className="flex w-full items-center justify-between text-left smk-text-label font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-400"
                 >
                   <span>{t.filterRegion}</span>
                   <ChevronDown className={`h-3.5 w-3.5 transition ${isRegionOpen ? 'rotate-180' : ''}`} />
@@ -259,7 +259,7 @@ export default function SearchFilter({
                 <button
                   type="button"
                   onClick={() => setIsWhoOpen((prev) => !prev)}
-                  className="flex w-full items-center justify-between text-left text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-400"
+                  className="flex w-full items-center justify-between text-left smk-text-label font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-400"
                 >
                   <span>{t.filterWho}</span>
                   <ChevronDown className={`h-3.5 w-3.5 transition ${isWhoOpen ? 'rotate-180' : ''}`} />
@@ -269,7 +269,7 @@ export default function SearchFilter({
                     {whoOptions.map((option) => (
                       <label
                         key={option.id}
-                        className="flex cursor-pointer items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+                        className="flex cursor-pointer items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 smk-text-label font-semibold text-slate-700 transition hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
                       >
                         <input
                           type="checkbox"
@@ -289,7 +289,7 @@ export default function SearchFilter({
                 <button
                   type="button"
                   onClick={() => setIsStatusOpen((prev) => !prev)}
-                  className="flex w-full items-center justify-between text-left text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-400"
+                  className="flex w-full items-center justify-between text-left smk-text-label font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-400"
                 >
                   <span>{t.filterWorkStatus}</span>
                   <ChevronDown className={`h-3.5 w-3.5 transition ${isStatusOpen ? 'rotate-180' : ''}`} />
@@ -299,7 +299,7 @@ export default function SearchFilter({
                     {statusFilterOptions.map((option) => (
                       <label
                         key={option.id}
-                        className="flex cursor-pointer items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+                        className="flex cursor-pointer items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 smk-text-label font-semibold text-slate-700 transition hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
                       >
                         <input
                           type="checkbox"
@@ -320,7 +320,7 @@ export default function SearchFilter({
                 <button
                   type="button"
                   onClick={() => setIsProfessionOpen((prev) => !prev)}
-                  className="flex w-full items-center justify-between text-left text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-400"
+                  className="flex w-full items-center justify-between text-left smk-text-label font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-400"
                 >
                   <span>{t.filterCategory}</span>
                   <ChevronDown className={`h-3.5 w-3.5 transition ${isProfessionOpen ? 'rotate-180' : ''}`} />

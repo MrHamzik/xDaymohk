@@ -29,7 +29,7 @@ export default function GlobalError({
           Произошла непредвиденная ошибка. Попробуйте перезагрузить эту страницу.
         </p>
         {error.digest && (
-          <p className="mt-2 text-[10px] font-mono text-slate-400">ID: {error.digest}</p>
+          <p className="mt-2 smk-text-label font-mono text-slate-400">ID: {error.digest}</p>
         )}
         <button
           type="button"

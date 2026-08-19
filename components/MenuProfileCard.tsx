@@ -52,17 +52,17 @@ export default function MenuProfileCard() {
         <h3 className="truncate text-xs font-bold text-slate-900 dark:text-white">
           {account?.fullName || 'Даймохк'}
         </h3>
-        <p className="truncate text-[10px] text-slate-500 dark:text-zinc-500">
+        <p className="truncate smk-text-label text-slate-500 dark:text-zinc-500">
           {account?.email || (language === 'ce' ? 'Нохчийн Республика' : 'Чеченская Республика')}
         </p>
       </div>
       <div className="flex shrink-0 items-center">
         {account ? (
-          <span className={`rounded-md px-1.5 py-0.5 text-[9px] font-bold ${isLocked ? 'bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-300' : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'}`}>
+          <span className={`rounded-md px-1.5 py-0.5 smk-text-label font-bold ${isLocked ? 'bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-300' : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'}`}>
             Профиль
           </span>
         ) : (
-          <span className="rounded-md bg-slate-200 px-1.5 py-0.5 text-[9px] font-bold text-slate-700 dark:bg-zinc-700 dark:text-zinc-300">
+          <span className="rounded-md bg-slate-200 px-1.5 py-0.5 smk-text-label font-bold text-slate-700 dark:bg-zinc-700 dark:text-zinc-300">
             {t.signIn}
           </span>
         )}
@@ -79,7 +79,7 @@ export default function MenuProfileCard() {
       )}
 
       {isLocked && (
-        <div className="mt-1.5 flex items-center gap-1.5 rounded-xl bg-red-100 px-2.5 py-1.5 text-[10px] font-bold text-red-800 dark:bg-red-900/50 dark:text-red-200">
+        <div className="mt-1.5 flex items-center gap-1.5 rounded-xl bg-red-100 px-2.5 py-1.5 smk-text-label font-bold text-red-800 dark:bg-red-900/50 dark:text-red-200">
           <Ban className="h-3 w-3 shrink-0" />
           <span className="truncate">{banLabel ?? (language === 'ce' ? 'Аккаунт билсена яьлла' : 'Аккаунт заблокирован')}</span>
         </div>

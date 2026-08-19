@@ -129,7 +129,7 @@ export default function NotificationLetterModal({ notification, onClose, onDelet
                   onClick={() => onDelete(notification)}
                   aria-label={language === 'ce' ? 'ДIаяккха' : 'Удалить'}
                   title={language === 'ce' ? 'ДIаяккха' : 'Удалить'}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-red-50 text-red-600 transition hover:bg-red-100 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-950/70"
+                  className="smk-hit flex h-8 w-8 items-center justify-center rounded-full bg-red-50 text-red-600 transition hover:bg-red-100 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-950/70"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -138,7 +138,7 @@ export default function NotificationLetterModal({ notification, onClose, onDelet
                 type="button"
                 onClick={onClose}
                 aria-label="Закрыть"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-slate-500 transition hover:bg-slate-100 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+                className="smk-hit flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-slate-500 transition hover:bg-slate-100 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
               >
                 <X className="h-4 w-4" />
               </button>

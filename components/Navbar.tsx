@@ -29,7 +29,7 @@ export default function Navbar() {
             <h1 className="text-base font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-lg">
               Даймохк
             </h1>
-            <p className="text-[10px] font-medium text-slate-500 dark:text-zinc-500 sm:text-xs">
+            <p className="smk-text-label font-medium text-slate-500 dark:text-zinc-500 sm:text-xs">
               {t.siteSubtitle}
             </p>
           </div>

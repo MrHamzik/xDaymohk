@@ -348,7 +348,7 @@ export default function VayghullakhPage() {
                 <p className="text-sm font-bold text-slate-900 dark:text-white">
                   {isActive ? t.tasksYouActive : t.tasksYouInactive}
                 </p>
-                <p className="text-[11px] text-slate-500 dark:text-zinc-500">
+                <p className="smk-text-label text-slate-500 dark:text-zinc-500">
                   {isActive ? t.tasksActiveHint : t.tasksInactiveHint}
                 </p>
               </div>

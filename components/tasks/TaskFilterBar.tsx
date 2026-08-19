@@ -117,7 +117,7 @@ export default function TaskFilterBar({
     'smk-field p-2.5';
   // Тот же класс, что у заголовков секций в SearchFilter каталога.
   const sectionHeadClass =
-    'flex w-full items-center justify-between text-left text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-400';
+    'flex w-full items-center justify-between text-left smk-text-label font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-400';
 
   return (
     <div className="mb-4 space-y-2">
@@ -166,7 +166,7 @@ export default function TaskFilterBar({
             <Filter className={`h-3.5 w-3.5 ${accentText}`} />
             {t.tasksFilterButton}
             {activeCount > 0 && (
-              <span className={`rounded-full px-2 py-0.5 text-[10px] font-black text-white ${
+              <span className={`rounded-full px-2 py-0.5 smk-text-label font-black text-white ${
                 isTeal ? 'bg-teal-600' : 'bg-emerald-600'
               }`}>
                 {activeCount}
@@ -181,7 +181,7 @@ export default function TaskFilterBar({
             <div className="mb-3 flex items-center justify-between border-b border-slate-100 pb-2 dark:border-zinc-700">
               <div>
                 <h3 className="text-xs font-bold text-slate-900 dark:text-white">{t.filterSettings}</h3>
-                <p className="text-[10px] text-slate-500 dark:text-zinc-500">{t.filterSettingsHint}</p>
+                <p className="smk-text-label text-slate-500 dark:text-zinc-500">{t.filterSettingsHint}</p>
               </div>
               {activeCount > 0 && (
                 <button
@@ -264,14 +264,14 @@ export default function TaskFilterBar({
                 {isRewardOpen && (
                   <div className="mt-2">
                     <div className="mb-1.5 flex items-center justify-between">
-                      <span className="text-[11px] text-slate-500 dark:text-zinc-400">
+                      <span className="smk-text-label text-slate-500 dark:text-zinc-400">
                         {minReward > 0 ? `${t.tasksRewardFromPrefix} ${minReward} ₽` : t.tasksRewardAny}
                       </span>
                       {minReward > 0 && (
                         <button
                           type="button"
                           onClick={() => setMinReward(0)}
-                          className="text-[10px] font-bold text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200"
+                          className="smk-text-label font-bold text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200"
                         >
                           {t.reset}
                         </button>
@@ -287,7 +287,7 @@ export default function TaskFilterBar({
                       aria-label={t.tasksRewardAria}
                       className={`w-full ${isTeal ? 'accent-teal-600' : 'accent-emerald-600'}`}
                     />
-                    <p className="mt-1 text-[10px] leading-relaxed text-slate-400">
+                    <p className="mt-1 smk-text-label leading-relaxed text-slate-400">
                       {t.tasksRewardHint}
                     </p>
                   </div>
@@ -340,7 +340,7 @@ export default function TaskFilterBar({
                   aria-expanded={isPaymentOpen}
                   className="flex w-full items-center justify-between gap-2 text-left"
                 >
-                  <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-600 dark:text-zinc-300">
+                  <span className="inline-flex items-center gap-1.5 smk-text-label font-bold uppercase tracking-wide text-slate-600 dark:text-zinc-300">
                     <Banknote className="h-3.5 w-3.5" />
                     {t.taskPaymentMethod}
                   </span>

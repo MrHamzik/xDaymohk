@@ -359,7 +359,7 @@ export default function AdminFiltersSection() {
         <div className="space-y-2">
           {/* Шапка колонок — только на широком экране, на мобильном
               поля подписаны плейсхолдерами. */}
-          <div className="hidden grid-cols-[auto_7rem_4rem_1fr_1fr_auto] gap-2 px-2.5 text-[10px] font-bold uppercase tracking-wide text-slate-400 sm:grid">
+          <div className="hidden grid-cols-[auto_7rem_4rem_1fr_1fr_auto] gap-2 px-2.5 smk-text-label font-bold uppercase tracking-wide text-slate-400 sm:grid">
             <span className="w-4" />
             <span>Код</span>
             <span>Иконка</span>
@@ -389,7 +389,7 @@ export default function AdminFiltersSection() {
               </span>
 
               {/* Код: служебный слаг, используется в ссылках и сравнениях */}
-              <code className="truncate rounded bg-slate-100 px-1.5 py-1 text-[10px] text-slate-500 dark:bg-zinc-800 dark:text-zinc-400">
+              <code className="truncate rounded bg-slate-100 px-1.5 py-1 smk-text-label text-slate-500 dark:bg-zinc-800 dark:text-zinc-400">
                 {filter.value}
               </code>
 

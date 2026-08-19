@@ -119,9 +119,9 @@ export const PRESET_THEMES: Record<
       text: '#0f172a',
       muted: '#57667c',
       icon: '#465369',
-      accent: '#ffae00',
+      accent: '#e7b653',
       accentSoft: '#ffedc4',
-      accentDeep: '#ffcd6d',
+      accentDeep: '#e5a539',
       ...SEMANTIC,
       heroFrom: '#059669',
       heroTo: '#14b8a6',
@@ -155,9 +155,9 @@ export const PRESET_THEMES: Record<
       text: '#ffffff',
       muted: '#96969e',
       icon: '#b3b3b9',
-      accent: '#ffae00',
+      accent: '#e7b653',
       accentSoft: '#ffedc4',
-      accentDeep: '#ffcd6d',
+      accentDeep: '#e5a539',
       ...SEMANTIC,
       heroFrom: '#047857',
       heroTo: '#0f766e',
@@ -552,13 +552,12 @@ export const PRESET_THEMES: Record<
       text: '#58442d',
       muted: '#78664c',
       icon: '#6f5d44',
-      // Золото 40°: контраст к карточке 3.21 — этого хватает крупному
-      // тексту и заливке кнопки (на золоте подпись белая, .smk-btn-gold
-      // задаёт #ffffff принудительно).
-      accent: '#be830e',
+      // Светлая латунь: те же значения, что --smk-gold / --smk-gold-deep.
+      // Тёмная охра (#be830e / #764c05) на кремовом полотне читалась
+      // грязной. На светлом золоте подпись кнопки — тёмная, не белая.
+      accent: '#e7b653',
       accentSoft: '#f7e6bf',
-      // Тёмное золото 38° для мелкого текста по светлому: 7.36.
-      accentDeep: '#764c05',
+      accentDeep: '#e5a539',
       ui: '#db7924',
       statusAuto: '#db7924',
       statusActive: '#7c9f38',

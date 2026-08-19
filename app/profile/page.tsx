@@ -252,7 +252,7 @@ export default function ProfilePage() {
             <Link
               href="/"
               aria-label="Вернуться в каталог"
-              className="smk-field flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-slate-700 shadow-sm transition hover:brightness-95 dark:text-zinc-300 dark:hover:brightness-110"
+              className="smk-hit smk-field flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-slate-700 shadow-sm transition hover:brightness-95 dark:text-zinc-300 dark:hover:brightness-110"
             >
               <ArrowLeft className="h-4 w-4" />
             </Link>
@@ -301,7 +301,7 @@ export default function ProfilePage() {
                 <label htmlFor="account-avatar" className="inline-flex cursor-pointer rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-emerald-700 active:scale-95">
                   {t.avatarChange}
                 </label>
-                <p className="mt-1 text-[11px] leading-tight text-slate-500 dark:text-zinc-500">{t.avatarHint}</p>
+                <p className="mt-1 smk-text-label leading-tight text-slate-500 dark:text-zinc-500">{t.avatarHint}</p>
               </div>
             </div>
 
@@ -364,7 +364,7 @@ export default function ProfilePage() {
             <section className="smk-panel smk-group p-3.5">
               <div className="flex items-center justify-between gap-3 pb-1">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-400">{t.myProfiles}</h3>
-                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300">{ownProfiles.length}</span>
+                <span className="rounded-full bg-emerald-100 px-2 py-0.5 smk-text-label font-black text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300">{ownProfiles.length}</span>
               </div>
               {ownProfiles.length === 0 ? (
                 <p className="py-2 text-center text-xs text-slate-500 dark:text-zinc-500">{t.noProfilesYet}</p>
@@ -373,11 +373,11 @@ export default function ProfilePage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex min-w-0 items-center gap-1.5">
                       <p className="truncate text-xs font-bold text-slate-900 dark:text-white">{profile.isPersonal ? t.personalProfile : (profile.professionTitle || t.personalProfile)}</p>
-                      {profile.isPersonal && <span className="shrink-0 rounded bg-emerald-100 px-1 py-0.5 text-[8px] font-bold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">{t.personalBadge}</span>}
-                      {(profile.isHidden || profile.isBanned) && !profile.isPersonal && <span className="shrink-0 rounded-md bg-red-600 px-1.5 py-0.5 text-[9px] font-bold text-white">Скрыта</span>}
-                      {profile.verificationStatus === 'pending' && <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-slate-200 px-1.5 py-0.5 text-[9px] font-bold text-slate-700 dark:bg-zinc-700 dark:text-zinc-300"><Clock3 className="h-2.5 w-2.5 animate-spin" />На проверке</span>}
+                      {profile.isPersonal && <span className="shrink-0 rounded bg-emerald-100 px-1 py-0.5 smk-text-label font-bold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">{t.personalBadge}</span>}
+                      {(profile.isHidden || profile.isBanned) && !profile.isPersonal && <span className="shrink-0 rounded-md bg-red-600 px-1.5 py-0.5 smk-text-label font-bold text-white">Скрыта</span>}
+                      {profile.verificationStatus === 'pending' && <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-slate-200 px-1.5 py-0.5 smk-text-label font-bold text-slate-700 dark:bg-zinc-700 dark:text-zinc-300"><Clock3 className="h-2.5 w-2.5 animate-spin" />На проверке</span>}
                     </div>
-                    <p className="truncate text-[10px] text-slate-500 dark:text-zinc-500">{profile.isPersonal ? t.personalMinInfo : profile.workplaceAddress}</p>
+                    <p className="truncate smk-text-label text-slate-500 dark:text-zinc-500">{profile.isPersonal ? t.personalMinInfo : profile.workplaceAddress}</p>
                   </div>
                   {!profile.isPersonal && <button type="button" disabled={Boolean(account.isBlocked)} onClick={() => updateProfile(profile.id, { isHidden: !profile.isHidden })} aria-label={profile.isHidden ? 'Показать анкету' : 'Скрыть анкету'} title={profile.isHidden ? 'Показать' : 'Скрыть'} className="inline-flex shrink-0 items-center gap-1 rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 dark:text-zinc-400 dark:hover:bg-zinc-800">{profile.isHidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}</button>}
                   <button type="button" disabled={Boolean(account.isBlocked)} onClick={() => { setEditingProfile(profile); setIsAddModalOpen(true); }} aria-label="Изменить анкету" title="Изменить" className="inline-flex shrink-0 items-center gap-1 rounded-lg p-1.5 text-emerald-700 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50 dark:text-emerald-400 dark:hover:bg-emerald-950/40"><Pencil className="h-3.5 w-3.5" /></button>
@@ -400,8 +400,8 @@ export default function ProfilePage() {
               {/* Отдельная кнопка, а не галочка рядом с «Выйти»: обычный
                   выход нажимают каждый день, этот — раз в жизни, когда
                   потерян телефон. Смешивать их опасно. */}
-              <button type="button" onClick={() => setIsSignOutAllOpen(true)} className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl py-1.5 text-[11px] font-semibold text-slate-500 transition hover:text-red-600 dark:text-zinc-500 dark:hover:text-red-400"><ShieldOff className="h-3.5 w-3.5" />{t.signOutEverywhere}</button>
-              <button type="button" onClick={handleDeleteAccount} disabled={isSaving || Boolean(account.isBlocked)} className="w-full rounded-xl py-1 text-[11px] font-semibold text-slate-400 transition hover:text-red-600 disabled:opacity-50 dark:text-zinc-500 dark:hover:text-red-400">Удалить аккаунт и все данные</button>
+              <button type="button" onClick={() => setIsSignOutAllOpen(true)} className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl py-1.5 smk-text-label font-semibold text-slate-500 transition hover:text-red-600 dark:text-zinc-500 dark:hover:text-red-400"><ShieldOff className="h-3.5 w-3.5" />{t.signOutEverywhere}</button>
+              <button type="button" onClick={handleDeleteAccount} disabled={isSaving || Boolean(account.isBlocked)} className="w-full rounded-xl py-1 smk-text-label font-semibold text-slate-400 transition hover:text-red-600 disabled:opacity-50 dark:text-zinc-500 dark:hover:text-red-400">Удалить аккаунт и все данные</button>
             </div>
           </form>
         ) : (
@@ -419,7 +419,7 @@ export default function ProfilePage() {
               disabled={isSaving}
               className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50 dark:border-zinc-700/60 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
             >
-              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white text-[11px] font-black text-blue-600">G</span>
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white smk-text-label font-black text-blue-600">G</span>
               Войти через Google
             </button>
             {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}

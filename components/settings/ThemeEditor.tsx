@@ -209,7 +209,7 @@ export default function ThemeEditor() {
           <button
             type="button"
             onClick={createTheme}
-            className="flex min-h-[76px] flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-slate-300 text-[11px] font-bold text-slate-500 transition hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800/60"
+            className="flex min-h-[76px] flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-slate-300 smk-text-label font-bold text-slate-500 transition hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800/60"
           >
             <Plus className="h-4 w-4" />
             {t.settingsThemeCreate}
@@ -217,7 +217,7 @@ export default function ThemeEditor() {
         )}
       </div>
 
-      <p className="mt-1.5 text-[10px] text-slate-400 dark:text-zinc-500">
+      <p className="mt-1.5 smk-text-label text-slate-400 dark:text-zinc-500">
         {t.settingsThemeLimit}: {settings.customThemes.length} / {MAX_CUSTOM_THEMES}
       </p>
 
@@ -231,7 +231,7 @@ export default function ThemeEditor() {
               aria-label={t.settingsThemeName}
               className="min-w-0 flex-1 rounded-lg bg-white px-2.5 py-1.5 text-xs font-bold text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:bg-zinc-800 dark:text-white"
             />
-            <label className="flex shrink-0 cursor-pointer items-center gap-1.5 text-[11px] font-bold text-slate-600 dark:text-zinc-300">
+            <label className="flex shrink-0 cursor-pointer items-center gap-1.5 smk-text-label font-bold text-slate-600 dark:text-zinc-300">
               <input
                 type="checkbox"
                 checked={editing.isDark}
@@ -256,7 +256,7 @@ export default function ThemeEditor() {
               />
               {t.settingsThemeDark}
             </label>
-            <label className="flex shrink-0 cursor-pointer items-center gap-1.5 text-[11px] font-bold text-slate-600 dark:text-zinc-300">
+            <label className="flex shrink-0 cursor-pointer items-center gap-1.5 smk-text-label font-bold text-slate-600 dark:text-zinc-300">
               <input
                 type="checkbox"
                 checked={editing.glass === true}
@@ -275,7 +275,7 @@ export default function ThemeEditor() {
               по 25 пикерам вручную почти невозможно. */}
           <div className="smk-sheet-row p-2.5">
             <div className="flex items-center gap-1.5">
-              <span className="min-w-0 flex-1 truncate text-[11px] font-bold uppercase tracking-wide text-slate-700 dark:text-zinc-300">
+              <span className="min-w-0 flex-1 truncate smk-text-label font-bold uppercase tracking-wide text-slate-700 dark:text-zinc-300">
                 {language === 'ce' ? MAIN_COLOR.ce : MAIN_COLOR.ru}
               </span>
               <HintMark text={MAIN_COLOR.hint} />
@@ -311,7 +311,7 @@ export default function ThemeEditor() {
               </div>
             </div>
 
-            <p className="mt-1.5 text-[10px] leading-relaxed text-slate-500 dark:text-zinc-500">
+            <p className="mt-1.5 smk-text-label leading-relaxed text-slate-500 dark:text-zinc-500">
               {language === 'ce' ? MAIN_COLOR.noteCe : MAIN_COLOR.noteRu}
             </p>
           </div>
@@ -333,7 +333,7 @@ export default function ThemeEditor() {
                     aria-expanded={isOpen}
                     className="flex min-w-0 flex-1 items-center justify-between gap-2 text-left"
                   >
-                    <span className="truncate text-[11px] font-bold uppercase tracking-wide text-slate-700 dark:text-zinc-300">
+                    <span className="truncate smk-text-label font-bold uppercase tracking-wide text-slate-700 dark:text-zinc-300">
                       {language === 'ce' ? GROUP_TITLES[group].ce : GROUP_TITLES[group].ru}
                     </span>
                     <ChevronDown
@@ -350,7 +350,7 @@ export default function ThemeEditor() {
                         key={key}
                         className="flex items-center justify-between gap-2 rounded-lg bg-white px-2.5 py-1.5 dark:bg-zinc-800"
                       >
-                        <span className="truncate text-[11px] font-semibold text-slate-600 dark:text-zinc-300">
+                        <span className="truncate smk-text-label font-semibold text-slate-600 dark:text-zinc-300">
                           {language === 'ce' ? COLOR_LABELS[key]?.ce : COLOR_LABELS[key]?.ru}
                         </span>
                         <input
@@ -458,7 +458,7 @@ function ThemeCard({
           ))}
         </span>
         <span
-          className="block truncate text-[11px] font-bold"
+          className="block truncate smk-text-label font-bold"
           style={{ color: colors.text }}
         >
           {name}

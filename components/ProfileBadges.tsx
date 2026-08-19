@@ -72,7 +72,7 @@ export function WorkingStatusBadge({ profile, onDarkBackground = false }: Workin
   return (
     <span
       title={`${statusInfo.label}${statusInfo.details ? ` (${statusInfo.details})` : ''}`}
-      className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-bold ${statusBg}`}
+      className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 smk-text-label font-bold ${statusBg}`}
     >
       <span className={`h-1.5 w-1.5 rounded-full ${dotBg}`} />
       {localizedBadge}

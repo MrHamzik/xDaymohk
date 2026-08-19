@@ -161,7 +161,7 @@ export default function AdminSupportSection() {
         <span className="smk-sheet-label">
           {L('Вопросы пользователей', 'Лелошхойн хаттарш')}
         </span>
-        <span className="smk-meta text-[10px]">
+        <span className="smk-meta smk-text-label">
           {L('Новых: ', 'Керланаш: ')}{items.filter(isNew).length}
         </span>
       </div>
@@ -260,7 +260,7 @@ export default function AdminSupportSection() {
                       {L('Спор', 'Къовсам')}
                     </span>
                   )}
-                  <span className="smk-meta truncate text-[10px]">
+                  <span className="smk-meta truncate smk-text-label">
                     {q.authorName || L('Житель', 'Бахархо')}
                     {isNew(q) ? L(' · ждёт ответа', ' · жоп доьхуш') : L(' · отвечен', ' · жоп делла')}
                   </span>
@@ -288,7 +288,7 @@ export default function AdminSupportSection() {
                   {/* Жалоба по заданию — полями, а не одной строкой. */}
                   {dispute ? (
                     <div className="smk-inset px-3 py-2.5">
-                      <dl className="space-y-1 text-[11px]">
+                      <dl className="space-y-1 smk-text-label">
                         <DisputeRow label={L('Задание', 'ТIедиллар')} value={dispute.title} />
                         <DisputeRow label={L('Награда', 'Мах')} value={dispute.reward} />
                         <DisputeRow label={L('Заявитель', 'Арз деш верг')} value={dispute.role} />
@@ -309,7 +309,7 @@ export default function AdminSupportSection() {
 
                   <button type="button" onClick={() => patch(q.id, { isPublic: !q.isPublic })}
                     disabled={busyId === q.id}
-                    className="smk-act inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px]">
+                    className="smk-act inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 smk-text-label">
                     {q.isPublic ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
                     {q.isPublic
                       ? L('Виден всем', 'Массарна гуш')
@@ -329,14 +329,14 @@ export default function AdminSupportSection() {
                     <button type="button"
                       onClick={() => patch(q.id, { answer: drafts[q.id] ?? q.answer })}
                       disabled={busyId === q.id}
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-1.5 text-[11px] font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50">
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-1.5 smk-text-label font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50">
                       {busyId === q.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
                       {L('Ответить', 'Жоп дала')}
                     </button>
                     {isNew(q) && (
                       <button type="button" onClick={() => patch(q.id, { status: 'closed' })}
                         disabled={busyId === q.id}
-                        className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-[11px] font-bold text-slate-500 transition hover:bg-slate-100 dark:hover:bg-zinc-800">
+                        className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 smk-text-label font-bold text-slate-500 transition hover:bg-slate-100 dark:hover:bg-zinc-800">
                         <X className="h-3.5 w-3.5" />
                         {L('Закрыть без ответа', 'Жоп доцуш дIакъовла')}
                       </button>
@@ -360,7 +360,7 @@ function DisputeRow({ label, value, mono = false }: {
   return (
     <div className="flex gap-2">
       <dt className="shrink-0 text-slate-500 dark:text-zinc-500">{label}:</dt>
-      <dd className={`min-w-0 flex-1 break-words font-bold text-slate-900 dark:text-white ${mono ? 'font-mono text-[10px]' : ''}`}>
+      <dd className={`min-w-0 flex-1 break-words font-bold text-slate-900 dark:text-white ${mono ? 'font-mono smk-text-label' : ''}`}>
         {value}
       </dd>
     </div>

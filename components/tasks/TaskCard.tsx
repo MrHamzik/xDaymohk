@@ -137,7 +137,7 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
             {task.authorName || t.taskCustomerDefault}
           </h3>
           {/* Слой 5: метаданные с воздухом и ромбами-разделителями */}
-          <div className="smk-meta mt-1.5 flex flex-wrap items-center text-[11px] leading-relaxed text-slate-500 dark:text-zinc-400">
+          <div className="smk-meta mt-1.5 flex flex-wrap items-center smk-text-label leading-relaxed text-slate-500 dark:text-zinc-400">
             <span className="inline-flex items-center gap-1 font-bold text-amber-600 dark:text-amber-400">
               <Star className="h-3 w-3 smk-star" />
               {rating > 0 ? rating.toFixed(1) : t.taskNoRatings}
@@ -149,17 +149,17 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
 
         {task.isPaid ? (
           <div className="smk-price shrink-0">
-            <span className="text-[15px] font-extrabold leading-tight text-emerald-700 dark:text-emerald-300">
+            <span className="smk-text-title font-extrabold leading-tight text-emerald-700 dark:text-emerald-300">
               {total} ₽
             </span>
             {total !== task.reward && (
-              <span className="text-[9px] font-semibold leading-tight text-emerald-600/60 line-through dark:text-emerald-400/50">
+              <span className="smk-text-label font-semibold leading-tight text-emerald-600/60 line-through dark:text-emerald-400/50">
                 {task.reward} ₽
               </span>
             )}
           </div>
         ) : (
-          <span className="smk-price smk-price-teal shrink-0 text-[11px] font-extrabold text-teal-700 dark:text-teal-300">
+          <span className="smk-price smk-price-teal shrink-0 smk-text-label font-extrabold text-teal-700 dark:text-teal-300">
             {t.taskSadaka}
           </span>
         )}
@@ -170,11 +170,11 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
 
       {/* ── Суть задания ───────────────────────────────────────── */}
       <div className="px-4 py-3">
-        <h4 className="line-clamp-2 text-[15px] font-bold leading-snug text-slate-900 dark:text-white">
+        <h4 className="line-clamp-2 smk-text-title font-bold leading-snug text-slate-900 dark:text-white">
           {task.title}
         </h4>
         {task.description && (
-          <p className="mt-1.5 line-clamp-2 break-words text-[13px] leading-relaxed text-slate-600 dark:text-zinc-400">
+          <p className="mt-1.5 line-clamp-2 break-words smk-text-body leading-relaxed text-slate-600 dark:text-zinc-400">
             {task.description}
           </p>
         )}
@@ -183,7 +183,7 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
       <hr className="smk-orn mx-4" />
 
       {/* ── Метки ──────────────────────────────────────────────── */}
-      <div className="mt-auto flex flex-wrap items-center gap-1.5 px-4 py-3 text-[10px] font-bold">
+      <div className="mt-auto flex flex-wrap items-center gap-1.5 px-4 py-3 smk-text-label font-bold">
         {/* Отменённое задание остаётся в списках неделю — обе стороны
             должны увидеть, что случилось. Метка идёт первой: она
             отменяет смысл всех остальных (срок, места, оплата). */}
@@ -285,7 +285,7 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
       {/* Подвал на подложке — как у карточки анкеты: раньше адрес висел
           на голом полотне за тонкой линией и читался как обрезок. */}
       <div className="smk-card-foot flex items-center justify-between gap-2 py-2.5 pl-4 pr-3.5">
-        <span className="flex min-w-0 items-center gap-1.5 text-[11px] text-slate-500 dark:text-zinc-400">
+        <span className="flex min-w-0 items-center gap-1.5 smk-text-label text-slate-500 dark:text-zinc-400">
           <MapPin className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
           <span className="truncate">{task.address || t.taskAddressMissing}</span>
         </span>

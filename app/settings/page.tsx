@@ -226,7 +226,7 @@ export default function SettingsPage() {
                   уходят под текст и шапка перестаёт над ними стоять —
                   подписи «висели» над пустотой. Роль тумблера на
                   телефоне понятна по aria-label и порядку. */}
-              <div className="mb-1 hidden items-center justify-end gap-4 pr-3 text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-zinc-500 sm:flex">
+              <div className="mb-1 hidden items-center justify-end gap-4 pr-3 smk-text-label font-bold uppercase tracking-wide text-slate-400 dark:text-zinc-500 sm:flex">
                 <span className="w-14 text-center">{t.settingsColShow}</span>
                 <span className="w-14 text-center">{t.settingsColSound}</span>
               </div>
@@ -245,7 +245,7 @@ export default function SettingsPage() {
                         <p className="truncate text-xs font-bold text-slate-800 dark:text-zinc-200">
                           {groupLabels[group].title}
                         </p>
-                        <p className="mt-0.5 text-[11px] leading-relaxed text-slate-500 dark:text-zinc-500">
+                        <p className="mt-0.5 smk-text-label leading-relaxed text-slate-500 dark:text-zinc-500">
                           {groupLabels[group].description}
                         </p>
                       </div>
@@ -259,7 +259,7 @@ export default function SettingsPage() {
                           />
                           {/* Подпись под тумблером — только на телефоне,
                               где шапки колонок нет. */}
-                          <span className="text-[10px] font-bold uppercase text-slate-400 dark:text-zinc-500 sm:hidden">
+                          <span className="smk-text-label font-bold uppercase text-slate-400 dark:text-zinc-500 sm:hidden">
                             {t.settingsColShow}
                           </span>
                         </span>
@@ -269,7 +269,7 @@ export default function SettingsPage() {
                             onChange={(next) => setPref(group, { sound: next })}
                             label={`${groupLabels[group].title}: ${t.settingsColSound}`}
                           />
-                          <span className="text-[10px] font-bold uppercase text-slate-400 dark:text-zinc-500 sm:hidden">
+                          <span className="smk-text-label font-bold uppercase text-slate-400 dark:text-zinc-500 sm:hidden">
                             {t.settingsColSound}
                           </span>
                         </span>
@@ -290,7 +290,7 @@ export default function SettingsPage() {
                               setPref(group, { soundId: e.target.value });
                               playSound(e.target.value as SoundId);
                             }}
-                            className="smk-field min-w-0 flex-1 px-2.5 py-1.5 text-[11px] text-slate-900 outline-none dark:text-white"
+                            className="smk-field min-w-0 flex-1 px-2.5 py-1.5 smk-text-label text-slate-900 outline-none dark:text-white"
                           >
                             {SOUND_IDS.map((id) => (
                               <option key={id} value={id}>
@@ -388,7 +388,7 @@ export default function SettingsPage() {
                         aria-label={t.settingsFontSize}
                         className="w-full accent-emerald-600"
                       />
-                      <p className="mt-1 text-[10px] leading-relaxed text-slate-400 dark:text-zinc-500">
+                      <p className="mt-1 smk-text-label leading-relaxed text-slate-400 dark:text-zinc-500">
                         {t.settingsFontSizeHint}
                       </p>
                     </div>

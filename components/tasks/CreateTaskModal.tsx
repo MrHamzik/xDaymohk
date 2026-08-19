@@ -330,7 +330,7 @@ export default function CreateTaskModal({
                 role="tab"
                 aria-selected={kind === value}
                 onClick={() => setKind(value)}
-                className={`flex-1 rounded-lg px-2 py-1.5 text-[11px] font-bold transition ${
+                className={`flex-1 rounded-lg px-2 py-1.5 smk-text-label font-bold transition ${
                   kind === value
                     ? 'bg-white text-slate-900 shadow-sm dark:bg-zinc-700 dark:text-white'
                     : 'text-slate-500 hover:text-slate-800 dark:text-zinc-500'
@@ -419,7 +419,7 @@ export default function CreateTaskModal({
                 placeholder="1500"
                 className={fieldClass}
               />
-              <p className="mt-1.5 text-[11px] leading-relaxed text-slate-500 dark:text-zinc-400">
+              <p className="mt-1.5 smk-text-label leading-relaxed text-slate-500 dark:text-zinc-400">
                 {t.taskBudgetHint}
               </p>
             </div>
@@ -440,7 +440,7 @@ export default function CreateTaskModal({
                     key={value}
                     type="button"
                     onClick={() => setPriority(value)}
-                    className={`flex-1 rounded-lg px-2 py-1.5 text-[11px] font-bold transition ${
+                    className={`flex-1 rounded-lg px-2 py-1.5 smk-text-label font-bold transition ${
                       priority === value
                         ? 'bg-white text-slate-900 shadow-sm dark:bg-zinc-700 dark:text-white'
                         : 'text-slate-500 hover:text-slate-800 dark:text-zinc-500'
@@ -453,7 +453,7 @@ export default function CreateTaskModal({
               {/* Полная разбивка: видно, за что платит заказчик и
                   сколько на руки получит исполнитель. */}
               {rewardValue > 0 && (
-                <dl className="mt-2 space-y-1 rounded-xl bg-slate-50 px-3 py-2.5 text-[11px] dark:bg-zinc-800/70">
+                <dl className="mt-2 space-y-1 rounded-xl bg-slate-50 px-3 py-2.5 smk-text-label dark:bg-zinc-800/70">
                   <div className="flex items-center justify-between">
                     <dt className="text-slate-500 dark:text-zinc-400">{t.taskCostReward}</dt>
                     <dd className="font-bold text-slate-800 dark:text-zinc-200">{cost.reward} ₽</dd>
@@ -592,7 +592,7 @@ export default function CreateTaskModal({
                   type="button"
                   onClick={() => setIsMapOpen((open) => !open)}
                   aria-expanded={isMapOpen}
-                  className="mb-1.5 inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:underline dark:text-emerald-400"
+                  className="mb-1.5 inline-flex items-center gap-1 smk-text-label font-bold text-emerald-600 hover:underline dark:text-emerald-400"
                 >
                   <MapPin className="h-3 w-3" />
                   {isMapOpen ? t.hideMap : t.openOnMap}
@@ -659,7 +659,7 @@ export default function CreateTaskModal({
               открывал и не знал, что фильтры вообще есть, — а потом
               удивлялся откликам без рейтинга. Показываем всегда. */}
           <div className={sectionClass}>
-            <h3 className="text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-zinc-400">
+            <h3 className="smk-text-label font-bold uppercase tracking-wide text-slate-500 dark:text-zinc-400">
               {t.taskRequirements}
             </h3>
             <div className="mt-3 space-y-3">

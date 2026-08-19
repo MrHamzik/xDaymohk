@@ -156,7 +156,7 @@ export default function ThemePickerButton() {
           <Link
             href="/settings"
             onClick={() => setIsOpen(false)}
-            className="flex items-center gap-2 border-t border-slate-100 px-3 py-2 text-[11px] font-bold text-slate-600 transition hover:bg-slate-50 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
+            className="flex items-center gap-2 border-t border-slate-100 px-3 py-2 smk-text-label font-bold text-slate-600 transition hover:bg-slate-50 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
           >
             <SettingsIcon className="h-3.5 w-3.5" />
             {t.settingsThemeCreate}

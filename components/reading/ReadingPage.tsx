@@ -126,7 +126,7 @@ export default function ReadingPage({
                   {heading(a)}
                 </span>
                 {lead(a) && (
-                  <span className="smk-meta mt-0.5 block line-clamp-2 text-[11px] leading-snug">
+                  <span className="smk-meta mt-0.5 block line-clamp-2 smk-text-label leading-snug">
                     {lead(a)}
                   </span>
                 )}
@@ -142,7 +142,7 @@ export default function ReadingPage({
         <article className="smk-read">
           <h2 className="smk-read-h1">{heading(active)}</h2>
           {lead(active) && (
-            <p className="mb-3 text-[13px] italic leading-relaxed text-slate-500 dark:text-zinc-400">
+            <p className="mb-3 smk-text-body italic leading-relaxed text-slate-500 dark:text-zinc-400">
               {lead(active)}
             </p>
           )}

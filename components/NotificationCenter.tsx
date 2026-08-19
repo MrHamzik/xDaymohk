@@ -80,7 +80,7 @@ export default function NotificationCenter() {
       >
         <Bell className="h-5 w-5" />
         {hasUnread && (
-          <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[9px] font-black text-white border-2 border-white dark:border-zinc-900 shadow-sm animate-pulse">
+          <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 smk-text-label font-black text-white border-2 border-white dark:border-zinc-900 shadow-sm animate-pulse">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
@@ -149,7 +149,7 @@ export default function NotificationCenter() {
                     key={tab.id}
                     type="button"
                     onClick={() => setActiveTab(tab.id)}
-                    className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-[11px] font-bold transition ${
+                    className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 smk-text-label font-bold transition ${
                       active
                         ? 'bg-emerald-600 text-white shadow-sm'
                         : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700'
@@ -157,7 +157,7 @@ export default function NotificationCenter() {
                   >
                     <Icon className="h-3.5 w-3.5" />
                     {language === 'ce' ? tab.labelCe : tab.labelRu}
-                    <span className={`rounded-full px-1.5 text-[9px] ${active ? 'bg-white/25' : 'bg-white dark:bg-zinc-700'}`}>{count}</span>
+                    <span className={`rounded-full px-1.5 smk-text-label ${active ? 'bg-white/25' : 'bg-white dark:bg-zinc-700'}`}>{count}</span>
                   </button>
                 );
               })}
@@ -203,7 +203,7 @@ export default function NotificationCenter() {
                         <span title={language === 'ce' ? (notification.messageCe || notification.message) : notification.message} className="mt-1 block truncate text-xs text-slate-600 dark:text-zinc-400">
                           {language === 'ce' ? (notification.messageCe || notification.message) : notification.message}
                         </span>
-                        <time className="mt-1 block text-[10px] text-slate-400 dark:text-zinc-500">
+                        <time className="mt-1 block smk-text-label text-slate-400 dark:text-zinc-500">
                           {formatDate(notification.createdAt)}
                         </time>
                       </span>
@@ -212,7 +212,7 @@ export default function NotificationCenter() {
                         onClick={(e) => { e.stopPropagation(); void deleteNotification(notification.id); }}
                         aria-label={language === 'ce' ? 'ДIаяккха' : 'Удалить'}
                         title={language === 'ce' ? 'ДIаяккха' : 'Удалить'}
-                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-red-500 transition hover:bg-red-100 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-950/60 dark:hover:text-red-300"
+                        className="smk-hit flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-red-500 transition hover:bg-red-100 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-950/60 dark:hover:text-red-300"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>

@@ -60,7 +60,7 @@ export default function SidebarNav({ onClose, isAdmin = false }: SidebarNavProps
 
             {/* 3. Section: НАВИГАЦИЯ (Clean flat vertical list rows) */}
             <div className="space-y-0.5">
-              <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-200 px-2 py-1">
+              <span className="block smk-text-label font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-200 px-2 py-1">
                 {language === 'ce' ? 'Навигаци' : 'Навигация'}
               </span>
 
@@ -147,7 +147,7 @@ export default function SidebarNav({ onClose, isAdmin = false }: SidebarNavProps
 
             {/* 4. Section: РЕЛИГИЯ И ИСЛАМ (Clean titles without brackets or "Суры") */}
             <div className="space-y-0.5 border-t border-slate-100 smk-hr pt-2">
-              <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-200 px-2 py-1">
+              <span className="block smk-text-label font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-200 px-2 py-1">
                 {language === 'ce' ? 'Дин а, ислам а' : 'Религия и ислам'}
               </span>
 
@@ -200,7 +200,7 @@ export default function SidebarNav({ onClose, isAdmin = false }: SidebarNavProps
 
             {/* 5. Section: СЕРВИСЫ ДАЙМОХК */}
             <div className="space-y-0.5 border-t border-slate-100 smk-hr pt-2">
-              <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-200 px-2 py-1">
+              <span className="block smk-text-label font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-200 px-2 py-1">
                 {language === 'ce' ? 'Вай сервисаш' : 'Сервисы экосистемы'}
               </span>
 
@@ -253,7 +253,7 @@ export default function SidebarNav({ onClose, isAdmin = false }: SidebarNavProps
             </div>
 
             <div className="space-y-0.5 border-t border-slate-100 smk-hr pt-2">
-              <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-200 px-2 py-1">
+              <span className="block smk-text-label font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-200 px-2 py-1">
                 {language === 'ce' ? 'Кхиндерш' : 'Дополнительно'}
               </span>
               <div className="flex flex-col space-y-0.5">

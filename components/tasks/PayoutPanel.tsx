@@ -79,7 +79,7 @@ export default function PayoutPanel({ taskId, amount }: PayoutPanelProps) {
           <Banknote className="h-3 w-3" />
           {t.taskPayoutTitleShort}
         </h3>
-        <p className="text-[11px] leading-relaxed text-slate-600 dark:text-zinc-400">
+        <p className="smk-text-label leading-relaxed text-slate-600 dark:text-zinc-400">
           {t.taskPayoutCashNote}
         </p>
       </div>
@@ -97,7 +97,7 @@ export default function PayoutPanel({ taskId, amount }: PayoutPanelProps) {
           <Wallet className="h-3 w-3" />
           {t.taskPayoutTitleShort}
         </h3>
-        <p className="text-[11px] leading-relaxed text-slate-600 dark:text-zinc-400">
+        <p className="smk-text-label leading-relaxed text-slate-600 dark:text-zinc-400">
           {t.taskPayoutMissing}
         </p>
       </div>
@@ -154,7 +154,7 @@ export default function PayoutPanel({ taskId, amount }: PayoutPanelProps) {
             <CreditCard className="h-3.5 w-3.5" />
             {t.taskPayoutYooCard}
           </a>
-          <p className="smk-meta mt-1.5 text-[10px] leading-relaxed">
+          <p className="smk-meta mt-1.5 smk-text-label leading-relaxed">
             {t.taskPayoutYooCardNote}
           </p>
 
@@ -167,7 +167,7 @@ export default function PayoutPanel({ taskId, amount }: PayoutPanelProps) {
             <Wallet className="h-3.5 w-3.5" />
             {t.taskPayoutYooWallet}
           </a>
-          <p className="smk-meta mt-1 text-[10px] leading-relaxed">
+          <p className="smk-meta mt-1 smk-text-label leading-relaxed">
             {t.taskPayoutYooWalletNote}
           </p>
         </>
@@ -175,7 +175,7 @@ export default function PayoutPanel({ taskId, amount }: PayoutPanelProps) {
         <>
           {/* Карта и СБП: подставить сумму в приложение банка нельзя,
               поэтому сначала копирование — оно работает всегда. */}
-          <p className="smk-meta mb-1.5 text-[11px] font-semibold">{t.taskPayoutStep1}</p>
+          <p className="smk-meta mb-1.5 smk-text-label font-semibold">{t.taskPayoutStep1}</p>
           <div className="space-y-1.5">
             <CopyRow id="amount" label={t.taskPayoutCopyAmount} value={String(amount)} />
             <CopyRow
@@ -184,13 +184,13 @@ export default function PayoutPanel({ taskId, amount }: PayoutPanelProps) {
               value={requisite}
             />
             {bankId && (
-              <p className="smk-meta px-1 text-[10px]">
+              <p className="smk-meta px-1 smk-text-label">
                 {t.taskPayoutBankLabel} — {bankName(bankId)}
               </p>
             )}
           </div>
 
-          <p className="smk-meta mb-1.5 mt-3 text-[11px] font-semibold">{t.taskPayoutStep2}</p>
+          <p className="smk-meta mb-1.5 mt-3 smk-text-label font-semibold">{t.taskPayoutStep2}</p>
           <a
             href={scheme ?? 'https://www.nspk.ru/'}
             target="_blank"
@@ -200,7 +200,7 @@ export default function PayoutPanel({ taskId, amount }: PayoutPanelProps) {
             <ExternalLink className="h-3.5 w-3.5" />
             {t.taskPayoutOpenBank}
           </a>
-          <p className="smk-meta mt-1.5 text-[10px] leading-relaxed">
+          <p className="smk-meta mt-1.5 smk-text-label leading-relaxed">
             {t.taskPayoutBankNote}
           </p>
         </>

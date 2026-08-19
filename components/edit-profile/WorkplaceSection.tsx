@@ -95,7 +95,7 @@ export default function WorkplaceSection({
           <button
             type="button"
             onClick={() => setShowMap((isShown) => !isShown)}
-            className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 hover:underline dark:text-emerald-400"
+            className="inline-flex items-center gap-1 smk-text-label font-semibold text-emerald-600 hover:underline dark:text-emerald-400"
           >
             <MapPin className="h-3 w-3" />
             {showMap ? t.hideMap : t.showMap}
@@ -169,14 +169,14 @@ export default function WorkplaceSection({
               (админка → «Фильтры» → «Карта»). */}
           {showPlaces && placeCategories.length > 0 && (
             <div className="-mt-1 flex flex-wrap items-center gap-2 px-1">
-              <label htmlFor="workplace-place-category" className="text-[10px] font-bold text-slate-400">
+              <label htmlFor="workplace-place-category" className="smk-text-label font-bold text-slate-400">
                 Категория:
               </label>
               <select
                 id="workplace-place-category"
                 value={placesCategory}
                 onChange={(e) => setPlacesCategory(e.target.value)}
-                className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-bold text-slate-700 outline-none transition focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 smk-text-label font-bold text-slate-700 outline-none transition focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
               >
                 <option value="">Все категории</option>
                 {placeCategories.map((cat) => (

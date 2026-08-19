@@ -170,7 +170,7 @@ export default function HelpPage() {
                   <ChevronDown className={`h-4 w-4 shrink-0 smk-arrow transition ${openId === f.id ? 'rotate-180' : ''}`} />
                 </button>
                 {openId === f.id && (
-                  <div className="smk-read pb-2 text-[13px]">
+                  <div className="smk-read pb-2 smk-text-body">
                     <Prose text={faqA(f)} />
                   </div>
                 )}
@@ -215,7 +215,7 @@ export default function HelpPage() {
               {q.answer && (
                 <>
                   <hr className="smk-orn-soft my-2" />
-                  <div className="smk-read text-[13px]"><Prose text={q.answer} /></div>
+                  <div className="smk-read smk-text-body"><Prose text={q.answer} /></div>
                 </>
               )}
             </article>
@@ -249,7 +249,7 @@ export default function HelpPage() {
                       aria-expanded={isOpen}
                       className="flex min-w-0 flex-1 items-center gap-2 text-left"
                     >
-                      <span className="shrink-0 font-mono text-[11px] font-bold text-slate-500 dark:text-zinc-500">
+                      <span className="shrink-0 font-mono smk-text-label font-bold text-slate-500 dark:text-zinc-500">
                         {shortRequestId(q.id)}
                       </span>
                       <span className="min-w-0 flex-1 truncate text-xs font-bold text-slate-900 dark:text-white">
@@ -286,7 +286,7 @@ export default function HelpPage() {
                   {isOpen && (
                     <div className="mt-2.5">
                       {dispute ? (
-                        <div className="smk-inset px-3 py-2.5 text-[11px]">
+                        <div className="smk-inset px-3 py-2.5 smk-text-label">
                           {dispute.reward && (
                             <p><span className="text-slate-500 dark:text-zinc-500">{L('Награда', 'Мах')}: </span>{dispute.reward}</p>
                           )}
@@ -311,7 +311,7 @@ export default function HelpPage() {
                       {q.answer && (
                         <>
                           <hr className="smk-orn-soft my-2" />
-                          <div className="smk-read text-[13px]"><Prose text={q.answer} /></div>
+                          <div className="smk-read smk-text-body"><Prose text={q.answer} /></div>
                         </>
                       )}
                     </div>
@@ -342,12 +342,12 @@ export default function HelpPage() {
                 {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
                 {L('Отправить', 'ДIадахьийта')}
               </button>
-              <span className="smk-meta text-[10px]">{draft.length}/1000</span>
+              <span className="smk-meta smk-text-label">{draft.length}/1000</span>
             </div>
-            {notice && <p className="smk-meta text-[11px]">{notice}</p>}
+            {notice && <p className="smk-meta smk-text-label">{notice}</p>}
           </form>
         ) : (
-          <p className="smk-sheet-row p-2.5 text-[11px] text-slate-500 dark:text-zinc-500">
+          <p className="smk-sheet-row p-2.5 smk-text-label text-slate-500 dark:text-zinc-500">
             {L('Войдите, чтобы задать вопрос.', 'Хаттар дан профиле чу вала.')}
           </p>
         )}

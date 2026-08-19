@@ -121,7 +121,7 @@ export default function ProfileCard({
 
         <div className="min-w-0 flex-1">
           {/* Имя пишем полностью, без сокращений; не влезло — обрезаем */}
-          <h3 className="smk-title truncate text-[17px] font-bold leading-tight sm:text-xl">
+          <h3 className="smk-title truncate smk-text-display font-bold leading-tight sm:text-xl">
             {profile.fullName}
           </h3>
 
@@ -131,7 +131,7 @@ export default function ProfileCard({
               <span className="smk-rating-value text-sm font-extrabold">
                 {headRating.toFixed(1)}
               </span>
-              <span className="truncate text-[11px] text-slate-500 dark:text-zinc-400">
+              <span className="truncate smk-text-label text-slate-500 dark:text-zinc-400">
                 {profile.isSpecialist
                   ? formatReviews(headCount)
                   : formatCount(headCount, t.cardRatingOne, t.cardRatingFew, t.cardRatingMany)}
@@ -154,7 +154,7 @@ export default function ProfileCard({
         <ProfileBadges profile={profile} adminStatus={profileIsAdmin} showPending={showPending} />
       </div>
 
-      <div className="smk-rows px-3.5 text-[13px]">
+      <div className="smk-rows px-3.5 smk-text-body">
         {/* Строку профессии прячем, если она дословно повторяет бейдж
             «Специалист» рядом с именем — иначе выходило «Специалист
             Специалист». Осмысленные названия («Электрик») остаются. */}
@@ -245,7 +245,7 @@ export default function ProfileCard({
       }`}>
         <div className="min-w-0">
           {profile.certificates.length > 0 ? (
-            <span className="inline-flex min-w-0 items-center gap-1.5 whitespace-nowrap text-[11px] font-bold text-slate-500 dark:text-zinc-400">
+            <span className="inline-flex min-w-0 items-center gap-1.5 whitespace-nowrap smk-text-label font-bold text-slate-500 dark:text-zinc-400">
               <Award className="smk-ico h-3.5 w-3.5" />
               {t.cardDocuments}: {profile.certificates.length}
             </span>
@@ -262,7 +262,7 @@ export default function ProfileCard({
                 event.stopPropagation();
                 onBlock(profile);
               }}
-              className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl bg-red-50 px-3 py-1.5 text-[11px] font-bold text-red-600 transition hover:bg-red-100 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-950/70"
+              className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl bg-red-50 px-3 py-1.5 smk-text-label font-bold text-red-600 transition hover:bg-red-100 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-950/70"
             >
               <Ban className="h-3.5 w-3.5 shrink-0" />
               {t.cardBlock}
@@ -274,7 +274,7 @@ export default function ProfileCard({
                 event.stopPropagation();
                 onReport(profile);
               }}
-              className="smk-btn-gold smk-shine inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap px-3.5 py-1.5 text-[11px]"
+              className="smk-btn-gold smk-shine inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap px-3.5 py-1.5 smk-text-label"
               aria-label={t.cardReportAria}
             >
               <Flag className="h-3.5 w-3.5 shrink-0" />

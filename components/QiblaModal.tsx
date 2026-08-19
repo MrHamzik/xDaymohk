@@ -256,7 +256,7 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
               </p>
             </div>
           </div>
-          <button type="button" onClick={onClose} aria-label="Закрыть" className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400">
+          <button type="button" onClick={onClose} aria-label="Закрыть" className="smk-hit flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -404,19 +404,19 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
 
           <div className="mt-6 grid w-full grid-cols-3 gap-2 text-center">
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-2.5 shadow-[0_2px_10px_-2px_rgba(15,45,60,0.1)] dark:border-zinc-700/60 dark:bg-zinc-900 dark:shadow-[0_2px_10px_-2px_rgba(0,0,0,0.5)]">
-              <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Кибла</p>
-              <p className="text-[14px] font-black text-[#0d7379] dark:text-[#2ba6ad]">{qiblaAngle.toFixed(1)}°</p>
-              <p className="text-[9px] text-slate-500">от севера</p>
+              <p className="smk-text-label font-bold uppercase tracking-wider text-slate-400">Кибла</p>
+              <p className="smk-text-title font-black text-[#0d7379] dark:text-[#2ba6ad]">{qiblaAngle.toFixed(1)}°</p>
+              <p className="smk-text-label text-slate-500">от севера</p>
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-2.5 shadow-[0_2px_10px_-2px_rgba(15,45,60,0.1)] dark:border-zinc-700/60 dark:bg-zinc-900 dark:shadow-[0_2px_10px_-2px_rgba(0,0,0,0.5)]">
-              <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Вы</p>
+              <p className="smk-text-label font-bold uppercase tracking-wider text-slate-400">Вы</p>
               <p
                 ref={headingLabelRef}
-                className="text-[12px] font-black text-slate-900 dark:text-white"
+                className="smk-text-label font-black text-slate-900 dark:text-white"
               >
                 —
               </p>
-              <p className="text-[9px] text-slate-500">
+              <p className="smk-text-label text-slate-500">
                 {mode === 'ready' ? 'компас' : mode === 'needs-calibration' ? 'калибровка' : mode === 'no-permission' ? 'нужно разрешение' : 'нет датчика'}
               </p>
             </div>
@@ -427,10 +427,10 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
                   : 'border-slate-200 bg-slate-50 dark:border-zinc-700/60 dark:bg-zinc-900'
               }`}
             >
-              <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Поворот</p>
+              <p className="smk-text-label font-bold uppercase tracking-wider text-slate-400">Поворот</p>
               <p
                 ref={turnLabelRef}
-                className={`text-[12px] font-black ${
+                className={`smk-text-label font-black ${
                   mode === 'ready'
                     ? 'text-amber-700 dark:text-amber-300'
                     : 'text-slate-500 dark:text-zinc-500'
@@ -438,7 +438,7 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
               >
                 —
               </p>
-              <p className="text-[9px] text-slate-500">
+              <p className="smk-text-label text-slate-500">
                 {mode === 'ready' ? 'повернитесь' : '—'}
               </p>
             </div>
@@ -468,14 +468,14 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
             <button
               type="button"
               onClick={handleCalibrate}
-              className="mt-3 w-full rounded-xl bg-slate-100 px-4 py-2 text-[11px] font-bold text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+              className="mt-3 w-full rounded-xl bg-slate-100 px-4 py-2 smk-text-label font-bold text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
             >
               {language === 'ce' ? 'Цакалибровкха' : 'Перекалибровать'}
             </button>
           )}
 
           {mode === 'no-support' && (
-            <p className="mt-3 rounded-xl border border-slate-200 bg-slate-100 p-2 text-center text-[11px] text-slate-500 shadow-[0_2px_10px_-2px_rgba(15,45,60,0.1)] dark:border-zinc-700/60 dark:bg-zinc-800 dark:text-zinc-400 dark:shadow-[0_2px_10px_-2px_rgba(0,0,0,0.5)]">
+            <p className="mt-3 rounded-xl border border-slate-200 bg-slate-100 p-2 text-center smk-text-label text-slate-500 shadow-[0_2px_10px_-2px_rgba(15,45,60,0.1)] dark:border-zinc-700/60 dark:bg-zinc-800 dark:text-zinc-400 dark:shadow-[0_2px_10px_-2px_rgba(0,0,0,0.5)]">
               На этом устройстве нет датчика компаса. Стрелка показывает статичное направление на Каабу: {qiblaAngle.toFixed(1)}° от севера.
             </p>
           )}

@@ -253,7 +253,7 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
               </div>
               <div>
                 <h2 className="text-sm font-bold text-slate-900 dark:text-white">{profile ? t.editProfileTitle : t.newProfileTitle}</h2>
-                <p className="text-[11px] text-slate-500 dark:text-zinc-500">{profile ? t.editProfileSubtitle : t.newProfileSubtitle}</p>
+                <p className="smk-text-label text-slate-500 dark:text-zinc-500">{profile ? t.editProfileSubtitle : t.newProfileSubtitle}</p>
               </div>
             </div>
             <button onClick={onClose} aria-label="Закрыть форму" className="smk-act flex h-7 w-7 items-center justify-center"><X className="h-3.5 w-3.5" /></button>
@@ -266,7 +266,7 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
                 <div>
                   <p className="font-bold text-slate-900 dark:text-white">{account.fullName}</p>
                   <p className="mt-1 text-xs text-slate-500 dark:text-zinc-500">{account.phone || t.phoneNotSet}</p>
-                  {!profile?.isPersonal && <p className="mt-0.5 text-[11px] text-emerald-700 dark:text-emerald-400">{t.profileInfoUsed}</p>}
+                  {!profile?.isPersonal && <p className="mt-0.5 smk-text-label text-emerald-700 dark:text-emerald-400">{t.profileInfoUsed}</p>}
                 </div>
               </section>
             ) : (
@@ -276,7 +276,7 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
             {!profile?.isPersonal && !profile?.id && (
               <div className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 dark:border-emerald-900 dark:bg-emerald-950/30">
                 <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-700 dark:text-emerald-300" />
-                <p className="text-[11px] leading-relaxed text-emerald-800 dark:text-emerald-200">
+                <p className="smk-text-label leading-relaxed text-emerald-800 dark:text-emerald-200">
                   {t.personalProfileExists}
                 </p>
               </div>
@@ -337,7 +337,7 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
 
                 <label className="flex cursor-pointer items-start gap-2 border-t border-slate-200/80 pt-2.5 text-xs dark:border-zinc-800">
                   <input type="checkbox" checked={requestVerification} onChange={(event) => setRequestVerification(event.target.checked)} className="mt-0.5 h-3.5 w-3.5 rounded text-emerald-600 focus:ring-emerald-500" />
-                  <span><span className="block font-semibold text-slate-700 dark:text-zinc-300">{t.requestVerificationLabel}</span><span className="mt-0.5 block text-[10px] text-slate-500 dark:text-zinc-500">{t.requestVerificationHint}</span></span>
+                  <span><span className="block font-semibold text-slate-700 dark:text-zinc-300">{t.requestVerificationLabel}</span><span className="mt-0.5 block smk-text-label text-slate-500 dark:text-zinc-500">{t.requestVerificationHint}</span></span>
                 </label>
               </section>
             )}
@@ -352,14 +352,14 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
             <div>
               <label htmlFor="profile-bio" className="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-400">{t.bioLabel}</label>
               <textarea id="profile-bio" rows={3} maxLength={MAX_BIO_LENGTH} value={bio} onChange={(event) => setBio(event.target.value)} placeholder={t.bioPlaceholder} className="w-full resize-y break-words [overflow-wrap:anywhere] smk-field px-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:text-white" />
-              <p className="mt-0.5 text-right text-[10px] text-slate-400">{bio.length}/{MAX_BIO_LENGTH}</p>
+              <p className="mt-0.5 text-right smk-text-label text-slate-400">{bio.length}/{MAX_BIO_LENGTH}</p>
             </div>
 
             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
               <div>
                 <div className="mb-1 flex items-center justify-between gap-2">
                   <label htmlFor="profile-whatsapp" className="block text-xs font-semibold text-slate-700 dark:text-zinc-400">WhatsApp</label>
-                  <label className="flex cursor-pointer items-center gap-1 text-[11px] text-emerald-700 dark:text-emerald-400"><input type="checkbox" checked={sameAsPhoneWhatsapp} onChange={(event) => { setSameAsPhoneWhatsapp(event.target.checked); if (event.target.checked && account) setWhatsappDigits(extractPhoneDigits(account.phone)); }} className="h-3 w-3 rounded text-emerald-600 focus:ring-emerald-500" />{t.useCommonNumber}</label>
+                  <label className="flex cursor-pointer items-center gap-1 smk-text-label text-emerald-700 dark:text-emerald-400"><input type="checkbox" checked={sameAsPhoneWhatsapp} onChange={(event) => { setSameAsPhoneWhatsapp(event.target.checked); if (event.target.checked && account) setWhatsappDigits(extractPhoneDigits(account.phone)); }} className="h-3 w-3 rounded text-emerald-600 focus:ring-emerald-500" />{t.useCommonNumber}</label>
                 </div>
                 <PhoneField id="profile-whatsapp" value={whatsappDigits} onChange={handleWhatsappChange} />
               </div>

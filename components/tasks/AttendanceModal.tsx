@@ -126,7 +126,7 @@ export default function AttendanceModal({
             <h2 id="attendance-title" className="truncate text-sm font-extrabold text-slate-900 dark:text-white">
               {t.attendanceTitle}
             </h2>
-            <p className="truncate text-[11px] text-slate-500 dark:text-zinc-500">{task.title}</p>
+            <p className="truncate smk-text-label text-slate-500 dark:text-zinc-500">{task.title}</p>
           </div>
           <button
             type="button"
@@ -139,7 +139,7 @@ export default function AttendanceModal({
         </div>
 
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
-          <p className="rounded-xl bg-slate-50 px-3 py-2 text-[11px] text-slate-600 dark:bg-zinc-800/60 dark:text-zinc-400">
+          <p className="rounded-xl bg-slate-50 px-3 py-2 smk-text-label text-slate-600 dark:bg-zinc-800/60 dark:text-zinc-400">
             {t.attendanceHint}
           </p>
 
@@ -166,7 +166,7 @@ export default function AttendanceModal({
                     <p className="truncate text-xs font-bold text-slate-900 dark:text-white">
                       {p.fullName || t.attendanceResident}
                     </p>
-                    <p className="text-[10px] text-slate-500 dark:text-zinc-500">
+                    <p className="smk-text-label text-slate-500 dark:text-zinc-500">
                       ★ {(p.rating ?? 0) > 0 ? p.rating?.toFixed(1) : '—'} · {t.attendanceDoneCount}: {p.tasksDoneCount ?? 0}
                     </p>
                   </div>
@@ -175,7 +175,7 @@ export default function AttendanceModal({
                     role="switch"
                     aria-checked={row.attended}
                     onClick={() => patch(p.userId, { attended: !row.attended })}
-                    className={`flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-bold transition ${
+                    className={`flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1.5 smk-text-label font-bold transition ${
                       row.attended
                         ? 'bg-emerald-600 text-white hover:bg-emerald-700'
                         : 'bg-slate-200 text-slate-600 hover:bg-slate-300 dark:bg-zinc-700 dark:text-zinc-300'
@@ -189,7 +189,7 @@ export default function AttendanceModal({
                 {row.attended && (
                   <div className="mt-3 space-y-2 border-t border-emerald-200/60 pt-2.5 dark:border-emerald-900/60">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                      <span className="smk-text-label font-bold uppercase tracking-wide text-slate-500">
                         {t.attendanceRating}
                       </span>
                       <div className="flex gap-0.5">
@@ -215,7 +215,7 @@ export default function AttendanceModal({
                     {task.isPaid && (
                       <div>
                         <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                          <span className="smk-text-label font-bold uppercase tracking-wide text-slate-500">
                             {t.attendanceBonus} +{row.bonusPercent}%
                           </span>
                           <span className="text-xs font-extrabold text-emerald-700 dark:text-emerald-400">

@@ -87,7 +87,7 @@ export default function PayoutSettings() {
   if (!account) return null;
 
   const field = 'w-full rounded-xl bg-slate-100/80 px-3 py-2.5 text-xs text-slate-900 outline-none transition focus:ring-2 focus:ring-emerald-500/30 dark:bg-zinc-800 dark:text-white';
-  const label = 'mb-1 block text-[11px] font-bold text-slate-600 dark:text-zinc-400';
+  const label = 'mb-1 block smk-text-label font-bold text-slate-600 dark:text-zinc-400';
 
   /**
    * Переключение тумблера сохраняем СРАЗУ, не дожидаясь кнопки
@@ -130,7 +130,7 @@ export default function PayoutSettings() {
       />
 
       {!value.isEnabled && !isLoading && (
-        <p className="smk-sheet-row p-3 text-[11px] leading-relaxed text-slate-600 dark:text-zinc-400">
+        <p className="smk-sheet-row p-3 smk-text-label leading-relaxed text-slate-600 dark:text-zinc-400">
           {t.payoutDisabledHint}
         </p>
       )}
@@ -171,7 +171,7 @@ export default function PayoutSettings() {
                 </select>
               </div>
             </div>
-            <p className="smk-meta mt-1.5 text-[10px] leading-relaxed">{t.payoutSbpHint}</p>
+            <p className="smk-meta mt-1.5 smk-text-label leading-relaxed">{t.payoutSbpHint}</p>
           </div>
 
           {/* Карта */}
@@ -203,7 +203,7 @@ export default function PayoutSettings() {
                 </select>
               </div>
             </div>
-            <p className="smk-meta mt-1.5 text-[10px] leading-relaxed">{t.payoutCardHint}</p>
+            <p className="smk-meta mt-1.5 smk-text-label leading-relaxed">{t.payoutCardHint}</p>
           </div>
 
           {/* ЮMoney */}
@@ -218,7 +218,7 @@ export default function PayoutSettings() {
               placeholder="410011234567890"
               className={field}
             />
-            <p className="smk-meta mt-1.5 text-[10px] leading-relaxed">{t.payoutWalletHint}</p>
+            <p className="smk-meta mt-1.5 smk-text-label leading-relaxed">{t.payoutWalletHint}</p>
           </div>
 
           {error && (
@@ -238,7 +238,7 @@ export default function PayoutSettings() {
               {t.save}
             </button>
             {saved && (
-              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+              <span className="inline-flex items-center gap-1 smk-text-label font-bold text-emerald-600 dark:text-emerald-400">
                 <Check className="h-3.5 w-3.5" />
                 {t.payoutSaved}
               </span>

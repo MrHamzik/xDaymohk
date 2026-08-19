@@ -121,13 +121,13 @@ export default function LetterPreview({
           <Icon className="h-5 w-5" />
         </div>
         <div className="min-w-0 flex-1">
-          <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-slate-500 shadow-sm dark:bg-zinc-800 dark:text-zinc-300">
+          <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 smk-text-label font-bold text-slate-500 shadow-sm dark:bg-zinc-800 dark:text-zinc-300">
             <Mail className="h-2.5 w-2.5" />
             {categoryLabel}
           </span>
           {/* «От: <имя>» — в ряд (метка слева, имя справа от неё) */}
           <div className="mt-1.5 flex flex-row items-center gap-1.5 rounded-xl bg-slate-100 px-2.5 py-1.5 dark:bg-zinc-800">
-            <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
+            <span className="shrink-0 smk-text-label font-bold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
               {fromLabel}
             </span>
             {edit?.sender && onSenderChange ? (
@@ -136,10 +136,10 @@ export default function LetterPreview({
                 onChange={(e) => onSenderChange(e.target.value)}
                 aria-label={fromLabel}
                 placeholder="Даймохк"
-                className={`w-full min-w-0 truncate bg-transparent text-[12px] font-bold text-slate-900 placeholder:text-slate-400 dark:text-white dark:placeholder:text-zinc-500 ${EDIT_AFFORDANCE}`}
+                className={`w-full min-w-0 truncate bg-transparent smk-text-label font-bold text-slate-900 placeholder:text-slate-400 dark:text-white dark:placeholder:text-zinc-500 ${EDIT_AFFORDANCE}`}
               />
             ) : (
-              <span className="truncate text-[12px] font-bold text-slate-900 dark:text-white">
+              <span className="truncate smk-text-label font-bold text-slate-900 dark:text-white">
                 {sender || 'Даймохк'}
               </span>
             )}
@@ -151,7 +151,7 @@ export default function LetterPreview({
       {/* Тело письма: разделители между блоками */}
       <div className="p-5">
         <div className="pb-3">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+          <p className="smk-text-label font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
             {themeLabel}
           </p>
           {edit?.title && onTitleChange ? (
@@ -170,7 +170,7 @@ export default function LetterPreview({
         <div className="border-t border-dashed smk-hr" />
 
         <div className="py-3">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+          <p className="smk-text-label font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
             {textLabel}
           </p>
           {edit?.message && onMessageChange ? (
@@ -190,12 +190,12 @@ export default function LetterPreview({
         <div className="border-t border-dashed smk-hr" />
 
         <div className="flex items-center justify-between pt-3">
-          <span className="flex items-center gap-1 text-[11px] text-slate-400 dark:text-zinc-500">
+          <span className="flex items-center gap-1 smk-text-label text-slate-400 dark:text-zinc-500">
             <CheckCheck className="h-3.5 w-3.5" />
             {isRead ? readLabel : unreadLabel}
           </span>
           {createdAt && (
-            <time className="text-[11px] font-medium text-slate-400 dark:text-zinc-500">
+            <time className="smk-text-label font-medium text-slate-400 dark:text-zinc-500">
               {formatDate(createdAt)}
             </time>
           )}

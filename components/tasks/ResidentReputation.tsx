@@ -94,20 +94,20 @@ export default function ResidentReputation({ ownerId }: ResidentReputationProps)
               <Avatar src={review.authorAvatarUrl} className="h-6 w-6 shrink-0 rounded-full object-cover" />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="truncate text-[11px] font-bold text-slate-900 dark:text-white">
+                  <p className="truncate smk-text-label font-bold text-slate-900 dark:text-white">
                     {review.authorName || t.taskCustomerDefault}
                   </p>
-                  <span className="flex shrink-0 items-center gap-0.5 text-[11px] font-bold text-amber-600 dark:text-amber-400">
+                  <span className="flex shrink-0 items-center gap-0.5 smk-text-label font-bold text-amber-600 dark:text-amber-400">
                     <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
                     {review.rating.toFixed(1)}
                   </span>
                 </div>
                 {/* Роль показывает, в каком качестве человека оценили */}
-                <p className="smk-meta text-[10px]">
+                <p className="smk-meta smk-text-label">
                   {review.targetRole === 'customer' ? t.reputationAsCustomer : t.reputationAsExecutor}
                 </p>
                 {review.text && (
-                  <p className="mt-1 break-words text-[11px] leading-relaxed text-slate-600 dark:text-zinc-400">
+                  <p className="mt-1 break-words smk-text-label leading-relaxed text-slate-600 dark:text-zinc-400">
                     {review.text}
                   </p>
                 )}
@@ -120,7 +120,7 @@ export default function ResidentReputation({ ownerId }: ResidentReputationProps)
         {/* Все оценки без текста — показывать в ленте нечего, но сам факт
             обратной связи отразить нужно. */}
         {!isLoading && withText.length === 0 && (reviews?.length ?? 0) > 0 && (
-          <p className="smk-meta py-1 text-center text-[11px]">
+          <p className="smk-meta py-1 text-center smk-text-label">
             {t.reputationNoComments}
           </p>
         )}
@@ -129,7 +129,7 @@ export default function ResidentReputation({ ownerId }: ResidentReputationProps)
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
-            className="w-full rounded-lg py-1.5 text-[11px] font-bold text-emerald-700 transition hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
+            className="w-full rounded-lg py-1.5 smk-text-label font-bold text-emerald-700 transition hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
           >
             {expanded ? t.reputationCollapse : `${t.reputationShowAll} (${withText.length})`}
           </button>

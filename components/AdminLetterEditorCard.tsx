@@ -170,7 +170,7 @@ export default function AdminLetterEditorCard({
       {!collapsed && (
         <>
           <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
-            <p className="text-[11px] text-slate-500 dark:text-zinc-500">{hint}</p>
+            <p className="smk-text-label text-slate-500 dark:text-zinc-500">{hint}</p>
             <div className="flex items-center gap-1.5">
               {/* Переключатель языка превью: RU / CE */}
               <div className="flex rounded-lg border border-slate-200 bg-slate-50 p-0.5 dark:border-zinc-700 dark:bg-zinc-900">
@@ -179,7 +179,7 @@ export default function AdminLetterEditorCard({
                     key={l}
                     type="button"
                     onClick={() => onLangChange(l)}
-                    className={`rounded-md px-2 py-1 text-[10px] font-bold uppercase transition ${lang === l ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-zinc-400 dark:hover:text-zinc-200'}`}
+                    className={`rounded-md px-2 py-1 smk-text-label font-bold uppercase transition ${lang === l ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-zinc-400 dark:hover:text-zinc-200'}`}
                   >
                     {l}
                   </button>
@@ -189,7 +189,7 @@ export default function AdminLetterEditorCard({
               <button
                 type="button"
                 onClick={onTranslate}
-                className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2 py-1 text-[10px] font-bold text-white transition hover:bg-emerald-700"
+                className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2 py-1 smk-text-label font-bold text-white transition hover:bg-emerald-700"
                 title={appCe ? 'Автоперевод (нохчийн → оьрсийн)' : 'Автоперевод (русский → чеченский)'}
               >
                 <Languages className="h-3 w-3" />

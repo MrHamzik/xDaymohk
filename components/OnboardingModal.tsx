@@ -357,7 +357,7 @@ export default function OnboardingModal() {
         {step === 'guide' && (
           <div className="relative px-6 pb-6 pt-10">
             <div className="mb-4 flex items-center gap-3">
-              <button type="button" onClick={() => setStep('welcome')} className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-300" aria-label="Назад">
+              <button type="button" onClick={() => setStep('welcome')} className="smk-hit flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-300" aria-label="Назад">
                 <ArrowLeft className="h-4 w-4" />
               </button>
               <h2 className="text-lg font-black text-slate-900 dark:text-white">{ce ? 'Руководство' : 'Руководство'}</h2>
@@ -369,7 +369,7 @@ export default function OnboardingModal() {
                   <span className="text-lg">{s.emoji}</span>
                   <div className="min-w-0">
                     <p className="text-xs font-bold text-slate-900 dark:text-white">{s.title}</p>
-                    <p className="text-[10px] text-slate-500 dark:text-zinc-400">{s.desc}</p>
+                    <p className="smk-text-label text-slate-500 dark:text-zinc-400">{s.desc}</p>
                   </div>
                 </div>
               ))}
@@ -384,7 +384,7 @@ export default function OnboardingModal() {
         {step === 'consent' && (
           <div className="relative px-6 pb-6 pt-10">
             <div className="mb-4 flex items-center gap-3">
-              <button type="button" onClick={() => setStep('welcome')} className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-300" aria-label="Назад">
+              <button type="button" onClick={() => setStep('welcome')} className="smk-hit flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-300" aria-label="Назад">
                 <ArrowLeft className="h-4 w-4" />
               </button>
               <h2 className="text-lg font-black text-slate-900 dark:text-white">{ce ? 'Бакъо' : 'Согласие'}</h2>
@@ -407,7 +407,7 @@ export default function OnboardingModal() {
               )}
             </p>
             <button type="button" onClick={() => void handleGoogleAuth()} className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-zinc-800/60 dark:bg-zinc-800 dark:text-white">
-              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white text-[11px] font-black text-blue-600">G</span>
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white smk-text-label font-black text-blue-600">G</span>
               {ce ? 'Google чуйаха' : 'Войти через Google'}
             </button>
             {error && <p className="smk-note smk-note-danger mt-3 px-3 py-2">{error}</p>}
@@ -417,7 +417,7 @@ export default function OnboardingModal() {
         {step === 'profile' && (
           <form onSubmit={handleSubmitProfile} className="relative px-6 pb-6 pt-10">
             <div className="mb-4 flex items-center gap-3">
-              <button type="button" onClick={backFromProfile} className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-300" aria-label="Назад">
+              <button type="button" onClick={backFromProfile} className="smk-hit flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-300" aria-label="Назад">
                 <ArrowLeft className="h-4 w-4" />
               </button>
               <h2 className="text-lg font-black text-slate-900 dark:text-white">{ce ? 'Хьайн анкета' : 'Ваш профиль'}</h2>
@@ -428,7 +428,7 @@ export default function OnboardingModal() {
             <div className="max-h-[52vh] space-y-3 overflow-y-auto pr-1 no-scrollbar">
               {/* Аватарка */}
               <div>
-                <label className="mb-1 block text-[11px] font-bold text-slate-500 dark:text-zinc-400">{ce ? 'Сурт' : 'Аватарка'}</label>
+                <label className="mb-1 block smk-text-label font-bold text-slate-500 dark:text-zinc-400">{ce ? 'Сурт' : 'Аватарка'}</label>
                 <div className="flex items-center gap-3">
                   <img src={avatarUrl || '/icon.png'} alt="" className="h-14 w-14 rounded-2xl object-cover" />
                   <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
@@ -438,15 +438,15 @@ export default function OnboardingModal() {
                 </div>
               </div>
               <div>
-                <label className="mb-1 block text-[11px] font-bold text-slate-500 dark:text-zinc-400">Имя / ЦIе *</label>
+                <label className="mb-1 block smk-text-label font-bold text-slate-500 dark:text-zinc-400">Имя / ЦIе *</label>
                 <input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder={ce ? 'Имам' : 'Имя'} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
               </div>
               <div>
-                <label className="mb-1 block text-[11px] font-bold text-slate-500 dark:text-zinc-400">Фамилия / Фамили *</label>
+                <label className="mb-1 block smk-text-label font-bold text-slate-500 dark:text-zinc-400">Фамилия / Фамили *</label>
                 <input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder={ce ? 'Хьадаев' : 'Фамилия'} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
               </div>
               <div>
-                <label className="mb-1 block text-[11px] font-bold text-slate-500 dark:text-zinc-400">Пол / Стен-боьршалла</label>
+                <label className="mb-1 block smk-text-label font-bold text-slate-500 dark:text-zinc-400">Пол / Стен-боьршалла</label>
                 <select value={gender} onChange={(e) => setGender(e.target.value)} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
                   <option value="">—</option>
                   <option value="male">{ce ? 'Къан' : 'Мужской'}</option>
@@ -454,35 +454,35 @@ export default function OnboardingModal() {
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-[11px] font-bold text-slate-500 dark:text-zinc-400">Дата рождения / Вин терахь</label>
+                <label className="mb-1 block smk-text-label font-bold text-slate-500 dark:text-zinc-400">Дата рождения / Вин терахь</label>
                 <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
               </div>
               <div>
-                <label className="mb-1 block text-[11px] font-bold text-slate-500 dark:text-zinc-400">Телефон / Телефон</label>
+                <label className="mb-1 block smk-text-label font-bold text-slate-500 dark:text-zinc-400">Телефон / Телефон</label>
                 <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+7 (___) ___-__-__" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
               </div>
               <div>
-                <label className="mb-1 block text-[11px] font-bold text-slate-500 dark:text-zinc-400">{ce ? 'Адрес / Адрес' : 'Адрес (населённый пункт)'}</label>
+                <label className="mb-1 block smk-text-label font-bold text-slate-500 dark:text-zinc-400">{ce ? 'Адрес / Адрес' : 'Адрес (населённый пункт)'}</label>
                 <input value={settlement} onChange={(e) => setSettlement(e.target.value)} placeholder={ce ? 'Даймохк' : 'Даймохк'} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
               </div>
               <div>
-                <label className="mb-1 block text-[11px] font-bold text-slate-500 dark:text-zinc-400">Telegram</label>
+                <label className="mb-1 block smk-text-label font-bold text-slate-500 dark:text-zinc-400">Telegram</label>
                 <input value={telegram} onChange={(e) => setTelegram(e.target.value)} placeholder="@username" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
               </div>
               <div>
-                <label className="mb-1 block text-[11px] font-bold text-slate-500 dark:text-zinc-400">WhatsApp</label>
+                <label className="mb-1 block smk-text-label font-bold text-slate-500 dark:text-zinc-400">WhatsApp</label>
                 <input value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="+7 (___) ___-__-__" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
-                <label className="mt-1.5 flex cursor-pointer items-center gap-2 text-[11px] font-bold text-slate-600 dark:text-zinc-300">
+                <label className="mt-1.5 flex cursor-pointer items-center gap-2 smk-text-label font-bold text-slate-600 dark:text-zinc-300">
                   <input type="checkbox" checked={whatsappUsePhone} onChange={(e) => setWhatsappUsePhone(e.target.checked)} className="h-3.5 w-3.5 rounded text-emerald-600" />
                   {ce ? 'Дерригчура телефон лелае' : 'Использовать общий номер (телефон)'}
                 </label>
               </div>
-              <label className="flex cursor-pointer items-center gap-2 text-[11px] font-bold text-slate-600 dark:text-zinc-300">
+              <label className="flex cursor-pointer items-center gap-2 smk-text-label font-bold text-slate-600 dark:text-zinc-300">
                 <input type="checkbox" checked={hidePhone} onChange={(e) => setHidePhone(e.target.checked)} className="h-3.5 w-3.5 rounded text-emerald-600" />
                 {ce ? 'Сан номер ма гайта' : 'Не показывать мой номер'}
               </label>
               <div>
-                <label className="mb-1 block text-[11px] font-bold text-slate-500 dark:text-zinc-400">{ce ? 'Хьоца лаьцна' : 'О себе'}</label>
+                <label className="mb-1 block smk-text-label font-bold text-slate-500 dark:text-zinc-400">{ce ? 'Хьоца лаьцна' : 'О себе'}</label>
                 <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={3} placeholder={ce ? 'Хьайн хьокъехь...' : 'Пару слов о себе…'} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
               </div>
               {(whatsapp || telegram) && (

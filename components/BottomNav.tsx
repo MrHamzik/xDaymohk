@@ -31,7 +31,7 @@ export default function BottomNav({ onOpenMenu, onOpenCreate }: BottomNavProps) 
           className="flex flex-col items-center justify-center rounded-2xl py-1 text-slate-500 transition hover:text-slate-900 active:scale-95 dark:text-zinc-500 dark:hover:text-white"
         >
           <Menu className="mb-0.5 h-5 w-5" />
-          <span className="text-[11px] font-semibold">{t.menu}</span>
+          <span className="smk-text-label font-semibold">{t.menu}</span>
         </button>
 
         {/* 2. Catalog — каталог живёт на /catalog (главная — отдельная landing) */}
@@ -44,7 +44,7 @@ export default function BottomNav({ onOpenMenu, onOpenCreate }: BottomNavProps) 
           }`}
         >
           <Users className="mb-0.5 h-5 w-5" />
-          <span className="text-[11px] font-semibold">{t.catalog}</span>
+          <span className="smk-text-label font-semibold">{t.catalog}</span>
         </Link>
 
         {/* 3. Center Elevated Gradient Plus Button */}
@@ -70,7 +70,7 @@ export default function BottomNav({ onOpenMenu, onOpenCreate }: BottomNavProps) 
           }`}
         >
           <MapPin className="mb-0.5 h-5 w-5" />
-          <span className="text-[11px] font-semibold">{t.map}</span>
+          <span className="smk-text-label font-semibold">{t.map}</span>
         </Link>
 
         {/* 5. Главная — лежит на "/" (роута /home не существует).
@@ -88,7 +88,7 @@ export default function BottomNav({ onOpenMenu, onOpenCreate }: BottomNavProps) 
           <div className="mb-0.5 h-5 w-5 flex items-center justify-center">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
           </div>
-          <span className="text-[11px] font-semibold">{t.navMain}</span>
+          <span className="smk-text-label font-semibold">{t.navMain}</span>
         </Link>
       </div>
     </nav>

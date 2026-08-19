@@ -631,14 +631,21 @@ html.dark .smk-price-teal {
 
 :root {
   /* --- Золото (светлая тема) ---------------------------------------------
-     Яркая янтарная гамма: на белом фоне приглушённая охра выглядела
-     грязной. --smk-gold-rgb нужен отдельно, чтобы задавать прозрачность
-     через rgb(var(--smk-gold-rgb) / a) — без него пришлось бы держать
-     параллельный набор hex-констант. */
-  --smk-gold: #ffae00;
+     Светлая латунь, не охра: #e7b653 / #e5a539. Тёмные «грязные» тона
+     на белом читались как пятно. --smk-gold-rgb нужен отдельно, чтобы
+     задавать прозрачность через rgb(var(--smk-gold-rgb) / a). */
+  --smk-gold: #e7b653;
   --smk-gold-soft: #ffedc4;
-  --smk-gold-deep: #ffcd6d;
-  --smk-gold-rgb: 255 174 0;
+  --smk-gold-deep: #e5a539;
+  --smk-gold-rgb: 231 182 83;
+
+  /* --- Шкала шрифтов -----------------------------------------------------
+     Четыре роли вместо россыпи text-[8px]…text-[17px]. rem, чтобы
+     ползунок масштаба в настройках двигал и их. */
+  --smk-fs-label: 0.75rem;
+  --smk-fs-body: 0.8125rem;
+  --smk-fs-title: 0.9375rem;
+  --smk-fs-display: 1.0625rem;
 
   /* --- Поверхности СВЕТЛОЙ темы -------------------------------------------
      Здесь именно светлые значения. Раньше в этом блоке лежали тёмные
@@ -719,6 +726,11 @@ html.dark .smk-price-teal {
   --smk-note-success: #1e7155;
   --smk-note-success-bg: #bff7e4;
 }
+
+.smk-text-label { font-size: var(--smk-fs-label); }
+.smk-text-body { font-size: var(--smk-fs-body); }
+.smk-text-title { font-size: var(--smk-fs-title); }
+.smk-text-display { font-size: var(--smk-fs-display); }
 
 /* --- Полотно карточки ------------------------------------------------------ */
 .smk-lux {
@@ -876,7 +888,7 @@ html.dark .smk-ring {
      упирался в края. Воздуха по вертикали нужно больше, чем кажется:
      заглавные буквы кириллицы выше латиницы. */
   padding: 0.25rem 0.5rem;
-  font-size: 10px;
+  font-size: var(--smk-fs-label);
   font-weight: 700;
   line-height: 1.35;
   white-space: nowrap;
@@ -922,8 +934,7 @@ html.smk-themed .bg-white {
    Эти три класса собирают повторяющиеся элементы модалок в одном
    месте и читают переменные темы. */
 .smk-sheet-label {
-  /* 12px: подписи набирались 10px и на телефоне читались с трудом. */
-  font-size: 12px;
+  font-size: var(--smk-fs-label);
   font-weight: 700;
   line-height: 1.3;
   text-transform: uppercase;
@@ -1552,18 +1563,11 @@ html.dark .smk-rule {
   flex: none;
 }
 
-/* Текст и иконка всегда белые: на золотом градиенте тёмная надпись
-   читалась плохо. В тёмной теме кнопка нейтрально-серая. */
+/* На светлой латуни белая надпись даёт контраст ~1.9. Чернила тёмные.
+   В тёмной теме кнопка стальная — там текст белый. */
 .smk-btn-gold {
   background: linear-gradient(100deg, var(--smk-gold-deep), var(--smk-gold));
-  /* Текст всегда белый — как надписи на четырёх цветных кнопках
-     бокового меню. Это фирменный вид: кнопка действия читается
-     одинаково во всех темах.
-
-     Раньше цвет брался из --smk-surface (слот «шапка и меню»): на
-     тёмных темах он почти чёрный, и надпись пропадала на золотом
-     фоне. */
-  color: #ffffff;
+  color: #3a2810;
   font-weight: 700;
   border-radius: 0.75rem;
   box-shadow: 0 6px 16px -8px rgb(var(--smk-gold-rgb) / 0.55);
@@ -1571,6 +1575,7 @@ html.dark .smk-rule {
 }
 html.dark .smk-btn-gold {
   background: linear-gradient(100deg, var(--smk-steel-a), var(--smk-steel-c));
+  color: #ffffff;
   box-shadow: 0 6px 16px -8px rgb(var(--smk-shadow-rgb) / 0.8);
 }
 .smk-btn-gold:hover { filter: brightness(1.08); }
@@ -1627,7 +1632,7 @@ html.dark .group:hover .smk-arrow { color: var(--smk-muted-bright); }
   gap: 0.3rem;
   padding: 0.45rem 0.25rem;
   border-radius: 0.55rem;
-  font-size: 11px;
+  font-size: var(--smk-fs-label);
   font-weight: 700;
   line-height: 1;
   color: var(--smk-muted, #94a3b8);
@@ -1641,7 +1646,7 @@ html.dark .group:hover .smk-arrow { color: var(--smk-muted-bright); }
 /* Счётчик рядом с названием вкладки: та же строка, но тише основного
    текста — цифра не должна спорить со словом. */
 .smk-seg-num {
-  font-size: 10px;
+  font-size: var(--smk-fs-label);
   font-weight: 700;
   opacity: 0.65;
 }
@@ -1682,9 +1687,26 @@ html.dark .group:hover .smk-arrow { color: var(--smk-muted-bright); }
   font-variant-numeric: tabular-nums;
 }
 .smk-act {
+  position: relative;
   color: var(--smk-icon);
   border-radius: 9999px;
   transition: color 0.16s ease, background-color 0.16s ease;
+}
+/* Зона нажатия 44×44, иконка визуально прежняя. Псевдоэлемент не
+   рисуется — только расширяет hit-testing, чтобы палец попадал в
+   «карандаш» и «корзину» рядом. */
+.smk-act::after,
+.smk-hit::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
+}
+.smk-hit {
+  position: relative;
 }
 .smk-act:hover:not(:disabled) {
   color: var(--color-emerald-600);
@@ -1909,7 +1931,7 @@ html.dark .group:hover .smk-arrow { color: var(--smk-muted-bright); }
   justify-content: center;
   border-radius: 0.6rem;
   background: var(--smk-card-inset);
-  font-size: 11px;
+  font-size: var(--smk-fs-label);
   font-weight: 800;
   color: var(--smk-gold-deep);
 }
@@ -2220,7 +2242,7 @@ textarea.smk-field:focus {
      !important нужен против утилит Tailwind (font-semibold,
      text-[11px]) — у них та же специфичность, и без него порядок
      правил в бандле решал бы, кто победит. */
-  font-size: 12px !important;
+  font-size: var(--smk-fs-label) !important;
   line-height: 1.55;
   font-weight: 400 !important;
   font-style: normal !important;
@@ -2302,7 +2324,7 @@ textarea.smk-field:focus {
   gap: 0.25rem;
   border-radius: 999px;
   padding: 0.125rem 0.5rem;
-  font-size: 12px !important;
+  font-size: var(--smk-fs-label) !important;
   line-height: 1.4;
   font-weight: 400 !important;
   font-style: normal !important;

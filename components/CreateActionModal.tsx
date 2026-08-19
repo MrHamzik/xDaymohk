@@ -173,7 +173,7 @@ export default function CreateActionModal({
                 >
                   <Icon className="h-5.5 w-5.5 stroke-[2.2]" />
                 </button>
-                <span className="mt-1 max-w-[80px] truncate text-center text-[10px] font-extrabold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] select-none">
+                <span className="mt-1 max-w-[80px] truncate text-center smk-text-label font-extrabold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] select-none">
                   {item.label}
                 </span>
               </div>

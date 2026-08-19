@@ -251,7 +251,7 @@ export default function AdminArticlesSection() {
                   <span className="block truncate text-xs font-bold text-slate-900 dark:text-white">
                     {a.titleRu || a.titleCe || L('Без названия', 'ЦIе йоцуш')}
                   </span>
-                  <span className="smk-meta block text-[10px]">
+                  <span className="smk-meta block smk-text-label">
                     {a.isPublished ? L('Опубликована', 'Зорбане яьлла') : L('Черновик', 'Черновик')}
                     {dirty ? L(' · есть несохранённые правки', ' · дIаязйина йоцу хийцамаш') : ''}
                   </span>
@@ -283,14 +283,14 @@ export default function AdminArticlesSection() {
                   <div className="flex items-center gap-1.5">
                     {(['ru', 'ce'] as const).map((l) => (
                       <button key={l} type="button" onClick={() => setLang(l)}
-                        className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition ${
+                        className={`rounded-lg px-2.5 py-1 smk-text-label font-bold transition ${
                           lang === l ? 'bg-emerald-600 text-white' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-zinc-800'
                         }`}>
                         {l === 'ru' ? 'Русский' : 'Нохчийн'}
                       </button>
                     ))}
                     <button type="button" onClick={() => setPreview((v) => !v)}
-                      className={`ml-auto rounded-lg px-2.5 py-1 text-[11px] font-bold transition ${
+                      className={`ml-auto rounded-lg px-2.5 py-1 smk-text-label font-bold transition ${
                         preview ? 'bg-emerald-600 text-white' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-zinc-800'
                       }`}>
                       {L('Предпросмотр', 'Хьалха хьажар')}
@@ -324,7 +324,7 @@ export default function AdminArticlesSection() {
                     />
                   )}
 
-                  <pre className="smk-meta overflow-x-auto whitespace-pre rounded-lg bg-slate-50 p-2 text-[10px] leading-relaxed dark:bg-zinc-800/60">
+                  <pre className="smk-meta overflow-x-auto whitespace-pre rounded-lg bg-slate-50 p-2 smk-text-label leading-relaxed dark:bg-zinc-800/60">
                     {SYNTAX_HINT}
                   </pre>
 

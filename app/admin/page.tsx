@@ -1699,7 +1699,7 @@ export default function AdminPage() {
                   key={l}
                   type="button"
                   onClick={() => setLanguage(l)}
-                  className={`rounded-lg px-2.5 py-1.5 text-[11px] font-bold uppercase transition ${language === l ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-zinc-400 dark:hover:text-zinc-200'}`}
+                  className={`rounded-lg px-2.5 py-1.5 smk-text-label font-bold uppercase transition ${language === l ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-zinc-400 dark:hover:text-zinc-200'}`}
                   title={l === 'ru' ? 'Русский' : 'Нохчийн'}
                 >
                   {l}
@@ -1730,7 +1730,7 @@ export default function AdminPage() {
             ['support', L('Помощь', 'ГIо'), 0],
             ['audit', L('Журнал', 'Журнал'), 0],
           ] as const).map(([section, label, count]) => (
-            <button key={section} type="button" onClick={() => setActiveSection(section)} className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition ${activeSection === section ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 dark:text-zinc-400 dark:hover:bg-zinc-800'}`}>{label}<span className={`rounded-full px-1.5 py-0.5 text-[10px] ${activeSection === section ? 'bg-white/20' : 'bg-slate-100 dark:bg-zinc-800'}`}>{count}</span></button>
+            <button key={section} type="button" onClick={() => setActiveSection(section)} className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition ${activeSection === section ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 dark:text-zinc-400 dark:hover:bg-zinc-800'}`}>{label}<span className={`rounded-full px-1.5 py-0.5 smk-text-label ${activeSection === section ? 'bg-white/20' : 'bg-slate-100 dark:bg-zinc-800'}`}>{count}</span></button>
           ))}
         </nav>
 
@@ -1779,9 +1779,9 @@ export default function AdminPage() {
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-1.5">
                               <h4 className="truncate text-sm font-bold text-slate-900 dark:text-white">{profile.fullName}</h4>
-                              <span className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold ${status.className}`}>{status.icon}{status.label}</span>
+                              <span className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 smk-text-label font-semibold ${status.className}`}>{status.icon}{status.label}</span>
                               {isProfileAdmin(profile) && profile.isSpecialist && (
-                                <span className="inline-flex items-center gap-1 rounded-md border border-sky-200 bg-sky-50 px-1.5 py-0.5 text-[10px] font-semibold text-sky-700 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-300"><Star className="h-3 w-3" />Специалист</span>
+                                <span className="inline-flex items-center gap-1 rounded-md border border-sky-200 bg-sky-50 px-1.5 py-0.5 smk-text-label font-semibold text-sky-700 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-300"><Star className="h-3 w-3" />Специалист</span>
                               )}
                             </div>
                             <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">{profile.professionTitle || 'Житель'}</p>
@@ -1826,7 +1826,7 @@ export default function AdminPage() {
                           <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">{profile.professionTitle || 'Специалист'}</p>
                           <p className="mt-1 truncate text-xs text-slate-500 dark:text-zinc-500">{profile.workplaceAddress}</p>
                         </div>
-                        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-950/60 dark:text-amber-300"><Clock3 className="h-3 w-3" />{L('На проверке', 'Талларан тIехь')}</span>
+                        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 smk-text-label font-bold text-amber-800 dark:bg-amber-950/60 dark:text-amber-300"><Clock3 className="h-3 w-3" />{L('На проверке', 'Талларан тIехь')}</span>
                       </div>
                       <div className="mt-4 flex flex-wrap gap-2 border-t border-amber-200/60 pt-3">
                         <button type="button" onClick={() => setViewProfile(profile)} className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs font-bold text-emerald-700 transition hover:bg-emerald-50 dark:border-emerald-900 dark:bg-zinc-900 dark:text-emerald-300 dark:hover:bg-emerald-950/50"><FolderOpen className="h-3.5 w-3.5" />{L('Открыть', 'Схьаделла')}</button>
@@ -1858,9 +1858,9 @@ export default function AdminPage() {
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-1.5">
                               <p className="truncate text-sm font-bold text-slate-900 dark:text-white">{profile.fullName}</p>
-                              <span className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold ${status.className}`}>{status.icon}{status.label}</span>
+                              <span className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 smk-text-label font-semibold ${status.className}`}>{status.icon}{status.label}</span>
                               {isProfileAdmin(profile) && profile.isSpecialist && (
-                                <span className="inline-flex items-center gap-1 rounded-md border border-sky-200 bg-sky-50 px-1.5 py-0.5 text-[10px] font-semibold text-sky-700 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-300"><Star className="h-3 w-3" />Специалист</span>
+                                <span className="inline-flex items-center gap-1 rounded-md border border-sky-200 bg-sky-50 px-1.5 py-0.5 smk-text-label font-semibold text-sky-700 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-300"><Star className="h-3 w-3" />Специалист</span>
                               )}
                             </div>
                             <p className="truncate text-sm font-semibold text-red-700 dark:text-red-400">{profile.professionTitle || 'Личная анкета'}</p>
@@ -1928,13 +1928,13 @@ export default function AdminPage() {
                               {profile.professionTitle || 'Личная анкета'} · {profile.workplaceAddress}
                             </p>
                             {owner && (
-                              <p className="mt-0.5 truncate text-[11px] text-slate-400 dark:text-zinc-500">
+                              <p className="mt-0.5 truncate smk-text-label text-slate-400 dark:text-zinc-500">
                                 {L('Владелец:', 'Долахо:')} {owner.fullName} {owner.isBlocked ? '· заблокирован' : ''}
                               </p>
                             )}
                           </div>
                         </div>
-                        <span className="shrink-0 rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-slate-500 shadow-sm dark:bg-zinc-900 dark:text-zinc-400">
+                        <span className="shrink-0 rounded-full bg-white px-2.5 py-1 smk-text-label font-medium text-slate-500 shadow-sm dark:bg-zinc-900 dark:text-zinc-400">
                           От: {complaint.authorName}
                         </span>
                       </div>
@@ -1945,7 +1945,7 @@ export default function AdminPage() {
                           {complaint.reason}
                         </p>
                         {complaint.createdAt && (
-                          <p className="mt-1.5 text-[11px] text-slate-400 dark:text-zinc-500">{complaint.createdAt}</p>
+                          <p className="mt-1.5 smk-text-label text-slate-400 dark:text-zinc-500">{complaint.createdAt}</p>
                         )}
                       </div>
 
@@ -1997,8 +1997,8 @@ export default function AdminPage() {
               />
             </div>
             <div className="space-y-3">{tabFilteredUsers.length === 0 ? <div className="smk-dashed p-8 text-center text-sm text-slate-500 dark:text-zinc-500">{L('Пользователей пока нет.', 'Лелошхой хIинца бац.')}</div> : tabFilteredUsers.map((user) => { const userProfiles = profiles.filter((profile) => profile.ownerId === user.id); const expanded = expandedUserId === user.id; return <div key={user.id} className={`rounded-3xl border p-4 shadow-sm transition ${user.isBlocked ? 'border-red-300 bg-red-50/70 dark:border-red-900 dark:bg-red-950/50' : 'border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-950'}`}><div className="flex flex-wrap items-center gap-3"><Avatar src={user.avatarUrl} className="h-12 w-12 shrink-0 rounded-2xl object-cover" /><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-slate-900 dark:text-white">{user.fullName}</p><p className="truncate text-xs text-slate-500 dark:text-zinc-500">{user.email} · {L('анкет:', 'анкеташ:')} {user.profileCount}</p>
-                          {user.isAdmin && <span className="mt-1 inline-flex rounded-md bg-slate-800 px-1.5 py-0.5 text-[10px] font-bold text-white dark:bg-zinc-700">Админ</span>}
-                          {user.isBlocked && <span className="mt-1 inline-flex rounded-md bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white">{L('Аккаунт заблокирован', 'Аккаунт билсна')}</span>}
+                          {user.isAdmin && <span className="mt-1 inline-flex rounded-md bg-slate-800 px-1.5 py-0.5 smk-text-label font-bold text-white dark:bg-zinc-700">Админ</span>}
+                          {user.isBlocked && <span className="mt-1 inline-flex rounded-md bg-red-600 px-1.5 py-0.5 smk-text-label font-bold text-white">{L('Аккаунт заблокирован', 'Аккаунт билсна')}</span>}
                         </div>
                         {!user.isAdmin && (
                           <button type="button" onClick={() => void adminToggleBan(user, !user.isBlocked)} className={`inline-flex w-full shrink-0 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold transition sm:w-auto ${user.isBlocked ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-950/70'}`}>{user.isBlocked ? <UserCheck className="h-3.5 w-3.5" /> : <Ban className="h-3.5 w-3.5" />}{user.isBlocked ? L('Разблокировать', 'ДIаяккха') : L('Заблокировать', 'Билсде')}</button>
@@ -2011,9 +2011,9 @@ export default function AdminPage() {
                             {user.isAdmin ? L('Забрать админа', 'Админ дIадаккха') : L('Сделать админом', 'Админ хIотто')}
                           </button>
                         )}
-                        <button type="button" onClick={() => setExpandedUserId(expanded ? null : user.id)} className="rounded-xl p-2 text-emerald-700 transition hover:bg-emerald-50" title="Анкеты пользователя"><UserRound className="h-5 w-5" /></button></div>{expanded && <div className="mt-3 space-y-2 border-t border-slate-100 pt-3 dark:border-zinc-800">{userProfiles.length === 0 ? <p className="text-xs text-slate-500">{L('Анкет нет.', 'Анкеташ бац.')}</p> : userProfiles.map((profile) => { const status = getStatus(profile, users); return <div key={profile.id} className="flex items-center gap-2 rounded-2xl bg-slate-50 p-2.5 dark:bg-zinc-800/60"><div className="min-w-0 flex-1"><p className="truncate text-xs font-bold text-slate-900 dark:text-white">{profile.professionTitle || 'Личная анкета'}</p><span className={`mt-1 inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold ${status.className}`}>{status.icon}{status.label}</span></div><button type="button" onClick={() => setViewProfile(profile)} className="inline-flex items-center gap-1 rounded-xl bg-white px-2.5 py-1.5 text-xs font-bold text-emerald-700 shadow-sm transition hover:bg-emerald-50 dark:bg-zinc-900 dark:text-emerald-300 dark:hover:bg-emerald-950/50"><FolderOpen className="h-3.5 w-3.5" />{L('Открыть', 'Схьаделла')}</button></div>; })}</div>}</div>; })}</div>
+                        <button type="button" onClick={() => setExpandedUserId(expanded ? null : user.id)} className="rounded-xl p-2 text-emerald-700 transition hover:bg-emerald-50" title="Анкеты пользователя"><UserRound className="h-5 w-5" /></button></div>{expanded && <div className="mt-3 space-y-2 border-t border-slate-100 pt-3 dark:border-zinc-800">{userProfiles.length === 0 ? <p className="text-xs text-slate-500">{L('Анкет нет.', 'Анкеташ бац.')}</p> : userProfiles.map((profile) => { const status = getStatus(profile, users); return <div key={profile.id} className="flex items-center gap-2 rounded-2xl bg-slate-50 p-2.5 dark:bg-zinc-800/60"><div className="min-w-0 flex-1"><p className="truncate text-xs font-bold text-slate-900 dark:text-white">{profile.professionTitle || 'Личная анкета'}</p><span className={`mt-1 inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 smk-text-label font-semibold ${status.className}`}>{status.icon}{status.label}</span></div><button type="button" onClick={() => setViewProfile(profile)} className="inline-flex items-center gap-1 rounded-xl bg-white px-2.5 py-1.5 text-xs font-bold text-emerald-700 shadow-sm transition hover:bg-emerald-50 dark:bg-zinc-900 dark:text-emerald-300 dark:hover:bg-emerald-950/50"><FolderOpen className="h-3.5 w-3.5" />{L('Открыть', 'Схьаделла')}</button></div>; })}</div>}</div>; })}</div>
           {showUsersPagination && (
-            <p className="pt-1 text-center text-[11px] text-slate-400 dark:text-zinc-500">
+            <p className="pt-1 text-center smk-text-label text-slate-400 dark:text-zinc-500">
               {L('Показаны первые 100 из', 'Гойту хьалхара 100')} {tabFilteredUsers.length} {L('пользователей. Уточните поиск.', 'лелошхой. Лахар ма-дарра де.')}
             </p>
           )}
@@ -2185,21 +2185,21 @@ export default function AdminPage() {
                 <button type="button" onClick={handleAddCategory} className="shrink-0 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500">{L('Добавить', 'ТIетоха')}</button>
               </div>
               {searchQ && (
-                <p className="mt-2 text-[11px] text-slate-500 dark:text-zinc-500">
+                <p className="mt-2 smk-text-label text-slate-500 dark:text-zinc-500">
                   {L('Найдено адресов:', 'Карийна адресаш:')} {filteredAddresses.length} {L('по запросу', 'дехарца')} «{addressSearch.trim()}»
                 </p>
               )}
               {customCategories.length>0 && (
                 <div className="mt-2 flex flex-wrap gap-1">
                   {customCategories.map((cat)=>(
-                    <span key={cat} className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold dark:bg-zinc-800">{cat}<button type="button" onClick={()=>handleDeleteCategory(cat)} className="ml-1 text-slate-400 hover:text-red-600"><X className="h-3 w-3" /></button></span>
+                    <span key={cat} className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 smk-text-label font-semibold dark:bg-zinc-800">{cat}<button type="button" onClick={()=>handleDeleteCategory(cat)} className="ml-1 text-slate-400 hover:text-red-600"><X className="h-3 w-3" /></button></span>
                   ))}
                 </div>
               )}
               <div className="mt-3 flex flex-wrap gap-1.5">
-                <button key="all" type="button" onClick={()=>setAddressFilter('all')} className={`rounded-full px-2.5 py-1 text-[11px] font-bold transition ${addressFilter==='all' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400'}`}>{L('Все', 'Массо')}</button>
+                <button key="all" type="button" onClick={()=>setAddressFilter('all')} className={`rounded-full px-2.5 py-1 smk-text-label font-bold transition ${addressFilter==='all' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400'}`}>{L('Все', 'Массо')}</button>
                 {allAddressCategories.map((cat)=>(
-                  <button key={cat} type="button" onClick={()=>setAddressFilter(cat)} className={`rounded-full px-2.5 py-1 text-[11px] font-bold transition ${addressFilter===cat ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400'}`}>{cat}</button>
+                  <button key={cat} type="button" onClick={()=>setAddressFilter(cat)} className={`rounded-full px-2.5 py-1 smk-text-label font-bold transition ${addressFilter===cat ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400'}`}>{cat}</button>
                 ))}
               </div>
             </div>
@@ -2289,7 +2289,7 @@ export default function AdminPage() {
                             </div>
                           </div>
                           <div className="flex items-center gap-1.5">
-                            <span className="shrink-0 text-[11px] font-bold text-slate-400">д.</span>
+                            <span className="shrink-0 smk-text-label font-bold text-slate-400">д.</span>
                             {editIsNotHouse ? (
                               <select
                                 value={editCategory}
@@ -2303,7 +2303,7 @@ export default function AdminPage() {
                             ) : (
                               <input value={editHouseNumber} onChange={(e)=>setEditHouseNumber(e.target.value)} className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-2 py-2 text-xs dark:border-zinc-800 dark:bg-zinc-800 dark:text-white" />
                             )}
-                            <label className="flex shrink-0 cursor-pointer select-none items-center gap-1 rounded-lg border border-amber-300 bg-amber-50 px-2 py-1.5 text-[11px] font-bold text-amber-800 transition hover:bg-amber-100 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300 dark:hover:bg-amber-950/50">
+                            <label className="flex shrink-0 cursor-pointer select-none items-center gap-1 rounded-lg border border-amber-300 bg-amber-50 px-2 py-1.5 smk-text-label font-bold text-amber-800 transition hover:bg-amber-100 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300 dark:hover:bg-amber-950/50">
                               <input type="checkbox" checked={editIsNotHouse} onChange={(e)=>setEditIsNotHouse(e.target.checked)} className="h-3.5 w-3.5 rounded border-amber-300 text-emerald-600 focus:ring-emerald-500" />
                               {L('Не дом', 'ЦIа дац')}
                             </label>
@@ -2363,10 +2363,10 @@ export default function AdminPage() {
                           <div className="min-w-0">
                             <p className="truncate text-xs font-bold text-slate-900 dark:text-white">
                               {address.fullAddress}
-                              {address.isNotHouse && <span className="ml-1 rounded bg-amber-100 px-1 py-0.5 text-[9px] text-amber-800">{address.category || 'Другое'}</span>}
-                              {isDeleted && <span className="ml-1 rounded bg-red-600 px-1 py-0.5 text-[9px] font-bold text-white">{L('Удалён', 'ДIадаьккхина')}</span>}
+                              {address.isNotHouse && <span className="ml-1 rounded bg-amber-100 px-1 py-0.5 smk-text-label text-amber-800">{address.category || 'Другое'}</span>}
+                              {isDeleted && <span className="ml-1 rounded bg-red-600 px-1 py-0.5 smk-text-label font-bold text-white">{L('Удалён', 'ДIадаьккхина')}</span>}
                             </p>
-                            <p className="truncate text-[11px] text-slate-500">{L('Координаты:', 'Координаташ:')} {address.lat.toFixed(5)}, {address.lng.toFixed(5)} · {decimalToDMSString(address.lat, address.lng)}</p>
+                            <p className="truncate smk-text-label text-slate-500">{L('Координаты:', 'Координаташ:')} {address.lat.toFixed(5)}, {address.lng.toFixed(5)} · {decimalToDMSString(address.lat, address.lng)}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
@@ -2374,7 +2374,7 @@ export default function AdminPage() {
                             <button
                               type="button"
                               onClick={()=>handleRestoreAddress(address.id)}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-white px-2.5 py-1.5 text-[11px] font-bold text-emerald-700 hover:bg-emerald-50 dark:border-emerald-900 dark:bg-zinc-900 dark:text-emerald-300 dark:hover:bg-emerald-950/40"
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-white px-2.5 py-1.5 smk-text-label font-bold text-emerald-700 hover:bg-emerald-50 dark:border-emerald-900 dark:bg-zinc-900 dark:text-emerald-300 dark:hover:bg-emerald-950/40"
                               title="Восстановить"
                             >
                               <RotateCcw className="h-3.5 w-3.5" />
@@ -2497,7 +2497,7 @@ export default function AdminPage() {
                   {lettersOpen.queue && (
                   <>
                   {/* Получатели */}
-                  <label className="mb-1 block text-[11px] font-bold text-slate-500 dark:text-zinc-400">{L('Получатели', 'ДIаэцархой')}</label>
+                  <label className="mb-1 block smk-text-label font-bold text-slate-500 dark:text-zinc-400">{L('Получатели', 'ДIаэцархой')}</label>
                   <div className="flex flex-wrap gap-1.5">
                     <button type="button" onClick={() => setComposeForm({ ...composeForm, recipients: 'all' })} className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${composeForm.recipients === 'all' ? 'bg-emerald-600 text-white' : 'border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300'}`}>{L('Все пользователи', 'Массо лелошхой')}</button>
                     <button type="button" onClick={() => setComposeForm({ ...composeForm, recipients: 'selected' })} className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${composeForm.recipients === 'selected' ? 'bg-emerald-600 text-white' : 'border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300'}`}>{L('Выбрать', 'Харжа')} ({selectedRecipients.size})</button>
@@ -2523,7 +2523,7 @@ export default function AdminPage() {
                             </label>
                           ))}
                         {people.filter((u) => u.fullName.toLowerCase().includes(recipientSearch.trim().toLowerCase())).length === 0 && (
-                          <p className="col-span-full py-2 text-center text-[11px] text-slate-400">{L('Никого не найдено', 'Цхьан а ца карийна')}</p>
+                          <p className="col-span-full py-2 text-center smk-text-label text-slate-400">{L('Никого не найдено', 'Цхьан а ца карийна')}</p>
                         )}
                       </div>
                     </div>
@@ -2531,18 +2531,18 @@ export default function AdminPage() {
 
                   {/* Планирование */}
                   <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-zinc-700 dark:bg-zinc-900">
-                    <label className="flex cursor-pointer items-center gap-2 text-[11px] font-bold text-slate-600 dark:text-zinc-300">
+                    <label className="flex cursor-pointer items-center gap-2 smk-text-label font-bold text-slate-600 dark:text-zinc-300">
                       <input type="checkbox" checked={scheduleEnabled} onChange={(e) => toggleSchedule(e.target.checked)} className="h-4 w-4 rounded text-emerald-600 focus:ring-emerald-500" />
                       {L('Отправить по расписанию', 'Расписаница дIадахка')}
                     </label>
                     {scheduleEnabled && (
                       <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                         <div>
-                          <label className="mb-1 block text-[10px] font-bold text-slate-400">{L('Время отправки', 'ДIадахьитаран хан')}</label>
+                          <label className="mb-1 block smk-text-label font-bold text-slate-400">{L('Время отправки', 'ДIадахьитаран хан')}</label>
                           <input type="datetime-local" value={scheduleAt} onChange={(e) => setScheduleAt(e.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs dark:border-zinc-700 dark:bg-zinc-800 dark:text-white" />
                         </div>
                         <div>
-                          <label className="mb-1 block text-[10px] font-bold text-slate-400">{L('Частота', 'Цуьнан-хIокху')}</label>
+                          <label className="mb-1 block smk-text-label font-bold text-slate-400">{L('Частота', 'Цуьнан-хIокху')}</label>
                           <select value={scheduleRepeat} onChange={(e) => setScheduleRepeat(e.target.value as 'once' | 'daily' | 'n_days')} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs dark:border-zinc-700 dark:bg-zinc-800 dark:text-white">
                             <option value="once">{L('Один раз', 'Цкъа')}</option>
                             <option value="daily">{L('Каждый день', 'ХIора дийнахь')}</option>
@@ -2551,13 +2551,13 @@ export default function AdminPage() {
                         </div>
                         {scheduleRepeat === 'n_days' && (
                           <div>
-                            <label className="mb-1 block text-[10px] font-bold text-slate-400">{L('Каждые N дней', 'ХIора N де')}</label>
+                            <label className="mb-1 block smk-text-label font-bold text-slate-400">{L('Каждые N дней', 'ХIора N де')}</label>
                             <input type="number" min={1} max={365} value={scheduleDays} onChange={(e) => setScheduleDays(Number(e.target.value) || 1)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs dark:border-zinc-700 dark:bg-zinc-800 dark:text-white" />
                           </div>
                         )}
                         {scheduleRepeat !== 'once' && (
                           <div>
-                            <label className="mb-1 block text-[10px] font-bold text-slate-400">{L('Сколько раз (0 = всегда)', 'Массо а хан (0 = массалла а)')}</label>
+                            <label className="mb-1 block smk-text-label font-bold text-slate-400">{L('Сколько раз (0 = всегда)', 'Массо а хан (0 = массалла а)')}</label>
                             <input type="number" min={0} value={scheduleCount} onChange={(e) => setScheduleCount(Number(e.target.value) || 0)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs dark:border-zinc-700 dark:bg-zinc-800 dark:text-white" />
                           </div>
                         )}
@@ -2612,7 +2612,7 @@ export default function AdminPage() {
                   <p className="text-xs text-slate-500 dark:text-zinc-500">{L('Очередь и отправленные письма', 'Кеп а, дIадаьхна кехаташ а')}</p>
                 </div>
               </div>
-              <button type="button" onClick={closeArchive} aria-label={L('Закрыть', 'ДIакъовла')} className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400">
+              <button type="button" onClick={closeArchive} aria-label={L('Закрыть', 'ДIакъовла')} className="smk-hit flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400">
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -2651,9 +2651,9 @@ export default function AdminPage() {
                             <div key={q.id} className="flex items-center gap-2 smk-inset p-3">
                               <div className="min-w-0 flex-1">
                                 <p className="truncate text-xs font-bold text-slate-900 dark:text-white">{q.title_ru || L('Письмо', 'Кехат')}</p>
-                                <p className={`mt-0.5 text-[11px] font-semibold ${ready ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-zinc-500'}`}>
+                                <p className={`mt-0.5 smk-text-label font-semibold ${ready ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-zinc-500'}`}>
                                   {new Date(q.run_at).toLocaleString()}
-                                  {ready && <span className="ml-1 rounded bg-emerald-100 px-1 py-0.5 text-[9px] font-bold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">{L('к отправке', 'дIадахьита')}</span>}
+                                  {ready && <span className="ml-1 rounded bg-emerald-100 px-1 py-0.5 smk-text-label font-bold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">{L('к отправке', 'дIадахьита')}</span>}
                                 </p>
                               </div>
                               <button
@@ -2661,7 +2661,7 @@ export default function AdminPage() {
                                 onClick={() => startEditSchedule(q)}
                                 aria-label={L('Редактировать', 'Хийца')}
                                 title={L('Редактировать', 'Хийца')}
-                                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-emerald-700 dark:hover:bg-zinc-800"
+                                className="smk-hit flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-emerald-700 dark:hover:bg-zinc-800"
                               >
                                 <Pencil className="h-4 w-4" />
                               </button>
@@ -2670,7 +2670,7 @@ export default function AdminPage() {
                                 onClick={() => void deleteSchedule(q.id)}
                                 aria-label={L('Удалить', 'ДIадайа')}
                                 title={L('Удалить', 'ДIадайа')}
-                                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600 transition hover:bg-red-100 dark:bg-red-950/40 dark:text-red-400"
+                                className="smk-hit flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600 transition hover:bg-red-100 dark:bg-red-950/40 dark:text-red-400"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </button>
@@ -2687,7 +2687,7 @@ export default function AdminPage() {
                         <div key={log.id} className="flex items-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 p-3 dark:border-zinc-800 dark:bg-zinc-900/60">
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-xs font-bold text-slate-900 dark:text-white">{log.title_ru || L('Письмо', 'Кехат')}</p>
-                            <p className="mt-0.5 text-[11px] text-slate-500 dark:text-zinc-500">
+                            <p className="mt-0.5 smk-text-label text-slate-500 dark:text-zinc-500">
                               {new Date(log.sent_at).toLocaleString()} · {L('получателей', 'дIаэцархой')}: {log.count} · {log.sender}
                             </p>
                           </div>
@@ -2696,7 +2696,7 @@ export default function AdminPage() {
                             onClick={() => void deleteLog(log.id)}
                             aria-label={L('Удалить', 'ДIадайа')}
                             title={L('Удалить из истории', 'Исторех дIадайа')}
-                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600 transition hover:bg-red-100 dark:bg-red-950/40 dark:text-red-400"
+                            className="smk-hit flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600 transition hover:bg-red-100 dark:bg-red-950/40 dark:text-red-400"
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
@@ -2711,31 +2711,31 @@ export default function AdminPage() {
               <div className="flex-1 space-y-3 overflow-y-auto p-5 no-scrollbar">
                 {archiveMsg && <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300">{archiveMsg}</div>}
                 <div>
-                  <label className="mb-1 block text-[11px] font-bold text-slate-500 dark:text-zinc-400">{L('Время отправки', 'ДIадахьитаран хан')}</label>
+                  <label className="mb-1 block smk-text-label font-bold text-slate-500 dark:text-zinc-400">{L('Время отправки', 'ДIадахьитаран хан')}</label>
                   <input type="datetime-local" value={toLocalInput(editSched.runAt)} onChange={(e) => setEditSched({ ...editSched, runAt: e.target.value })} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs dark:border-zinc-700 dark:bg-zinc-800 dark:text-white" />
                 </div>
                 <div>
-                  <label className="mb-1 block text-[11px] font-bold text-slate-500 dark:text-zinc-400">{L('Тема (RU)', 'Тема (RU)')}</label>
+                  <label className="mb-1 block smk-text-label font-bold text-slate-500 dark:text-zinc-400">{L('Тема (RU)', 'Тема (RU)')}</label>
                   <input value={editSched.title_ru} onChange={(e) => setEditSched({ ...editSched, title_ru: e.target.value })} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs dark:border-zinc-700 dark:bg-zinc-800 dark:text-white" />
                 </div>
                 <div>
-                  <label className="mb-1 block text-[11px] font-bold text-slate-500 dark:text-zinc-400">{L('Текст (RU)', 'Текст (RU)')}</label>
+                  <label className="mb-1 block smk-text-label font-bold text-slate-500 dark:text-zinc-400">{L('Текст (RU)', 'Текст (RU)')}</label>
                   <textarea rows={3} value={editSched.message_ru} onChange={(e) => setEditSched({ ...editSched, message_ru: e.target.value })} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs dark:border-zinc-700 dark:bg-zinc-800 dark:text-white" />
                 </div>
                 <div>
-                  <label className="mb-1 block text-[11px] font-bold text-slate-500 dark:text-zinc-400">{L('Тема (CE)', 'Тема (CE)')}</label>
+                  <label className="mb-1 block smk-text-label font-bold text-slate-500 dark:text-zinc-400">{L('Тема (CE)', 'Тема (CE)')}</label>
                   <input value={editSched.title_ce} onChange={(e) => setEditSched({ ...editSched, title_ce: e.target.value })} className="w-full rounded-xl border border-emerald-200 bg-emerald-50/40 px-3 py-2 text-xs dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:text-white" />
                 </div>
                 <div>
-                  <label className="mb-1 block text-[11px] font-bold text-slate-500 dark:text-zinc-400">{L('Текст (CE)', 'Текст (CE)')}</label>
+                  <label className="mb-1 block smk-text-label font-bold text-slate-500 dark:text-zinc-400">{L('Текст (CE)', 'Текст (CE)')}</label>
                   <textarea rows={2} value={editSched.message_ce} onChange={(e) => setEditSched({ ...editSched, message_ce: e.target.value })} className="w-full rounded-xl border border-emerald-200 bg-emerald-50/40 px-3 py-2 text-xs dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:text-white" />
                 </div>
                 <div>
-                  <label className="mb-1 block text-[11px] font-bold text-slate-500 dark:text-zinc-400">{L('Отправитель', 'ДIадахочо')}</label>
+                  <label className="mb-1 block smk-text-label font-bold text-slate-500 dark:text-zinc-400">{L('Отправитель', 'ДIадахочо')}</label>
                   <input value={editSched.sender} onChange={(e) => setEditSched({ ...editSched, sender: e.target.value })} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs dark:border-zinc-700 dark:bg-zinc-800 dark:text-white" />
                 </div>
                 <div>
-                  <label className="mb-1 block text-[11px] font-bold text-slate-500 dark:text-zinc-400">{L('Получатели', 'ДIаэцархой')}</label>
+                  <label className="mb-1 block smk-text-label font-bold text-slate-500 dark:text-zinc-400">{L('Получатели', 'ДIаэцархой')}</label>
                   <div className="flex flex-wrap gap-1.5">
                     <button type="button" onClick={() => setEditSched({ ...editSched, recipients: 'all' })} className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${editSched.recipients === 'all' ? 'bg-emerald-600 text-white' : 'border border-slate-200 bg-slate-50 text-slate-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300'}`}>{L('Все пользователи', 'Массо лелошхой')}</button>
                     <button type="button" onClick={() => setEditSched({ ...editSched, recipients: 'selected' })} className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${editSched.recipients === 'selected' ? 'bg-emerald-600 text-white' : 'border border-slate-200 bg-slate-50 text-slate-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300'}`}>{L('Выбрать', 'Харжа')} ({editSchedSelected.size})</button>
@@ -2785,7 +2785,7 @@ export default function AdminPage() {
                   </p>
                 </div>
               </div>
-              <button type="button" onClick={dupClose} aria-label="Закрыть" className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400">
+              <button type="button" onClick={dupClose} aria-label="Закрыть" className="smk-hit flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400">
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -2802,17 +2802,17 @@ export default function AdminPage() {
                       <div className="flex items-start gap-2">
                         <div className="min-w-0 flex-1">
                           <p className="text-xs font-bold text-slate-900 dark:text-white">{pair.candidate.fullAddress}</p>
-                          <p className="mt-0.5 text-[11px] text-slate-500 dark:text-zinc-500">
+                          <p className="mt-0.5 smk-text-label text-slate-500 dark:text-zinc-500">
                             уже есть: {pair.existing.fullAddress}
                           </p>
                         </div>
                         <div className="flex shrink-0 gap-1.5">
                           <button type="button" onClick={() => dupChoose(i, 'keep')}
-                            className="rounded-lg bg-emerald-600 px-2.5 py-1.5 text-[11px] font-bold text-white hover:bg-emerald-700">
+                            className="rounded-lg bg-emerald-600 px-2.5 py-1.5 smk-text-label font-bold text-white hover:bg-emerald-700">
                             {L('Заменить', 'Хийца')}
                           </button>
                           <button type="button" onClick={() => dupChoose(i, 'skip')}
-                            className="rounded-lg bg-slate-100 px-2.5 py-1.5 text-[11px] font-bold text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700">
+                            className="rounded-lg bg-slate-100 px-2.5 py-1.5 smk-text-label font-bold text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700">
                             {L('Исключить', 'ДIасадаккха')}
                           </button>
                         </div>
