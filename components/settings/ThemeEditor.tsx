@@ -382,7 +382,12 @@ export default function ThemeEditor() {
                               // доводятся по контрасту к этому фону.
                               Object.assign(
                                 next,
-                                deriveNotes(e.target.value, next.ui, editing.isDark),
+                                deriveNotes(e.target.value, next.ui, editing.isDark, {
+                                  statusFlexible: next.statusFlexible,
+                                  statusBreak: next.statusBreak,
+                                  danger: next.danger,
+                                  statusActive: next.statusActive,
+                                }),
                               );
                             }
                             patchTheme(editing.id, {

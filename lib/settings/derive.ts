@@ -304,9 +304,18 @@ function tint(
    Общий фон даёт им читаться одной семьёй, а смысл различают цвет
    текста и золотая засечка слева.
 
+   Откуда берутся цвета текста. Из СМЫСЛОВЫХ цветов самой темы, а не
+   из универсального набора синий/оранжевый/красный/зелёный. Тема уже
+   объявила, каким цветом у неё говорят «информация» (statusFlexible),
+   «внимание» (statusBreak), «опасно» (danger) и «готово»
+   (statusActive) — подсказки обязаны звучать так же. Первая версия
+   брала общий набор, и «Закат» получал холодный синий #5092f1 при
+   собственном бирюзовом #3f9fa8: в тёплую тему вклеивался кусок чужой
+   палитры.
+
    Требование к контрасту: текст подсказки — мелкий (11 px), значит по
-   WCAG AA нужен коэффициент 4.5. Ниже он и обеспечивается доводкой
-   через ensureContrast.
+   WCAG AA нужен коэффициент 4.5. Обеспечивается доводкой светлоты
+   через ensureContrast — оттенок при этом не трогаем, он несёт смысл.
 --------------------------------------------------------------------------- */
 
 /** Светлота фона подсказки по шкале 0–240: отход от карточки. */
@@ -332,30 +341,88 @@ export function deriveNoteBg(card: string, isDark: boolean): string {
   return hslToHex({ h, s: Math.min(s * 1.35, 0.7), l: next / LIGHTNESS_SCALE });
 }
 
-/** Опорные тона текста подсказок: смысл одинаков во всех темах. */
-const NOTE_TEXT_BASE = {
-  info: '#0369a1',
-  warn: '#b45309',
-  danger: '#be123c',
-  success: '#047857',
-};
+/**
+ * Минимальное расхождение оттенков соседних типов подсказки, градусы.
+ *
+ * Ниже 25° два цвета на мелком тексте читаются как один. Именно это
+ * происходило в «Закате»: статус «работает» там оранжевый (31°) и от
+ * «перерыва» (38°) отличался на 7° — подтверждение и предупреждение
+ * стали бы неразличимы.
+ */
+const NOTE_HUE_MIN_GAP = 25;
 
 /**
- * Цвет текста подсказки: смысловой тон, подтонированный темой и
- * доведённый по контрасту к фону подсказки.
+ * Эталонные оттенки типов подсказки, градусы HSL.
  *
- * Подтон слабый (0.14) и с узким потолком: «опасно» обязано остаться
- * красным, иначе предупреждение перестаёт работать как сигнал.
+ * Запасной вариант, когда цвет темы слился с соседним типом. Это
+ * общепринятая семантика (синий — информация, оранжевый — внимание,
+ * красный — опасность, зелёный — готово), и в такой ситуации смысл
+ * важнее оттенка темы.
+ */
+const NOTE_ANCHOR_HUE = {
+  info: 199,
+  warn: 38,
+  danger: 352,
+  success: 152,
+};
+
+/** Достаточно ли оттенок отстоит от всех уже занятых. */
+function hueIsFree(hue: number, taken: number[]): boolean {
+  return taken.every((t) => {
+    const d = Math.abs(((hue - t + 540) % 360) - 180);
+    return Math.min(d, 360 - d) >= NOTE_HUE_MIN_GAP;
+  });
+}
+
+/**
+ * Выбрать оттенок типа подсказки, разведя его с соседями.
+ *
+ * Порядок предпочтений:
+ *   1. Оттенок самой темы — он и есть цель, тема должна звучать.
+ *   2. Эталонный оттенок типа, если первый слился с соседом. Именно
+ *      здесь смысл важнее темы: в «Закате» статус «работает» оранжевый
+ *      (31°) и от «перерыва» (38°) отличается на 7°. Минимальный сдвиг
+ *      дал бы жёлто-зелёный «успех» — формально различимый, но по
+ *      смыслу неверный. Эталон возвращает зелёный.
+ *   3. Отход от занятого оттенка на минимальный зазор — если и эталон
+ *      занят (крайний случай, но код не должен на нём падать).
+ */
+function pickNoteHue(sourceHue: number, anchorHue: number, taken: number[]): number {
+  if (hueIsFree(sourceHue, taken)) return sourceHue;
+  if (hueIsFree(anchorHue, taken)) return anchorHue;
+  const blocker = taken[0] ?? sourceHue;
+  const toAnchor = ((anchorHue - blocker + 540) % 360) - 180;
+  const sign = toAnchor >= 0 ? 1 : -1;
+  return ((blocker + sign * NOTE_HUE_MIN_GAP) % 360 + 360) % 360;
+}
+
+/**
+ * Цвет текста подсказки из СМЫСЛОВОГО цвета самой темы.
+ *
+ * Ключевое отличие от первой версии: источник — не универсальный
+ * набор синий/оранжевый/красный/зелёный, а те цвета, которые тема уже
+ * объявила для статусов. «Закат» описывает информацию бирюзовым
+ * (#3f9fa8), «Космос» — васильковым (#4cacf0), «Янтарь» опасность
+ * терракотой (#c96248). Брать вместо них общий синий значило вклеивать
+ * в тему чужую палитру — ровно то, на что и было замечание.
+ *
+ * Светлоту доводим по контрасту к фону подсказки: оттенок остаётся
+ * темин, а читаемость обеспечивается независимо (мелкий текст, 4.5).
  */
 function deriveNoteText(
-  base: string,
+  source: string,
   noteBg: string,
-  uiHue: number,
-  uiSat: number,
+  anchorHue: number,
   isDark: boolean,
+  takenHues: number[],
 ): string {
-  const tinted = tint(base, uiHue, uiSat, isDark, 0.14, 14);
-  return ensureContrast(tinted, noteBg, NOTE_TEXT_MIN_CONTRAST, !isDark);
+  const { s, l } = hexToHsl(source);
+  const h = pickNoteHue(hexToHsl(source).h, anchorHue, takenHues);
+  // Насыщенность поднимаем: у статусной точки цвет работает пятном, а
+  // у текста — тонкими штрихами букв, и блёклый тон в них теряется.
+  const sat = Math.min(Math.max(s, 0.45), 0.9);
+  const candidate = hslToHex({ h, s: sat, l });
+  return ensureContrast(candidate, noteBg, NOTE_TEXT_MIN_CONTRAST, !isDark);
 }
 
 /** Все пять слотов подсказок разом: фон из карточки, тексты — из главного цвета. */
@@ -367,17 +434,48 @@ export interface NoteColors {
   noteSuccess: string;
 }
 
-export function deriveNotes(card: string, ui: string, isDark: boolean): NoteColors {
+export function deriveNotes(
+  card: string,
+  ui: string,
+  isDark: boolean,
+  semantic?: {
+    statusFlexible?: string;
+    statusBreak?: string;
+    danger?: string;
+    statusActive?: string;
+  },
+): NoteColors {
   const noteBg = deriveNoteBg(card, isDark);
-  const { h, s } = hexToHsl(ui);
+
+  // Источник каждого типа — смысловой цвет ТЕМЫ. Запасные значения
+  // нужны только для тем, собранных до появления этих слотов.
+  const info = semantic?.statusFlexible ?? '#0ea5e9';
+  const warn = semantic?.statusBreak ?? '#f59e0b';
+  const danger = semantic?.danger ?? '#f43f5e';
+  const success = semantic?.statusActive ?? '#10b981';
+
+  // Порядок важен: каждый следующий тип расходится с уже занятыми
+  // оттенками. Первым идёт «предупреждение» — он чаще всех на экране,
+  // и двигать его нежелательнее всего; последним «подтверждение» —
+  // самый редкий, ему проще уступить.
+  const warnHue = hexToHsl(warn).h;
+  const dangerColor = deriveNoteText(danger, noteBg, NOTE_ANCHOR_HUE.danger, isDark, [warnHue]);
+  const infoColor = deriveNoteText(info, noteBg, NOTE_ANCHOR_HUE.info, isDark, [
+    warnHue, hexToHsl(dangerColor).h,
+  ]);
+  const successColor = deriveNoteText(success, noteBg, NOTE_ANCHOR_HUE.success, isDark, [
+    warnHue, hexToHsl(dangerColor).h, hexToHsl(infoColor).h,
+  ]);
+
   return {
     noteBg,
-    noteInfo: deriveNoteText(NOTE_TEXT_BASE.info, noteBg, h, s, isDark),
-    noteWarn: deriveNoteText(NOTE_TEXT_BASE.warn, noteBg, h, s, isDark),
-    noteDanger: deriveNoteText(NOTE_TEXT_BASE.danger, noteBg, h, s, isDark),
-    noteSuccess: deriveNoteText(NOTE_TEXT_BASE.success, noteBg, h, s, isDark),
+    noteInfo: infoColor,
+    noteWarn: deriveNoteText(warn, noteBg, NOTE_ANCHOR_HUE.warn, isDark, []),
+    noteDanger: dangerColor,
+    noteSuccess: successColor,
   };
 }
+
 
 /** Готовые смысловые цвета: одинаковый смысл во всех темах. */
 const SEMANTIC_BASE = {
@@ -466,8 +564,9 @@ export function derivePalette(ui: string, isDark: boolean): DerivedPalette {
   // Подложка блоков заметнее разделителя: иначе карточка выглядит
   // одним сплошным пятном (см. deriveCardInset).
   const cardInset = deriveCardInset(card, isDark);
-  // Подсказки: фон из карточки, тексты доводятся по контрасту к нему.
-  const notes = deriveNotes(card, ui, isDark);
+  // Подсказки считаем ПОСЛЕ статусов: их текст выводится из смысловых
+  // цветов темы, а не из универсального набора (см. deriveNotes).
+
 
   // Текст: светлый на тёмной основе и наоборот. Светлота 228/63 взята
   // из эталонов — она даёт контраст к карточке около 15 на тёмных
@@ -505,6 +604,15 @@ export function derivePalette(ui: string, isDark: boolean): DerivedPalette {
     !isDark,
   );
 
+  // Смысловые цвета темы — источник для текста подсказок.
+  const statusActive = tint(SEMANTIC_BASE.statusActive, h, s, isDark, 0.18);
+  const statusBreak = tint(SEMANTIC_BASE.statusBreak, h, s, isDark, 0.18);
+  const statusFlexible = tint(SEMANTIC_BASE.statusFlexible, h, s, isDark, 0.18);
+  const dangerColor = tint(SEMANTIC_BASE.danger, h, s, isDark, 0.12, 14);
+  const notes = deriveNotes(card, ui, isDark, {
+    statusFlexible, statusBreak, danger: dangerColor, statusActive,
+  });
+
   return {
     bg,
     card,
@@ -525,9 +633,9 @@ export function derivePalette(ui: string, isDark: boolean): DerivedPalette {
     statusAuto: ui,
     // Остальные статусы тянем к теме слабо (0.18): «работает» обязан
     // остаться узнаваемо зелёным, иначе значение статуса теряется.
-    statusActive: tint(SEMANTIC_BASE.statusActive, h, s, isDark, 0.18),
-    statusBreak: tint(SEMANTIC_BASE.statusBreak, h, s, isDark, 0.18),
-    statusFlexible: tint(SEMANTIC_BASE.statusFlexible, h, s, isDark, 0.18),
+    statusActive,
+    statusBreak,
+    statusFlexible,
     // «Не работает» — единственный намеренно нейтральный статус:
     // он должен гаснуть, поэтому берёт подтон темы, а не свой цвет.
     statusOffline: isDark
@@ -542,7 +650,7 @@ export function derivePalette(ui: string, isDark: boolean): DerivedPalette {
     // «Проверен» совпадает с главным цветом — как в «Космосе» и
     // «Янтаре», где roleVerified в точности равен ui.
     roleVerified: ui,
-    danger: tint(SEMANTIC_BASE.danger, h, s, isDark, 0.12, 14),
+    danger: dangerColor,
     // Шапка каталога — градиент от главного цвета к соседнему по RYB:
     // два тона одной семьи вместо случайной пары.
     heroFrom: tone(h, Math.min(s, 0.8), isDark ? 72 : 108),

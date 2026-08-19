@@ -127,10 +127,10 @@ export const PRESET_THEMES: Record<
       // Подсказки: общий фон и четыре смысловых цвета текста
       // (контраст к фону не ниже 4.5 — текст мелкий).
       noteBg: '#f7f7f7',
-      noteInfo: '#0c7398',
-      noteWarn: '#97690c',
-      noteDanger: '#c01012',
-      noteSuccess: '#097354',
+      noteInfo: '#0a79aa',
+      noteWarn: '#9c6508',
+      noteDanger: '#df0d31',
+      noteSuccess: '#0b815a',
     },
   },
   dark: {
@@ -160,10 +160,10 @@ export const PRESET_THEMES: Record<
       // Подсказки: общий фон и четыре смысловых цвета текста
       // (контраст к фону не ниже 4.5 — текст мелкий).
       noteBg: '#292931',
-      noteInfo: '#2fbcee',
-      noteWarn: '#eeae2f',
-      noteDanger: '#f26365',
-      noteSuccess: '#2feeb7',
+      noteInfo: '#0ea5e9',
+      noteWarn: '#f29d0e',
+      noteDanger: '#f65c76',
+      noteSuccess: '#10b981',
     },
   },
   /**
@@ -211,10 +211,10 @@ export const PRESET_THEMES: Record<
       // Подсказки: общий фон и четыре смысловых цвета текста
       // (контраст к фону не ниже 4.5 — текст мелкий).
       noteBg: '#161440',
-      noteInfo: '#2f96ee',
-      noteWarn: '#eb5733',
-      noteDanger: '#e73d8d',
-      noteSuccess: '#31eddd',
+      noteInfo: '#4cacf0',
+      noteWarn: '#e0a63c',
+      noteDanger: '#e05575',
+      noteSuccess: '#3fc9b0',
     },
   },
   /**
@@ -261,10 +261,10 @@ export const PRESET_THEMES: Record<
       // Подсказки: общий фон и четыре смысловых цвета текста
       // (контраст к фону не ниже 4.5 — текст мелкий).
       noteBg: '#4c1925',
-      noteInfo: '#5092f1',
-      noteWarn: '#ee7a2f',
-      noteDanger: '#ee627d',
-      noteSuccess: '#2fee8b',
+      noteInfo: '#3f9fa8',
+      noteWarn: '#f4ae33',
+      noteDanger: '#ea6b57',
+      noteSuccess: '#2be58e',
     },
   },
   /**
@@ -314,10 +314,10 @@ export const PRESET_THEMES: Record<
       // Подсказки: общий фон и четыре смысловых цвета текста
       // (контраст к фону не ниже 4.5 — текст мелкий).
       noteBg: '#0f0f0f',
-      noteInfo: '#4c96d2',
-      noteWarn: '#ce6950',
-      noteDanger: '#c9558c',
-      noteSuccess: '#4dd0c2',
+      noteInfo: '#63a5f7',
+      noteWarn: '#f3c81c',
+      noteDanger: '#ef4444',
+      noteSuccess: '#4ade80',
     },
   },
   /**
@@ -369,10 +369,10 @@ export const PRESET_THEMES: Record<
       // Подсказки: общий фон и четыре смысловых цвета текста
       // (контраст к фону не ниже 4.5 — текст мелкий).
       noteBg: '#f7f7f7',
-      noteInfo: '#215783',
-      noteWarn: '#933f2a',
-      noteDanger: '#9d3366',
-      noteSuccess: '#1a625a',
+      noteInfo: '#4472b1',
+      noteWarn: '#8d6b31',
+      noteDanger: '#bc4d52',
+      noteSuccess: '#31804e',
     },
   },
   /**
@@ -420,10 +420,10 @@ export const PRESET_THEMES: Record<
       // Подсказки: общий фон и четыре смысловых цвета текста
       // (контраст к фону не ниже 4.5 — текст мелкий).
       noteBg: '#f7f7f7',
-      noteInfo: '#0c6798',
-      noteWarn: '#97690c',
-      noteDanger: '#c01064',
-      noteSuccess: '#09735d',
+      noteInfo: '#0a79aa',
+      noteWarn: '#9c6508',
+      noteDanger: '#dc1c47',
+      noteSuccess: '#0b814a',
     },
   },
   /**
@@ -474,10 +474,10 @@ export const PRESET_THEMES: Record<
       // Подсказки: общий фон и четыре смысловых цвета текста
       // (контраст к фону не ниже 4.5 — текст мелкий).
       noteBg: '#ecfcf1',
-      noteInfo: '#137691',
-      noteWarn: '#926916',
-      noteDanger: '#b02022',
-      noteSuccess: '#0f6d4d',
+      noteInfo: '#287896',
+      noteWarn: '#966613',
+      noteDanger: '#bd4f3f',
+      noteSuccess: '#2a7e46',
     },
   },
   /**
@@ -526,10 +526,10 @@ export const PRESET_THEMES: Record<
       // Подсказки: общий фон и четыре смысловых цвета текста
       // (контраст к фону не ниже 4.5 — текст мелкий).
       noteBg: '#fcf7ec',
-      noteInfo: '#0b7a8a',
-      noteWarn: '#ad5510',
-      noteDanger: '#b9172e',
-      noteSuccess: '#09733c',
+      noteInfo: '#2e7893',
+      noteWarn: '#926a0c',
+      noteDanger: '#b75036',
+      noteSuccess: '#5f792b',
     },
   },
 };
@@ -663,7 +663,12 @@ function normalizeCustomThemes(raw: unknown): CustomTheme[] {
       // подставились бы цвета пресета-основы: светлый фон подсказки
       // внутри тёмной пользовательской темы. Считаем из её же карточки
       // и главного цвета.
-      const notes = deriveNotes(colors.card, colors.ui, isDark);
+      const notes = deriveNotes(colors.card, colors.ui, isDark, {
+        statusFlexible: colors.statusFlexible,
+        statusBreak: colors.statusBreak,
+        danger: colors.danger,
+        statusActive: colors.statusActive,
+      });
       if (typeof stored.noteBg !== 'string') colors.noteBg = notes.noteBg;
       if (typeof stored.noteInfo !== 'string') colors.noteInfo = notes.noteInfo;
       if (typeof stored.noteWarn !== 'string') colors.noteWarn = notes.noteWarn;

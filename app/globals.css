@@ -695,10 +695,10 @@ html.dark .smk-price-teal {
      слева. Контраст текста к фону не ниже 4.5 — блоки набраны 11 px,
      а это по WCAG AA «мелкий текст». */
   --smk-note-bg: #f7f7f7;
-  --smk-note-info: #0c7398;
-  --smk-note-warn: #97690c;
-  --smk-note-danger: #c01012;
-  --smk-note-success: #097354;
+  --smk-note-info: #0a79aa;
+  --smk-note-warn: #9c6508;
+  --smk-note-danger: #df0d31;
+  --smk-note-success: #0b815a;
 }
 
 /* --- Полотно карточки ------------------------------------------------------ */
@@ -1158,10 +1158,10 @@ html.dark {
 
   /* Подсказки: тёмное зеркало блока из :root. */
   --smk-note-bg: #292931;
-  --smk-note-info: #2fbcee;
-  --smk-note-warn: #eeae2f;
-  --smk-note-danger: #f5898a;
-  --smk-note-success: #2feeb7;
+  --smk-note-info: #0ea5e9;
+  --smk-note-warn: #f29d0e;
+  --smk-note-danger: #f65c76;
+  --smk-note-success: #10b981;
 }
 
 /* --- Стеклянный режим ---------------------------------------------------------
