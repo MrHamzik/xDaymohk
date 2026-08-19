@@ -18,6 +18,7 @@ import { useI18n } from '@/lib/i18n';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/lib/supabase';
 import Prose from '@/components/reading/Prose';
+import { parseDisputeQuestion, shortRequestId } from '@/lib/support/format';
 
 /** Телеграм поддержки — единственный внешний канал связи. */
 const SUPPORT_TELEGRAM = 'https://t.me/+Zx6xmc5g_a5hZmEy';
@@ -47,6 +48,8 @@ export default function HelpPage() {
   const [questions, setQuestions] = useState<UserQuestion[]>([]);
   const [mine, setMine] = useState<UserQuestion[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  // Раскрытое обращение в «Моих вопросах» — по одному за раз.
+  const [openMine, setOpenMine] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
@@ -225,30 +228,97 @@ export default function HelpPage() {
         <section className="mt-5">
           <h2 className="smk-sheet-label mb-2">{L('Мои вопросы', 'Сан хаттарш')}</h2>
           <div className="space-y-1.5">
-            {mine.map((q) => (
-              <article key={q.id} className="smk-sheet-row p-2.5">
-                <div className="flex items-start gap-2">
-                  <p className="min-w-0 flex-1 text-xs font-bold text-slate-900 dark:text-white">
-                    {q.question}
-                  </p>
-                  <button type="button" onClick={() => remove(q.id)}
-                    aria-label={L('Удалить', 'ДIадаккха')}
-                    className="smk-act smk-act--danger flex h-6 w-6 shrink-0 items-center justify-center">
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-                {q.answer ? (
-                  <>
-                    <hr className="smk-orn-soft my-2" />
-                    <div className="smk-read text-[13px]"><Prose text={q.answer} /></div>
-                  </>
-                ) : (
-                  <p className="smk-meta mt-1 text-[10px]">
-                    {L('Ожидает ответа', 'Жоп доьхуш ду')}
-                  </p>
-                )}
-              </article>
-            ))}
+            {mine.map((q) => {
+              // Компактно: номер обращения, сам вопрос одной строкой,
+              // корзина и стрелка. Полный текст и ответ открываются по
+              // стрелке — иначе жалоба по заданию занимала пол-экрана
+              // служебными строками.
+              const isOpen = openMine === q.id;
+              const dispute = parseDisputeQuestion(q.question);
+              // У жалобы в заголовке показываем название задания, а не
+              // сырую строку с полями.
+              const preview = dispute
+                ? (dispute.title || L('Спор по заданию', 'ТIедилларан къовсам'))
+                : q.question;
+              return (
+                <article key={q.id} className="smk-sheet-row p-2.5">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setOpenMine(isOpen ? null : q.id)}
+                      aria-expanded={isOpen}
+                      className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                    >
+                      <span className="shrink-0 font-mono text-[11px] font-bold text-slate-500 dark:text-zinc-500">
+                        {shortRequestId(q.id)}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-xs font-bold text-slate-900 dark:text-white">
+                        {preview}
+                      </span>
+                      {q.answer ? (
+                        <span className="smk-chip smk-note-success shrink-0">
+                          {L('Отвечен', 'Жоп делла')}
+                        </span>
+                      ) : (
+                        <span className="smk-chip smk-note-warn shrink-0">
+                          {L('Ждёт ответа', 'Жоп доьхуш')}
+                        </span>
+                      )}
+                    </button>
+
+                    <button type="button" onClick={() => remove(q.id)}
+                      aria-label={L('Удалить', 'ДIадаккха')}
+                      className="smk-act smk-act--danger flex h-6 w-6 shrink-0 items-center justify-center">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setOpenMine(isOpen ? null : q.id)}
+                      aria-label={isOpen ? L('Свернуть', 'Юха хIотто') : L('Развернуть', 'Схьадаста')}
+                      aria-expanded={isOpen}
+                      className="smk-act flex h-6 w-6 shrink-0 items-center justify-center"
+                    >
+                      <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                  </div>
+
+                  {isOpen && (
+                    <div className="mt-2.5">
+                      {dispute ? (
+                        <div className="smk-inset px-3 py-2.5 text-[11px]">
+                          {dispute.reward && (
+                            <p><span className="text-slate-500 dark:text-zinc-500">{L('Награда', 'Мах')}: </span>{dispute.reward}</p>
+                          )}
+                          {dispute.rejectReason && (
+                            <p className="mt-0.5">
+                              <span className="text-slate-500 dark:text-zinc-500">{L('Причина отказа', 'ТIе ца эцна бахьана')}: </span>
+                              {dispute.rejectReason}
+                            </p>
+                          )}
+                          {dispute.text && (
+                            <p className="mt-1.5 whitespace-pre-wrap break-words text-xs text-slate-800 dark:text-zinc-200">
+                              {dispute.text}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="smk-inset whitespace-pre-wrap break-words px-3 py-2.5 text-xs text-slate-800 dark:text-zinc-200">
+                          {q.question}
+                        </p>
+                      )}
+
+                      {q.answer && (
+                        <>
+                          <hr className="smk-orn-soft my-2" />
+                          <div className="smk-read text-[13px]"><Prose text={q.answer} /></div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </article>
+              );
+            })}
           </div>
         </section>
       )}

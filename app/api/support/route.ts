@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase-admin';
 import { authenticateAdmin } from '@/lib/auth';
 import { log } from '@/lib/logger';
 import { rateLimit, withRateLimitHeaders } from '@/lib/rate-limit';
+import { SUPPORT_ANSWER_DIVIDER } from '@/lib/support/format';
 
 /**
  * Раздел «Помощь»: частые вопросы и вопросы от пользователей.
@@ -207,14 +208,30 @@ export async function PATCH(request: Request) {
         p_user: data.author_id, p_group: 'complaint',
       });
       if (allowed !== false) {
+        // В письмо кладём И вопрос, И ответ, разделённые орнаментом.
+        //
+        // Раньше уходил только обрезанный до 140 символов вопрос:
+        // человек получал «Поддержка ответила» и свой же текст без
+        // самого ответа — то есть письмо не несло того единственного,
+        // ради чего отправлялось.
+        //
+        // Разделитель — тот же ромб, что в орнаментах интерфейса.
+        // Текст письма рендерится с whitespace-pre-wrap, поэтому
+        // переносы строк сохраняются.
+        const body = [
+          String(data.question ?? '').trim(),
+          SUPPORT_ANSWER_DIVIDER,
+          String(data.answer ?? '').trim(),
+        ].join('\n\n');
+
         await admin.from('notifications').insert({
           id: `sup-${data.id}-${Date.now()}`,
           recipient_id: data.author_id,
           type: 'support_answered',
           title: 'Поддержка ответила',
           title_ce: 'ГIо декъехь жоп делла',
-          message: String(data.question).slice(0, 140),
-          message_ce: String(data.question).slice(0, 140),
+          message: body,
+          message_ce: body,
         });
       }
     } catch (e) {
