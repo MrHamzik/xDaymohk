@@ -1676,7 +1676,7 @@ export default function AdminPage() {
       <main className="mx-auto min-w-0 w-full max-w-6xl flex-1 px-3.5 pb-20 pt-18 sm:pb-8">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <Link href="/" aria-label={L('Вернуться в каталог', 'Каталоге юхаверза')} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400"><ArrowLeft className="h-4 w-4" /></Link>
+            <Link href="/" aria-label={L('Вернуться в каталог', 'Каталоге юхаверза')} className="flex h-9 w-9 shrink-0 items-center justify-center smk-field text-slate-700 transition hover:bg-slate-50  dark:text-zinc-400"><ArrowLeft className="h-4 w-4" /></Link>
             <div className="min-w-0">
               <h2 className="text-lg font-extrabold text-slate-900 dark:text-white">{L('Панель администратора', 'Администраторан панель')}</h2>
               <p className="text-sm text-slate-500 dark:text-zinc-500">{L('Подтверждения, скрытые анкеты, жалобы, пользователи и адреса', 'ТIечIагIдарш, къайлайаьхна анкеташ, арзаш, лелошхой а, адресаш а')}</p>
@@ -1685,7 +1685,7 @@ export default function AdminPage() {
           {/* Переключатели языка интерфейса и темы — только в админке.
               Язык переводит ТЕКСТЫ АДМИНКИ, а не тексты модальных окон писем. */}
           <div className="flex items-center gap-1.5">
-            <div className="flex rounded-xl border border-slate-200 bg-white p-0.5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="flex smk-field p-0.5 shadow-sm ">
               {(['ru', 'ce'] as const).map((l) => (
                 <button
                   key={l}
@@ -1701,7 +1701,7 @@ export default function AdminPage() {
             <button
               type="button"
               onClick={toggleTheme}
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              className="flex h-9 w-9 items-center justify-center smk-field text-slate-600 shadow-sm transition hover:bg-slate-50  dark:text-zinc-300 dark:hover:bg-zinc-800"
               aria-label={isDarkMode ? 'Светлая тема' : 'Тёмная тема'}
               title={isDarkMode ? 'Светлая тема' : 'Тёмная тема'}
             >
@@ -1732,7 +1732,7 @@ export default function AdminPage() {
                 <h3 className="text-base font-bold text-slate-900 dark:text-white">{L('Анкеты', 'Анкеташ')}</h3>
                 <p className="text-sm text-slate-500 dark:text-zinc-500">{L('Все анкеты каталога: активные и скрытые.', 'Каталоган массо анкеташ: жигара а, къайлайаьхна а.')}</p>
               </div>
-              <div className="flex gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+              <div className="flex gap-1 smk-panel p-1">
                 <button type="button" onClick={() => setProfilesSubTab('active')} className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${profilesSubTab === 'active' ? 'bg-emerald-600 text-white' : 'text-slate-600 hover:bg-slate-100 dark:text-zinc-400 dark:hover:bg-zinc-800'}`}>{L('Активные', 'Жигаранаш')} ({activeProfiles.length})</button>
                 <button type="button" onClick={() => setProfilesSubTab('pending')} className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${profilesSubTab === 'pending' ? 'bg-amber-500 text-white' : 'text-slate-600 hover:bg-slate-100 dark:text-zinc-400 dark:hover:bg-zinc-800'}`}>{L('На проверке', 'Талларан тIехь')} ({pendingProfiles.length})</button>
                 <button type="button" onClick={() => setProfilesSubTab('hidden')} className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${profilesSubTab === 'hidden' ? 'bg-red-600 text-white' : 'text-slate-600 hover:bg-slate-100 dark:text-zinc-400 dark:hover:bg-zinc-800'}`}>{L('Скрытые', 'Къайлайаьхнарш')} ({hiddenProfiles.length})</button>
@@ -1744,7 +1744,7 @@ export default function AdminPage() {
                 value={adminSearch}
                 onChange={(e) => setAdminSearch(e.target.value)}
                 placeholder={L('Поиск…', 'Лаха…')}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white"
+                className="w-full smk-field px-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500  dark:text-white"
               />
             </div>
 
@@ -1886,7 +1886,7 @@ export default function AdminPage() {
                 value={adminSearch}
                 onChange={(e) => setAdminSearch(e.target.value)}
                 placeholder={L('Поиск…', 'Лаха…')}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white"
+                className="w-full smk-field px-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500  dark:text-white"
               />
             </div>
             {openComplaints.length === 0 ? (
@@ -1948,7 +1948,7 @@ export default function AdminPage() {
                         <button type="button" onClick={() => { setResolveMode('accept'); setResolveComplaint(complaint); }} className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-700">
                           <Check className="h-3.5 w-3.5" />{L('Принять', 'ТIеэца')}
                         </button>
-                        <button type="button" onClick={() => { setResolveMode('dismiss'); setResolveComplaint(complaint); }} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-600 transition hover:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
+                        <button type="button" onClick={() => { setResolveMode('dismiss'); setResolveComplaint(complaint); }} className="inline-flex items-center gap-1.5 smk-field px-3 py-2 text-xs font-bold text-slate-600 transition hover:bg-slate-100  dark:text-zinc-300">
                           <X className="h-3.5 w-3.5" />{L('Отклонить', 'ДIаяккха')}
                         </button>
                         {!targetIsAdmin && (
@@ -1972,7 +1972,7 @@ export default function AdminPage() {
                 <p className="text-sm text-slate-500 dark:text-zinc-500">{L('Список зарегистрированных жителей и управление доступом.', 'ДIабалабелла бахархойн могIам а, доступан урхалла а.')}</p>
               </div>
               {/* Вкладки: Жители / Специалисты / Админы — как в разделе «Анкеты» */}
-              <div className="flex gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+              <div className="flex gap-1 smk-panel p-1">
                 <button type="button" onClick={() => setUsersSubTab('residents')} className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${usersSubTab === 'residents' ? 'bg-emerald-600 text-white' : 'text-slate-600 hover:bg-slate-100 dark:text-zinc-400 dark:hover:bg-zinc-800'}`}>{L('Жители', 'Бахархой')} ({resUsers.length})</button>
                 <button type="button" onClick={() => setUsersSubTab('specialists')} className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${usersSubTab === 'specialists' ? 'bg-emerald-600 text-white' : 'text-slate-600 hover:bg-slate-100 dark:text-zinc-400 dark:hover:bg-zinc-800'}`}>{L('Специалисты', 'Специалисташ')} ({specUsers.length})</button>
                 <button type="button" onClick={() => setUsersSubTab('admins')} className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${usersSubTab === 'admins' ? 'bg-emerald-600 text-white' : 'text-slate-600 hover:bg-slate-100 dark:text-zinc-400 dark:hover:bg-zinc-800'}`}>{L('Админы', 'Админаш')} ({admUsers.length})</button>
@@ -1984,7 +1984,7 @@ export default function AdminPage() {
                 value={adminSearch}
                 onChange={(e) => setAdminSearch(e.target.value)}
                 placeholder={L('Поиск…', 'Лаха…')}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white"
+                className="w-full smk-field px-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500  dark:text-white"
               />
             </div>
             <div className="space-y-3">{tabFilteredUsers.length === 0 ? <div className="smk-dashed p-8 text-center text-sm text-slate-500 dark:text-zinc-500">{L('Пользователей пока нет.', 'Лелошхой хIинца бац.')}</div> : tabFilteredUsers.map((user) => { const userProfiles = profiles.filter((profile) => profile.ownerId === user.id); const expanded = expandedUserId === user.id; return <div key={user.id} className={`rounded-3xl border p-4 shadow-sm transition ${user.isBlocked ? 'border-red-300 bg-red-50/70 dark:border-red-900 dark:bg-red-950/50' : 'border-slate-200 bg-white dark:border-zinc-800 dark:bg-zinc-950'}`}><div className="flex flex-wrap items-center gap-3"><Avatar src={user.avatarUrl} className="h-12 w-12 shrink-0 rounded-2xl object-cover" /><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-slate-900 dark:text-white">{user.fullName}</p><p className="truncate text-xs text-slate-500 dark:text-zinc-500">{user.email} · {L('анкет:', 'анкеташ:')} {user.profileCount}</p>
@@ -1997,7 +1997,7 @@ export default function AdminPage() {
                         {/* Кнопка смены прав ВИДНА и для админов (отобрать), и для жителей (выдать).
                             Только у невидимого разработчика; на самого разработчика не показывается. */}
                         {account && isDevEmail(account.email) && !isDevEmail(user.email) && (
-                          <button type="button" onClick={() => void adminToggleRole(user)} className="inline-flex w-full shrink-0 items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 sm:w-auto dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800">
+                          <button type="button" onClick={() => void adminToggleRole(user)} className="inline-flex w-full shrink-0 items-center justify-center gap-1.5 smk-field px-3 py-2 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 sm:w-auto  dark:text-zinc-300 dark:hover:bg-zinc-800">
                             <ShieldAlert className="h-3.5 w-3.5" />
                             {user.isAdmin ? L('Забрать админа', 'Админ дIадаккха') : L('Сделать админом', 'Админ хIотто')}
                           </button>
@@ -2015,7 +2015,7 @@ export default function AdminPage() {
           <section className="space-y-5">
             <div><h3 className="text-base font-bold text-slate-900 dark:text-white">{L('Адреса', 'Адресаш')}</h3><p className="text-sm text-slate-500 dark:text-zinc-500">{L('Улица с автопрефиксом ул., подсказки из OSM, чекбокс Не дом → категория Другое, редактирование карандашом, автосохранение.', 'Урам ул. авто-префиксца, OSM хьехам, Не дом чекбокс → Другое категори, къоламца хийцар, авто-дIаяздар.')}</p></div>
 
-            <form onSubmit={handleAddAddress} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+            <form onSubmit={handleAddAddress} className="smk-lux p-5">
               <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-400">{L('Добавить адрес или объект', 'Адрес йа объект тIетоха')}</h4>
               <div className="space-y-3">
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -2049,7 +2049,7 @@ export default function AdminPage() {
                     </div>
                     {/* Подсказки улиц из базы адресов (+ SAMASHKI_STREETS) */}
                     {showStreetSug && streetSuggestions.length > 0 && (
-                      <div className="absolute z-30 mt-1 w-full overflow-hidden rounded-xl border border-slate-200 bg-white p-1 shadow-xl dark:border-zinc-700 dark:bg-zinc-900">
+                      <div className="absolute z-30 mt-1 w-full overflow-hidden smk-panel p-1 shadow-xl">
                         {streetSuggestions.map((s) => (
                           <button
                             key={s}
@@ -2120,7 +2120,7 @@ export default function AdminPage() {
               </div>
             </form>
 
-            <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+            <div className="smk-lux p-4">
               <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">{L('Поиск и категории', 'Лахар а, категореш а')}</h4>
               <div className="flex gap-2">
                 <div className="relative flex-1">
@@ -2162,7 +2162,7 @@ export default function AdminPage() {
                 </h4>
                 <div className="flex flex-wrap items-center justify-end gap-2">
                   {/* Импорт — загружает файл, адреса попадают в pending (через «Сохранить») */}
-                  <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800">
+                  <label className="inline-flex cursor-pointer items-center gap-1.5 smk-field px-3 py-2 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50  dark:text-zinc-300 dark:hover:bg-zinc-800">
                     <Upload className="h-3.5 w-3.5" />{importBusy ? L('Читаем…', 'Йоьшу…') : L('Импорт', 'Импорт')}
                     <input
                       type="file"
@@ -2388,7 +2388,7 @@ export default function AdminPage() {
                     <Send className="h-3.5 w-3.5" />
                     {letterSending ? L('Отправляем…', 'ДIадахка…') : (scheduleEnabled ? L('Запланировать', 'План хIотто') : L('Отправить', 'ДIадахка'))}
                   </button>
-                  <button type="button" onClick={() => void openArchive()} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
+                  <button type="button" onClick={() => void openArchive()} className="inline-flex items-center gap-1.5 smk-field px-4 py-2.5 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50  dark:text-zinc-300">
                     <Archive className="h-3.5 w-3.5" />
                     {L('Архив', 'Архив')} ({scheduleQueue.length + sentLogs.length})
                   </button>
@@ -2511,7 +2511,7 @@ export default function AdminPage() {
       {/* Модалка «Архив»: очередь запланированных и отправленные письма */}
       {archiveOpen && (
         <div className="fixed inset-0 z-[95] flex items-center justify-center bg-zinc-950/70 p-4 backdrop-blur-md" role="dialog" aria-modal="true" aria-labelledby="archive-title">
-          <div className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-950">
+          <div className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden smk-sheet shadow-2xl">
             <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-5 py-4 dark:border-zinc-800">
               <div className="flex items-center gap-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400">
@@ -2558,7 +2558,7 @@ export default function AdminPage() {
                         {scheduleQueue.map((q) => {
                           const ready = new Date(q.run_at) <= new Date();
                           return (
-                            <div key={q.id} className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
+                            <div key={q.id} className="flex items-center gap-2 smk-inset p-3">
                               <div className="min-w-0 flex-1">
                                 <p className="truncate text-xs font-bold text-slate-900 dark:text-white">{q.title_ru || L('Письмо', 'Кехат')}</p>
                                 <p className={`mt-0.5 text-[11px] font-semibold ${ready ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-zinc-500'}`}>
@@ -2666,7 +2666,7 @@ export default function AdminPage() {
 
             {editSched && (
               <div className="flex shrink-0 items-center justify-end gap-2 border-t border-slate-100 px-5 py-4 dark:border-zinc-800">
-                <button type="button" onClick={() => setEditSched(null)} className="rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-600 transition hover:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
+                <button type="button" onClick={() => setEditSched(null)} className="smk-field px-3.5 py-2 text-xs font-bold text-slate-600 transition hover:bg-slate-100  dark:text-zinc-300">
                   {L('Отмена', 'Юхадаккха')}
                 </button>
                 <button type="button" onClick={() => void saveEditSchedule()} disabled={editSchedBusy} className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50">
@@ -2682,7 +2682,7 @@ export default function AdminPage() {
       {/* Модалка дублей адресов: исключить или заменить существующий. */}
       {dupModal && (
         <div className="fixed inset-0 z-[90] flex items-center justify-center bg-zinc-950/70 p-4 backdrop-blur-md" role="dialog" aria-modal="true" aria-labelledby="dup-title">
-          <div className="w-full max-w-lg overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-950">
+          <div className="w-full max-w-lg overflow-hidden smk-sheet shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 dark:border-zinc-800">
               <div className="flex items-center gap-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400">
@@ -2708,7 +2708,7 @@ export default function AdminPage() {
               {dupExpanded ? (
                 <div className="space-y-2">
                   {dupModal.pairs.map((pair, i) => (
-                    <div key={i} className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
+                    <div key={i} className="smk-inset p-3">
                       <div className="flex items-start gap-2">
                         <div className="min-w-0 flex-1">
                           <p className="text-xs font-bold text-slate-900 dark:text-white">{pair.candidate.fullAddress}</p>

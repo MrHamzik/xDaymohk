@@ -2286,3 +2286,35 @@ textarea.smk-field:focus {
      плашки; жирный убран вместе с остальными начертаниями. */
   text-decoration: underline;
 }
+
+/* --- Компас «Кибла» ------------------------------------------------------------
+   Корпус прибора: полотно карточки плюс латунное кольцо золотом акцента.
+
+   Раньше здесь стояли литералы #0b2c41 (фон) и #2c4b61 (обод) в
+   dark:-вариантах: на светлых темах компас оставался бледно-серым, а на
+   цветных — синим пятном посреди чужой палитры. Теперь всё из
+   переменных, поэтому прибор выглядит частью любой темы.
+
+   Кольцо собрано слоями box-shadow, а не border: так их можно наложить
+   несколько (тонкий золотой кант, тёмная фаска, внешний ореол) и
+   получить объём латуни без единой картинки. */
+.smk-qibla {
+  background:
+    radial-gradient(
+      circle at 50% 32%,
+      color-mix(in srgb, var(--smk-gold) calc(7% * var(--fx-gradient)), transparent),
+      transparent 62%
+    ),
+    var(--smk-card-a);
+  box-shadow:
+    /* внутренняя фаска */
+    inset 0 0 0 1px color-mix(in srgb, var(--smk-gold) 45%, transparent),
+    inset 0 2px 14px -6px rgb(var(--smk-shadow-rgb) / calc(0.45 * var(--fx-shadow))),
+    /* латунный кант */
+    0 0 0 3px color-mix(in srgb, var(--smk-gold) 70%, transparent),
+    0 0 0 5px var(--smk-card-a),
+    0 0 0 6px color-mix(in srgb, var(--smk-gold) 30%, transparent),
+    /* свечение и посадочная тень */
+    0 0 22px -6px color-mix(in srgb, var(--smk-gold) calc(60% * var(--fx-glow)), transparent),
+    0 18px 45px -18px rgb(var(--smk-shadow-rgb) / calc(0.55 * var(--fx-shadow)));
+}
