@@ -17,19 +17,18 @@ import type { AppFilter } from '@/lib/types';
  * разделе «Адреса» → «Поиск и категории», дублировать их здесь нельзя —
  * получились бы два несогласованных справочника.
  */
+import { FILTER_ICONS, FILTER_ICON_NAMES } from '@/lib/filter-icons';
+
 type Scope = 'tasks' | 'catalog' | 'map';
 
 /**
- * Иконки для фильтров. Ключ хранится в app_filters.icon, значение —
- * компонент lucide-react. Список закрытый: имя из БД попадает в
- * разметку, поэтому произвольные значения не допускаются.
+ * Иконки берём из общего справочника lib/filter-icons: тот же список
+ * читают ленты заданий, поэтому выбранная здесь иконка сразу видна и
+ * там. Раньше список жил только в этом файле — иконку можно было
+ * выбрать, но нигде не увидеть.
  */
-const ICON_OPTIONS: Record<string, React.ComponentType<{ className?: string }>> = {
-  Briefcase, Stethoscope, Hammer, GraduationCap, Wrench, Scissors,
-  ShoppingBag, Sprout, Car, Home, Utensils, Truck, Baby, Scale,
-  Paintbrush, Laptop, Camera, Music, Dumbbell, Leaf,
-};
-const ICON_NAMES = Object.keys(ICON_OPTIONS);
+const ICON_OPTIONS = FILTER_ICONS;
+const ICON_NAMES = FILTER_ICON_NAMES;
 
 /**
  * Выбор иконки сеткой, а не выпадающим списком названий: по строке

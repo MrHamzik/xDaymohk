@@ -461,14 +461,19 @@ export default function TaskDetailModal({
               {/* Заявки на рассмотрении — только заказчику */}
               {isAuthor && pendingParticipants.length > 0 && (
                 <div className="smk-sheet-section px-4 py-4">
-                  <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-amber-600 dark:text-amber-400">
+                  <h3 className="smk-sheet-label mb-2">
                     {t.taskPendingHeading} ({pendingParticipants.length})
                   </h3>
                   <div className="space-y-1.5">
                     {pendingParticipants.map((p) => (
                       <div
                         key={p.id}
-                        className="flex items-center gap-2 rounded-xl bg-amber-50/70 p-2.5 dark:bg-amber-950/20"
+                        // Слот темы вместо bg-amber-50/70: тот литерал не
+                        // подчинялся палитре, поэтому заявка на
+                        // рассмотрении выглядела чужеродной, а после
+                        // одобрения строка вставала на .smk-sheet-row и
+                        // «вдруг» становилась правильной.
+                        className="smk-note smk-note-warn flex items-center gap-2 p-2.5"
                       >
                         <Avatar src={p.avatarUrl} className="h-8 w-8 shrink-0 rounded-lg object-cover" />
                         <div className="min-w-0 flex-1">
@@ -502,7 +507,7 @@ export default function TaskDetailModal({
               )}
 
               {/* Моя заявка ждёт решения заказчика */}
-              {isPendingMe && (
+              {isPendingMe && showHints && (
                 <p className="smk-note smk-note-warn mx-4 mb-4 px-3.5 py-2.5">
                   {t.taskPendingMine}
                 </p>
@@ -563,7 +568,7 @@ export default function TaskDetailModal({
                 <PayoutPanel taskId={task.id} amount={total} />
               )}
 
-              {task.status === 'awaiting_confirm' && (
+              {task.status === 'awaiting_confirm' && showHints && (
                 <p className="smk-note smk-note-warn mx-4 mb-4 px-3.5 py-2.5">
                   {t.taskAwaitConfirmNote.replace('{hours}', String(TASK_AUTO_CONFIRM_HOURS))}
                 </p>
@@ -662,23 +667,9 @@ export default function TaskDetailModal({
                       )
                     )}
 
-                    {/* Исполнителю — своя кнопка: отметить, что деньги
-                        всё-таки получены. Без неё у него был только
-                        путь «пожаловаться», и договориться миром было
-                        нечем. */}
-                    {isExecutor && needsPaymentProof && !isPaymentReceived && (
-                      <button
-                        type="button"
-                        disabled={Boolean(busy)}
-                        onClick={() => act('paid', () => runTaskAction(task.id, 'paid'))}
-                        className="smk-act rounded-lg px-2.5 py-1.5"
-                      >
-                        {busy === 'paid'
-                          ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          : <Check className="h-3.5 w-3.5" />}
-                        {t.taskPaymentReceivedBtn}
-                      </button>
-                    )}
+                    {/* Кнопки «Оплата получена» здесь нет: в споре она
+                        ничего не меняла — закрытие всё равно требует
+                        согласия обеих сторон через «Договорились». */}
 
                     {/* Жалоба администратору — модальное окно прямо
                         здесь, а не переход в «Помощь»: уводить человека
@@ -699,9 +690,11 @@ export default function TaskDetailModal({
               {/* Подтверждение вместо исчезающей формы */}
               {task.status === 'completed' && ratingSubmitted
                 && !(isAuthor && authorRatesViaAttendance) && (
-                <p className="smk-note smk-note-success mx-4 mb-4 px-3.5 py-3">
-                  {t.taskRatingSaved}
-                </p>
+                showHints ? (
+                  <p className="smk-note smk-note-success mx-4 mb-4 px-3.5 py-3">
+                    {t.taskRatingSaved}
+                  </p>
+                ) : null
               )}
 
               {/* Оценка второй стороны после закрытия сделки */}
@@ -852,9 +845,11 @@ export default function TaskDetailModal({
                 считалась успешной, а денег исполнитель не видел. */}
             {isExecutor && needsPaymentProof && task.status === 'awaiting_confirm' && (
               isPaymentReceived ? (
-                <p className="smk-note smk-note-success w-full px-3 py-2">
-                  {t.taskPaymentReceivedDone}
-                </p>
+                showHints ? (
+                  <p className="smk-note smk-note-success w-full px-3 py-2">
+                    {t.taskPaymentReceivedDone}
+                  </p>
+                ) : null
               ) : (
                 <>
                   <button

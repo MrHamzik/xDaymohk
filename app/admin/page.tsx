@@ -3,7 +3,7 @@
 import Avatar from '@/components/Avatar';
 import { useCallback, useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
-import { Archive, ArrowLeft, Ban, Check, ChevronDown, Clock3, Eye, EyeOff, FolderOpen, MapPin, Moon, Plus, RotateCcw, Save as SaveIcon, Search, Send, ShieldAlert, Star, Sun, Trash2, Upload, UserCheck, UserRound, X, Pencil } from 'lucide-react';
+import { Archive, ArrowLeft, Ban, Check, ChevronDown, Clock3, Eye, EyeOff, FolderOpen, MapPin, MapPinned, Moon, Plus, RotateCcw, Save as SaveIcon, Search, Send, ShieldAlert, Star, Sun, Trash2, Upload, UserCheck, UserRound, X, Pencil } from 'lucide-react';
 import AdminLetterEditorCard from '@/components/AdminLetterEditorCard';
 import AdminFiltersSection from '@/components/admin/AdminFiltersSection';
 import AdminArticlesSection from '@/components/admin/AdminArticlesSection';
@@ -19,6 +19,7 @@ import { useTheme } from '@/components/ThemeProvider';
 import { useAuth } from '@/components/AuthProvider';
 import { useProfiles } from '@/components/ProfilesProvider';
 import { isDevEmail } from '@/lib/admin';
+import AdminPickMap from '@/components/admin/AdminPickMap';
 import { useI18n } from '@/lib/i18n';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { SAMASHKI_HOUSE_ADDRESSES, SamashkiHouseAddress, getEffectiveHouseAddresses } from '@/lib/samashki-addresses';
@@ -255,6 +256,10 @@ export default function AdminPage() {
   const [newLng, setNewLng] = useState('45.2989');
   const [dmsInput, setDmsInput] = useState(() => decimalToDMSString(43.2880, 45.2989));
   const [dmsError, setDmsError] = useState('');
+  // Карта выбора координат в форме адреса: клик по пустому месту
+  // ставит точку. Раньше координаты можно было только вписать руками
+  // или найти геокодером — для нового объекта без адреса это тупик.
+  const [isPickMapOpen, setIsPickMapOpen] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
   const [customCategories, setCustomCategories] = useState<string[]>([]);
   // Общий справочник категорий карты из БД (app_filters, scope='map').
@@ -2090,8 +2095,12 @@ export default function AdminPage() {
                           />
                         )}
                       </div>
-                      <label className="flex h-10 shrink-0 cursor-pointer select-none items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 text-xs font-bold text-amber-800 transition hover:bg-amber-100 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300 dark:hover:bg-amber-950/50">
-                        <input type="checkbox" checked={isNotHouse} onChange={(e) => setIsNotHouse(e.target.checked)} className="h-4 w-4 rounded border-amber-300 text-emerald-600 focus:ring-emerald-500" />
+                      {/* self-stretch вместо фиксированной h-10: соседние
+                          поля имеют py-2.5 и растут вместе со шрифтом,
+                          а кнопка оставалась ниже их. Цвета — слот
+                          «предупреждение», а не литералы amber. */}
+                      <label className="smk-note smk-note-warn flex shrink-0 cursor-pointer select-none items-center gap-2 self-stretch px-3 transition">
+                        <input type="checkbox" checked={isNotHouse} onChange={(e) => setIsNotHouse(e.target.checked)} className="h-4 w-4 rounded text-emerald-600 focus:ring-emerald-500" />
                         {L('Не дом', 'ЦIа дац')}
                       </label>
                     </div>
@@ -2110,6 +2119,43 @@ export default function AdminPage() {
                   <label className="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-400">{L('Формат DMS', 'DMS формат')}</label>
                   <input value={dmsInput} onChange={(e)=>handleDmsChange(e.target.value)} placeholder={`43°17'15.8"N 45°17'59.3"E`} className="w-full rounded-xl border border-emerald-200 bg-emerald-50/50 px-3 py-2.5 text-xs font-mono text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-emerald-900 dark:bg-emerald-950/20 dark:text-white" />
                   {dmsError && <p className="mt-1 text-xs text-amber-600">{dmsError}</p>}
+                </div>
+
+                {/* Выбор точки на карте: клик ставит координаты в поля
+                    выше. Для объектов без почтового адреса («родник за
+                    околицей») это единственный способ задать место, не
+                    выясняя цифры на стороне. */}
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setIsPickMapOpen((v) => !v)}
+                    aria-expanded={isPickMapOpen}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-white px-4 py-2 text-xs font-bold text-emerald-700 shadow-sm hover:bg-emerald-50 dark:border-emerald-900 dark:bg-zinc-900 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
+                  >
+                    <MapPinned className="h-3.5 w-3.5" />
+                    {isPickMapOpen
+                      ? L('Скрыть карту', 'Карта къайлаяккха')
+                      : L('Указать точку на карте', 'Картин тIехь меттиг билгалъяккха')}
+                  </button>
+
+                  {isPickMapOpen && (
+                    <div className="mt-2 space-y-2">
+                      <p className="smk-note smk-note-info px-3 py-2">
+                        {L(
+                          'Нажмите на карту — координаты подставятся в поля выше. Кнопкой «Поиск» можно затем подтянуть улицу и дом.',
+                          'Карти тIе тIетаIае — координаташ лакхарчу меттигашка хIуттур ю. «Лахар» кнопкаца урам а, цIа а схьаэца мега.',
+                        )}
+                      </p>
+                      <AdminPickMap
+                        lat={parseFloat(newLat)}
+                        lng={parseFloat(newLng)}
+                        onPick={(lat, lng) => {
+                          handleLatChange(lat.toFixed(6));
+                          handleLngChange(lng.toFixed(6));
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2">

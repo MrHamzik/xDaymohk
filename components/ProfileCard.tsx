@@ -155,7 +155,11 @@ export default function ProfileCard({
       </div>
 
       <div className="smk-rows px-3.5 text-[13px]">
-        {profile.isSpecialist && profile.professionTitle && (
+        {/* Строку профессии прячем, если она дословно повторяет бейдж
+            «Специалист» рядом с именем — иначе выходило «Специалист
+            Специалист». Осмысленные названия («Электрик») остаются. */}
+        {profile.isSpecialist && profile.professionTitle
+          && profile.professionTitle.trim().toLowerCase() !== t.roleSpecialist.toLowerCase() && (
           <div className="flex items-start gap-2.5 py-2">
             <Briefcase className="smk-ico mt-0.5 h-3.5 w-3.5" />
             <p className="line-clamp-2 font-bold leading-snug text-emerald-700 dark:text-emerald-400">

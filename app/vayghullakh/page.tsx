@@ -284,13 +284,20 @@ export default function VayghullakhPage() {
     }
 
     if (category) list = list.filter((t) => t.category === category);
-    if (priorityFilter) list = list.filter((t) => t.priority === priorityFilter);
+    // Фильтры хранят выбор строкой через запятую (может быть несколько).
+    if (priorityFilter) {
+      const picked = priorityFilter.split(',').filter(Boolean);
+      list = list.filter((t) => picked.includes(t.priority));
+    }
     // Сравниваем с чистой наградой: надбавка за срочность и деньги
     // на закупку — не доход исполнителя.
     if (minReward > 0) list = list.filter((t) => t.reward >= minReward);
     // Способ расчёта: у старых заданий колонки нет — считаем наличными,
     // иначе фильтр «Наличные» их бы не находил.
-    if (payment) list = list.filter((t) => (t.paymentMethod ?? 'cash') === payment);
+    if (payment) {
+      const picked = payment.split(',').filter(Boolean);
+      list = list.filter((t) => picked.includes(t.paymentMethod ?? 'cash'));
+    }
 
     const q = query.trim().toLowerCase();
     if (q) {

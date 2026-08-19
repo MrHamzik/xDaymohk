@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { Check, Palette, Settings as SettingsIcon } from 'lucide-react';
 import { useSettings } from '@/components/SettingsProvider';
@@ -21,6 +22,9 @@ export default function ThemePickerButton() {
   const { settings, update } = useSettings();
   const [isOpen, setIsOpen] = useState(false);
   const boxRef = useRef<HTMLDivElement | null>(null);
+  const btnRef = useRef<HTMLButtonElement | null>(null);
+  // Координаты меню в окне: список рендерится порталом в <body>.
+  const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -29,6 +33,32 @@ export default function ThemePickerButton() {
     };
     document.addEventListener('mousedown', onClickOutside);
     return () => document.removeEventListener('mousedown', onClickOutside);
+  }, [isOpen]);
+
+  /**
+   * Меню рисуем ПОРТАЛОМ в body, а не рядом с кнопкой.
+   *
+   * Кнопка живёт в боковом меню (SettingsControlsBar), а его контейнер
+   * имеет overflow-hidden и overflow-y-auto. Абсолютно спозиционированный
+   * список обрезался этими рамками — в админ-панели выбор темы просто
+   * не открывался, хотя код отрабатывал.
+   *
+   * Портал выносит список из-под обрезки, координаты берём от кнопки.
+   */
+  useEffect(() => {
+    if (!isOpen) return;
+    const place = () => {
+      const rect = btnRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      setMenuPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right });
+    };
+    place();
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    return () => {
+      window.removeEventListener('resize', place);
+      window.removeEventListener('scroll', place, true);
+    };
   }, [isOpen]);
 
   const active = resolveTheme(settings.themeId, settings.customThemes);
@@ -76,6 +106,7 @@ export default function ThemePickerButton() {
     <div ref={boxRef} className="relative">
       <button
         type="button"
+        ref={btnRef}
         onClick={() => setIsOpen((value) => !value)}
         aria-expanded={isOpen}
         title={`${t.settingsThemes}: ${active.name}`}
@@ -86,8 +117,12 @@ export default function ThemePickerButton() {
         <Palette className="h-5 w-5" />
       </button>
 
-      {isOpen && (
-        <div className="smk-solid absolute right-0 top-full z-50 mt-2 w-52 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-zinc-700 dark:bg-zinc-900">
+      {isOpen && menuPos && createPortal((
+        <div
+          ref={boxRef}
+          className="smk-solid fixed z-[120] w-52 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-zinc-700 dark:bg-zinc-900"
+          style={{ top: menuPos.top, right: menuPos.right }}
+        >
           <div className="max-h-72 overflow-y-auto p-1.5 no-scrollbar">
             {options.map((option) => (
               <button
@@ -127,7 +162,7 @@ export default function ThemePickerButton() {
             {t.settingsThemeCreate}
           </Link>
         </div>
-      )}
+      ), document.body)}
     </div>
   );
 }

@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { Banknote, Search, Filter, ChevronDown, X, MapPin, Layers, Zap, Wallet } from 'lucide-react';
+import { Banknote, Check, Search, Filter, ChevronDown, X, MapPin, Layers, Zap, Wallet } from 'lucide-react';
 import MapSegmentedControl from '@/components/MapSegmentedControl';
 import { useI18n } from '@/lib/i18n';
 import { PAYMENT_METHODS } from '@/lib/payments';
+import { filterIcon } from '@/lib/filter-icons';
 import type { AppFilter } from '@/lib/types';
 
 interface TaskFilterBarProps {
@@ -66,6 +67,28 @@ export default function TaskFilterBar({
   const [isRewardOpen, setIsRewardOpen] = useState(false);
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
   const activeCount = (category ? 1 : 0) + (priority ? 1 : 0) + (minReward > 0 ? 1 : 0) + (payment ? 1 : 0);
+
+  /**
+   * Переключить значение в списке через запятую.
+   *
+   * Фильтр хранит выбор строкой ('sbp,card'), а не массивом: так не
+   * пришлось менять сигнатуры setPayment/setPriority и состояние на
+   * двух страницах лент. Пустая строка = «Любой», и выбор любого
+   * конкретного значения её вытесняет.
+   */
+  const toggleMulti = (current: string, value: string, apply: (next: string) => void) => {
+    if (!value) { apply(''); return; }
+    const list = current ? current.split(',').filter(Boolean) : [];
+    const next = list.includes(value)
+      ? list.filter((v) => v !== value)
+      : [...list, value];
+    apply(next.join(','));
+  };
+
+  /** Отмечен ли вариант: пустой — когда не выбрано ничего. */
+  const isPicked = (current: string, value: string) => (
+    value ? current.split(',').includes(value) : !current
+  );
 
   const resetAll = () => {
     setCategory('');
@@ -294,9 +317,11 @@ export default function TaskFilterBar({
                       <button
                         key={value || 'any'}
                         type="button"
-                        onClick={() => setPriority(value)}
-                        className={`${chipBase} ${priority === value ? chipActive : chipIdle}`}
+                        onClick={() => toggleMulti(priority, value, setPriority)}
+                        aria-pressed={isPicked(priority, value)}
+                        className={`${chipBase} ${isPicked(priority, value) ? chipActive : chipIdle}`}
                       >
+                        {isPicked(priority, value) && value ? <Check className="h-3 w-3" /> : null}
                         {label}
                       </button>
                     ))}
@@ -333,9 +358,11 @@ export default function TaskFilterBar({
                       <button
                         key={value || 'any'}
                         type="button"
-                        onClick={() => setPayment(value)}
-                        className={`${chipBase} ${payment === value ? chipActive : chipIdle}`}
+                        onClick={() => toggleMulti(payment, value, setPayment)}
+                        aria-pressed={isPicked(payment, value)}
+                        className={`${chipBase} ${isPicked(payment, value) ? chipActive : chipIdle}`}
                       >
+                        {isPicked(payment, value) && value ? <Check className="h-3 w-3" /> : null}
                         {label}
                       </button>
                     ))}
@@ -365,19 +392,26 @@ export default function TaskFilterBar({
                     >
                       <span className="truncate">{t.tasksSphereAll}</span>
                     </button>
-                    {categories.map((c) => (
-                      <button
-                        key={c.id}
-                        type="button"
-                        onClick={() => setCategory(c.value)}
-                        className={`${chipBase} min-w-0 ${category === c.value ? chipActive : chipIdle}`}
-                      >
-                        {/* Чеченская подпись, если админ её задал; иначе русская */}
-                        <span className="truncate">
-                          {(language === 'ce' && c.labelCe) || c.labelRu}
-                        </span>
-                      </button>
-                    ))}
+                    {categories.map((c) => {
+                      // Иконка: выбранная админом, иначе подобранная по
+                      // коду сферы. Раньше её можно было задать в
+                      // админке, но в ленте она нигде не показывалась.
+                      const Icon = filterIcon(c.icon, c.value);
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => setCategory(c.value)}
+                          className={`${chipBase} min-w-0 ${category === c.value ? chipActive : chipIdle}`}
+                        >
+                          <Icon className="h-3.5 w-3.5 shrink-0" />
+                          {/* Чеченская подпись, если админ её задал; иначе русская */}
+                          <span className="truncate">
+                            {(language === 'ce' && c.labelCe) || c.labelRu}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </div>
