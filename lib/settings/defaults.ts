@@ -126,11 +126,14 @@ export const PRESET_THEMES: Record<
       mapHouse: '#f59e0b',
       // Подсказки: общий фон и четыре смысловых цвета текста
       // (контраст к фону не ниже 4.5 — текст мелкий).
-      noteBg: '#f7f7f7',
-      noteInfo: '#0a79aa',
-      noteWarn: '#9c6508',
-      noteDanger: '#df0d31',
-      noteSuccess: '#0b815a',
+      noteInfo: '#0a74a3',
+      noteInfoBg: '#edf4f8',
+      noteWarn: '#9b6408',
+      noteWarnBg: '#f8f4ed',
+      noteDanger: '#d90d30',
+      noteDangerBg: '#f8edef',
+      noteSuccess: '#0b7c56',
+      noteSuccessBg: '#ecf7f3',
     },
   },
   dark: {
@@ -159,11 +162,14 @@ export const PRESET_THEMES: Record<
       mapHouse: '#f59e0b',
       // Подсказки: общий фон и четыре смысловых цвета текста
       // (контраст к фону не ниже 4.5 — текст мелкий).
-      noteBg: '#292931',
-      noteInfo: '#0ea5e9',
+      noteInfo: '#0eaaf1',
+      noteInfoBg: '#163a4b',
       noteWarn: '#f29d0e',
-      noteDanger: '#f65c76',
-      noteSuccess: '#10b981',
+      noteWarnBg: '#533d18',
+      noteDanger: '#f5526e',
+      noteDangerBg: '#48151d',
+      noteSuccess: '#14eba4',
+      noteSuccessBg: '#1d634c',
     },
   },
   /**
@@ -210,11 +216,14 @@ export const PRESET_THEMES: Record<
       mapHouse: '#4cacf0',
       // Подсказки: общий фон и четыре смысловых цвета текста
       // (контраст к фону не ниже 4.5 — текст мелкий).
-      noteBg: '#161440',
       noteInfo: '#4cacf0',
+      noteInfoBg: '#193d57',
       noteWarn: '#e0a63c',
-      noteDanger: '#e05575',
+      noteWarnBg: '#523e18',
+      noteDanger: '#e26280',
+      noteDangerBg: '#44141f',
       noteSuccess: '#3fc9b0',
+      noteSuccessBg: '#174f44',
     },
   },
   /**
@@ -260,11 +269,14 @@ export const PRESET_THEMES: Record<
       mapHouse: '#f6ae31',
       // Подсказки: общий фон и четыре смысловых цвета текста
       // (контраст к фону не ниже 4.5 — текст мелкий).
-      noteBg: '#4c1925',
-      noteInfo: '#3f9fa8',
+      noteInfo: '#5cb9c1',
+      noteInfoBg: '#1c464a',
       noteWarn: '#f4ae33',
-      noteDanger: '#ea6b57',
+      noteWarnBg: '#5f461b',
+      noteDanger: '#eb6f5b',
+      noteDangerBg: '#4f1f17',
       noteSuccess: '#2be58e',
+      noteSuccessBg: '#1b5e3e',
     },
   },
   /**
@@ -313,11 +325,14 @@ export const PRESET_THEMES: Record<
       mapHouse: '#a3a3a3',
       // Подсказки: общий фон и четыре смысловых цвета текста
       // (контраст к фону не ниже 4.5 — текст мелкий).
-      noteBg: '#0f0f0f',
       noteInfo: '#63a5f7',
+      noteInfoBg: '#1b395f',
       noteWarn: '#f3c81c',
+      noteWarnBg: '#61531c',
       noteDanger: '#ef4444',
+      noteDangerBg: '#340f0f',
       noteSuccess: '#4ade80',
+      noteSuccessBg: '#1a5b32',
     },
   },
   /**
@@ -368,11 +383,14 @@ export const PRESET_THEMES: Record<
       mapHouse: '#b4b4bc',
       // Подсказки: общий фон и четыре смысловых цвета текста
       // (контраст к фону не ниже 4.5 — текст мелкий).
-      noteBg: '#f7f7f7',
-      noteInfo: '#4472b1',
-      noteWarn: '#8d6b31',
-      noteDanger: '#bc4d52',
-      noteSuccess: '#31804e',
+      noteInfo: '#416eaa',
+      noteInfoBg: '#edf2f8',
+      noteWarn: '#886830',
+      noteWarnBg: '#f8f4ed',
+      noteDanger: '#aa4145',
+      noteDangerBg: '#f2dfdf',
+      noteSuccess: '#2f7d4c',
+      noteSuccessBg: '#ecf7f0',
     },
   },
   /**
@@ -419,11 +437,14 @@ export const PRESET_THEMES: Record<
       mapHouse: '#94a3b8',
       // Подсказки: общий фон и четыре смысловых цвета текста
       // (контраст к фону не ниже 4.5 — текст мелкий).
-      noteBg: '#f7f7f7',
-      noteInfo: '#0a79aa',
-      noteWarn: '#9c6508',
-      noteDanger: '#dc1c47',
+      noteInfo: '#0a74a3',
+      noteInfoBg: '#edf4f8',
+      noteWarn: '#9b6408',
+      noteWarnBg: '#f8f4ed',
+      noteDanger: '#d01b43',
+      noteDangerBg: '#f6e9ec',
       noteSuccess: '#0b814a',
+      noteSuccessBg: '#ecf7f2',
     },
   },
   /**
@@ -473,11 +494,14 @@ export const PRESET_THEMES: Record<
       mapHouse: '#36a2c9',
       // Подсказки: общий фон и четыре смысловых цвета текста
       // (контраст к фону не ниже 4.5 — текст мелкий).
-      noteBg: '#ecfcf1',
-      noteInfo: '#287896',
+      noteInfo: '#277896',
+      noteInfoBg: '#edf5f8',
       noteWarn: '#966613',
-      noteDanger: '#bd4f3f',
+      noteWarnBg: '#f8f4ed',
+      noteDanger: '#b04a3a',
+      noteDangerBg: '#f6ebe9',
       noteSuccess: '#2a7e46',
+      noteSuccessBg: '#edf8f0',
     },
   },
   /**
@@ -525,11 +549,14 @@ export const PRESET_THEMES: Record<
       mapHouse: '#edb91d',
       // Подсказки: общий фон и четыре смысловых цвета текста
       // (контраст к фону не ниже 4.5 — текст мелкий).
-      noteBg: '#fcf7ec',
       noteInfo: '#2e7893',
-      noteWarn: '#926a0c',
-      noteDanger: '#b75036',
+      noteInfoBg: '#edf5f8',
+      noteWarn: '#8d660b',
+      noteWarnBg: '#f8f4ed',
+      noteDanger: '#b14d34',
+      noteDangerBg: '#f8efed',
       noteSuccess: '#5f792b',
+      noteSuccessBg: '#f4f8ed',
     },
   },
 };
@@ -602,11 +629,14 @@ export function normalizeColors(raw: unknown, base: ThemeColors): ThemeColors {
     heroTo: pick('heroTo'),
     mapCluster: pick('mapCluster'),
     mapHouse: pick('mapHouse'),
-    noteBg: pick('noteBg'),
     noteInfo: pick('noteInfo'),
+    noteInfoBg: pick('noteInfoBg'),
     noteWarn: pick('noteWarn'),
+    noteWarnBg: pick('noteWarnBg'),
     noteDanger: pick('noteDanger'),
+    noteDangerBg: pick('noteDangerBg'),
     noteSuccess: pick('noteSuccess'),
+    noteSuccessBg: pick('noteSuccessBg'),
   };
 }
 
@@ -669,11 +699,17 @@ function normalizeCustomThemes(raw: unknown): CustomTheme[] {
         danger: colors.danger,
         statusActive: colors.statusActive,
       });
-      if (typeof stored.noteBg !== 'string') colors.noteBg = notes.noteBg;
       if (typeof stored.noteInfo !== 'string') colors.noteInfo = notes.noteInfo;
       if (typeof stored.noteWarn !== 'string') colors.noteWarn = notes.noteWarn;
       if (typeof stored.noteDanger !== 'string') colors.noteDanger = notes.noteDanger;
       if (typeof stored.noteSuccess !== 'string') colors.noteSuccess = notes.noteSuccess;
+      // Фоны подсказок появились позже текстов: у тем с прошлой версии
+      // был один общий noteBg. Его не переносим — он и был проблемой,
+      // из-за которой все четыре типа выглядели одинаково.
+      if (typeof stored.noteInfoBg !== 'string') colors.noteInfoBg = notes.noteInfoBg;
+      if (typeof stored.noteWarnBg !== 'string') colors.noteWarnBg = notes.noteWarnBg;
+      if (typeof stored.noteDangerBg !== 'string') colors.noteDangerBg = notes.noteDangerBg;
+      if (typeof stored.noteSuccessBg !== 'string') colors.noteSuccessBg = notes.noteSuccessBg;
       return {
         id: typeof entry.id === 'string' && entry.id ? entry.id : `theme-${index}`,
         name: typeof entry.name === 'string' && entry.name.trim()

@@ -131,8 +131,10 @@ const MANAGED_PROPERTIES = [
   '--smk-status-offline', '--smk-status-offline-deep',
   '--smk-role-specialist', '--smk-role-admin', '--smk-role-verified',
   '--smk-map-cluster',
-  '--smk-note-bg', '--smk-note-info', '--smk-note-warn',
-  '--smk-note-danger', '--smk-note-success',
+  '--smk-note-info', '--smk-note-info-bg',
+  '--smk-note-warn', '--smk-note-warn-bg',
+  '--smk-note-danger', '--smk-note-danger-bg',
+  '--smk-note-success', '--smk-note-success-bg',
   '--smk-danger-rgb',
   // Акцент интерфейса: Tailwind v4 держит палитру в переменных, поэтому
   // подмена --color-emerald-* перекрашивает все утилиты emerald разом.
@@ -313,14 +315,18 @@ export function applyThemeColors(
   set('--smk-danger-rgb', hexToRgbChannels(colors.danger));
 
   // ── Подсказки и предупреждения ──────────────────────────────────
-  // Один фон на все типы, четыре цвета текста по смыслу. Раньше эти
-  // блоки красились утилитами bg-sky-50 / bg-amber-50 / bg-rose-50 и
-  // в тёмных темах оставались светлыми пятнами с нечитаемым текстом.
-  set('--smk-note-bg', colors.noteBg);
+  // Четыре ПАРЫ «текст + свой фон»: блок целиком окрашен смыслом, а не
+  // отличается одной буквой. Раньше эти блоки красились утилитами
+  // bg-sky-50 / bg-amber-50 / bg-rose-50 и в тёмных темах оставались
+  // светлыми пятнами с нечитаемым текстом.
   set('--smk-note-info', colors.noteInfo);
+  set('--smk-note-info-bg', colors.noteInfoBg);
   set('--smk-note-warn', colors.noteWarn);
+  set('--smk-note-warn-bg', colors.noteWarnBg);
   set('--smk-note-danger', colors.noteDanger);
+  set('--smk-note-danger-bg', colors.noteDangerBg);
   set('--smk-note-success', colors.noteSuccess);
+  set('--smk-note-success-bg', colors.noteSuccessBg);
 
   // ── Акцент интерфейса (зелёный по умолчанию) ────────────────────
   // Утилиты вида bg-emerald-600 компилируются в var(--color-emerald-600),

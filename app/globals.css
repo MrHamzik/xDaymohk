@@ -694,11 +694,14 @@ html.dark .smk-price-teal {
      Один фон на все четыре типа, различает их цвет текста и засечка
      слева. Контраст текста к фону не ниже 4.5 — блоки набраны 11 px,
      а это по WCAG AA «мелкий текст». */
-  --smk-note-bg: #f7f7f7;
-  --smk-note-info: #0a79aa;
-  --smk-note-warn: #9c6508;
-  --smk-note-danger: #df0d31;
-  --smk-note-success: #0b815a;
+  --smk-note-info: #0a74a3;
+  --smk-note-info-bg: #edf4f8;
+  --smk-note-warn: #9b6408;
+  --smk-note-warn-bg: #f8f4ed;
+  --smk-note-danger: #d90d30;
+  --smk-note-danger-bg: #f8edef;
+  --smk-note-success: #0b7c56;
+  --smk-note-success-bg: #ecf7f3;
 }
 
 /* --- Полотно карточки ------------------------------------------------------ */
@@ -1157,11 +1160,14 @@ html.dark {
   --smk-hairline-strong: rgb(255 255 255 / 0.16);
 
   /* Подсказки: тёмное зеркало блока из :root. */
-  --smk-note-bg: #292931;
-  --smk-note-info: #0ea5e9;
+  --smk-note-info: #0eaaf1;
+  --smk-note-info-bg: #163a4b;
   --smk-note-warn: #f29d0e;
-  --smk-note-danger: #f65c76;
-  --smk-note-success: #10b981;
+  --smk-note-warn-bg: #533d18;
+  --smk-note-danger: #f5526e;
+  --smk-note-danger-bg: #48151d;
+  --smk-note-success: #14eba4;
+  --smk-note-success-bg: #1d634c;
 }
 
 /* --- Стеклянный режим ---------------------------------------------------------
@@ -2086,17 +2092,19 @@ textarea.smk-field:focus {
    текстом, а в карточке задания подряд шли четыре разных по яркости
    плашки — она рябила.
 
-   Устройство: ОДИН фон на все типы (--smk-note-bg) и четыре цвета
-   текста по смыслу. Тип различают цвет текста и вертикальная засечка
-   слева — тем же приёмом, что подписи .smk-sheet-label. Так блоки
-   читаются одной семьёй, но смысл виден до чтения.
+   Устройство: у каждого типа СВОЯ пара «текст + фон». Фон выводится
+   из цвета текста того же типа (на тёмных темах вдвое темнее него, на
+   светлых — светлее), поэтому блок целиком окрашен смыслом:
+   предупреждение тёплое, опасность красная, подтверждение зелёное.
+   Плюс вертикальная засечка слева — тем же приёмом, что подписи
+   .smk-sheet-label.
 
    Контраст текста к фону не ниже 4.5 (WCAG AA для мелкого текста) —
    он обеспечивается в lib/settings/derive.ts на этапе вывода палитры. */
 .smk-note {
   position: relative;
   border-radius: 0.75rem;
-  background: var(--smk-note-bg);
+  background: var(--smk-note-info-bg);
   color: var(--smk-note-info);
   padding-left: 0.875rem;
   box-shadow:
@@ -2125,10 +2133,22 @@ textarea.smk-field:focus {
 
 /* Заголовок внутри подсказки наследует её цвет, поэтому отдельного
    класса под него не нужно. */
-.smk-note-info { color: var(--smk-note-info); }
-.smk-note-warn { color: var(--smk-note-warn); }
-.smk-note-danger { color: var(--smk-note-danger); }
-.smk-note-success { color: var(--smk-note-success); }
+.smk-note-info {
+  color: var(--smk-note-info);
+  background: var(--smk-note-info-bg);
+}
+.smk-note-warn {
+  color: var(--smk-note-warn);
+  background: var(--smk-note-warn-bg);
+}
+.smk-note-danger {
+  color: var(--smk-note-danger);
+  background: var(--smk-note-danger-bg);
+}
+.smk-note-success {
+  color: var(--smk-note-success);
+  background: var(--smk-note-success-bg);
+}
 
 /* Ссылка внутри подсказки: тот же цвет, подчёркивание оставляем —
    это единственный признак кликабельности внутри плашки. */

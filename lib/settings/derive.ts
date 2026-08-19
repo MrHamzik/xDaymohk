@@ -295,14 +295,17 @@ function tint(
    Подсказки и предупреждения
    ---------------------------------------------------------------------------
    Блок-подсказка — это НЕ поверхность и не поле: у него своя задача —
-   объяснить правило или предостеречь. Поэтому пять отдельных слотов:
-   один общий фон и четыре цвета текста по смыслу сообщения.
+   объяснить правило или предостеречь. Поэтому четыре ПАРЫ слотов:
+   у каждого типа свой цвет текста и свой фон.
 
-   Почему фон один. Раньше каждый блок красился своей утилитой
-   (bg-sky-50, bg-amber-50, bg-rose-50, bg-emerald-50) — в карточке
-   задания подряд шли четыре разных по яркости пятна, и она рябила.
-   Общий фон даёт им читаться одной семьёй, а смысл различают цвет
-   текста и золотая засечка слева.
+   Фон выводится из цвета текста того же типа — блок целиком окрашен
+   смыслом: предупреждение тёплое, опасность красная, подтверждение
+   зелёное. Раньше фон был один на все четыре типа, и смысл различала
+   лишь буква; теперь тип виден боковым зрением, до чтения.
+
+   Направление отхода зависит от основы темы: на тёмных фон уходит
+   ВНИЗ от цвета текста, на светлых — ВВЕРХ. Одна арифметика на оба
+   случая давала тёмные цветные плашки на белых карточках.
 
    Откуда берутся цвета текста. Из СМЫСЛОВЫХ цветов самой темы, а не
    из универсального набора синий/оранжевый/красный/зелёный. Тема уже
@@ -318,27 +321,96 @@ function tint(
    через ensureContrast — оттенок при этом не трогаем, он несёт смысл.
 --------------------------------------------------------------------------- */
 
-/** Светлота фона подсказки по шкале 0–240: отход от карточки. */
-const NOTE_BG_DARK_FACTOR = 1.5;
-const NOTE_BG_LIGHT_STEP = 8;
 /** Минимальный контраст текста подсказки к её фону (WCAG AA, мелкий текст). */
 const NOTE_TEXT_MIN_CONTRAST = 4.5;
 
 /**
- * Фон блока-подсказки: между полотном карточки и полем.
+ * Стартовая доля отхода фона от цвета текста.
  *
- * Заметнее разделителя (иначе блок не читается как отдельный), но
- * мягче поля — подсказку не заполняют, её читают.
+ * На тёмных темах — «вдвое темнее» (светлота × 0.5), ровно как просил
+ * заказчик. На светлых зеркально: половина пути к белому, иначе на
+ * белой карточке появлялась бы тёмная цветная плашка.
+ *
+ * Это только СТАРТ: дальше фон доводится по контрасту (см. deriveNoteBg),
+ * потому что при ×0.5 текст и фон выходят из одного цвета и слишком
+ * близки — контраст получался 2.4 при норме 4.5.
  */
-export function deriveNoteBg(card: string, isDark: boolean): string {
-  const { h, s, l } = hexToHsl(card);
-  const scaled = l * LIGHTNESS_SCALE;
-  const next = isDark
-    ? Math.min(LIGHTNESS_SCALE, scaled * NOTE_BG_DARK_FACTOR)
-    : Math.max(0, scaled - NOTE_BG_LIGHT_STEP);
-  // Насыщенность чуть выше карточки: подтон темы в подсказке должен
-  // читаться, иначе на светлых темах блок выходит просто серым.
-  return hslToHex({ h, s: Math.min(s * 1.35, 0.7), l: next / LIGHTNESS_SCALE });
+const NOTE_BG_DARK_FACTOR = 0.5;
+const NOTE_BG_LIGHT_FACTOR = 0.5;
+
+/**
+ * Насыщенность фона подсказки.
+ *
+ * Ниже, чем у текста: на всю площадь блока полная насыщенность
+ * читается как заливка-предупреждение, а подсказка не должна кричать.
+ * На тёмных темах потолок выше — там цвет гасится самой основой.
+ */
+const NOTE_BG_SAT_MAX_DARK = 0.55;
+const NOTE_BG_SAT_MAX_LIGHT = 0.42;
+
+/**
+ * Предел светлоты фона подсказки.
+ *
+ * Без него доводка по контрасту съедала весь цвет: на светлых темах
+ * фон уходил в чистый #ffffff и подсказка переставала отличаться от
+ * карточки — то есть ровно то, ради чего цветной фон и вводился.
+ * Упёршись в потолок, дальше двигаем ТЕКСТ, а не фон.
+ */
+const NOTE_BG_LIGHT_CEILING = 0.955;
+const NOTE_BG_DARK_FLOOR = 0.07;
+
+/**
+ * Насколько фон подсказки обязан быть светлее карточки на ТЁМНЫХ темах.
+ *
+ * Направление принципиально: на тёмной основе подсказка — приподнятая
+ * поверхность, она светлее полотна. Без этого правила доводка уводила
+ * её ВНИЗ, и в «Космосе» фон опасности выходил #1d080d при карточке
+ * #121127 — темнее полотна и неотличим от него.
+ *
+ * Множитель к светлоте карточки: 1.35 даёт видимую ступень и на почти
+ * чёрных темах, где абсолютная разница мала.
+ */
+const NOTE_BG_DARK_MIN_FACTOR = 1.5;
+/** Абсолютный минимум светлоты фона на тёмных темах (для «Чёрной»). */
+const NOTE_BG_DARK_MIN_ABS = 0.1;
+
+/**
+ * Фон блока-подсказки из цвета его же текста.
+ *
+ * Шаг 1 — отход на половину светлоты (вниз на тёмных, вверх на
+ * светлых). Шаг 2 — доводка, пока текст не станет читаемым: оттенок
+ * при этом не трогаем, он несёт смысл, двигается только светлота.
+ */
+export function deriveNoteBg(text: string, isDark: boolean, card?: string): string {
+  const { h, s, l } = hexToHsl(text);
+  const sat = Math.min(s, isDark ? NOTE_BG_SAT_MAX_DARK : NOTE_BG_SAT_MAX_LIGHT);
+  // На тёмных темах фон не опускается ниже карточки: подсказка —
+  // приподнятая поверхность, а не выемка в полотне.
+  const darkFloor = card
+    ? Math.max(hexToHsl(card).l * NOTE_BG_DARK_MIN_FACTOR, NOTE_BG_DARK_MIN_ABS)
+    : NOTE_BG_DARK_FLOOR;
+  let lightness = isDark
+    ? Math.max(l * NOTE_BG_DARK_FACTOR, darkFloor)
+    : l + (1 - l) * NOTE_BG_LIGHT_FACTOR;
+
+  // Фон обязан отличаться И от текста (читаемость), И от карточки
+  // (иначе блока попросту не видно на полотне).
+  const isReady = (candidate: string) =>
+    contrastRatio(text, candidate) >= NOTE_TEXT_MIN_CONTRAST;
+
+  for (let step = 0; step < 120; step += 1) {
+    const candidate = hslToHex({ h, s: sat, l: lightness });
+    if (isReady(candidate)) return candidate;
+    const next = lightness + (isDark ? -0.01 : 0.01);
+    // Дошли до предела — останавливаемся с цветом, а не с белым/чёрным.
+    // Дальше контраст добирает ТЕКСТ (см. pair в deriveNotes).
+    if (isDark ? next < darkFloor : next > NOTE_BG_LIGHT_CEILING) break;
+    lightness = next;
+  }
+  const capped = isDark
+    ? Math.max(lightness, darkFloor)
+    : Math.min(lightness, NOTE_BG_LIGHT_CEILING);
+  return hslToHex({ h, s: sat, l: capped });
 }
 
 /**
@@ -399,19 +471,19 @@ function pickNoteHue(sourceHue: number, anchorHue: number, taken: number[]): num
 /**
  * Цвет текста подсказки из СМЫСЛОВОГО цвета самой темы.
  *
- * Ключевое отличие от первой версии: источник — не универсальный
- * набор синий/оранжевый/красный/зелёный, а те цвета, которые тема уже
- * объявила для статусов. «Закат» описывает информацию бирюзовым
- * (#3f9fa8), «Космос» — васильковым (#4cacf0), «Янтарь» опасность
- * терракотой (#c96248). Брать вместо них общий синий значило вклеивать
- * в тему чужую палитру — ровно то, на что и было замечание.
+ * Источник — не универсальный набор синий/оранжевый/красный/зелёный, а
+ * те цвета, которые тема уже объявила для статусов. «Закат» описывает
+ * информацию бирюзовым (#3f9fa8), «Космос» — васильковым (#4cacf0),
+ * «Янтарь» опасность терракотой (#c96248). Брать вместо них общий синий
+ * значило вклеивать в тему чужую палитру.
  *
- * Светлоту доводим по контрасту к фону подсказки: оттенок остаётся
- * темин, а читаемость обеспечивается независимо (мелкий текст, 4.5).
+ * Контраст здесь НЕ доводится: фон подсказки выводится из этого цвета
+ * (см. deriveNoteBg) и сам отходит на нужное расстояние. Раньше было
+ * наоборот — текст подгонялся под общий фон, — но с индивидуальным
+ * фоном у каждого типа двусторонняя подгонка зациклилась бы.
  */
 function deriveNoteText(
   source: string,
-  noteBg: string,
   anchorHue: number,
   isDark: boolean,
   takenHues: number[],
@@ -421,19 +493,34 @@ function deriveNoteText(
   // Насыщенность поднимаем: у статусной точки цвет работает пятном, а
   // у текста — тонкими штрихами букв, и блёклый тон в них теряется.
   const sat = Math.min(Math.max(s, 0.45), 0.9);
-  const candidate = hslToHex({ h, s: sat, l });
-  return ensureContrast(candidate, noteBg, NOTE_TEXT_MIN_CONTRAST, !isDark);
+  // Светлоту держим в коридоре: слишком тёмный текст на тёмной теме и
+  // слишком светлый на светлой не дали бы фону куда отойти.
+  const lightness = isDark
+    ? Math.min(Math.max(l, 0.5), 0.78)
+    : Math.min(Math.max(l, 0.28), 0.46);
+  return hslToHex({ h, s: sat, l: lightness });
 }
+
 
 /** Все пять слотов подсказок разом: фон из карточки, тексты — из главного цвета. */
 export interface NoteColors {
-  noteBg: string;
   noteInfo: string;
+  noteInfoBg: string;
   noteWarn: string;
+  noteWarnBg: string;
   noteDanger: string;
+  noteDangerBg: string;
   noteSuccess: string;
+  noteSuccessBg: string;
 }
 
+/**
+ * Все восемь слотов подсказок: четыре пары «текст + свой фон».
+ *
+ * Параметр `card` больше не нужен для фона (он выводится из текста), но
+ * остаётся в сигнатуре ради совместимости вызовов и на случай, если
+ * фон снова понадобится привязать к полотну.
+ */
 export function deriveNotes(
   card: string,
   ui: string,
@@ -445,8 +532,6 @@ export function deriveNotes(
     statusActive?: string;
   },
 ): NoteColors {
-  const noteBg = deriveNoteBg(card, isDark);
-
   // Источник каждого типа — смысловой цвет ТЕМЫ. Запасные значения
   // нужны только для тем, собранных до появления этих слотов.
   const info = semantic?.statusFlexible ?? '#0ea5e9';
@@ -458,23 +543,42 @@ export function deriveNotes(
   // оттенками. Первым идёт «предупреждение» — он чаще всех на экране,
   // и двигать его нежелательнее всего; последним «подтверждение» —
   // самый редкий, ему проще уступить.
-  const warnHue = hexToHsl(warn).h;
-  const dangerColor = deriveNoteText(danger, noteBg, NOTE_ANCHOR_HUE.danger, isDark, [warnHue]);
-  const infoColor = deriveNoteText(info, noteBg, NOTE_ANCHOR_HUE.info, isDark, [
+  const warnColor = deriveNoteText(warn, NOTE_ANCHOR_HUE.warn, isDark, []);
+  const warnHue = hexToHsl(warnColor).h;
+  const dangerColor = deriveNoteText(danger, NOTE_ANCHOR_HUE.danger, isDark, [warnHue]);
+  const infoColor = deriveNoteText(info, NOTE_ANCHOR_HUE.info, isDark, [
     warnHue, hexToHsl(dangerColor).h,
   ]);
-  const successColor = deriveNoteText(success, noteBg, NOTE_ANCHOR_HUE.success, isDark, [
+  const successColor = deriveNoteText(success, NOTE_ANCHOR_HUE.success, isDark, [
     warnHue, hexToHsl(dangerColor).h, hexToHsl(infoColor).h,
   ]);
 
+  // Пара «текст + фон» досчитывается в два шага без взаимной рекурсии:
+  // фон отходит от цвета текста, а затем текст доводится по контрасту
+  // к уже готовому фону. Второй шаг нужен там, где фон упёрся в
+  // потолок светлоты и сам добрать контраст не смог.
+  const pair = (text: string) => {
+    const bg = deriveNoteBg(text, isDark, card);
+    return { text: ensureContrast(text, bg, NOTE_TEXT_MIN_CONTRAST, !isDark), bg };
+  };
+
+  const infoPair = pair(infoColor);
+  const warnPair = pair(warnColor);
+  const dangerPair = pair(dangerColor);
+  const successPair = pair(successColor);
+
   return {
-    noteBg,
-    noteInfo: infoColor,
-    noteWarn: deriveNoteText(warn, noteBg, NOTE_ANCHOR_HUE.warn, isDark, []),
-    noteDanger: dangerColor,
-    noteSuccess: successColor,
+    noteInfo: infoPair.text,
+    noteInfoBg: infoPair.bg,
+    noteWarn: warnPair.text,
+    noteWarnBg: warnPair.bg,
+    noteDanger: dangerPair.text,
+    noteDangerBg: dangerPair.bg,
+    noteSuccess: successPair.text,
+    noteSuccessBg: successPair.bg,
   };
 }
+
 
 
 /** Готовые смысловые цвета: одинаковый смысл во всех темах. */
@@ -518,11 +622,14 @@ export interface DerivedPalette {
   heroTo: string;
   mapCluster: string;
   mapHouse: string;
-  noteBg: string;
   noteInfo: string;
+  noteInfoBg: string;
   noteWarn: string;
+  noteWarnBg: string;
   noteDanger: string;
+  noteDangerBg: string;
   noteSuccess: string;
+  noteSuccessBg: string;
 }
 
 /**
