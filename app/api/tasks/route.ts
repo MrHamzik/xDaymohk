@@ -239,11 +239,20 @@ export async function POST(request: Request) {
   const allowNewcomers = body.allowNewcomers !== false;
 
   // Блокировка за неподтверждение оплаты (6 часов).
-  const { data: profile, error: profileError } = await admin
+  let { data: profile, error: profileError } = await admin
     .from('user_profiles')
-    .select('id, is_blocked, tasks_blocked_until, tasks_created_count')
+    .select('id, is_blocked, tasks_blocked_until, tasks_created_count, phone_verified_at')
     .eq('id', userId)
     .maybeSingle();
+  if (profileError && /phone_verified_at/i.test(profileError.message)) {
+    const retry = await admin
+      .from('user_profiles')
+      .select('id, is_blocked, tasks_blocked_until, tasks_created_count')
+      .eq('id', userId)
+      .maybeSingle();
+    profile = retry.data as typeof profile;
+    profileError = retry.error;
+  }
   if (profileError) {
     log.warn('tasks create: profile read failed:', profileError.message);
     return NextResponse.json({ error: 'Не удалось проверить профиль' }, { status: 500 });
@@ -258,6 +267,19 @@ export async function POST(request: Request) {
     const until = new Date(profile.tasks_blocked_until!);
     return NextResponse.json(
       { error: `Создание заданий заблокировано до ${until.toLocaleString('ru-RU')}` },
+      { status: 403 },
+    );
+  }
+
+  // Платное задание — только с подтверждённым номером. Почту Google
+  // делают за минуту; SMS привязывает человека к российскому телефону.
+  // Безвозмездная помощь в «ГIончалла» этой проверки не требует.
+  if (isPaid && 'phone_verified_at' in profile && !profile.phone_verified_at) {
+    return NextResponse.json(
+      {
+        error: 'Сначала подтвердите телефон SMS-кодом. Безвозмездная помощь в «ГIончалла» открыта без этого.',
+        code: 'phone_required',
+      },
       { status: 403 },
     );
   }

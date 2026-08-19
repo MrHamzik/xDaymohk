@@ -7,6 +7,7 @@ import Navbar from '@/components/Navbar';
 import SidebarNav from '@/components/SidebarNav';
 import BottomNav from '@/components/BottomNav';
 import PhoneField from '@/components/PhoneField';
+import PhoneVerifyPanel from '@/components/PhoneVerifyPanel';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import EditProfileModal from '@/components/EditProfileModal';
 import CreateActionModal from '@/components/CreateActionModal';
@@ -340,6 +341,9 @@ export default function ProfilePage() {
             <div>
               <label htmlFor="account-phone" className="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-400">{t.phoneGeneral}</label>
               <PhoneField id="account-phone" value={accountPhone} onChange={setAccountPhone} />
+              <div className="mt-2">
+                <PhoneVerifyPanel hideField phoneDigits={accountPhone} />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

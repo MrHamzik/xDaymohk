@@ -10,6 +10,7 @@ import { useI18n } from '@/lib/i18n';
 import { createTask, updateTask, fetchTaskFilters } from '@/lib/tasks/client';
 import { getUserCoords } from '@/lib/geo';
 import { useAuth } from '@/components/AuthProvider';
+import PhoneVerifyPanel from '@/components/PhoneVerifyPanel';
 import { useProfiles } from '@/components/ProfilesProvider';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
@@ -319,6 +320,20 @@ export default function CreateTaskModal({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
+          {isPaid && !isEditing && (
+            <div className="smk-sheet-section space-y-2 px-4 py-4">
+              <h3 className="smk-sheet-label">{t.phoneVerifyTitle}</h3>
+              <p className="smk-text-label leading-relaxed text-slate-600 dark:text-zinc-400">
+                {t.phoneVerifyWhy}
+              </p>
+              <PhoneVerifyPanel
+                onVerified={() => {
+                  setError('');
+                }}
+              />
+            </div>
+          )}
+
           {/* Тип задания */}
           <div className="px-4 pb-4 pt-4">
           <span className={labelClass}>{t.taskKindLabel}</span>
