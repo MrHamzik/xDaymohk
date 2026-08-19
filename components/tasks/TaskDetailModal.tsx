@@ -24,6 +24,7 @@ import InteractiveMap from '@/components/InteractiveMapLazy';
 import MapSegmentedControl from '@/components/MapSegmentedControl';
 import { type MapLayerMode } from '@/components/InteractiveMap';
 import { useI18n } from '@/lib/i18n';
+import { useSettings } from '@/components/SettingsProvider';
 import { useTaskRealtime } from '@/lib/tasks/realtime';
 import {
   taskTotalReward,
@@ -50,6 +51,10 @@ export default function TaskDetailModal({
   onEdit,
 }: TaskDetailModalProps) {
   const { t } = useI18n();
+  // «Скрыть подсказки» прячет только статичные пояснения. Сообщения о
+  // состоянии и причины неактивных кнопок остаются всегда.
+  const { settings } = useSettings();
+  const showHints = !settings.hideHints;
   const [task, setTask] = useState<Task | null>(null);
   const [participants, setParticipants] = useState<TaskParticipant[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -138,6 +143,38 @@ export default function TaskDetailModal({
     return () => document.removeEventListener('keydown', onKey);
   }, [taskId, onClose]);
 
+  /**
+   * Выбор точки на карте автором.
+   *
+   * Клик по карте отдаёт только координаты (адрес приходит лишь при
+   * выборе объекта), поэтому приводим точку к ближайшему известному
+   * дому — так же, как в форме создания и в редакторе анкеты. Иначе у
+   * задания были бы координаты без адреса, и исполнитель не понял бы,
+   * куда ехать.
+   *
+   * Дальше открываем форму правки с новым адресом: сохранять молча
+   * нельзя, заказчик должен увидеть, что именно поменялось.
+   *
+   * ВАЖНО: хук объявлен ДО `if (!taskId) return null` ниже. React
+   * требует одинакового порядка хуков между рендерами, а при закрытой
+   * карточке компонент выходит раньше — useCallback после выхода
+   * вызывал «Rendered fewer hooks than expected» при открытии.
+   */
+  const handleMapPick = useCallback((
+    position: { lat: number; lng: number },
+    explicitAddress?: string,
+  ) => {
+    if (!task || !onEdit) return;
+    const picked = explicitAddress
+      ? { address: explicitAddress, lat: position.lat, lng: position.lng }
+      : (() => {
+        const closest = findClosestSamashkiHouse(position);
+        return { address: closest.fullAddress, lat: closest.lat, lng: closest.lng };
+      })();
+    setIsMapOpen(false);
+    onEdit({ ...task, ...picked });
+  }, [task, onEdit]);
+
   if (!taskId) return null;
 
   const isAuthor = Boolean(task && currentUserId && task.authorId === currentUserId);
@@ -205,33 +242,6 @@ export default function TaskDetailModal({
     ? Boolean(task?.disputeExecutorOk)
     : Boolean(task?.disputeAuthorOk);
 
-  /**
-   * Выбор точки на карте автором.
-   *
-   * Клик по карте отдаёт только координаты (адрес приходит лишь при
-   * выборе объекта), поэтому приводим точку к ближайшему известному
-   * дому — так же, как в форме создания и в редакторе анкеты. Иначе у
-   * задания были бы координаты без адреса, и исполнитель не понял бы,
-   * куда ехать.
-   *
-   * Дальше открываем форму правки с новым адресом: сохранять молча
-   * нельзя, заказчик должен увидеть, что именно поменялось, и
-   * подтвердить.
-   */
-  const handleMapPick = useCallback((
-    position: { lat: number; lng: number },
-    explicitAddress?: string,
-  ) => {
-    if (!task || !onEdit) return;
-    const picked = explicitAddress
-      ? { address: explicitAddress, lat: position.lat, lng: position.lng }
-      : (() => {
-        const closest = findClosestSamashkiHouse(position);
-        return { address: closest.fullAddress, lat: closest.lat, lng: closest.lng };
-      })();
-    setIsMapOpen(false);
-    onEdit({ ...task, ...picked });
-  }, [task, onEdit]);
 
 
   const act = async (label: string, fn: () => Promise<void>) => {
@@ -371,37 +381,36 @@ export default function TaskDetailModal({
                   плитка с иконкой, адрес и ссылка «Открыть на карте». */}
               {(task.address || (typeof task.lat === 'number' && typeof task.lng === 'number')) && (
                 <div className="smk-sheet-section px-4 py-4">
-                  {/* Заголовок и кнопка в одной строке: подпись слева,
-                      «Открыть на карте» прижата к правому краю — как в
-                      редакторе анкеты (WorkplaceSection). Раньше кнопка
-                      висела под адресом внутри плитки и уводила взгляд
-                      в середину блока. */}
-                  <div className="mb-1.5 flex items-center justify-between gap-3">
-                    <h3 className="smk-sheet-label">
-                      {t.taskAddressHeading}
-                    </h3>
-                    {/* Открывает НАШУ карту прямо в карточке, а не
-                        внешние Яндекс.Карты: точку мы умеем показать
-                        сами, и уходить из приложения незачем. */}
-                    {typeof task.lat === 'number' && typeof task.lng === 'number' && (
-                      <button
-                        type="button"
-                        onClick={() => setIsMapOpen((open) => !open)}
-                        aria-expanded={isMapOpen}
-                        className="inline-flex shrink-0 items-center gap-1 text-[11px] font-bold text-emerald-600 hover:underline dark:text-emerald-400"
-                      >
-                        <MapPin className="h-3 w-3" />
-                        {isMapOpen ? t.hideMap : t.openOnMap}
-                      </button>
-                    )}
-                  </div>
-                  <div className="smk-inset flex items-center gap-3 p-3">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-                      <MapPin className="h-4 w-4" />
+                  <h3 className="smk-sheet-label mb-1.5">
+                    {t.taskAddressHeading}
+                  </h3>
+                  {/* Иконка во всю высоту блока: адрес сверху, кнопка
+                      «Открыть на карте» под ним — как в карточке анкеты.
+                      items-stretch + h-auto растягивают плитку иконки на
+                      обе строки, поэтому блок читается как одно целое. */}
+                  <div className="smk-inset flex items-stretch gap-3 p-3">
+                    <div className="flex w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                      <MapPin className="h-6 w-6" />
                     </div>
-                    <p className="min-w-0 flex-1 truncate text-xs font-bold text-slate-900 dark:text-white">
-                      {task.address || t.taskAddressMissing}
-                    </p>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-bold text-slate-900 dark:text-white">
+                        {task.address || t.taskAddressMissing}
+                      </p>
+                      {/* Открывает НАШУ карту прямо в карточке, а не
+                          внешние Яндекс.Карты: точку мы умеем показать
+                          сами, и уходить из приложения незачем. */}
+                      {typeof task.lat === 'number' && typeof task.lng === 'number' && (
+                        <button
+                          type="button"
+                          onClick={() => setIsMapOpen((open) => !open)}
+                          aria-expanded={isMapOpen}
+                          className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:underline dark:text-emerald-400"
+                        >
+                          <MapPin className="h-3 w-3" />
+                          {isMapOpen ? t.hideMap : t.openOnMap}
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {isMapOpen && typeof task.lat === 'number' && typeof task.lng === 'number' && (
@@ -439,7 +448,7 @@ export default function TaskDetailModal({
                         onMapLayerModeChange={setMapLayerMode}
                         className="h-56 overflow-hidden rounded-xl sm:h-72"
                       />
-                      {canEdit && (
+                      {canEdit && showHints && (
                         <p className="smk-note smk-note-info px-3 py-2">
                           {t.taskMapPickHint}
                         </p>
@@ -533,7 +542,7 @@ export default function TaskDetailModal({
 
               {/* Оплата идёт вне приложения — говорим об этом прямо, иначе
                   обе стороны ждут, что деньги переведёт сервис. */}
-              {task.isPaid && (isAuthor || isExecutor)
+              {task.isPaid && (isAuthor || isExecutor) && showHints
                 && ['open', 'in_progress', 'awaiting_confirm'].includes(task.status) && (
                 <div className="smk-note smk-note-info mx-4 mb-4 px-3.5 py-3">
                   <h3 className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide">
@@ -608,11 +617,15 @@ export default function TaskDetailModal({
                   {/* Объясняем МЕХАНИКУ: раньше блок сообщал «идёт
                       рассмотрение», но не говорил, что это за
                       рассмотрение, кто его ведёт и что будет дальше. */}
-                  <p className="mt-2 pt-2 opacity-90" style={{ borderTop: '1px solid currentColor' }}>
-                    <span className="font-bold">{t.taskDisputeHowTitle}. </span>
-                    {t.taskDisputeHow.replace('{hours}', String(TASK_DISPUTE_HOURS))}
-                  </p>
-                  <p className="mt-1.5 opacity-90">{t.taskDisputeAfter}</p>
+                  {showHints && (
+                    <>
+                      <p className="mt-2 pt-2 opacity-90" style={{ borderTop: '1px solid currentColor' }}>
+                        <span className="font-bold">{t.taskDisputeHowTitle}. </span>
+                        {t.taskDisputeHow.replace('{hours}', String(TASK_DISPUTE_HOURS))}
+                      </p>
+                      <p className="mt-1.5 opacity-90">{t.taskDisputeAfter}</p>
+                    </>
+                  )}
 
                   {/* Возможности решить: договориться самим либо позвать
                       администратора. */}
@@ -853,9 +866,11 @@ export default function TaskDetailModal({
                     {busy === 'paid' && <Loader2 className="h-4 w-4 animate-spin" />}
                     {t.taskPaymentReceivedBtn}
                   </button>
-                  <p className="smk-note smk-note-warn w-full px-3 py-2">
-                    {t.taskPaymentReceivedHint}
-                  </p>
+                  {showHints && (
+                    <p className="smk-note smk-note-warn w-full px-3 py-2">
+                      {t.taskPaymentReceivedHint}
+                    </p>
+                  )}
                 </>
               )
             )}

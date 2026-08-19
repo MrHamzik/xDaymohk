@@ -240,7 +240,10 @@ export default function MapPage() {
         </aside>
         
         {/* Main Content Area */}
-        <main className="flex-1 min-w-0 max-w-3xl">
+        {/* Без max-w-3xl: на этой странице главный элемент — карта, и
+            ограничивать её 48rem посреди широкого экрана незачем.
+            Остальные страницы ширину сохраняют — правка только здесь. */}
+        <main className="min-w-0 flex-1">
         <div className="mb-5 flex items-center gap-3">
           <Link
             href="/catalog"
@@ -384,7 +387,10 @@ export default function MapPage() {
                   onClick: () => { setSelectedAddress(null); setSelectedProfileId(profile.id); },
                 };
               })}
-              className="h-[380px] sm:h-[460px]"
+              // Высота от экрана, а не фиксированные 380/460 px: на
+              // большом мониторе карта занимала треть окна, а вокруг
+              // оставалась пустота.
+              className="h-[420px] sm:h-[min(70vh,720px)]"
             />
             
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 px-2 pt-3 dark:border-zinc-700">
@@ -428,7 +434,6 @@ export default function MapPage() {
                 </div>
               )}
 
-              <p className="smk-sheet-label">{t.mapClearHint}</p>
             </div>
           </section>
 

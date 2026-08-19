@@ -264,7 +264,6 @@ export const translations = {
     mapLayerProfiles: 'Анкеты',
     mapLayerHouses: 'Дома',
     mapLayerPlaces: 'Другие',
-    mapClearHint: 'Клик по карте убирает выбор',
 
     // About Page Projects
     aboutTitle: 'О проекте',
@@ -341,6 +340,8 @@ export const translations = {
     settingsSectionAdvanced: 'Расширенные',
     settingsSectionAll: 'Все',
     settingsTasksSection: 'Задания',
+    settingsHideHints: 'Скрыть подсказки',
+    settingsHideHintsHint: 'Убирает из карточки задания статичные пояснения — как передаются деньги, что значит спор и подобные. Сообщения о состоянии задания и причины неактивных кнопок остаются.',
     settingsAutoActive: 'Автоактивация статуса Темщика',
     settingsAutoActiveHint: 'Когда вы открываете страницу «Аренца Темщик», статус активности автоматически переключается на «Активен» на 30 минут. Окно продлевается любым действием в разделе.',
     settingsAutoApprove: 'Автоодобрение исполнителя',
@@ -922,7 +923,6 @@ export const translations = {
     mapLayerProfiles: 'Анкеташ',
     mapLayerHouses: 'ЦIенош',
     mapLayerPlaces: 'Кхидерш',
-    mapClearHint: 'Карти тIе басар тоьхча харжам дIаболу',
 
     // About Page Projects
     aboutTitle: 'Проектах лаьцна',
@@ -999,6 +999,8 @@ export const translations = {
     settingsSectionAdvanced: 'ШуьйранигI',
     settingsSectionAll: 'Дерриг',
     settingsTasksSection: 'ТIедилларш',
+    settingsHideHints: 'Хаамаш къайлабаха',
+    settingsHideHintsHint: 'ТIедилларан карточкера хийцалуш доцу къамелаш дIадоху — ахча муха дIало, къовсам хIун ду. ТIедилларан хьокъехь хаамаш а, кнопкаш нислуш йоцу бахьанаш а дуьсу.',
     settingsAutoActive: 'Темщикан хьал ша шех латадар',
     settingsAutoActiveHint: '«Аренца Темщик» агIо схьайиллича, жигаралла ша шех «Жигара» хуьлу 30 минот. Декъехь хIума дича, хан яьржа.',
     settingsAutoApprove: 'Кхочушдийриг ша шех тIеэцар',

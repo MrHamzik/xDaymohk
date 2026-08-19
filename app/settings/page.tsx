@@ -192,6 +192,13 @@ export default function SettingsPage() {
                     label={t.settingsAutoApprove}
                   />
                 </SettingRow>
+                <SettingRow title={t.settingsHideHints} hint={t.settingsHideHintsHint}>
+                  <Toggle
+                    checked={settings.hideHints}
+                    onChange={(next) => update({ hideHints: next })}
+                    label={t.settingsHideHints}
+                  />
+                </SettingRow>
               </div>
             </section>
             )}

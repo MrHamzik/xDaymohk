@@ -1381,9 +1381,12 @@ export default function ProfileModal({
 
           <section className="smk-sheet-section px-4 py-3.5">
             <h3 className="smk-sheet-label mb-1.5">{t.profileAddressHeading}</h3>
-            <div className="smk-sheet-row flex items-start gap-3 p-2.5">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-                <MapPin className="h-4 w-4" />
+            {/* Иконка во всю высоту блока: адрес и кнопка под ним.
+                items-stretch растягивает плитку на обе строки — так же,
+                как в карточке задания. */}
+            <div className="smk-sheet-row flex items-stretch gap-3 p-2.5">
+              <div className="flex w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                <MapPin className="h-6 w-6" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="truncate text-xs font-bold text-slate-900 dark:text-white">{profile.workplaceAddress}</p>

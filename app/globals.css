@@ -822,10 +822,32 @@ html.dark .smk-ring {
 .smk-ring-break    { background: linear-gradient(140deg, var(--smk-status-break), var(--smk-status-break-deep)); }
 .smk-ring-flexible { background: linear-gradient(140deg, var(--smk-status-flexible), var(--smk-status-flexible-deep)); }
 .smk-ring-offline  { background: linear-gradient(140deg, var(--smk-status-offline), var(--smk-status-offline-deep)); }
-html.dark .smk-ring-active   { box-shadow: 0 0 16px -5px var(--smk-status-active); }
-html.dark .smk-ring-break    { box-shadow: 0 0 16px -5px var(--smk-status-break); }
-html.dark .smk-ring-flexible { box-shadow: 0 0 16px -5px var(--smk-status-flexible); }
-html.dark .smk-ring-offline  { box-shadow: none; }
+
+/* Неоновая обводка со свечением.
+   Раньше свечение включалось только в тёмных темах и было еле заметным
+   (16px, смещение −5). Теперь горит на всех темах: тонкое плотное
+   кольцо вплотную к аватару плюс мягкий ореол вокруг. Оба слоя берут
+   цвет статуса, поэтому «работает» светится зелёным, «перерыв» —
+   жёлтым, и статус читается боковым зрением.
+
+   Множитель --fx-glow позволяет приглушить или выключить свечение в
+   настройках эффектов — на слабом телефоне десяток светящихся колец
+   в списке заметно грузит отрисовку. */
+.smk-ring-active,
+.smk-ring-break,
+.smk-ring-flexible {
+  box-shadow:
+    0 0 0 1px rgb(var(--smk-light-rgb) / calc(0.5 * var(--fx-glow))) inset,
+    0 0 6px -1px var(--smk-ring-glow),
+    0 0 16px -2px var(--smk-ring-glow);
+}
+.smk-ring-active   { --smk-ring-glow: color-mix(in srgb, var(--smk-status-active) calc(85% * var(--fx-glow)), transparent); }
+.smk-ring-break    { --smk-ring-glow: color-mix(in srgb, var(--smk-status-break) calc(85% * var(--fx-glow)), transparent); }
+.smk-ring-flexible { --smk-ring-glow: color-mix(in srgb, var(--smk-status-flexible) calc(85% * var(--fx-glow)), transparent); }
+
+/* «Не работает» не светится намеренно: это отсутствие активности, и
+   подсвечивать его — значит привлекать внимание к тому, чего нет. */
+.smk-ring-offline { box-shadow: none; }
 
 /* --- Роли и смысловые цвета -------------------------------------------------
    Значения по умолчанию совпадают с палитрой Tailwind, которой бейджи
