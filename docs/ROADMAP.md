@@ -317,4 +317,5 @@ Google — минимум 44×44 px. Попасть пальцем в «корз
 Разнести по компонентам, как уже сделано для `AdminSupportSection`,
 `AdminFiltersSection`, `AdminArticlesSection`.
 
-Второй кандидат — `components/ProfileModal.tsx` (1554 строки).
+Второй кандидат — `components/ProfileModal.tsx` · СДЕЛАНО
+(отзывы, вопросы, оценки и факты вынесены в `components/profile/`).
