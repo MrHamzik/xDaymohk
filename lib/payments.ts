@@ -192,6 +192,94 @@ export function yoomoneyWalletLink(
 }
 
 /**
+ * Ссылка внутри QR «реквизиты кодом».
+ *
+ * Это не платёжный QR НСПК: такой регистрирует только банк, собрать его
+ * из номера телефона нельзя. Камера открывает обычный https.
+ *
+ *   ЮMoney — готовая форма Quickpay с суммой.
+ *   СБП / карта — страница /r, реквизиты в hash (на сервер не уходят).
+ *
+ * origin берём с текущего сайта: код должен открывать тот же хост,
+ * с которого его показали. Без origin (SSR) для СБП/карты — null.
+ */
+export function payoutQrHref(
+  method: PaymentMethod,
+  payout: PayoutMethods,
+  amount: number,
+  comment?: string,
+  origin?: string,
+): string | null {
+  if (!payout.isEnabled) return null;
+  const sum = Math.max(1, Math.round(amount));
+  if (!Number.isFinite(sum) || sum > 10_000_000) return null;
+
+  if (method === 'yoomoney') {
+    const wallet = digitsOnly(payout.yoomoneyWallet);
+    if (!isValidWallet(wallet)) return null;
+    return yoomoneyLink(wallet, sum, comment);
+  }
+
+  if (method !== 'sbp' && method !== 'card') return null;
+
+  const host = (origin
+    ?? (typeof window !== 'undefined' ? window.location.origin : '')
+  ).replace(/\/$/, '');
+  if (!host.startsWith('https://') && !host.startsWith('http://')) return null;
+
+  const params = new URLSearchParams();
+  params.set('m', method);
+  params.set('s', String(sum));
+
+  if (method === 'sbp') {
+    const phone = normalizePhone(payout.sbpPhone);
+    if (!phone) return null;
+    params.set('p', phone);
+    if (payout.sbpBank) params.set('b', payout.sbpBank.slice(0, 60));
+  } else {
+    const card = digitsOnly(payout.cardNumber);
+    if (!isValidCard(card)) return null;
+    params.set('c', card);
+    if (payout.cardBank) params.set('b', payout.cardBank.slice(0, 60));
+  }
+
+  return `${host}/r#${params.toString()}`;
+}
+
+/** То, что страница /r читает из hash. Серверу этот объект не нужен. */
+export interface PayoutQrPayload {
+  method: 'sbp' | 'card';
+  amount: number;
+  phone: string;
+  card: string;
+  bank: string;
+}
+
+/** Разобрать hash страницы /r. Мусор и чужие ключи отбрасываются. */
+export function parsePayoutQrHash(hash: string): PayoutQrPayload | null {
+  const raw = hash.startsWith('#') ? hash.slice(1) : hash;
+  if (!raw) return null;
+  const params = new URLSearchParams(raw);
+  const method = params.get('m');
+  if (method !== 'sbp' && method !== 'card') return null;
+
+  const amount = Math.round(Number(params.get('s')));
+  if (!Number.isFinite(amount) || amount < 1 || amount > 10_000_000) return null;
+
+  const bank = (params.get('b') ?? '').slice(0, 60);
+
+  if (method === 'sbp') {
+    const phone = normalizePhone(params.get('p') ?? '');
+    if (!phone) return null;
+    return { method, amount, phone, card: '', bank };
+  }
+
+  const card = digitsOnly(params.get('c') ?? '');
+  if (!isValidCard(card)) return null;
+  return { method, amount, phone: '', card, bank };
+}
+
+/**
  * Какой реквизит обязателен для способа оплаты.
  *
  * Наличные не требуют ничего — расчёт при встрече. Для остальных

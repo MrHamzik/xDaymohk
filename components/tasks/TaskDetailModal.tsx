@@ -20,6 +20,7 @@ import AttendanceModal from '@/components/tasks/AttendanceModal';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import DisputeComplaintModal from '@/components/tasks/DisputeComplaintModal';
 import PayoutPanel from '@/components/tasks/PayoutPanel';
+import { PayoutQrBlock } from '@/components/tasks/PayoutQrCode';
 import InteractiveMap from '@/components/InteractiveMapLazy';
 import MapSegmentedControl from '@/components/MapSegmentedControl';
 import { type MapLayerMode } from '@/components/InteractiveMap';
@@ -566,6 +567,19 @@ export default function TaskDetailModal({
               {isAuthor && task.isPaid
                 && ['awaiting_confirm', 'completed'].includes(task.status) && (
                 <PayoutPanel taskId={task.id} amount={total} />
+              )}
+
+              {/* Исполнитель показывает код с телефона — заказчик
+                  сканирует камерой. Не обещаем оплату по QR: камера
+                  откроет ссылку с реквизитами (или ЮMoney). */}
+              {isExecutor && needsPaymentProof && task.status === 'awaiting_confirm' && (
+                <PayoutQrBlock
+                  method={payMethod}
+                  payout={myPayout}
+                  amount={total}
+                  comment="Даймохк: оплата задания"
+                  reveal
+                />
               )}
 
               {task.status === 'awaiting_confirm' && showHints && (

@@ -8,6 +8,7 @@ import {
   bankName, bankScheme, formatCard, formatPhone, yoomoneyLink, yoomoneyWalletLink,
   type PayoutMethods,
 } from '@/lib/payments';
+import { PayoutQrBlock } from '@/components/tasks/PayoutQrCode';
 
 interface PayoutPanelProps {
   taskId: string;
@@ -205,6 +206,13 @@ export default function PayoutPanel({ taskId, amount }: PayoutPanelProps) {
           </p>
         </>
       )}
+
+      <PayoutQrBlock
+        method={hasSbp ? 'sbp' : hasCard ? 'card' : 'yoomoney'}
+        payout={payout}
+        amount={amount}
+        comment={comment}
+      />
 
       <p className="smk-note smk-note-danger mt-2.5 px-3 py-2">
         {t.taskPayoutSafety}
