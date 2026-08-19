@@ -3,12 +3,16 @@ import { createClient } from '@supabase/supabase-js';
 import { rateLimit, withRateLimitHeaders } from '@/lib/rate-limit';
 import { log } from '@/lib/logger';
 import { notifyTaskEvent } from '@/lib/tasks/server';
-import { TASK_AUTO_CONFIRM_HOURS, TASK_BLOCK_HOURS } from '@/lib/types';
+import {
+  TASK_AUTO_CONFIRM_HOURS, TASK_BLOCK_HOURS, TASK_EXPIRED_DELETE_DAYS,
+} from '@/lib/types';
 
 /**
  * Обслуживание заданий по расписанию:
  *   1. автоподтверждение — заказчик молчит 3 часа после «Выполнил»;
- *   2. просрочка — срок вышел, задание никто не взял.
+ *   2. просрочка — срок вышел, задание никто не взял;
+ *   3. уборка — отменённые уходят в архив, просроченные удаляются
+ *      из базы через неделю.
  *
  * Вызывается тихо при открытии раздела (как раздел «Письма» в админке) и
  * может дублироваться pg_cron. Идемпотентен: выбираются только строки в
@@ -145,10 +149,23 @@ export async function POST(request: Request) {
   }
 
   for (const task of overdue ?? []) {
-    await admin
+    // visible_until — точка отсчёта для последующего удаления: сама
+    // deadline_at не годится, задание могло провисеть открытым дольше.
+    const expiresAt = new Date(
+      now + TASK_EXPIRED_DELETE_DAYS * 24 * 3_600_000,
+    ).toISOString();
+    const { error: expireError } = await admin
       .from('tasks')
-      .update({ status: 'expired', is_archived: true })
+      .update({ status: 'expired', is_archived: true, visible_until: expiresAt })
       .eq('id', String(task.id));
+    // Колонка появляется в миграции 38 — без неё просто помечаем
+    // просроченным, как раньше.
+    if (expireError) {
+      await admin
+        .from('tasks')
+        .update({ status: 'expired', is_archived: true })
+        .eq('id', String(task.id));
+    }
 
     await notifyTaskEvent(admin, {
       recipientId: String(task.author_id),
@@ -224,7 +241,40 @@ export async function POST(request: Request) {
     }
   }
 
+  // ── Просроченные: удаляем из базы через неделю ─────────────────
+  // Задание, которое никто не взял, не несёт истории: исполнителей у
+  // него нет, отзывов тоже (они ставятся только по завершённой
+  // сделке). Раньше такие записи оставались в базе навсегда с флагом
+  // is_archived и копились без пользы.
+  //
+  // Удаляем физически: task_participants уходят каскадом
+  // (on delete cascade в миграции 18).
+  let expiredDeleted = 0;
+  const { data: staleExpired, error: staleExpiredError } = await admin
+    .from('tasks')
+    .select('id')
+    .eq('status', 'expired')
+    .lt('visible_until', new Date(now).toISOString())
+    .limit(100);
+
+  if (staleExpiredError) {
+    log.warn('maintenance: expired cleanup skipped', { message: staleExpiredError.message });
+  } else if ((staleExpired ?? []).length > 0) {
+    const ids = (staleExpired ?? []).map((t) => String(t.id));
+    const { error: deleteError } = await admin.from('tasks').delete().in('id', ids);
+    if (deleteError) {
+      log.warn('maintenance: expired delete failed', { message: deleteError.message });
+    } else {
+      expiredDeleted = ids.length;
+    }
+  }
+
   return NextResponse.json({
-    success: true, autoConfirmed, expired, disputesReleased, cancelledArchived,
+    success: true,
+    autoConfirmed,
+    expired,
+    disputesReleased,
+    cancelledArchived,
+    expiredDeleted,
   });
 }

@@ -694,14 +694,14 @@ html.dark .smk-price-teal {
      Один фон на все четыре типа, различает их цвет текста и засечка
      слева. Контраст текста к фону не ниже 4.5 — блоки набраны 11 px,
      а это по WCAG AA «мелкий текст». */
-  --smk-note-info: #0a74a3;
-  --smk-note-info-bg: #edf4f8;
-  --smk-note-warn: #9b6408;
-  --smk-note-warn-bg: #f8f4ed;
-  --smk-note-danger: #d90d30;
-  --smk-note-danger-bg: #f8edef;
-  --smk-note-success: #0b7c56;
-  --smk-note-success-bg: #ecf7f3;
+  --smk-note-info: #1e5771;
+  --smk-note-info-bg: #bfe6f7;
+  --smk-note-warn: #71521e;
+  --smk-note-warn-bg: #f7e2bf;
+  --smk-note-danger: #711e2c;
+  --smk-note-danger-bg: #f7bfc9;
+  --smk-note-success: #1e7155;
+  --smk-note-success-bg: #bff7e4;
 }
 
 /* --- Полотно карточки ------------------------------------------------------ */
@@ -1160,14 +1160,14 @@ html.dark {
   --smk-hairline-strong: rgb(255 255 255 / 0.16);
 
   /* Подсказки: тёмное зеркало блока из :root. */
-  --smk-note-info: #0eaaf1;
-  --smk-note-info-bg: #163a4b;
-  --smk-note-warn: #f29d0e;
-  --smk-note-warn-bg: #533d18;
-  --smk-note-danger: #f5526e;
-  --smk-note-danger-bg: #48151d;
-  --smk-note-success: #14eba4;
-  --smk-note-success-bg: #1d634c;
+  --smk-note-info: #86c3df;
+  --smk-note-info-bg: #0b425b;
+  --smk-note-warn: #dfbe86;
+  --smk-note-warn-bg: #5b3d0b;
+  --smk-note-danger: #df8695;
+  --smk-note-danger-bg: #5b0b19;
+  --smk-note-success: #86dfc1;
+  --smk-note-success-bg: #0b5b40;
 }
 
 /* --- Стеклянный режим ---------------------------------------------------------

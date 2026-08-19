@@ -329,14 +329,14 @@ export default function VayghullakhPage() {
           )}
 
           {tab === 'nearby' && geoDenied && (
-            <p className="mb-3 flex items-start gap-2 rounded-xl bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+            <p className="smk-note smk-note-warn mb-3 flex items-start gap-2 px-3 py-2 text-[11px] font-semibold">
               <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
               {t.tasksGeoDenied}
             </p>
           )}
 
           {error && (
-            <p className="mb-3 rounded-xl bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
+            <p className="smk-note smk-note-danger mb-3 px-3 py-2 text-xs font-semibold">
               {error}
             </p>
           )}

@@ -254,7 +254,7 @@ export default function ProfilePage() {
         ) : account ? (
           <form onSubmit={handleSaveAccount} className="space-y-3.5">
             {account.isBlocked && (
-              <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
+              <p className="smk-note smk-note-danger p-3 text-xs font-semibold">
                 {t.accountBlocked}
               </p>
             )}

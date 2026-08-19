@@ -129,7 +129,7 @@ export default function SettingsPage() {
           </div>
 
           {!account && (
-            <p className="mb-4 rounded-xl bg-sky-50 px-3.5 py-2.5 text-[11px] font-semibold text-sky-800 dark:bg-sky-950/30 dark:text-sky-300">
+            <p className="smk-note smk-note-info mb-4 px-3.5 py-2.5 text-[11px] font-semibold">
               {t.settingsSignInRequired}
             </p>
           )}

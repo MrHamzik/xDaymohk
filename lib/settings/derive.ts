@@ -325,92 +325,49 @@ function tint(
 const NOTE_TEXT_MIN_CONTRAST = 4.5;
 
 /**
- * Стартовая доля отхода фона от цвета текста.
+ * Насыщенность и светлота пары «фон + текст» подсказки.
  *
- * На тёмных темах — «вдвое темнее» (светлота × 0.5), ровно как просил
- * заказчик. На светлых зеркально: половина пути к белому, иначе на
- * белой карточке появлялась бы тёмная цветная плашка.
+ * Значения сняты с эталонов, которые заказчик подобрал вручную:
  *
- * Это только СТАРТ: дальше фон доводится по контрасту (см. deriveNoteBg),
- * потому что при ×0.5 текст и фон выходят из одного цвета и слишком
- * близки — контраст получался 2.4 при норме 4.5.
+ *     синий    rgb(11, 57, 91) → #0b395b → H 206°, S 78 %, L 20 %
+ *     красный  rgb(91, 11, 29) → #5b0b1d → H 347°, S 78 %, L 20 %
+ *     жёлтый   rgb(91, 52, 11) → #5b340b → H  31°, S 78 %, L 20 %
+ *     текст    #df869c         →           H 345°, S 58 %, L 70 %
+ *
+ * Все три фона совпали по насыщенности и светлоте — различается только
+ * оттенок. Зелёный достроен по тому же правилу: H 145° даёт
+ * rgb(11, 91, 44), тот же ряд чисел.
+ *
+ * То есть один оттенок на пару, фон тёмный и насыщенный, текст светлый
+ * и приглушённый. Прежняя итеративная доводка по контрасту здесь не
+ * нужна: заданные светлоты сами дают 4.5+ во всех темах, а результат
+ * получается предсказуемым, а не «сколько насчиталось».
+ *
+ * На светлых темах пара зеркальна: фон светлый (L 86 %), текст тёмный
+ * (L 28 %). Одна арифметика на оба случая давала тёмные цветные плашки
+ * на белых карточках.
+ *
+ * Светлота текста здесь 28 %, а не зеркальные 30 %: жёлтый и зелёный
+ * по природе светлее синего и красного, и при 32 % «подтверждение»
+ * давало контраст 4.06 — ниже нормы. 28 % закрывает все четыре типа с
+ * запасом, сохраняя единый тон.
  */
-const NOTE_BG_DARK_FACTOR = 0.5;
-const NOTE_BG_LIGHT_FACTOR = 0.5;
-
-/**
- * Насыщенность фона подсказки.
- *
- * Ниже, чем у текста: на всю площадь блока полная насыщенность
- * читается как заливка-предупреждение, а подсказка не должна кричать.
- * На тёмных темах потолок выше — там цвет гасится самой основой.
- */
-const NOTE_BG_SAT_MAX_DARK = 0.55;
-const NOTE_BG_SAT_MAX_LIGHT = 0.42;
-
-/**
- * Предел светлоты фона подсказки.
- *
- * Без него доводка по контрасту съедала весь цвет: на светлых темах
- * фон уходил в чистый #ffffff и подсказка переставала отличаться от
- * карточки — то есть ровно то, ради чего цветной фон и вводился.
- * Упёршись в потолок, дальше двигаем ТЕКСТ, а не фон.
- */
-const NOTE_BG_LIGHT_CEILING = 0.955;
-const NOTE_BG_DARK_FLOOR = 0.07;
-
-/**
- * Насколько фон подсказки обязан быть светлее карточки на ТЁМНЫХ темах.
- *
- * Направление принципиально: на тёмной основе подсказка — приподнятая
- * поверхность, она светлее полотна. Без этого правила доводка уводила
- * её ВНИЗ, и в «Космосе» фон опасности выходил #1d080d при карточке
- * #121127 — темнее полотна и неотличим от него.
- *
- * Множитель к светлоте карточки: 1.35 даёт видимую ступень и на почти
- * чёрных темах, где абсолютная разница мала.
- */
-const NOTE_BG_DARK_MIN_FACTOR = 1.5;
-/** Абсолютный минимум светлоты фона на тёмных темах (для «Чёрной»). */
-const NOTE_BG_DARK_MIN_ABS = 0.1;
+const NOTE_TONE = {
+  dark: { bgSat: 0.78, bgLight: 0.20, textSat: 0.58, textLight: 0.70 },
+  light: { bgSat: 0.78, bgLight: 0.86, textSat: 0.58, textLight: 0.28 },
+};
 
 /**
  * Фон блока-подсказки из цвета его же текста.
  *
- * Шаг 1 — отход на половину светлоты (вниз на тёмных, вверх на
- * светлых). Шаг 2 — доводка, пока текст не станет читаемым: оттенок
- * при этом не трогаем, он несёт смысл, двигается только светлота.
+ * Цвет сплошной, без прозрачности: сквозь полупрозрачный фон
+ * просвечивало полотно карточки, и оттенок подсказки менялся в
+ * зависимости от того, на чём она лежит.
  */
-export function deriveNoteBg(text: string, isDark: boolean, card?: string): string {
-  const { h, s, l } = hexToHsl(text);
-  const sat = Math.min(s, isDark ? NOTE_BG_SAT_MAX_DARK : NOTE_BG_SAT_MAX_LIGHT);
-  // На тёмных темах фон не опускается ниже карточки: подсказка —
-  // приподнятая поверхность, а не выемка в полотне.
-  const darkFloor = card
-    ? Math.max(hexToHsl(card).l * NOTE_BG_DARK_MIN_FACTOR, NOTE_BG_DARK_MIN_ABS)
-    : NOTE_BG_DARK_FLOOR;
-  let lightness = isDark
-    ? Math.max(l * NOTE_BG_DARK_FACTOR, darkFloor)
-    : l + (1 - l) * NOTE_BG_LIGHT_FACTOR;
-
-  // Фон обязан отличаться И от текста (читаемость), И от карточки
-  // (иначе блока попросту не видно на полотне).
-  const isReady = (candidate: string) =>
-    contrastRatio(text, candidate) >= NOTE_TEXT_MIN_CONTRAST;
-
-  for (let step = 0; step < 120; step += 1) {
-    const candidate = hslToHex({ h, s: sat, l: lightness });
-    if (isReady(candidate)) return candidate;
-    const next = lightness + (isDark ? -0.01 : 0.01);
-    // Дошли до предела — останавливаемся с цветом, а не с белым/чёрным.
-    // Дальше контраст добирает ТЕКСТ (см. pair в deriveNotes).
-    if (isDark ? next < darkFloor : next > NOTE_BG_LIGHT_CEILING) break;
-    lightness = next;
-  }
-  const capped = isDark
-    ? Math.max(lightness, darkFloor)
-    : Math.min(lightness, NOTE_BG_LIGHT_CEILING);
-  return hslToHex({ h, s: sat, l: capped });
+export function deriveNoteBg(text: string, isDark: boolean): string {
+  const { h } = hexToHsl(text);
+  const tone = isDark ? NOTE_TONE.dark : NOTE_TONE.light;
+  return hslToHex({ h, s: tone.bgSat, l: tone.bgLight });
 }
 
 /**
@@ -432,10 +389,10 @@ const NOTE_HUE_MIN_GAP = 25;
  * важнее оттенка темы.
  */
 const NOTE_ANCHOR_HUE = {
-  info: 199,
-  warn: 38,
-  danger: 352,
-  success: 152,
+  info: 206,
+  warn: 31,
+  danger: 347,
+  success: 145,
 };
 
 /** Достаточно ли оттенок отстоит от всех уже занятых. */
@@ -477,10 +434,9 @@ function pickNoteHue(sourceHue: number, anchorHue: number, taken: number[]): num
  * «Янтарь» опасность терракотой (#c96248). Брать вместо них общий синий
  * значило вклеивать в тему чужую палитру.
  *
- * Контраст здесь НЕ доводится: фон подсказки выводится из этого цвета
- * (см. deriveNoteBg) и сам отходит на нужное расстояние. Раньше было
- * наоборот — текст подгонялся под общий фон, — но с индивидуальным
- * фоном у каждого типа двусторонняя подгонка зациклилась бы.
+ * От источника берём только ОТТЕНОК: насыщенность и светлота заданы
+ * эталоном (NOTE_TONE), поэтому все четыре типа выглядят одной семьёй,
+ * а различаются цветом.
  */
 function deriveNoteText(
   source: string,
@@ -488,18 +444,11 @@ function deriveNoteText(
   isDark: boolean,
   takenHues: number[],
 ): string {
-  const { s, l } = hexToHsl(source);
   const h = pickNoteHue(hexToHsl(source).h, anchorHue, takenHues);
-  // Насыщенность поднимаем: у статусной точки цвет работает пятном, а
-  // у текста — тонкими штрихами букв, и блёклый тон в них теряется.
-  const sat = Math.min(Math.max(s, 0.45), 0.9);
-  // Светлоту держим в коридоре: слишком тёмный текст на тёмной теме и
-  // слишком светлый на светлой не дали бы фону куда отойти.
-  const lightness = isDark
-    ? Math.min(Math.max(l, 0.5), 0.78)
-    : Math.min(Math.max(l, 0.28), 0.46);
-  return hslToHex({ h, s: sat, l: lightness });
+  const tone = isDark ? NOTE_TONE.dark : NOTE_TONE.light;
+  return hslToHex({ h, s: tone.textSat, l: tone.textLight });
 }
+
 
 
 /** Все пять слотов подсказок разом: фон из карточки, тексты — из главного цвета. */
@@ -553,29 +502,18 @@ export function deriveNotes(
     warnHue, hexToHsl(dangerColor).h, hexToHsl(infoColor).h,
   ]);
 
-  // Пара «текст + фон» досчитывается в два шага без взаимной рекурсии:
-  // фон отходит от цвета текста, а затем текст доводится по контрасту
-  // к уже готовому фону. Второй шаг нужен там, где фон упёрся в
-  // потолок светлоты и сам добрать контраст не смог.
-  const pair = (text: string) => {
-    const bg = deriveNoteBg(text, isDark, card);
-    return { text: ensureContrast(text, bg, NOTE_TEXT_MIN_CONTRAST, !isDark), bg };
-  };
-
-  const infoPair = pair(infoColor);
-  const warnPair = pair(warnColor);
-  const dangerPair = pair(dangerColor);
-  const successPair = pair(successColor);
-
+  // Фон каждого типа — тот же оттенок, что у его текста, но в тоне
+  // фона. Доводка по контрасту не нужна: тона заданы эталоном и дают
+  // 4.5+ во всех темах (проверено скриптом на всех девяти).
   return {
-    noteInfo: infoPair.text,
-    noteInfoBg: infoPair.bg,
-    noteWarn: warnPair.text,
-    noteWarnBg: warnPair.bg,
-    noteDanger: dangerPair.text,
-    noteDangerBg: dangerPair.bg,
-    noteSuccess: successPair.text,
-    noteSuccessBg: successPair.bg,
+    noteInfo: infoColor,
+    noteInfoBg: deriveNoteBg(infoColor, isDark),
+    noteWarn: warnColor,
+    noteWarnBg: deriveNoteBg(warnColor, isDark),
+    noteDanger: dangerColor,
+    noteDangerBg: deriveNoteBg(dangerColor, isDark),
+    noteSuccess: successColor,
+    noteSuccessBg: deriveNoteBg(successColor, isDark),
   };
 }
 
