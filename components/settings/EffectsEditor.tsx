@@ -3,7 +3,6 @@
 import { Sparkles } from 'lucide-react';
 import { useSettings } from '@/components/SettingsProvider';
 import { useI18n } from '@/lib/i18n';
-import { SectionTitle } from '@/components/settings/SettingsPrimitives';
 import { DEFAULT_EFFECTS, EFFECT_KEYS, type EffectSettings } from '@/lib/settings/types';
 
 /**
@@ -64,12 +63,12 @@ export default function EffectsEditor() {
 
   return (
     <section>
-      <SectionTitle
-        title={ce ? 'Эффекташ' : 'Эффекты'}
-        hint={ce
-          ? 'Оформленин эффекташ. Телефон гIело йахйахь, къардар а, жIаьлеш а дIаяха.'
-          : 'Визуальные эффекты оформления. Если телефон тормозит — уменьшите размытие и тени.'}
-        action={!isDefault ? (
+      {/* Заголовок и подсказку рисует обёртка CollapsibleSection —
+          внутренний SectionTitle давал второй такой же с линией.
+          Кнопка сброса осталась здесь: она относится к эффектам, а не
+          к разделу настроек. */}
+      {!isDefault && (
+        <div className="mb-2 flex justify-end">
           <button
             type="button"
             onClick={() => update({ effects: { ...DEFAULT_EFFECTS } })}
@@ -77,8 +76,8 @@ export default function EffectsEditor() {
           >
             {ce ? 'Юха дIахIотто' : 'Сбросить'}
           </button>
-        ) : undefined}
-      />
+        </div>
+      )}
 
       <div className="space-y-1.5">
         {EFFECT_KEYS.map((key) => {

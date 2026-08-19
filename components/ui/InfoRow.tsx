@@ -17,15 +17,22 @@ export default function InfoRow({
   label: string;
   value: string;
 }) {
-  // Одна строка: подпись слева, значение справа. Двухэтажный вариант
-  // разрывал короткие пары вроде «Осталось · 2 ч» без пользы.
+  // На широком экране — подпись слева, значение справа. На узком
+  // столбиком: пары вроде «Стаж · 9 лет 7 месяцев» и «График ·
+  // Пн–Сб 09:00–18:00» в одну строку на телефоне не помещались, и
+  // значение обрезалось многоточием прямо на середине.
+  //
+  // whitespace-nowrap на подписи не даёт ей переноситься по слогам,
+  // а break-words у значения — рвать длинный график как попало.
   return (
-    <div className="smk-sheet-row flex items-center justify-between gap-2 px-2.5 py-2">
-      <span className="smk-sheet-label flex shrink-0 items-center gap-1">
+    <div className="smk-sheet-row flex flex-col gap-0.5 px-2.5 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
+      <span className="smk-sheet-label flex shrink-0 items-center gap-1 whitespace-nowrap">
         <Icon className="h-3 w-3" />
         {label}
       </span>
-      <span className="truncate text-xs font-bold text-slate-800 dark:text-zinc-200">{value}</span>
+      <span className="min-w-0 break-words text-xs font-bold text-slate-800 dark:text-zinc-200 sm:truncate sm:text-right">
+        {value}
+      </span>
     </div>
   );
 }

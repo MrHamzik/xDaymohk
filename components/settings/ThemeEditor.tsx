@@ -13,7 +13,7 @@ import {
   type CustomTheme, type ThemeColorGroup, type ThemeColors,
 } from '@/lib/settings/types';
 import { useI18n } from '@/lib/i18n';
-import { HintMark, SectionTitle } from '@/components/settings/SettingsPrimitives';
+import { HintMark } from '@/components/settings/SettingsPrimitives';
 
 /**
  * Подписи слотов палитры, разложенные по трём группам.
@@ -180,8 +180,8 @@ export default function ThemeEditor() {
 
   return (
     <section>
-      <SectionTitle title={t.settingsThemes} hint={t.settingsThemesHint} />
-
+      {/* Заголовок рисует обёртка CollapsibleSection на странице
+          настроек — здесь он дублировался бы вместе с линией. */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         {Object.entries(PRESET_THEMES).map(([id, theme]) => (
           <ThemeCard

@@ -15,6 +15,7 @@ import ResidentReputation from '@/components/tasks/ResidentReputation';
 import InfoRow from '@/components/ui/InfoRow';
 import { compactWeekdays } from '@/lib/schedule';
 import Notice from '@/components/Notice';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import ProfileBadges, { WorkingStatusBadge } from '@/components/ProfileBadges';
 import { cacheBustAvatarUrl } from '@/lib/media';
 import InteractiveMap from '@/components/InteractiveMapLazy';
@@ -118,6 +119,7 @@ export default function ProfileModal({
   // Карта рабочего адреса — по кнопке: Leaflet тянет свой бандл и тайлы,
   // а анкету открывают чаще ради контактов, чем ради точки.
   const [isMapOpen, setIsMapOpen] = useState(false);
+  const [isBlockConfirmOpen, setIsBlockConfirmOpen] = useState(false);
   const [mapLayerMode, setMapLayerMode] = useState<MapLayerMode>('streets');
   // A user card opened from a name link renders as a nested ProfileModal
   // on top of this one; closing it returns to this анкета instead of
@@ -654,7 +656,8 @@ export default function ProfileModal({
 
   const handleBlockOwner = async () => {
     if (!ownerId) return;
-    if (!window.confirm(t.profileBlockConfirm)) return;
+    // Подтверждение — наша модалка ConfirmDialog: системный alert
+    // игнорирует тему, шрифт и язык приложения.
     setBlockBusy(true);
     try {
       await blockUser(ownerId);
@@ -679,7 +682,7 @@ export default function ProfileModal({
                 Своя анкета и администратор отсекаются и на сервере. */}
             {canBlockOwner && (
               <button
-                onClick={handleBlockOwner}
+                onClick={() => setIsBlockConfirmOpen(true)}
                 disabled={blockBusy}
                 aria-label={t.profileBlockUser}
                 title={t.profileBlockUser}
@@ -793,8 +796,10 @@ export default function ProfileModal({
               });
             }
             if (rows.length === 0) return null;
+            // Одна колонка на телефоне: в две «Стаж» и «График» не
+            // помещались и обрезались.
             return (
-              <div className="grid grid-cols-2 gap-2 px-4 py-3.5 text-[11px]">
+              <div className="grid grid-cols-1 gap-2 px-4 py-3.5 text-[11px] sm:grid-cols-2">
                 {rows.map((row) => (
                   <InfoRow key={row.key} icon={row.icon} label={row.label} value={row.value} />
                 ))}
@@ -1539,6 +1544,20 @@ export default function ProfileModal({
       {/* User card opened from a name link: nested modal on top of this
           one. Closing it returns to the current анкета instead of closing
           everything and dropping back to the catalog. */}
+      <ConfirmDialog
+        isOpen={isBlockConfirmOpen}
+        title={t.profileBlockTitle}
+        message={t.profileBlockConfirm}
+        confirmLabel={t.profileBlockTitle}
+        danger
+        isBusy={blockBusy}
+        onCancel={() => setIsBlockConfirmOpen(false)}
+        onConfirm={() => {
+          setIsBlockConfirmOpen(false);
+          void handleBlockOwner();
+        }}
+      />
+
       {nestedProfile && (
         <ProfileModal
           profile={nestedProfile}

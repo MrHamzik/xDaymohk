@@ -144,6 +144,7 @@ export const translations = {
     profileOpenUserCard: 'Открыть карточку пользователя',
     profileCloseSheet: 'Закрыть анкету',
     profileBlockUser: 'Заблокировать',
+    profileBlockTitle: 'Заблокировать',
     profileBlockConfirm: 'Заблокировать этого человека? Вы перестанете видеть его анкеты, а он — ваши. Он не сможет писать вам отзывы и откликаться на ваши задания.',
     profileBlockFailed: 'Не удалось заблокировать.',
     profileCloseDocument: 'Закрыть документ',
@@ -371,6 +372,7 @@ export const translations = {
 
     settingsThemes: 'Тема оформления',
     settingsEffects: 'Эффекты',
+    settingsEffectsHint: 'Визуальные эффекты оформления. Если телефон тормозит — уменьшите размытие и тени.',
     settingsThemesHint: 'Готовые темы изменить нельзя — создайте свою на их основе. Можно сохранить до 5 собственных тем.',
     settingsThemeCreate: 'Создать свою',
     settingsThemeMine: 'Моя тема',
@@ -807,6 +809,7 @@ export const translations = {
     profileOpenUserCard: 'Лелорхочун карточка схьаелла',
     profileCloseSheet: 'Анкета дIакъовла',
     profileBlockUser: 'Блоки вé',
+    profileBlockTitle: 'Блоктаба',
     profileBlockConfirm: 'ХIара стаг блоки вé? Хьуна цуьнан анкеташ гур яц, цунна хьан а. Цунна хьуна хастамаш яздан а, хьан тIедилларш тIеэца а ца лур ду.',
     profileBlockFailed: 'Блоки ван ца делира.',
     profileCloseDocument: 'Кехат дIакъовла',
@@ -1034,6 +1037,7 @@ export const translations = {
 
     settingsThemes: 'ХатIан тема',
     settingsEffects: 'Эффекташ',
+    settingsEffectsHint: 'Оформленин эффекташ. Телефон гIело йахйахь, къардар а, жIаьлеш а дIаяха.',
     settingsThemesHint: 'Кечйина темаш хийца йиш яц — царех терра хьайн йе. 5 йолу хьайн темаш дIаязйан мега.',
     settingsThemeCreate: 'Хьайн йе',
     settingsThemeMine: 'Сан тема',

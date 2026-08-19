@@ -327,6 +327,8 @@ export default function AdminPage() {
   const [editRegionName, setEditRegionName] = useState('Самашки');
   const [editLat, setEditLat] = useState('');
   const [editLng, setEditLng] = useState('');
+  // У какого адреса раскрыта карта выбора точки (правка существующего).
+  const [editMapId, setEditMapId] = useState<string | null>(null);
 
   // soft-delete queue: addresses removed in this session that the user
   // can still restore. They are committed to the database only when the
@@ -1605,7 +1607,7 @@ export default function AdminPage() {
       setEditRegionName(regionMatch[2].trim());
     }
   };
-  const cancelEdit = () => { setEditingId(null); };
+  const cancelEdit = () => { setEditingId(null); setEditMapId(null); };
   const saveEdit = () => {
     if (!editingId) return;
     if (!editStreetName.trim()) return;
@@ -2306,9 +2308,47 @@ export default function AdminPage() {
                           </div>
                         </div>
                         <div className="grid grid-cols-2 gap-2">
-                          <input value={editLat} onChange={(e)=>setEditLat(e.target.value)} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs dark:border-zinc-800 dark:bg-zinc-800 dark:text-white" />
-                          <input value={editLng} onChange={(e)=>setEditLng(e.target.value)} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs dark:border-zinc-800 dark:bg-zinc-800 dark:text-white" />
+                          <div className="relative">
+                            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">Lat</span>
+                            <input value={editLat} onChange={(e)=>setEditLat(e.target.value)} className="smk-field w-full py-2 pl-10 pr-3 text-xs text-slate-900 outline-none dark:text-white" />
+                          </div>
+                          <div className="relative">
+                            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">Lng</span>
+                            <input value={editLng} onChange={(e)=>setEditLng(e.target.value)} className="smk-field w-full py-2 pl-10 pr-3 text-xs text-slate-900 outline-none dark:text-white" />
+                          </div>
                         </div>
+
+                        {/* Правка точки на карте — то же, что при добавлении.
+                            Раньше карта была только в форме нового адреса, а
+                            у существующих оставались голые поля с цифрами:
+                            поправить положение дома можно было лишь вручную. */}
+                        <div>
+                          <button
+                            type="button"
+                            onClick={() => setEditMapId(editMapId === address.id ? null : address.id)}
+                            aria-expanded={editMapId === address.id}
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-white px-3 py-1.5 text-xs font-bold text-emerald-700 hover:bg-emerald-50 dark:border-emerald-900 dark:bg-zinc-900 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
+                          >
+                            <MapPinned className="h-3.5 w-3.5" />
+                            {editMapId === address.id
+                              ? L('Скрыть карту', 'Карта къайлаяккха')
+                              : L('Указать точку на карте', 'Картин тIехь меттиг билгалъяккха')}
+                          </button>
+
+                          {editMapId === address.id && (
+                            <div className="mt-2">
+                              <AdminPickMap
+                                lat={parseFloat(editLat)}
+                                lng={parseFloat(editLng)}
+                                onPick={(lat, lng) => {
+                                  setEditLat(lat.toFixed(6));
+                                  setEditLng(lng.toFixed(6));
+                                }}
+                              />
+                            </div>
+                          )}
+                        </div>
+
                         <div className="flex gap-2">
                           <button type="button" onClick={saveEdit} className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white"><SaveIcon className="h-3 w-3" />{L('Сохранить', 'ДIаязде')}</button>
                           <button type="button" onClick={cancelEdit} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300"><X className="h-3 w-3" />{L('Отмена', 'Юхадаккха')}</button>

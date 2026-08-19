@@ -347,7 +347,7 @@ export default function TaskDetailModal({
                 </div>
               )}
 
-              <div className="smk-sheet-section grid grid-cols-2 gap-2 px-4 py-4 text-[11px]">
+              <div className="smk-sheet-section grid grid-cols-1 gap-2 px-4 py-4 text-[11px] sm:grid-cols-2">
                 {/* У спора срока нет: работа уже сдана, идёт разбор.
                     Раньше здесь выводилось «Осталось · просрочено» —
                     отсчёт по дедлайну, который к этому моменту давно

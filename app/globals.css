@@ -1056,9 +1056,51 @@ html.smk-themed .bg-white {
   border-color: var(--smk-divider, rgb(15 23 42 / 0.12));
 }
 .smk-dashed {
+  position: relative;
   border: 1px dashed var(--smk-hairline-strong, rgb(15 23 42 / 0.12));
   border-radius: 1rem;
   background: transparent;
+  /* Место под орнамент сверху: без него ромб наезжал на текст. */
+  padding-top: 2.25rem;
+}
+
+/* Вайнахский ромб в пустом состоянии.
+   Раньше «Заданий нет» было просто серой надписью в рамке — выглядело
+   как ошибка загрузки, а не как «здесь пока пусто». Тот же мотив, что
+   в разделителях .smk-orn: ромб с золотыми усиками по бокам.
+
+   Рисуем псевдоэлементами, без картинок: масштабируется, красится
+   темой и подчиняется --fx-pattern из настроек эффектов. */
+.smk-dashed::before {
+  content: '';
+  position: absolute;
+  top: 0.9rem;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  transform: translateX(-50%) rotate(45deg);
+  background: var(--smk-gold);
+  opacity: calc(0.85 * var(--fx-pattern));
+  box-shadow: 0 0 10px -2px var(--smk-gold);
+}
+.smk-dashed::after {
+  content: '';
+  position: absolute;
+  top: calc(0.9rem + 3.5px);
+  left: 50%;
+  width: 88px;
+  height: 1px;
+  transform: translateX(-50%);
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--smk-gold) 22%,
+    transparent 42%,
+    transparent 58%,
+    var(--smk-gold) 78%,
+    transparent
+  );
+  opacity: calc(0.5 * var(--fx-pattern));
 }
 
 /* --- Плотные всплывающие слои -----------------------------------------------
@@ -1514,12 +1556,14 @@ html.dark .smk-rule {
    читалась плохо. В тёмной теме кнопка нейтрально-серая. */
 .smk-btn-gold {
   background: linear-gradient(100deg, var(--smk-gold-deep), var(--smk-gold));
-  /* Текст выводим ИЗ фона кнопки, а не из --smk-surface.
-     Раньше стоял слот «шапка и меню»: на тёмных темах он почти чёрный,
-     и надпись «Пожаловаться» на золотом фоне становилась нечитаемой.
-     color-contrast здесь недоступен, поэтому берём тёмный текст на
-     светлом золоте и светлый — на тёмной стали (ветка html.dark). */
-  color: #1a1206;
+  /* Текст всегда белый — как надписи на четырёх цветных кнопках
+     бокового меню. Это фирменный вид: кнопка действия читается
+     одинаково во всех темах.
+
+     Раньше цвет брался из --smk-surface (слот «шапка и меню»): на
+     тёмных темах он почти чёрный, и надпись пропадала на золотом
+     фоне. */
+  color: #ffffff;
   font-weight: 700;
   border-radius: 0.75rem;
   box-shadow: 0 6px 16px -8px rgb(var(--smk-gold-rgb) / 0.55);
@@ -1527,8 +1571,6 @@ html.dark .smk-rule {
 }
 html.dark .smk-btn-gold {
   background: linear-gradient(100deg, var(--smk-steel-a), var(--smk-steel-c));
-  /* Сталь тёмная — надпись светлая. */
-  color: #f5f5f7;
   box-shadow: 0 6px 16px -8px rgb(var(--smk-shadow-rgb) / 0.8);
 }
 .smk-btn-gold:hover { filter: brightness(1.08); }

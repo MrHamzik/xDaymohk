@@ -104,6 +104,20 @@ export async function compressImageDataUrl(dataUrl: string, square = false) {
   return compressDataUrl(dataUrl, square);
 }
 
+/**
+ * Предел размера файла в Storage, байты.
+ *
+ * ДУБЛИРУЕТ ограничение самого bucket (обновление 46) намеренно: там
+ * оно защищает от обхода через консоль, здесь — даёт человеку понятную
+ * ошибку до отправки, вместо технического отказа сервера после
+ * ожидания загрузки.
+ */
+const MAX_UPLOAD_BYTES = 3 * 1024 * 1024;
+
+/** Разрешённые типы. Белый список, как и на bucket. SVG исключён: это
+ *  XML с исполняемым JavaScript внутри. */
+const ALLOWED_UPLOAD_TYPES = ['image/webp', 'image/jpeg', 'image/png'];
+
 export async function uploadImageIfStorageConfigured(dataUrl: string, ownerId: string, folder: 'avatars' | 'documents') {
   const safeDataUrl = await compressDataUrl(dataUrl, folder === 'avatars');
   if (!isSupabaseConfigured || !supabase || !safeDataUrl.startsWith('data:')) return safeDataUrl;
@@ -111,6 +125,16 @@ export async function uploadImageIfStorageConfigured(dataUrl: string, ownerId: s
   try {
     const response = await fetch(safeDataUrl);
     const blob = await response.blob();
+
+    if (blob.size > MAX_UPLOAD_BYTES) {
+      throw new Error(
+        `Файл слишком большой: ${(blob.size / 1024 / 1024).toFixed(1)} МБ. `
+        + `Максимум — ${MAX_UPLOAD_BYTES / 1024 / 1024} МБ.`,
+      );
+    }
+    if (blob.type && !ALLOWED_UPLOAD_TYPES.includes(blob.type)) {
+      throw new Error('Можно загружать только изображения JPEG, PNG или WebP.');
+    }
     // Путь = uuid владельца: при повторной загрузке аватар ПЕРЕЗАПИСЫВАЕТСЯ,
     // а не копится новыми файлами (upsert: true).
     const path = `${folder}/${ownerId}.webp`;

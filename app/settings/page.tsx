@@ -222,7 +222,11 @@ export default function SettingsPage() {
               {/* Шапка колонок: без неё два тумблера в ряд неразличимы.
                   Ширина и зазор совпадают со строками ниже — иначе
                   подписи «Показывать» и «Звук» наезжали друг на друга. */}
-              <div className="mb-1 flex items-center justify-end gap-4 pr-3 text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-zinc-500">
+              {/* Подписи колонок прячем на узком экране: там тумблеры
+                  уходят под текст и шапка перестаёт над ними стоять —
+                  подписи «висели» над пустотой. Роль тумблера на
+                  телефоне понятна по aria-label и порядку. */}
+              <div className="mb-1 hidden items-center justify-end gap-4 pr-3 text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-zinc-500 sm:flex">
                 <span className="w-14 text-center">{t.settingsColShow}</span>
                 <span className="w-14 text-center">{t.settingsColSound}</span>
               </div>
@@ -234,8 +238,9 @@ export default function SettingsPage() {
                   return (
                     <div
                       key={group}
-                      className="smk-field flex flex-wrap items-center justify-between gap-3 px-3 py-2.5"
+                      className="smk-field px-3 py-2.5"
                     >
+                      <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="truncate text-xs font-bold text-slate-800 dark:text-zinc-200">
                           {groupLabels[group].title}
@@ -244,22 +249,31 @@ export default function SettingsPage() {
                           {groupLabels[group].description}
                         </p>
                       </div>
-                      <div className="flex shrink-0 items-center gap-4">
-                        <span className="flex w-14 justify-center">
+                      <div className="flex shrink-0 items-start gap-4">
+                        <span className="flex w-14 flex-col items-center gap-1">
                           <Toggle
                             checked={isLocked ? true : pref.show}
                             disabled={isLocked}
                             onChange={(next) => setPref(group, { show: next })}
                             label={`${groupLabels[group].title}: ${t.settingsColShow}`}
                           />
+                          {/* Подпись под тумблером — только на телефоне,
+                              где шапки колонок нет. */}
+                          <span className="text-[10px] font-bold uppercase text-slate-400 dark:text-zinc-500 sm:hidden">
+                            {t.settingsColShow}
+                          </span>
                         </span>
-                        <span className="flex w-14 justify-center">
+                        <span className="flex w-14 flex-col items-center gap-1">
                           <Toggle
                             checked={pref.sound}
                             onChange={(next) => setPref(group, { sound: next })}
                             label={`${groupLabels[group].title}: ${t.settingsColSound}`}
                           />
+                          <span className="text-[10px] font-bold uppercase text-slate-400 dark:text-zinc-500 sm:hidden">
+                            {t.settingsColSound}
+                          </span>
                         </span>
+                      </div>
                       </div>
 
                       {/* Выбор мелодии — только когда звук включён.
@@ -331,6 +345,7 @@ export default function SettingsPage() {
                       приходилось листать всю палитру. */}
                   <CollapsibleSection
                     title={t.settingsThemes}
+                    hint={t.settingsThemesHint}
                     isOpen={openBlock === 'themes'}
                     onToggle={() => toggleBlock('themes')}
                   >
@@ -341,6 +356,7 @@ export default function SettingsPage() {
                       потом настраивают его «плотность». */}
                   <CollapsibleSection
                     title={t.settingsEffects}
+                    hint={t.settingsEffectsHint}
                     isOpen={openBlock === 'effects'}
                     onToggle={() => toggleBlock('effects')}
                   >
