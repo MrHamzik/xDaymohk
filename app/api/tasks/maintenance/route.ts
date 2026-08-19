@@ -6,11 +6,13 @@ import { notifyTaskEvent } from '@/lib/tasks/server';
 import {
   TASK_AUTO_CONFIRM_HOURS, TASK_BLOCK_HOURS,
   TASK_DISPUTE_BLOCK_HOURS, TASK_DISPUTE_HOURS,
+  TASK_PAYOUT_REMIND_HOURS,
 } from '@/lib/types';
 
 /**
  * Обслуживание заданий по расписанию:
  *   1. автоподтверждение — заказчик молчит 3 часа после «Выполнил»;
+ *   1b. напоминание о переводе — час после сдачи, отметки нет;
  *   2. просрочка — срок вышел, задание никто не взял: такое удаляется
  *      из базы сразу, оно уже никому не нужно;
  *   3. уборка — отменённые уходят в архив после срока показа.
@@ -132,6 +134,73 @@ export async function POST(request: Request) {
     });
 
     autoConfirmed += 1;
+  }
+
+  // ---------------------------------------------------------------
+  // 1b. Напоминание о незакрытом переводе.
+  //     Работа сдана, «Оплата получена» не нажата, прошёл час.
+  //     Наличные пропускаем: там второй отметки нет.
+  //     Идёт ПОСЛЕ автоподтверждения: тем, кому уже стукнуло 3 ч,
+  //     уйдёт закрытие, а не мягкое «не забудьте».
+  // ---------------------------------------------------------------
+  let payoutReminded = 0;
+  const remindCutoff = new Date(now - TASK_PAYOUT_REMIND_HOURS * 3_600_000).toISOString();
+  const { data: unpaid, error: unpaidError } = await admin
+    .from('tasks')
+    .select('id, title, author_id, payment_method')
+    .eq('status', 'awaiting_confirm')
+    .eq('is_paid', true)
+    .in('payment_method', ['sbp', 'card', 'yoomoney'])
+    .is('payment_received_at', null)
+    .is('payout_reminder_sent_at', null)
+    .lt('submitted_at', remindCutoff)
+    .limit(100);
+
+  if (unpaidError) {
+    // Колонки ещё нет (обновление 48 не применено) — этот шаг молча
+    // пропускаем, остальное обслуживание не роняем.
+    if (!/payout_reminder_sent_at/i.test(unpaidError.message)) {
+      log.warn('maintenance: payout reminder query failed:', unpaidError.message);
+    }
+  } else {
+    for (const task of unpaid ?? []) {
+      const taskId = String(task.id);
+      const { data: parts } = await admin
+        .from('task_participants')
+        .select('user_id')
+        .eq('task_id', taskId)
+        .in('status', ['joined', 'attended', 'done']);
+
+      for (const part of parts ?? []) {
+        await notifyTaskEvent(admin, {
+          recipientId: String(part.user_id),
+          type: 'task_reminder',
+          title: 'Отметьте получение оплаты',
+          titleCe: 'Ахча схьаэцна аьлла билгалде',
+          message: `«${task.title}»: когда деньги придут — нажмите «Оплата получена», иначе задание не закроется.`,
+          messageCe: `«${task.title}»: ахча кхаьчча «Ахча схьаэцна» тIетаIае — цхьаьна тIедиллар дIакъовлалур дац.`,
+        });
+      }
+
+      await notifyTaskEvent(admin, {
+        recipientId: String(task.author_id),
+        type: 'task_reminder',
+        title: 'Незавершённый расчёт',
+        titleCe: 'Дехар чекхдаккха деза',
+        message: `«${task.title}»: исполнитель сдал работу. Переведите оплату — он отметит получение, и задание закроется.`,
+        messageCe: `«${task.title}»: кхочушдийриг болх бина. Ахча дIало — цо схьаэцна аьлла билгалдаккха, тIедиллар дIакъовлур ду.`,
+      });
+
+      const { error: markError } = await admin
+        .from('tasks')
+        .update({ payout_reminder_sent_at: new Date().toISOString() })
+        .eq('id', taskId);
+      if (markError) {
+        log.warn('maintenance: payout reminder mark failed', { message: markError.message });
+        continue;
+      }
+      payoutReminded += 1;
+    }
   }
 
   // ---------------------------------------------------------------
