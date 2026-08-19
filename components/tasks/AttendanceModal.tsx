@@ -249,7 +249,7 @@ export default function AttendanceModal({
           })}
 
           {error && (
-            <p className="smk-note smk-note-danger px-3 py-2 text-xs font-semibold">
+            <p className="smk-note smk-note-danger px-3 py-2">
               {error}
             </p>
           )}

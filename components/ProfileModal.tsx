@@ -736,12 +736,12 @@ export default function ProfileModal({
 
         <div className="min-h-0 flex-1 overflow-y-auto text-xs text-slate-800 dark:text-zinc-300 no-scrollbar">
           {(profile.isHidden || profile.isBanned) && (
-            <p className="smk-note smk-note-danger mx-4 mt-3 px-3.5 py-2.5 text-[11px] font-semibold leading-relaxed">
+            <p className="smk-note smk-note-danger mx-4 mt-3 px-3.5 py-2.5">
               {t.profileHiddenNotice}
             </p>
           )}
           {isViewerBlocked && (
-            <p className="smk-note smk-note-danger mx-4 mt-3 px-3.5 py-2.5 text-[11px] font-semibold leading-relaxed">
+            <p className="smk-note smk-note-danger mx-4 mt-3 px-3.5 py-2.5">
               {t.profileViewerBlocked}
             </p>
           )}

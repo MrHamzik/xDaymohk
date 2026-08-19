@@ -95,7 +95,7 @@ export default function BlacklistModal({ isOpen, onClose }: BlacklistModalProps)
           </p>
 
           {error && (
-            <p className="smk-note smk-note-danger mb-2 px-3 py-2 text-[11px] font-semibold">
+            <p className="smk-note smk-note-danger mb-2 px-3 py-2">
               {error}
             </p>
           )}

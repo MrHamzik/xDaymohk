@@ -110,6 +110,22 @@ export async function createTask(input: CreateTaskInput): Promise<string> {
   return data.id;
 }
 
+/**
+ * Правка задания. Доступна автору, пока задание открыто и по нему нет
+ * одобренного исполнителя — сервер проверяет это же условие.
+ */
+export async function updateTask(
+  taskId: string,
+  input: Omit<CreateTaskInput, 'isPaid' | 'kind'>,
+): Promise<void> {
+  const response = await fetch(`/api/tasks/${encodeURIComponent(taskId)}`, {
+    method: 'PATCH',
+    headers: await authHeaders(),
+    body: JSON.stringify(input),
+  });
+  await parse(response);
+}
+
 export type TaskAction =
   | 'take' | 'join' | 'leave' | 'exclude'
   // Одобрение исполнителя заказчиком на платных заданиях (обновление 27).
@@ -202,7 +218,14 @@ export async function fetchTaskFilters(scope: 'tasks' | 'catalog' | 'map' = 'tas
  */
 export async function runTaskMaintenance(): Promise<void> {
   try {
-    await fetch('/api/tasks/maintenance', { method: 'POST' });
+    // Таймаут обязателен: раздел ждёт эту уборку перед загрузкой
+    // ленты, и зависший запрос повесил бы пустой экран. Три секунды —
+    // с запасом на обычный прогон; если не успели, лента покажется
+    // как есть, а уборку доделает pg_cron.
+    await fetch('/api/tasks/maintenance', {
+      method: 'POST',
+      signal: AbortSignal.timeout(3000),
+    });
   } catch {
     // намеренно тихо
   }

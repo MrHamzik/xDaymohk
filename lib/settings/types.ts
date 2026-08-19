@@ -69,6 +69,10 @@ export function notificationGroup(type: NotificationType): NotificationGroup {
     case 'task_join_request':
     case 'task_join_approved':
     case 'task_join_rejected':
+    case 'task_disputed':
+    case 'task_dispute_released':
+    case 'task_payment_received':
+    case 'task_updated':
       return 'tasks';
 
     // Блокировки и системные сообщения отключать нельзя по смыслу,

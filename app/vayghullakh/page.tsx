@@ -64,6 +64,9 @@ export default function VayghullakhPage() {
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [openTaskId, setOpenTaskId] = useState<string | null>(null);
+  // Задание, открытое на правку. Та же форма, что и для создания:
+  // набор полей и проверки совпадают.
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [isMenuDrawerOpen, setIsMenuDrawerOpen] = useState(false);
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
 
@@ -90,11 +93,23 @@ export default function VayghullakhPage() {
   }, [account, t.tasksLoadError]);
 
   useEffect(() => {
-    load();
+    // Обслуживание идёт ПЕРЕД загрузкой, а не параллельно с ней.
+    //
+    // Раньше load() и runTaskMaintenance() стартовали одновременно:
+    // лента успевала прийти раньше, чем уборка удаляла просроченные,
+    // и они оставались на экране до следующего захода. Именно поэтому
+    // «просроченные до сих пор не удалились из списка».
+    //
+    // Ждём уборку, но не даём ей заблокировать раздел: она сама себя
+    // гасит по таймауту и ошибки не выбрасывает.
+    let cancelled = false;
+    const boot = async () => {
+      await runTaskMaintenance();
+      if (!cancelled) await load();
+    };
+    void boot();
     fetchTaskFilters('tasks').then(setCategories).catch(() => setCategories([]));
-    // Тихо подчищаем просроченные и подтверждаем «зависшие» —
-    // как раздел «Письма» в админке, без отдельного планировщика.
-    runTaskMaintenance();
+    return () => { cancelled = true; };
   }, [load]);
 
   // Живое обновление ленты: чужие действия (взяли задание, выполнили,
@@ -111,6 +126,7 @@ export default function VayghullakhPage() {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     if (params.get('create') !== '1') return;
+    setEditingTask(null);
     setIsCreateOpen(true);
     params.delete('create');
     const rest = params.toString();
@@ -329,14 +345,14 @@ export default function VayghullakhPage() {
           )}
 
           {tab === 'nearby' && geoDenied && (
-            <p className="smk-note smk-note-warn mb-3 flex items-start gap-2 px-3 py-2 text-[11px] font-semibold">
+            <p className="smk-note smk-note-warn mb-3 flex items-start gap-2 px-3 py-2">
               <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
               {t.tasksGeoDenied}
             </p>
           )}
 
           {error && (
-            <p className="smk-note smk-note-danger mb-3 px-3 py-2 text-xs font-semibold">
+            <p className="smk-note smk-note-danger mb-3 px-3 py-2">
               {error}
             </p>
           )}
@@ -374,7 +390,8 @@ export default function VayghullakhPage() {
       <CreateTaskModal
         isOpen={isCreateOpen}
         isPaid
-        onClose={() => setIsCreateOpen(false)}
+        editTask={editingTask}
+        onClose={() => { setIsCreateOpen(false); setEditingTask(null); }}
         onCreated={load}
       />
       <TaskDetailModal
@@ -382,6 +399,13 @@ export default function VayghullakhPage() {
         currentUserId={account?.id}
         onClose={() => setOpenTaskId(null)}
         onChanged={load}
+        onEdit={(task) => {
+          // Карточку закрываем: форма правки — тоже модалка, две
+          // наложенные друг на друга читались бы как сбой.
+          setOpenTaskId(null);
+          setEditingTask(task);
+          setIsCreateOpen(true);
+        }}
       />
 
       <BottomNav
@@ -400,7 +424,7 @@ export default function VayghullakhPage() {
         isOpen={isCreateSheetOpen}
         onClose={() => setIsCreateSheetOpen(false)}
         onOpenCreateProfile={() => router.push('/catalog')}
-        onOpenGullaq={() => setIsCreateOpen(true)}
+        onOpenGullaq={() => { setEditingTask(null); setIsCreateOpen(true); }}
       />
     </div>
   );

@@ -240,7 +240,7 @@ export default function MobileMenuDrawer({ isOpen, onClose, isAdmin = false }: M
                     <CarFront className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                     <span>{t.taxiTitle}</span>
                   </div>
-                  <span className="rounded-md bg-orange-100 px-2 py-0.5 text-[9px] font-extrabold text-orange-800 dark:bg-orange-950/70 dark:text-orange-400">{t.inDevelopment}</span>
+                  <span className="smk-chip smk-note-warn">{t.inDevelopment}</span>
                 </Link>
 
                 <Link href="/" onClick={onClose} className="flex items-center justify-between rounded-xl px-3 py-2 text-xs font-bold text-slate-800 transition hover:bg-slate-100 dark:text-zinc-300 dark:hover:bg-zinc-800">
@@ -248,7 +248,7 @@ export default function MobileMenuDrawer({ isOpen, onClose, isAdmin = false }: M
                     <Globe2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                     <span>{t.vpnTitle}</span>
                   </div>
-                  <span className="rounded-md bg-orange-100 px-2 py-0.5 text-[9px] font-extrabold text-orange-800 dark:bg-orange-950/70 dark:text-orange-400">{t.inDevelopment}</span>
+                  <span className="smk-chip smk-note-warn">{t.inDevelopment}</span>
                 </Link>
 
                 <Link href="/vaynakh" onClick={onClose} className="flex items-center justify-between rounded-xl px-3 py-2 text-xs font-bold text-slate-800 transition hover:bg-slate-100 dark:text-zinc-300 dark:hover:bg-zinc-800">
@@ -277,7 +277,7 @@ export default function MobileMenuDrawer({ isOpen, onClose, isAdmin = false }: M
                     <Bot className="h-4 w-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
                     <span>{t.djannaTitle}</span>
                   </div>
-                  <span className="rounded-md bg-indigo-100 px-2 py-0.5 text-[9px] font-extrabold text-indigo-900 dark:bg-indigo-950/60 dark:text-indigo-200">{t.inPlans}</span>
+                  <span className="smk-chip smk-note-info">{t.inPlans}</span>
                 </Link>
               </div>
             </div>

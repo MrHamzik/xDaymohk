@@ -343,7 +343,7 @@ export default function OnboardingModal() {
               </button>
             </div>
 
-            {error && <p className="smk-note smk-note-danger mt-3 px-3 py-2 text-[11px] font-semibold">{error}</p>}
+            {error && <p className="smk-note smk-note-danger mt-3 px-3 py-2">{error}</p>}
 
             <div className="mt-4 flex items-center justify-center">
               <button type="button" onClick={toggleLanguage} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800">
@@ -410,7 +410,7 @@ export default function OnboardingModal() {
               <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white text-[11px] font-black text-blue-600">G</span>
               {ce ? 'Google чуйаха' : 'Войти через Google'}
             </button>
-            {error && <p className="smk-note smk-note-danger mt-3 px-3 py-2 text-[11px] font-semibold">{error}</p>}
+            {error && <p className="smk-note smk-note-danger mt-3 px-3 py-2">{error}</p>}
           </div>
         )}
 
@@ -486,7 +486,7 @@ export default function OnboardingModal() {
                 <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={3} placeholder={ce ? 'Хьайн хьокъехь...' : 'Пару слов о себе…'} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
               </div>
               {(whatsapp || telegram) && (
-                <p className="smk-note smk-note-warn px-3 py-2 text-[10px] leading-relaxed">
+                <p className="smk-note smk-note-warn px-3 py-2">
                   {ce
                     ? 'Хьажа: хьайн ватсап а, телеграм а язйина дацахь, уьш телефонан номераца хир ду.'
                     : 'Если оставите поля WhatsApp и Telegram пустыми, они будут дублировать номер телефона.'}
@@ -494,7 +494,7 @@ export default function OnboardingModal() {
               )}
             </div>
             {error && (
-              <p className="smk-note smk-note-danger mt-3 px-3 py-2 text-[11px] font-semibold">{error}</p>
+              <p className="smk-note smk-note-danger mt-3 px-3 py-2">{error}</p>
             )}
             <div className="mt-5 flex items-center gap-2">
               <button type="button" onClick={backFromProfile} className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">

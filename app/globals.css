@@ -2107,6 +2107,20 @@ textarea.smk-field:focus {
   background: var(--smk-note-info-bg);
   color: var(--smk-note-info);
   padding-left: 0.875rem;
+  /* Единый комфортный размер для всех подсказок.
+     Раньше в разметке соседствовали 10px, 11px и text-xs — блоки
+     одного смысла выглядели разнокалиберными. Спокойное начертание
+     без жирного и курсива: цвет уже несёт смысл, а текст должен
+     читаться, а не кричать.
+     !important нужен против утилит Tailwind (font-semibold,
+     text-[11px]) — у них та же специфичность, и без него порядок
+     правил в бандле решал бы, кто победит. */
+  font-size: 12px !important;
+  line-height: 1.55;
+  font-weight: 400 !important;
+  font-style: normal !important;
+  letter-spacing: normal;
+  text-transform: none !important;
   box-shadow:
     0 1px 2px -1px rgb(var(--smk-shadow-rgb) / calc(0.10 * var(--fx-shadow))),
     0 4px 12px -8px rgb(var(--smk-shadow-rgb) / calc(0.16 * var(--fx-shadow)));
@@ -2131,6 +2145,22 @@ textarea.smk-field:focus {
   opacity: 0.75;
 }
 
+/* Заголовки и вложенные элементы подсказки живут по тем же правилам:
+   без них <h3 className="font-bold uppercase"> внутри блока снова
+   давал бы жирный верхний регистр. */
+.smk-note h3,
+.smk-note h4,
+.smk-note p,
+.smk-note span,
+.smk-note strong,
+.smk-note em {
+  font-size: inherit;
+  font-weight: inherit;
+  font-style: normal;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
 /* Заголовок внутри подсказки наследует её цвет, поэтому отдельного
    класса под него не нужно. */
 .smk-note-info {
@@ -2150,10 +2180,37 @@ textarea.smk-field:focus {
   background: var(--smk-note-success-bg);
 }
 
+/* --- Метка-бейдж на цветах подсказок -------------------------------------
+   «В разработке», «В планах» и подобные короткие статусы. Смысл тот
+   же, что у подсказок, поэтому и цвета те же — берутся модификаторами
+   .smk-note-warn / .smk-note-info, которые задают пару «текст + фон».
+
+   Отдельный класс, а не .smk-note: у бейджа нет засечки и тени, он
+   компактный и стоит в углу карточки. Раньше эти метки красились
+   утилитами bg-amber-50 / bg-indigo-100 мимо палитры и в тёмных темах
+   оставались светлыми пятнами.
+
+   Начертание спокойное, как у подсказок: цвет уже несёт смысл. */
+.smk-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 999px;
+  padding: 0.125rem 0.5rem;
+  font-size: 12px !important;
+  line-height: 1.4;
+  font-weight: 400 !important;
+  font-style: normal !important;
+  letter-spacing: normal !important;
+  text-transform: none !important;
+  white-space: nowrap;
+}
+
 /* Ссылка внутри подсказки: тот же цвет, подчёркивание оставляем —
    это единственный признак кликабельности внутри плашки. */
 .smk-note a {
   color: inherit;
-  font-weight: 700;
+  /* Подчёркивание — единственный признак кликабельности внутри
+     плашки; жирный убран вместе с остальными начертаниями. */
   text-decoration: underline;
 }

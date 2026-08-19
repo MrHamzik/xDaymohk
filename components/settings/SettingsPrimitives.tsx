@@ -186,7 +186,7 @@ export function SettingRow({
 /** Предупреждение перед опасным действием. */
 export function WarningBox({ text }: { text: string }) {
   return (
-    <p className="smk-note smk-note-warn flex items-start gap-2 px-3 py-2.5 text-[11px] font-semibold leading-relaxed">
+    <p className="smk-note smk-note-warn flex items-start gap-2 px-3 py-2.5">
       <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
       {text}
     </p>

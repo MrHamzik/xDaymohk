@@ -299,12 +299,12 @@ export default function AdminFiltersSection() {
       <p className="text-xs text-slate-400">{SCOPES.find((s) => s.value === scope)?.hint}</p>
 
       {error && (
-        <p className="smk-note smk-note-danger px-3 py-2 text-xs font-semibold">
+        <p className="smk-note smk-note-danger px-3 py-2">
           {error}
         </p>
       )}
       {notice && (
-        <p className="smk-note smk-note-success px-3 py-2 text-xs font-semibold">
+        <p className="smk-note smk-note-success px-3 py-2">
           {notice}
         </p>
       )}

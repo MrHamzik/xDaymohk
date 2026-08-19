@@ -133,7 +133,7 @@ export default function AboutPage() {
             </div>
 
             <div className="relative space-y-3 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-950">
-              <span className="absolute right-5 top-5 rounded-full bg-amber-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">{t.inDevelopment}</span>
+              <span className="smk-chip smk-note-warn absolute right-5 top-5">{t.inDevelopment}</span>
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400">
                 <CarFront className="h-6 w-6" />
               </div>
@@ -144,7 +144,7 @@ export default function AboutPage() {
             </div>
 
             <div className="relative space-y-3 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-950">
-              <span className="absolute right-5 top-5 rounded-full bg-amber-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">{t.inDevelopment}</span>
+              <span className="smk-chip smk-note-warn absolute right-5 top-5">{t.inDevelopment}</span>
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400">
                 <Globe2 className="h-6 w-6" />
               </div>
@@ -155,7 +155,7 @@ export default function AboutPage() {
             </div>
 
             <div className="relative space-y-3 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-950">
-              <span className="absolute right-5 top-5 rounded-full bg-amber-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">{t.inDevelopment}</span>
+              <span className="smk-chip smk-note-warn absolute right-5 top-5">{t.inDevelopment}</span>
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400">
                 <BookOpen className="h-6 w-6" />
               </div>
@@ -166,7 +166,7 @@ export default function AboutPage() {
             </div>
 
             <div className="relative space-y-3 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-950">
-              <span className="absolute right-5 top-5 rounded-full bg-amber-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">{t.inDevelopment}</span>
+              <span className="smk-chip smk-note-warn absolute right-5 top-5">{t.inDevelopment}</span>
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400">
                 <Briefcase className="h-6 w-6" />
               </div>
@@ -177,7 +177,7 @@ export default function AboutPage() {
             </div>
 
             <div className="relative space-y-3 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-950">
-              <span className="absolute right-5 top-5 rounded-full bg-amber-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">{t.inDevelopment}</span>
+              <span className="smk-chip smk-note-warn absolute right-5 top-5">{t.inDevelopment}</span>
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400">
                 <HandHeart className="h-6 w-6" />
               </div>
@@ -188,7 +188,7 @@ export default function AboutPage() {
             </div>
 
             <div className="relative space-y-3 rounded-3xl border border-indigo-200/80 bg-gradient-to-b from-indigo-50/40 to-white p-6 shadow-sm dark:border-indigo-900/60 dark:from-indigo-950/20 dark:to-zinc-900 md:col-span-2">
-              <span className="absolute right-5 top-5 rounded-full border border-indigo-200 bg-indigo-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-indigo-800 dark:border-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-300">{t.inPlans}</span>
+              <span className="smk-chip smk-note-info absolute right-5 top-5">{t.inPlans}</span>
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
                 <Bot className="h-6 w-6" />
               </div>

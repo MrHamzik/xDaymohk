@@ -182,6 +182,28 @@ export async function POST(request: Request) {
     expired += 1;
   }
 
+  // ── Хвосты: записи 'expired' от прежней версии кода ────────────
+  // Раньше просрочка помечалась статусом и оставалась в базе. Такие
+  // строки уже скрыты из ленты (is_archived), но занимают место и
+  // мешают счётчикам — убираем их тем же прогоном.
+  const { data: leftovers } = await admin
+    .from('tasks')
+    .select('id')
+    .eq('status', 'expired')
+    .limit(100);
+  const leftoverIds = (leftovers ?? []).map((t) => String(t.id));
+  if (leftoverIds.length > 0) {
+    const { error: leftoverError } = await admin
+      .from('tasks')
+      .delete()
+      .in('id', leftoverIds);
+    if (leftoverError) {
+      log.warn('maintenance: leftover cleanup failed', { message: leftoverError.message });
+    } else {
+      expired += leftoverIds.length;
+    }
+  }
+
   // ── Споры: возвращаем в работу по истечении суток ──────────────
   // Спор не должен висеть вечно: если стороны не договорились и никто
   // не подал жалобу, исполнитель снова может сдать работу, а заказчик —

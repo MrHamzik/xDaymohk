@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   X, Loader2, Star, MapPin, Clock, Users, CalendarDays, ShieldAlert, Trash2,
-  Ban, Wallet,
+  Ban, Pencil, Wallet,
 } from 'lucide-react';
 import Link from 'next/link';
 import Avatar from '@/components/Avatar';
@@ -34,6 +34,8 @@ interface TaskDetailModalProps {
   currentUserId?: string;
   onClose: () => void;
   onChanged: () => void;
+  /** Открыть форму правки. Без обработчика кнопка «Изменить» не показывается. */
+  onEdit?: (task: Task) => void;
 }
 
 export default function TaskDetailModal({
@@ -41,6 +43,7 @@ export default function TaskDetailModal({
   currentUserId,
   onClose,
   onChanged,
+  onEdit,
 }: TaskDetailModalProps) {
   const { t } = useI18n();
   const [task, setTask] = useState<Task | null>(null);
@@ -171,6 +174,13 @@ export default function TaskDetailModal({
     && Date.now() - Date.parse(task.submittedAt) >= TASK_AUTO_CONFIRM_HOURS * 3600_000,
   );
   const canConfirm = !needsPaymentProof || isPaymentReceived || autoConfirmDue;
+
+  // Править условия можно, пока задание открыто и никто не одобрен.
+  // Заявки на рассмотрении (pending) не мешают: заказчик ещё никого
+  // не выбрал, а откликнувшимся уйдёт уведомление об изменениях.
+  const canEdit = Boolean(
+    task && task.status === 'open' && activeParticipants.length === 0 && onEdit,
+  );
 
 
   const act = async (label: string, fn: () => Promise<void>) => {
@@ -408,7 +418,7 @@ export default function TaskDetailModal({
 
               {/* Моя заявка ждёт решения заказчика */}
               {isPendingMe && (
-                <p className="smk-note smk-note-warn mx-4 mb-4 px-3.5 py-2.5 text-[11px] font-semibold leading-relaxed">
+                <p className="smk-note smk-note-warn mx-4 mb-4 px-3.5 py-2.5">
                   {t.taskPendingMine}
                 </p>
               )}
@@ -469,7 +479,7 @@ export default function TaskDetailModal({
               )}
 
               {task.status === 'awaiting_confirm' && (
-                <p className="smk-note smk-note-warn mx-4 mb-4 px-3.5 py-2.5 text-[11px] font-semibold leading-relaxed">
+                <p className="smk-note smk-note-warn mx-4 mb-4 px-3.5 py-2.5">
                   {t.taskAwaitConfirmNote.replace('{hours}', String(TASK_AUTO_CONFIRM_HOURS))}
                 </p>
               )}
@@ -524,7 +534,7 @@ export default function TaskDetailModal({
               {/* Подтверждение вместо исчезающей формы */}
               {task.status === 'completed' && ratingSubmitted
                 && !(isAuthor && authorRatesViaAttendance) && (
-                <p className="smk-note smk-note-success mx-4 mb-4 px-3.5 py-3 text-xs font-bold">
+                <p className="smk-note smk-note-success mx-4 mb-4 px-3.5 py-3">
                   {t.taskRatingSaved}
                 </p>
               )}
@@ -585,7 +595,7 @@ export default function TaskDetailModal({
               )}
 
               {error && (
-                <p className="smk-note smk-note-danger mx-4 mb-4 px-3.5 py-2.5 text-xs font-semibold">
+                <p className="smk-note smk-note-danger mx-4 mb-4 px-3.5 py-2.5">
                   {error}
                 </p>
               )}
@@ -614,7 +624,7 @@ export default function TaskDetailModal({
                     решению: неактивная кнопка без причины выглядит как
                     поломка. */}
                 {!canTake && (
-                  <p className="smk-note smk-note-warn w-full px-3 py-2 text-[11px] leading-relaxed">
+                  <p className="smk-note smk-note-warn w-full px-3 py-2">
                     {t.taskNeedPayout.replace(
                       '{method}',
                       t[`taskPay_${payMethod}` as keyof typeof t] as string,
@@ -661,7 +671,7 @@ export default function TaskDetailModal({
                 считалась успешной, а денег исполнитель не видел. */}
             {isExecutor && needsPaymentProof && task.status === 'awaiting_confirm' && (
               isPaymentReceived ? (
-                <p className="smk-note smk-note-success w-full px-3 py-2 text-[11px] font-bold">
+                <p className="smk-note smk-note-success w-full px-3 py-2">
                   {t.taskPaymentReceivedDone}
                 </p>
               ) : (
@@ -675,7 +685,7 @@ export default function TaskDetailModal({
                     {busy === 'paid' && <Loader2 className="h-4 w-4 animate-spin" />}
                     {t.taskPaymentReceivedBtn}
                   </button>
-                  <p className="smk-note smk-note-warn w-full px-3 py-2 text-[11px] leading-relaxed">
+                  <p className="smk-note smk-note-warn w-full px-3 py-2">
                     {t.taskPaymentReceivedHint}
                   </p>
                 </>
@@ -716,7 +726,7 @@ export default function TaskDetailModal({
                 {/* Неактивная кнопка без причины выглядит поломкой —
                     объясняем, чего ждём и что нужно сделать. */}
                 {!canConfirm && (
-                  <p className="smk-note smk-note-warn w-full px-3 py-2 text-[11px] leading-relaxed">
+                  <p className="smk-note smk-note-warn w-full px-3 py-2">
                     {t.taskConfirmLockedNote.replace(
                       '{hours}',
                       String(TASK_AUTO_CONFIRM_HOURS),
@@ -739,6 +749,23 @@ export default function TaskDetailModal({
                 className={`${btn} bg-emerald-600 text-white hover:bg-emerald-700`}
               >
                 {t.taskFinishAttendanceBtn}
+              </button>
+            )}
+
+            {/* Правка условий — только пока задание открыто и никого
+                не одобрили. После одобрения исполнитель уже рассчитывает
+                на эти награду, адрес и срок: менять их задним числом
+                значит переписать договор после рукопожатия. Сервер
+                проверяет то же самое (PATCH /api/tasks/:id). */}
+            {isAuthor && canEdit && (
+              <button
+                type="button"
+                disabled={Boolean(busy)}
+                onClick={() => onEdit?.(task)}
+                className={`${btn} smk-field text-slate-700 hover:brightness-95 dark:text-zinc-200 dark:hover:brightness-110`}
+              >
+                <Pencil className="h-4 w-4" />
+                {t.taskEditBtn}
               </button>
             )}
 

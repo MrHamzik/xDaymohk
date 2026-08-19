@@ -52,6 +52,9 @@ export default function VaygoPage() {
   const [geoDenied, setGeoDenied] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [openTaskId, setOpenTaskId] = useState<string | null>(null);
+  // Задание, открытое на правку. Та же форма, что и для создания:
+  // набор полей и проверки совпадают.
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [isMenuDrawerOpen, setIsMenuDrawerOpen] = useState(false);
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
 
@@ -68,9 +71,23 @@ export default function VaygoPage() {
   }, [t.tasksLoadError]);
 
   useEffect(() => {
-    load();
+    // Обслуживание идёт ПЕРЕД загрузкой, а не параллельно с ней.
+    //
+    // Раньше load() и runTaskMaintenance() стартовали одновременно:
+    // лента успевала прийти раньше, чем уборка удаляла просроченные,
+    // и они оставались на экране до следующего захода. Именно поэтому
+    // «просроченные до сих пор не удалились из списка».
+    //
+    // Ждём уборку, но не даём ей заблокировать раздел: она сама себя
+    // гасит по таймауту и ошибки не выбрасывает.
+    let cancelled = false;
+    const boot = async () => {
+      await runTaskMaintenance();
+      if (!cancelled) await load();
+    };
+    void boot();
     fetchTaskFilters('tasks').then(setCategories).catch(() => setCategories([]));
-    runTaskMaintenance();
+    return () => { cancelled = true; };
   }, [load]);
 
   // Живое обновление ленты: чужие действия (взяли задание, выполнили,
@@ -87,6 +104,7 @@ export default function VaygoPage() {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     if (params.get('create') !== '1') return;
+    setEditingTask(null);
     setIsCreateOpen(true);
     params.delete('create');
     const rest = params.toString();
@@ -199,7 +217,7 @@ export default function VaygoPage() {
           />
 
           {error && (
-            <p className="smk-note smk-note-danger mb-3 px-3 py-2 text-xs font-semibold">
+            <p className="smk-note smk-note-danger mb-3 px-3 py-2">
               {error}
             </p>
           )}
@@ -231,7 +249,8 @@ export default function VaygoPage() {
       <CreateTaskModal
         isOpen={isCreateOpen}
         isPaid={false}
-        onClose={() => setIsCreateOpen(false)}
+        editTask={editingTask}
+        onClose={() => { setIsCreateOpen(false); setEditingTask(null); }}
         onCreated={load}
       />
       <TaskDetailModal
@@ -239,6 +258,13 @@ export default function VaygoPage() {
         currentUserId={account?.id}
         onClose={() => setOpenTaskId(null)}
         onChanged={load}
+        onEdit={(task) => {
+          // Карточку закрываем: форма правки — тоже модалка, две
+          // наложенные друг на друга читались бы как сбой.
+          setOpenTaskId(null);
+          setEditingTask(task);
+          setIsCreateOpen(true);
+        }}
       />
 
       <BottomNav
@@ -257,7 +283,7 @@ export default function VaygoPage() {
         isOpen={isCreateSheetOpen}
         onClose={() => setIsCreateSheetOpen(false)}
         onOpenCreateProfile={() => router.push('/catalog')}
-        onOpenGo={() => setIsCreateOpen(true)}
+        onOpenGo={() => { setEditingTask(null); setIsCreateOpen(true); }}
       />
     </div>
   );

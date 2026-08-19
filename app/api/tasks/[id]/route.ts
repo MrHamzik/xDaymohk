@@ -25,7 +25,9 @@ import {
 } from '@/lib/tasks/server';
 import {
   TASK_AUTO_CONFIRM_HOURS, TASK_CANCELLED_VISIBLE_DAYS, TASK_DISPUTE_HOURS,
+  TASK_MIN_REWARD,
 } from '@/lib/types';
+import { checkTaskContent, moderationMessage } from '@/lib/tasks/moderation';
 import { mapTaskRow } from '@/lib/tasks/map';
 
 /**
@@ -256,6 +258,246 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
   if (updateError) {
     log.warn('task delete failed:', updateError.message);
     return NextResponse.json({ error: 'Не удалось удалить задание' }, { status: 500 });
+  }
+
+  return NextResponse.json({ success: true });
+}
+
+/* ---------------------------------------------------------------------------
+   Ограничения полей — те же, что при создании (app/api/tasks/route.ts).
+   Держим списком здесь, а не импортом: роут-файлы Next.js разрешают
+   экспортировать только обработчики, поэтому вынести константы в общий
+   модуль без отдельного файла нельзя.
+--------------------------------------------------------------------------- */
+const EDIT_TITLE_MAX = 120;
+const EDIT_DESCRIPTION_MAX = 2000;
+const EDIT_ADDRESS_MAX = 300;
+const EDIT_REWARD_MAX = 1_000_000;
+const EDIT_SLOTS_MAX = 100;
+const EDIT_MAX_FUTURE_MS = 365 * 24 * 60 * 60 * 1000;
+
+/**
+ * PATCH /api/tasks/:id — правка задания.
+ *
+ * Когда можно править
+ * -------------------
+ * Пока задание ОТКРЫТО и по нему нет одобренного исполнителя. После
+ * одобрения человек уже рассчитывает на конкретные условия:менять ему
+ * награду, адрес или срок задним числом нельзя — это то же самое, что
+ * переписать договор после рукопожатия. Заявки на рассмотрении
+ * (pending) правку не блокируют: заказчик ещё никого не выбрал, а
+ * откликнувшийся увидит новые условия до одобрения.
+ *
+ * Что менять НЕЛЬЗЯ даже до одобрения
+ * -----------------------------------
+ *   • is_paid — раздел задания («Аренца Темщик» ↔ «ГIончалла»);
+ *   • kind — срочное ↔ на дату: от него зависит весь сценарий закрытия.
+ * Для этого проще удалить задание и создать заново — оно ещё никем не
+ * взято, потерь нет.
+ */
+export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
+  const limit = await rateLimit(request, { limit: 30, windowMs: 60_000, scope: 'task-edit' });
+  if (!limit.allowed) {
+    return withRateLimitHeaders(
+      NextResponse.json({ error: 'Too many requests' }, { status: 429 }),
+      { ...limit, limit: 30 },
+    );
+  }
+
+  const { id } = await context.params;
+  const auth = await authenticateTaskRequest(request);
+  if ('error' in auth) return taskAuthError(auth);
+  const { userId, email, admin } = auth;
+  const isAdmin = isAdminEmail(email);
+
+  let body: Record<string, unknown> = {};
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Неверный запрос' }, { status: 400 });
+  }
+
+  const { data: task, error: readError } = await admin
+    .from('tasks')
+    .select('id, author_id, status, is_paid, kind, title')
+    .eq('id', id)
+    .maybeSingle();
+  if (readError) {
+    log.warn('task edit: read failed:', readError.message);
+    return NextResponse.json({ error: 'Не удалось загрузить задание' }, { status: 500 });
+  }
+  if (!task) return NextResponse.json({ error: 'Задание не найдено' }, { status: 404 });
+
+  if (String(task.author_id) !== userId && !isAdmin) {
+    return NextResponse.json({ error: 'Можно менять только свои задания' }, { status: 403 });
+  }
+
+  if (String(task.status) !== 'open' && !isAdmin) {
+    return NextResponse.json(
+      { error: 'Менять можно только открытое задание' },
+      { status: 409 },
+    );
+  }
+
+  // Ключевая проверка: одобренный исполнитель закрывает правку.
+  const { count: approvedCount } = await admin
+    .from('task_participants')
+    .select('id', { count: 'exact', head: true })
+    .eq('task_id', id)
+    .in('status', ['joined', 'attended', 'done']);
+  if ((approvedCount ?? 0) > 0 && !isAdmin) {
+    return NextResponse.json(
+      {
+        error: 'Исполнитель уже одобрен — условия менять нельзя. '
+          + 'Отмените задание, если договорённости изменились.',
+      },
+      { status: 409 },
+    );
+  }
+
+  const isPaid = Boolean(task.is_paid);
+  const kind = String(task.kind);
+
+  const title = String(body.title ?? '').trim().slice(0, EDIT_TITLE_MAX);
+  const description = String(body.description ?? '').trim().slice(0, EDIT_DESCRIPTION_MAX);
+  const address = String(body.address ?? '').trim().slice(0, EDIT_ADDRESS_MAX);
+  const category = String(body.category ?? 'other').trim().slice(0, 50) || 'other';
+
+  if (title.length < 3) {
+    return NextResponse.json(
+      { error: 'Опишите задание в заголовке (минимум 3 символа)' },
+      { status: 400 },
+    );
+  }
+
+  // Стоп-лист: правка не должна быть лазейкой мимо модерации.
+  const moderation = checkTaskContent(title, description);
+  if (!moderation.allowed) {
+    return NextResponse.json({ error: moderationMessage(moderation.category!) }, { status: 422 });
+  }
+
+  const reward = Math.floor(Number(body.reward) || 0);
+  if (!Number.isFinite(reward) || reward < 0 || reward > EDIT_REWARD_MAX) {
+    return NextResponse.json({ error: 'Некорректная награда' }, { status: 400 });
+  }
+  if (isPaid && reward < TASK_MIN_REWARD) {
+    return NextResponse.json(
+      { error: `Минимальная награда — ${TASK_MIN_REWARD} ₽` },
+      { status: 400 },
+    );
+  }
+  if (!isPaid && reward !== 0) {
+    return NextResponse.json({ error: 'В «ГIончалла» задания без оплаты' }, { status: 400 });
+  }
+
+  const purchaseBudget = Math.floor(Number(body.purchaseBudget) || 0);
+  if (!Number.isFinite(purchaseBudget) || purchaseBudget < 0 || purchaseBudget > EDIT_REWARD_MAX) {
+    return NextResponse.json({ error: 'Некорректная сумма на закупку' }, { status: 400 });
+  }
+  if (purchaseBudget > 0 && !isPaid) {
+    return NextResponse.json(
+      { error: 'Закупка возможна только в оплачиваемых заданиях' },
+      { status: 400 },
+    );
+  }
+
+  const slots = Math.floor(Number(body.slots) || 1);
+  if (slots < 1 || slots > EDIT_SLOTS_MAX) {
+    return NextResponse.json({ error: `Мест должно быть от 1 до ${EDIT_SLOTS_MAX}` }, { status: 400 });
+  }
+  if (kind === 'urgent' && slots !== 1) {
+    return NextResponse.json({ error: 'У срочного задания один исполнитель' }, { status: 400 });
+  }
+
+  const now = Date.now();
+  const parseFutureDate = (value: unknown, field: string): string | null | { error: string } => {
+    if (!value) return null;
+    const time = new Date(String(value)).getTime();
+    if (!Number.isFinite(time)) return { error: `Некорректная дата (${field})` };
+    if (time <= now) return { error: 'Дата должна быть в будущем' };
+    if (time > now + EDIT_MAX_FUTURE_MS) return { error: 'Дата слишком далеко в будущем' };
+    return new Date(time).toISOString();
+  };
+
+  const deadlineRaw = parseFutureDate(body.deadlineAt, 'дедлайн');
+  if (deadlineRaw && typeof deadlineRaw === 'object') {
+    return NextResponse.json({ error: deadlineRaw.error }, { status: 400 });
+  }
+  const scheduledRaw = parseFutureDate(body.scheduledAt, 'дата работ');
+  if (scheduledRaw && typeof scheduledRaw === 'object') {
+    return NextResponse.json({ error: scheduledRaw.error }, { status: 400 });
+  }
+
+  const priority = ['normal', 'high', 'critical'].includes(String(body.priority))
+    ? String(body.priority)
+    : 'normal';
+
+  // Способ расчёта меняем только вместе с проверкой реквизитов: иначе
+  // заказчик выберет перевод, а платить будет нечем.
+  const rawMethod = String(body.paymentMethod ?? 'cash');
+  const paymentMethod: PaymentMethod = isPaid && isPaymentMethod(rawMethod)
+    ? (rawMethod as PaymentMethod)
+    : 'cash';
+  if (isPaid && paymentMethod !== 'cash') {
+    const { data: payout } = await admin
+      .from('user_payouts')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle();
+    const field = payoutFieldFor(paymentMethod);
+    const filled = payout?.is_enabled !== false && Boolean(field && payout?.[field]);
+    if (!filled) {
+      return NextResponse.json(
+        { error: 'Заполните реквизиты в настройках, чтобы выбрать этот способ расчёта' },
+        { status: 409 },
+      );
+    }
+  }
+
+  const { error: updateError } = await admin
+    .from('tasks')
+    .update({
+      title,
+      description,
+      category,
+      reward,
+      purchase_budget: purchaseBudget,
+      priority,
+      slots: kind === 'scheduled' ? slots : 1,
+      deadline_at: kind === 'urgent' ? (deadlineRaw as string | null) : null,
+      scheduled_at: kind === 'scheduled' ? (scheduledRaw as string | null) : null,
+      address,
+      lat: body.lat === null || body.lat === undefined ? null : Number(body.lat),
+      lng: body.lng === null || body.lng === undefined ? null : Number(body.lng),
+      min_rating: Number(body.minRating) || 0,
+      min_account_days: Math.floor(Number(body.minAccountDays) || 0),
+      min_tasks_done: Math.floor(Number(body.minTasksDone) || 0),
+      allow_newcomers: body.allowNewcomers !== false,
+      payment_method: paymentMethod,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id);
+
+  if (updateError) {
+    log.warn('task edit failed:', updateError.message);
+    return NextResponse.json({ error: 'Не удалось сохранить изменения' }, { status: 500 });
+  }
+
+  // Откликнувшимся сообщаем: они ждут решения по ЭТИМ условиям, и те
+  // изменились до того, как заказчик кого-то выбрал.
+  const { data: pending } = await admin
+    .from('task_participants')
+    .select('user_id')
+    .eq('task_id', id)
+    .eq('status', 'pending');
+  for (const p of pending ?? []) {
+    await notifyTaskEvent(admin, {
+      recipientId: String(p.user_id),
+      type: 'task_updated',
+      title: 'Условия задания изменились',
+      message: `«${title}» — откройте задание и проверьте новые условия.`,
+      titleCe: 'ТIедилларан хьелаш хийцина',
+    });
   }
 
   return NextResponse.json({ success: true });

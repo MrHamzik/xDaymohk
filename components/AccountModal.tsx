@@ -196,7 +196,7 @@ export default function AccountModal({ isOpen, onClose, onOpenAddModal, onEditPr
           <div className="p-6 text-center text-xs text-slate-500">Загрузка профиля…</div>
         ) : account ? (
           <form onSubmit={handleSaveAccount} className="space-y-3.5 overflow-y-auto p-4 no-scrollbar">
-            {account.isBlocked && <p className="smk-note smk-note-danger p-2.5 text-xs font-semibold">{t.accountBlocked}</p>}
+            {account.isBlocked && <p className="smk-note smk-note-danger p-2.5">{t.accountBlocked}</p>}
 
             {/* Avatar block */}
             <div className="smk-field flex items-center gap-3 p-3">

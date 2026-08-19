@@ -7,25 +7,34 @@ import InteractiveMap from '@/components/InteractiveMapLazy';
 import MapSegmentedControl from '@/components/MapSegmentedControl';
 import { type MapLayerMode } from '@/components/InteractiveMap';
 import { useI18n } from '@/lib/i18n';
-import { createTask, fetchTaskFilters } from '@/lib/tasks/client';
+import { createTask, updateTask, fetchTaskFilters } from '@/lib/tasks/client';
 import { getUserCoords } from '@/lib/geo';
 import { useAuth } from '@/components/AuthProvider';
 import { useProfiles } from '@/components/ProfilesProvider';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import {
-  canAcceptPayment, PAYMENT_METHODS, type PaymentMethod, type PayoutMethods,
+  canAcceptPayment, isPaymentMethod, PAYMENT_METHODS,
+  type PaymentMethod, type PayoutMethods,
 } from '@/lib/payments';
 import { findClosestSamashkiHouse } from '@/lib/samashki-addresses';
 import {
   taskCostBreakdown, TASK_MIN_REWARD, TASK_PRIORITY_SURCHARGE,
-  type AppFilter, type TaskKind, type TaskPriority,
+  type AppFilter, type Task, type TaskKind, type TaskPriority,
 } from '@/lib/types';
 
 interface CreateTaskModalProps {
   isOpen: boolean;
   /** true — «Аренца Темщик» (за деньги), false — «ГIончалла» (безвозмездно). */
   isPaid: boolean;
+  /**
+   * Задание для правки. Если передано — форма работает в режиме
+   * редактирования: поля предзаполнены, вместо создания идёт PATCH.
+   *
+   * Отдельная модалка не нужна: набор полей и все проверки те же, а два
+   * почти одинаковых файла разъехались бы при первой же правке.
+   */
+  editTask?: Task | null;
   onClose: () => void;
   onCreated: () => void;
 }
@@ -36,7 +45,10 @@ function toLocalInput(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: CreateTaskModalProps) {
+export default function CreateTaskModal({
+  isOpen, isPaid, editTask = null, onClose, onCreated,
+}: CreateTaskModalProps) {
+  const isEditing = Boolean(editTask);
   const { t, language } = useI18n();
   const { account } = useAuth();
   const { profiles } = useProfiles();
@@ -97,13 +109,42 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
   useEffect(() => {
     if (!isOpen) return;
     fetchTaskFilters('tasks').then(setCategories).catch(() => setCategories([]));
+
+    // В режиме правки поля берём из задания, а не подставляем умолчания.
+    if (editTask) {
+      setKind(editTask.kind as TaskKind);
+      setTitle(editTask.title ?? '');
+      setDescription(editTask.description ?? '');
+      setCategory(editTask.category || 'other');
+      setReward(String(editTask.reward ?? 0));
+      setPurchaseBudget(editTask.purchaseBudget ? String(editTask.purchaseBudget) : '');
+      setPriority((editTask.priority as TaskPriority) ?? 'normal');
+      setSlots(String(editTask.slots ?? 1));
+      setDeadlineAt(editTask.deadlineAt ? toLocalInput(new Date(editTask.deadlineAt)) : '');
+      setScheduledAt(editTask.scheduledAt ? toLocalInput(new Date(editTask.scheduledAt)) : '');
+      setAddress(editTask.address ?? '');
+      setCoords(
+        typeof editTask.lat === 'number' && typeof editTask.lng === 'number'
+          ? { lat: editTask.lat, lng: editTask.lng }
+          : null,
+      );
+      setMinRating(String(editTask.minRating ?? 0));
+      setMinAccountDays(String(editTask.minAccountDays ?? 0));
+      setMinTasksDone(String(editTask.minTasksDone ?? 0));
+      setAllowNewcomers(editTask.allowNewcomers !== false);
+      if (isPaymentMethod(editTask.paymentMethod)) {
+        setPaymentMethod(editTask.paymentMethod as PaymentMethod);
+      }
+      return;
+    }
+
     // Срочное — через 30 минут (чаще всего «принеси сейчас»),
     // запланированное — на завтра.
     const soon = new Date(Date.now() + 30 * 60_000);
     const tomorrow = new Date(Date.now() + 24 * 3600_000);
     setDeadlineAt(toLocalInput(soon));
     setScheduledAt(toLocalInput(tomorrow));
-  }, [isOpen]);
+  }, [isOpen, editTask]);
 
   // Адрес подставляем сам, в два источника по убыванию точности:
   //   1. GPS → ближайший дом из адресной книги (как кнопка «Моё место»);
@@ -195,8 +236,7 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
 
     setIsSaving(true);
     try {
-      await createTask({
-        isPaid,
+      const payload = {
         kind,
         title: title.trim(),
         description: description.trim(),
@@ -216,7 +256,15 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
         minAccountDays: Number(minAccountDays) || 0,
         minTasksDone: Number(minTasksDone) || 0,
         allowNewcomers,
-      });
+      };
+
+      if (editTask) {
+        // kind и isPaid сервер не меняет: раздел и сценарий закрытия
+        // задания зафиксированы при создании.
+        await updateTask(editTask.id, payload);
+      } else {
+        await createTask({ isPaid, ...payload });
+      }
       // Сбрасываем форму, чтобы следующее открытие было чистым.
       setTitle('');
       setDescription('');
@@ -256,7 +304,9 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
       >
         <div className="smk-sheet-head flex items-center justify-between px-4 pb-3 pt-4">
           <h2 id="create-task-title" className="text-sm font-extrabold text-slate-900 dark:text-white">
-            {isPaid ? t.taskCreateTitlePaid : t.taskCreateTitleFree}
+            {isEditing
+              ? t.taskEditTitle
+              : isPaid ? t.taskCreateTitlePaid : t.taskCreateTitleFree}
           </h2>
           <button
             type="button"
@@ -432,7 +482,7 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
                       {cost.total} ₽
                     </dd>
                   </div>
-                  <p className="smk-note smk-note-info mt-1.5 px-2.5 py-2 text-[10px] leading-relaxed">
+                  <p className="smk-note smk-note-info mt-1.5 px-2.5 py-2">
                     {t.taskCostExecutorGets} {cost.executorGets} ₽
                     {cost.budget > 0 && ` ${t.taskCostBudgetIncluded}`}. {t.taskCostTaxNote}
                   </p>
@@ -474,14 +524,14 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
                   {/* Ссылка в настройки: неактивная кнопка без объяснения
                       выглядит поломкой. */}
                   {PAYMENT_METHODS.some((m) => !canAcceptPayment(m, myPayout)) && (
-                    <p className="smk-note smk-note-warn mt-1.5 px-2.5 py-2 text-[10px] leading-relaxed">
+                    <p className="smk-note smk-note-warn mt-1.5 px-2.5 py-2">
                       {t.taskPayNeedOwnPayout}{' '}
                       <Link href="/settings" className="font-bold underline">
                         {t.taskNeedPayoutLink}
                       </Link>
                     </p>
                   )}
-                  <p className="smk-note smk-note-info mt-1.5 px-2.5 py-2 text-[10px] leading-relaxed">
+                  <p className="smk-note smk-note-info mt-1.5 px-2.5 py-2">
                     {paymentMethod === 'cash'
                       ? t.taskPayHintCash
                       : t.taskPayHintTransfer}
@@ -657,7 +707,7 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
 
           {error && (
             <div className="px-4 pb-4">
-              <p className="smk-note smk-note-danger px-3.5 py-2.5 text-xs font-semibold">
+              <p className="smk-note smk-note-danger px-3.5 py-2.5">
                 {error}
               </p>
             </div>
@@ -679,7 +729,7 @@ export default function CreateTaskModal({ isOpen, isPaid, onClose, onCreated }: 
             className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:opacity-60"
           >
             {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
-            {t.taskPublishBtn}
+            {isEditing ? t.taskSaveChangesBtn : t.taskPublishBtn}
           </button>
         </div>
       </div>

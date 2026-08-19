@@ -88,6 +88,13 @@ export type NotificationType =
   | 'task_join_request'
   | 'task_join_approved'
   | 'task_join_rejected'
+  // Спор об оплате (обновление 35)
+  | 'task_disputed'
+  | 'task_dispute_released'
+  // Исполнитель подтвердил получение денег (обновление 38)
+  | 'task_payment_received'
+  // Заказчик изменил условия до одобрения исполнителя (обновление 40)
+  | 'task_updated'
   // Ответ поддержки на вопрос из раздела «Помощь»
   | 'support_answered';
 
@@ -121,6 +128,10 @@ export function notificationCategory(type: NotificationType): NotificationCatego
     case 'task_join_request':
     case 'task_join_approved':
     case 'task_join_rejected':
+    case 'task_disputed':
+    case 'task_dispute_released':
+    case 'task_payment_received':
+    case 'task_updated':
       return 'task';
     default:
       return 'system';
