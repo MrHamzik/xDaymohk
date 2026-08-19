@@ -87,6 +87,7 @@ export default function TaskDetailModal({
   // Что подтверждаем: удаление (никто не взял) или отмену (взяли).
   const [confirmClose, setConfirmClose] = useState<'delete' | 'cancel' | null>(null);
   const [complaintSent, setComplaintSent] = useState(false);
+  const [shareHint, setShareHint] = useState(false);
   const [mapLayerMode, setMapLayerMode] = useState<MapLayerMode>('streets');
 
   const load = useCallback(async () => {
@@ -307,7 +308,12 @@ export default function TaskDetailModal({
                     task.title,
                     task.title,
                     `${siteOrigin()}/${task.isPaid ? 'vayghullakh' : 'vaygo'}?task=${encodeURIComponent(task.id)}`,
-                  );
+                  ).then((result) => {
+                    if (result === 'copied') {
+                      setShareHint(true);
+                      window.setTimeout(() => setShareHint(false), 2000);
+                    }
+                  });
                 }}
                 aria-label={t.shareAction}
                 className="smk-act rounded-lg p-1.5"
@@ -327,6 +333,9 @@ export default function TaskDetailModal({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
+          {shareHint && (
+            <p className="smk-note smk-note-success mx-4 mt-3 px-3 py-2">{t.shareCopied}</p>
+          )}
           {isLoading && (
             <div className="flex justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-emerald-600" />

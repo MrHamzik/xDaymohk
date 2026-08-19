@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { X, Loader2, Star, Check, UserX } from 'lucide-react';
 import Avatar from '@/components/Avatar';
 import { useI18n } from '@/lib/i18n';
+import { useSheetSwipe } from '@/lib/hooks/useSheetSwipe';
 import { runTaskAction, submitResidentReview } from '@/lib/tasks/client';
 import { taskTotalReward, type Task, type TaskParticipant } from '@/lib/types';
 
@@ -36,6 +37,7 @@ export default function AttendanceModal({
   onDone,
 }: AttendanceModalProps) {
   const { t } = useI18n();
+  const swipe = useSheetSwipe(onClose);
   const [rows, setRows] = useState<Record<string, Row>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
@@ -121,7 +123,11 @@ export default function AttendanceModal({
         className="smk-sheet flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl shadow-2xl sm:rounded-3xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="smk-sheet-head flex items-center justify-between px-4 pb-3 pt-4">
+        <div
+          className="smk-sheet-head flex items-center justify-between px-4 pb-3 pt-4"
+          onTouchStart={swipe.onTouchStart}
+          onTouchEnd={swipe.onTouchEnd}
+        >
           <div className="min-w-0">
             <h2 id="attendance-title" className="truncate text-sm font-extrabold text-slate-900 dark:text-white">
               {t.attendanceTitle}

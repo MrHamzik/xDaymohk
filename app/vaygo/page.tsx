@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, HandHeart } from 'lucide-react';
@@ -79,6 +79,32 @@ export default function VaygoPage() {
   }, [t.tasksLoadError]);
 
   const pull = usePullRefresh(() => load({ silent: true }));
+
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const more = await fetchTasks({ paid: false, limit: 20, offset: tasks.length });
+      setTasks((current) => [...current, ...more]);
+      setHasMore(more.length === 20);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, hasMore, tasks.length]);
+
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const node = loadMoreRef.current;
+    if (!node || tab !== 'all' || !hasMore || loadingMore) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) void loadMore();
+      },
+      { rootMargin: '200px 0px' },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [tab, hasMore, loadingMore, loadMore]);
 
   useEffect(() => {
     // Обслуживание идёт ПЕРЕД загрузкой, а не параллельно с ней.

@@ -13,6 +13,7 @@ import ScheduleSection from '@/components/edit-profile/ScheduleSection';
 import DocumentsSection from '@/components/edit-profile/DocumentsSection';
 import WorkplaceSection from '@/components/edit-profile/WorkplaceSection';
 import ExperienceSection, { calculateExperience } from '@/components/edit-profile/ExperienceSection';
+import { useSheetSwipe } from '@/lib/hooks/useSheetSwipe';
 
 interface EditProfileModalProps {
   isOpen: boolean;
@@ -70,6 +71,7 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
   const [breakEnd, setBreakEnd] = useState('');
   const [isFlexibleSchedule, setIsFlexibleSchedule] = useState(false);
   const [notice, setNotice] = useState('');
+  const swipe = useSheetSwipe(onClose);
 
   useEffect(() => {
     if (!isOpen) return;

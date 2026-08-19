@@ -11,6 +11,7 @@ import { useI18n } from '@/lib/i18n';
 import { compressImageFile, cacheBustAvatarUrl } from '@/lib/media';
 import { extractPhoneDigits, formatPhone, isValidCyrillicName } from '@/lib/phone';
 import { Profile } from '@/lib/types';
+import { useSheetSwipe } from '@/lib/hooks/useSheetSwipe';
 
 interface AccountModalProps {
   isOpen: boolean;
@@ -36,6 +37,7 @@ export default function AccountModal({ isOpen, onClose, onOpenAddModal, onEditPr
   const [isDeletingProfile, setIsDeletingProfile] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [profileToDelete, setProfileToDelete] = useState<Profile | null>(null);
+  const swipe = useSheetSwipe(onClose);
 
   useEffect(() => {
     if (!account) return;
@@ -179,7 +181,11 @@ export default function AccountModal({ isOpen, onClose, onOpenAddModal, onEditPr
     <>
       <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/60 p-0 backdrop-blur-sm sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label={account ? 'Профиль' : 'Вход через Google'}>
       <div className="flex max-h-[90vh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl dark:bg-zinc-800 sm:max-w-md sm:rounded-2xl">
-        <header className="flex items-center justify-between border-b border-slate-100 p-4 dark:border-zinc-800/60">
+        <header
+          className="flex items-center justify-between border-b border-slate-100 p-4 dark:border-zinc-800/60"
+          onTouchStart={swipe.onTouchStart}
+          onTouchEnd={swipe.onTouchEnd}
+        >
           <div className="flex items-center gap-2.5">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm" style={{ borderRadius: 'var(--radius-xl, 0.75rem)' }}>
               {account ? <CircleUserRound className="h-4 w-4" /> : <LogIn className="h-4 w-4" />}

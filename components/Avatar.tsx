@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { cacheBustAvatarUrl, AVATAR_FALLBACK } from '@/lib/media';
 
 const FALLBACK = AVATAR_FALLBACK;
@@ -37,11 +38,15 @@ export default function Avatar({ src, className = '', alt = '' }: AvatarProps) {
     setCurrent(src && src.trim() ? cacheBustAvatarUrl(src) : FALLBACK);
   }, [src]);
 
+  const inline = current.startsWith('data:') || current.startsWith('blob:');
+
   return (
-    <img
+    <Image
       src={current}
       alt={alt}
-      loading="lazy"
+      width={80}
+      height={80}
+      unoptimized={inline}
       referrerPolicy="no-referrer"
       onError={() => {
         // Только один раз: иначе ошибка на самом FALLBACK зациклила бы.

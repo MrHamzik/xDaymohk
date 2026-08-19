@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import {
-  clearTaskDraft, draftIsEmpty, loadTaskDraft, loadTemplates, saveTaskDraft, saveTemplate,
+  clearTaskDraft, draftIsEmpty, loadTaskDraft, loadTemplates, removeTemplate, saveTaskDraft, saveTemplate,
   type TaskDraft,
 } from '@/lib/tasks/drafts';
 import { X, Loader2, MapPin } from 'lucide-react';
@@ -426,17 +426,29 @@ export default function CreateTaskModal({
               <span className={labelClass}>{t.taskTemplates}</span>
               <div className="flex flex-wrap gap-1.5">
                 {templates.map((tpl) => (
-                  <button
+                  <span
                     key={tpl.id}
-                    type="button"
-                    onClick={() => {
-                      applyDraft(tpl);
-                      setDraftAsk(false);
-                    }}
-                    className="rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700 dark:bg-zinc-800 dark:text-zinc-200"
+                    className="inline-flex items-center gap-1 rounded-xl bg-slate-100 pl-3 dark:bg-zinc-800"
                   >
-                    {tpl.name}
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        applyDraft(tpl);
+                        setDraftAsk(false);
+                      }}
+                      className="py-1.5 text-xs font-bold text-slate-700 dark:text-zinc-200"
+                    >
+                      {tpl.name}
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={t.delete}
+                      onClick={() => setTemplates(removeTemplate(isPaid, tpl.id))}
+                      className="smk-hit px-2 py-1.5 text-slate-400 hover:text-rose-600"
+                    >
+                      ×
+                    </button>
+                  </span>
                 ))}
               </div>
             </div>

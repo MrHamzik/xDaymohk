@@ -7,6 +7,7 @@ import Avatar from '@/components/Avatar';
 import { useI18n } from '@/lib/i18n';
 import { useBlacklist } from '@/components/BlacklistProvider';
 import EmptyState from '@/components/ui/EmptyState';
+import { useSheetSwipe } from '@/lib/hooks/useSheetSwipe';
 import { ListSkeleton } from '@/components/ui/FeedSkeleton';
 
 interface BlacklistModalProps {
@@ -29,6 +30,7 @@ export default function BlacklistModal({ isOpen, onClose }: BlacklistModalProps)
   const { language } = useI18n();
   const L = (ru: string, ce: string) => (language === 'ce' ? ce : ru);
   const { list, unblock, isLoading } = useBlacklist();
+  const swipe = useSheetSwipe(onClose);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState('');
 
@@ -69,7 +71,11 @@ export default function BlacklistModal({ isOpen, onClose }: BlacklistModalProps)
         className="smk-sheet flex max-h-[85dvh] w-full flex-col overflow-hidden rounded-t-3xl shadow-2xl sm:max-w-md sm:rounded-3xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="smk-sheet-head flex items-center justify-between gap-2 px-4 pb-3 pt-4">
+        <div
+          className="smk-sheet-head flex items-center justify-between gap-2 px-4 pb-3 pt-4"
+          onTouchStart={swipe.onTouchStart}
+          onTouchEnd={swipe.onTouchEnd}
+        >
           <div className="flex min-w-0 items-center gap-2.5">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-rose-100 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400">
               <ShieldBan className="h-4 w-4" />

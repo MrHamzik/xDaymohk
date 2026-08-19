@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, FileWarning, Loader2, Power, MapPin, ShieldAlert, Star } from 'lucide-react';
@@ -102,6 +102,32 @@ export default function VayghullakhPage() {
   }, [account, t.tasksLoadError]);
 
   const pull = usePullRefresh(() => load({ silent: true }));
+
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const more = await fetchTasks({ paid: true, limit: 20, offset: tasks.length });
+      setTasks((current) => [...current, ...more]);
+      setHasMore(more.length === 20);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, hasMore, tasks.length]);
+
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const node = loadMoreRef.current;
+    if (!node || tab !== 'all' || !hasMore || loadingMore) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) void loadMore();
+      },
+      { rootMargin: '200px 0px' },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [tab, hasMore, loadingMore, loadMore]);
 
   useEffect(() => {
     // Обслуживание идёт ПЕРЕД загрузкой, а не параллельно с ней.
@@ -499,20 +525,12 @@ export default function VayghullakhPage() {
               ))}
             </div>
             {hasMore && tab === 'all' && (
-              <div className="mt-3 flex justify-center">
+              <div className="mt-3 flex flex-col items-center gap-2">
+                <div ref={loadMoreRef} aria-hidden className="h-1 w-full" />
                 <button
                   type="button"
                   disabled={loadingMore}
-                  onClick={async () => {
-                    setLoadingMore(true);
-                    try {
-                      const more = await fetchTasks({ paid: true, limit: 20, offset: tasks.length });
-                      setTasks((current) => [...current, ...more]);
-                      setHasMore(more.length === 20);
-                    } finally {
-                      setLoadingMore(false);
-                    }
-                  }}
+                  onClick={() => { void loadMore(); }}
                   className="rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white disabled:opacity-60"
                 >
                   {t.loadMoreTasks}
@@ -568,7 +586,8 @@ export default function VayghullakhPage() {
         isOpen={isCreateOpen}
         isPaid
         editTask={editingTask}
-        onClose={() => { setIsCreateOpen(false); setEditingTask(null); }}
+        seedTask={seedTask}
+        onClose={() => { setIsCreateOpen(false); setEditingTask(null); setSeedTask(null); }}
         onCreated={load}
       />
       <TaskDetailModal
@@ -580,7 +599,14 @@ export default function VayghullakhPage() {
           // Карточку закрываем: форма правки — тоже модалка, две
           // наложенные друг на друга читались бы как сбой.
           setOpenTaskId(null);
+          setSeedTask(null);
           setEditingTask(task);
+          setIsCreateOpen(true);
+        }}
+        onRepeat={(task) => {
+          setOpenTaskId(null);
+          setEditingTask(null);
+          setSeedTask(task);
           setIsCreateOpen(true);
         }}
       />

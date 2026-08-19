@@ -26,6 +26,7 @@ import ProfileReviewsTab from '@/components/profile/ProfileReviewsTab';
 import ProfileQuestionsTab from '@/components/profile/ProfileQuestionsTab';
 import ProfileRatingsTab from '@/components/profile/ProfileRatingsTab';
 import { youtubeEmbedId } from '@/components/profile/profile-helpers';
+import { useSheetSwipe } from '@/lib/hooks/useSheetSwipe';
 
 interface ProfileModalProps {
   profile: Profile | null;
@@ -64,6 +65,7 @@ export default function ProfileModal({
   const [nestedProfile, setNestedProfile] = useState<Profile | null>(null);
   const [activeTab, setActiveTab] = useState<'reviews' | 'questions' | 'ratings'>('reviews');
   const [notice, setNotice] = useState('');
+  const [noticeKind, setNoticeKind] = useState<'error' | 'success'>('error');
   const [blockBusy, setBlockBusy] = useState(false);
   const [reviewStats, setReviewStats] = useState({
     rating: profile?.rating ?? 0,
@@ -73,6 +75,7 @@ export default function ProfileModal({
   const [questionCount, setQuestionCount] = useState(0);
   const { block: blockUser } = useBlacklist();
   const [fav, setFav] = useState(false);
+  const swipe = useSheetSwipe(onClose);
 
   useEffect(() => {
     if (!profile || !supabase || !account) { setFav(false); return; }
@@ -120,6 +123,7 @@ export default function ProfileModal({
       await blockUser(ownerId);
       onClose();
     } catch (error) {
+      setNoticeKind('error');
       setNotice(error instanceof Error ? error.message : t.profileBlockFailed);
     } finally {
       setBlockBusy(false);
@@ -129,9 +133,13 @@ export default function ProfileModal({
   return (
     <>
       <div className="fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/80 p-0 backdrop-blur-md sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label={`Анкета ${profile.fullName}`}>
-      {notice && <Notice message={notice} type="error" onClose={() => setNotice('')} />}
+      {notice && <Notice message={notice} type={noticeKind} onClose={() => setNotice('')} />}
       <div className="smk-sheet flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-3xl shadow-2xl transition-colors sm:max-w-2xl sm:rounded-3xl">
-        <div className="smk-sheet-head relative shrink-0 px-4 pb-3.5 pt-4 text-slate-900 dark:text-white">
+        <div
+          className="smk-sheet-head relative shrink-0 px-4 pb-3.5 pt-4 text-slate-900 dark:text-white"
+          onTouchStart={swipe.onTouchStart}
+          onTouchEnd={swipe.onTouchEnd}
+        >
           <div className="absolute right-3.5 top-3.5 flex items-center gap-1.5">
             <button
               type="button"
@@ -309,7 +317,7 @@ export default function ProfileModal({
                   isOwnProfile={isOwnProfile}
                   onReview={onReview}
                   onOpenUser={openUserCard}
-                  onNotice={setNotice}
+                  onNotice={(message) => { setNoticeKind('error'); setNotice(message); }}
                   onStats={(rating, count, reviews) => setReviewStats({ rating, count, reviews })}
                 />
               </div>
@@ -318,7 +326,7 @@ export default function ProfileModal({
                   profile={profile}
                   isOwnProfile={isOwnProfile}
                   onOpenUser={openUserCard}
-                  onNotice={setNotice}
+                  onNotice={(message) => { setNoticeKind('error'); setNotice(message); }}
                   onCount={setQuestionCount}
                 />
               </div>

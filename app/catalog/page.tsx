@@ -355,14 +355,14 @@ export default function Home() {
               onClick={() => setVisibleCount((current) => Math.min(current + pageSize, filteredProfiles.length))}
               className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
             >
-              Показать ещё ({Math.min(pageSize, filteredProfiles.length - visibleCount)})
+              {t.loadMoreTasks} ({Math.min(pageSize, filteredProfiles.length - visibleCount)})
             </button>
           </div>
         )}
 
         {!hasMore && filteredProfiles.length > pageSize && (
           <p className="mt-4 text-center smk-text-label text-slate-400 dark:text-zinc-500">
-            Вы просмотрели все {filteredProfiles.length} анкет
+            {t.catalogViewedAll.replace('{count}', String(filteredProfiles.length))}
           </p>
         )}
       </main>

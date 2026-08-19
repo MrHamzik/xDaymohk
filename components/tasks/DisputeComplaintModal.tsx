@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Loader2, ShieldAlert, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useI18n } from '@/lib/i18n';
+import { useSheetSwipe } from '@/lib/hooks/useSheetSwipe';
 import type { Task } from '@/lib/types';
 
 interface DisputeComplaintModalProps {
@@ -35,6 +36,7 @@ export default function DisputeComplaintModal({
   task, role, onClose, onSent,
 }: DisputeComplaintModalProps) {
   const { t } = useI18n();
+  const swipe = useSheetSwipe(onClose);
   const [text, setText] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState('');
@@ -100,7 +102,11 @@ export default function DisputeComplaintModal({
         className="smk-sheet flex max-h-[92dvh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl shadow-2xl sm:rounded-3xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="smk-sheet-head flex items-center justify-between px-4 pb-3 pt-4">
+        <div
+          className="smk-sheet-head flex items-center justify-between px-4 pb-3 pt-4"
+          onTouchStart={swipe.onTouchStart}
+          onTouchEnd={swipe.onTouchEnd}
+        >
           <h2 className="flex items-center gap-2 text-sm font-extrabold text-slate-900 dark:text-white">
             <ShieldAlert className="h-4 w-4" />
             {t.taskDisputeComplain}
