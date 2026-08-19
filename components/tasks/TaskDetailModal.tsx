@@ -325,34 +325,37 @@ export default function TaskDetailModal({
                   плитка с иконкой, адрес и ссылка «Открыть на карте». */}
               {(task.address || (typeof task.lat === 'number' && typeof task.lng === 'number')) && (
                 <div className="smk-sheet-section px-4 py-4">
-                  <h3 className="smk-sheet-label mb-1.5">
-                    {t.taskAddressHeading}
-                  </h3>
-                  <div className="smk-inset flex items-start gap-3 p-3">
+                  {/* Заголовок и кнопка в одной строке: подпись слева,
+                      «Открыть на карте» прижата к правому краю — как в
+                      редакторе анкеты (WorkplaceSection). Раньше кнопка
+                      висела под адресом внутри плитки и уводила взгляд
+                      в середину блока. */}
+                  <div className="mb-1.5 flex items-center justify-between gap-3">
+                    <h3 className="smk-sheet-label">
+                      {t.taskAddressHeading}
+                    </h3>
+                    {/* Открывает НАШУ карту прямо в карточке, а не
+                        внешние Яндекс.Карты: точку мы умеем показать
+                        сами, и уходить из приложения незачем. */}
+                    {typeof task.lat === 'number' && typeof task.lng === 'number' && (
+                      <button
+                        type="button"
+                        onClick={() => setIsMapOpen((open) => !open)}
+                        aria-expanded={isMapOpen}
+                        className="inline-flex shrink-0 items-center gap-1 text-[11px] font-bold text-emerald-600 hover:underline dark:text-emerald-400"
+                      >
+                        <MapPin className="h-3 w-3" />
+                        {isMapOpen ? t.hideMap : t.openOnMap}
+                      </button>
+                    )}
+                  </div>
+                  <div className="smk-inset flex items-center gap-3 p-3">
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
                       <MapPin className="h-4 w-4" />
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-xs font-bold text-slate-900 dark:text-white">
-                        {task.address || t.taskAddressMissing}
-                      </p>
-                      {/* «Открыть на карте» открывает НАШУ карту прямо
-                          в карточке — как в анкете (WorkplaceSection).
-                          Раньше ссылка уводила во внешние Яндекс.Карты:
-                          человек уходил из приложения ради точки,
-                          которую мы и так умеем показать. */}
-                      {typeof task.lat === 'number' && typeof task.lng === 'number' && (
-                        <button
-                          type="button"
-                          onClick={() => setIsMapOpen((open) => !open)}
-                          aria-expanded={isMapOpen}
-                          className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:underline dark:text-emerald-400"
-                        >
-                          <MapPin className="h-3 w-3" />
-                          {isMapOpen ? t.hideMap : t.openOnMap}
-                        </button>
-                      )}
-                    </div>
+                    <p className="min-w-0 flex-1 truncate text-xs font-bold text-slate-900 dark:text-white">
+                      {task.address || t.taskAddressMissing}
+                    </p>
                   </div>
 
                   {isMapOpen && typeof task.lat === 'number' && typeof task.lng === 'number' && (
