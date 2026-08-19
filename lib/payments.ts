@@ -255,6 +255,49 @@ export interface PayoutQrPayload {
   bank: string;
 }
 
+/**
+ * Месяц «сейчас» по часовому поясу села (Москва, без перехода на лето).
+ * История расчётов группируется по этому календарю, а не по UTC.
+ */
+export function currentMoscowMonth(): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Moscow',
+    year: 'numeric',
+    month: '2-digit',
+  }).formatToParts(new Date());
+  const year = parts.find((part) => part.type === 'year')?.value;
+  const month = parts.find((part) => part.type === 'month')?.value;
+  return year && month ? `${year}-${month}` : '2026-01';
+}
+
+/** Проверка YYYY-MM и границы месяца в Москве. */
+export function moscowMonthBounds(ym: string): { from: string; to: string } | null {
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(ym)) return null;
+  const year = Number(ym.slice(0, 4));
+  const month = Number(ym.slice(5, 7));
+  if (year < 2020 || year > 2100) return null;
+  const pad = (value: number) => String(value).padStart(2, '0');
+  const nextYear = month === 12 ? year + 1 : year;
+  const nextMonth = month === 12 ? 1 : month + 1;
+  return {
+    from: `${year}-${pad(month)}-01T00:00:00+03:00`,
+    to: `${nextYear}-${pad(nextMonth)}-01T00:00:00+03:00`,
+  };
+}
+
+/**
+ * Сдвиг месяца YYYY-MM на delta (−1 / +1). Пустая строка, если вышли
+ * за разумные годы — кнопка «вперёд» тогда просто молчит.
+ */
+export function shiftMonth(ym: string, delta: number): string {
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(ym)) return ym;
+  const date = new Date(Date.UTC(Number(ym.slice(0, 4)), Number(ym.slice(5, 7)) - 1 + delta, 1));
+  const year = date.getUTCFullYear();
+  const month = date.getUTCMonth() + 1;
+  if (year < 2020 || year > 2100) return '';
+  return `${year}-${String(month).padStart(2, '0')}`;
+}
+
 /** Разобрать hash страницы /r. Мусор и чужие ключи отбрасываются. */
 export function parsePayoutQrHash(hash: string): PayoutQrPayload | null {
   const raw = hash.startsWith('#') ? hash.slice(1) : hash;

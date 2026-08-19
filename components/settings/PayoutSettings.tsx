@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Check, Loader2, Save, Wallet } from 'lucide-react';
+import Link from 'next/link';
+import { Check, ChevronRight, Loader2, Save, Wallet } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
 import { useI18n } from '@/lib/i18n';
@@ -251,6 +252,14 @@ export default function PayoutSettings() {
           </p>
         </div>
       ) : null}
+
+      <Link
+        href="/payouts"
+        className="smk-sheet-row mt-2.5 flex min-h-11 items-center gap-2 px-3 py-2.5 text-xs font-bold text-slate-800 transition hover:brightness-95 dark:text-zinc-200 dark:hover:brightness-110"
+      >
+        <span className="min-w-0 flex-1">{t.payoutHistoryLink}</span>
+        <ChevronRight className="h-4 w-4 shrink-0 smk-arrow" />
+      </Link>
     </section>
   );
 }
