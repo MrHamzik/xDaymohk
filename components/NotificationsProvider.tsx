@@ -4,6 +4,11 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { useAuth } from '@/components/AuthProvider';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { AppNotification, NotificationType } from '@/lib/types';
+import { useSettings } from '@/components/SettingsProvider';
+import { notificationGroup } from '@/lib/settings/types';
+import { prefFor } from '@/lib/settings/defaults';
+import { DEFAULT_GROUP_SOUND, playSound, type SoundId } from '@/lib/notification-sounds';
+import { isQuietNow } from '@/lib/quiet-hours';
 
 interface NotificationsContextValue {
   notifications: AppNotification[];
@@ -32,7 +37,7 @@ function fromDbRow(row: Record<string, any>): AppNotification {
 }
 
 function localKey(accountId: string) {
-  return `samashki-notifications-${accountId}`;
+  return `daymohk-notifications-${accountId}`;
 }
 
 function readLocal(accountId: string) {
@@ -46,6 +51,7 @@ function readLocal(accountId: string) {
 
 export default function NotificationsProvider({ children }: { children: React.ReactNode }) {
   const { account } = useAuth();
+  const { settings } = useSettings();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
   useEffect(() => {
@@ -81,7 +87,7 @@ export default function NotificationsProvider({ children }: { children: React.Re
     if (!account || !supabase || !isSupabaseConfigured) return;
 
     const channel = supabase
-      .channel(`samashki-notifications-${account.id}`)
+      .channel(`daymohk-notifications-${account.id}`)
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
@@ -89,8 +95,19 @@ export default function NotificationsProvider({ children }: { children: React.Re
         filter: `recipient_id=eq.${account.id}`,
       }, (payload) => {
         const nextNotification = fromDbRow(payload.new as Record<string, any>);
+        // Звук по группе из настроек. Сервер уже отфильтровал скрытые
+        // группы (обновление 28), здесь решается «звучать ли» и «чем».
+        //
+        // Мелодия своя у каждой группы: по сигналу понятно, задание это
+        // или жалоба, не доставая телефон.
+        const group = notificationGroup(nextNotification.type);
+        const pref = prefFor(settings, group);
+        const muted = settings.quietHours && isQuietNow();
+        if (pref.sound && !muted) {
+          playSound((pref.soundId ?? DEFAULT_GROUP_SOUND[group] ?? 'chime') as SoundId);
+        }
         if (nextNotification.type === 'user_blocked' || nextNotification.type === 'user_unblocked') {
-          window.dispatchEvent(new CustomEvent('samashki-account-status', { detail: { userId: account.id, isBlocked: nextNotification.type === 'user_blocked' } }));
+          window.dispatchEvent(new CustomEvent('daymohk-account-status', { detail: { userId: account.id, isBlocked: nextNotification.type === 'user_blocked' } }));
         }
         setNotifications((current) => [nextNotification, ...current.filter((item) => item.id !== nextNotification.id)].slice(0, 50));
       })
@@ -99,7 +116,7 @@ export default function NotificationsProvider({ children }: { children: React.Re
     return () => {
       void supabase?.removeChannel(channel);
     };
-  }, [account?.id]);
+  }, [account?.id, settings]);
 
   useEffect(() => {
     if (!account) return;
@@ -158,7 +175,7 @@ export default function NotificationsProvider({ children }: { children: React.Re
 
     if (account?.id === recipientId) {
       if (type === 'user_blocked' || type === 'user_unblocked') {
-        window.dispatchEvent(new CustomEvent('samashki-account-status', { detail: { userId: recipientId, isBlocked: type === 'user_blocked' } }));
+        window.dispatchEvent(new CustomEvent('daymohk-account-status', { detail: { userId: recipientId, isBlocked: type === 'user_blocked' } }));
       }
       setNotifications((current) => [notification, ...current].slice(0, 50));
     }

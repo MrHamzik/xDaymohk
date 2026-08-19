@@ -3,10 +3,12 @@ import type { Metadata } from 'next';
 import ThemeProvider from '@/components/ThemeProvider';
 import AuthProvider from '@/components/AuthProvider';
 import ProfilesProvider from '@/components/ProfilesProvider';
+import { BlacklistProvider } from '@/components/BlacklistProvider';
 import NotificationsProvider from '@/components/NotificationsProvider';
+import SettingsProvider from '@/components/SettingsProvider';
 import OnboardingModal from '@/components/OnboardingModal';
 import { I18nProvider } from '@/lib/i18n';
-import SidebarNav from '@/components/SidebarNav';
+import ServiceWorkerRegister from '@/components/ServiceWorkerRegister';
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://daymohk.vercel.app'),
@@ -58,16 +60,27 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru" suppressHydrationWarning>
-      <body suppressHydrationWarning className="antialiased selection:bg-emerald-500 selection:text-white transition-colors duration-200">
+      <body suppressHydrationWarning className="antialiased transition-colors duration-200">
         <I18nProvider>
           <ThemeProvider>
             <AuthProvider>
-              <NotificationsProvider>
-                <ProfilesProvider>
-                  {children}
-                  <OnboardingModal />
-                </ProfilesProvider>
-              </NotificationsProvider>
+              {/* Настройки идут после AuthProvider: серверная копия
+                  читается по account.id. Тема из localStorage
+                  применяется раньше, чем придёт ответ сервера. */}
+              <SettingsProvider>
+                <NotificationsProvider>
+                  {/* Чёрный список выше ProfilesProvider: каталог и
+                      карта фильтруют выдачу по нему, значит список
+                      скрытых должен быть готов раньше анкет. */}
+                  <BlacklistProvider>
+                    <ProfilesProvider>
+                      {children}
+                      <ServiceWorkerRegister />
+                      <OnboardingModal />
+                    </ProfilesProvider>
+                  </BlacklistProvider>
+                </NotificationsProvider>
+              </SettingsProvider>
             </AuthProvider>
           </ThemeProvider>
         </I18nProvider>

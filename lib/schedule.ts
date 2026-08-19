@@ -1,5 +1,24 @@
 import { Profile, UserMasterStatus, ProfileStatusType } from './types';
 
+/**
+ * Какой режим работы применить к анкете.
+ *
+ * Тумблер «Режим работы» принадлежит ЧЕЛОВЕКУ (user_profiles.status_override)
+ * и обязан действовать на всех его анкетах специалиста — у любого зрителя.
+ * Своё значение (viewerOverride) приоритетнее: применяется мгновенно, не
+ * дожидаясь перезагрузки списка анкет из БД.
+ *
+ * ownerOverride приходит из публичной вьюхи v_resident_reputation
+ * (обновление 26); до неё чужие зрители override вообще не видели.
+ */
+export function resolveOwnerOverride(options: {
+  isOwner: boolean;
+  viewerOverride?: UserMasterStatus;
+  ownerOverride?: UserMasterStatus;
+}): UserMasterStatus | undefined {
+  return options.isOwner ? options.viewerOverride : options.ownerOverride;
+}
+
 export interface WorkingStatusInfo {
   status: ProfileStatusType;
   color: 'emerald' | 'amber' | 'zinc' | 'sky';
@@ -172,4 +191,32 @@ export function calculateWorkingStatus(
     details: 'На связи',
     isSpecialist: true,
   };
+}
+
+/**
+ * Дни недели в компактной записи: ['Пн','Вт','Ср','Чт','Пт'] → «Пн–Пт»,
+ * ['Пн','Ср','Пт'] → «Пн, Ср, Пт», все семь → «Ежедневно».
+ *
+ * В анкете полный список занимал целую строку («Пн, Вт, Ср, Чт, Пт»),
+ * из-за чего расписание не помещалось рядом с часами и переносилось.
+ * Схлопываем подряд идущие дни в диапазон — так пишут в справочниках.
+ */
+export function compactWeekdays(days: string[]): string {
+  const order = WEEKDAYS.filter((day) => days.includes(day));
+  if (order.length === 0) return '';
+  if (order.length === WEEKDAYS.length) return 'Ежедневно';
+
+  const indexes = order.map((day) => WEEKDAYS.indexOf(day));
+  const chunks: string[] = [];
+  let start = 0;
+  for (let i = 1; i <= indexes.length; i += 1) {
+    const isBreak = i === indexes.length || indexes[i] !== indexes[i - 1] + 1;
+    if (!isBreak) continue;
+    const length = i - start;
+    if (length === 1) chunks.push(WEEKDAYS[indexes[start]]);
+    else if (length === 2) chunks.push(`${WEEKDAYS[indexes[start]]}, ${WEEKDAYS[indexes[i - 1]]}`);
+    else chunks.push(`${WEEKDAYS[indexes[start]]}–${WEEKDAYS[indexes[i - 1]]}`);
+    start = i;
+  }
+  return chunks.join(', ');
 }

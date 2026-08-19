@@ -74,7 +74,7 @@ export default function PrayerTimesModal({ isOpen, onClose }: PrayerTimesModalPr
       onClick={onClose}
     >
       <div
-        className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl transition-all dark:bg-zinc-800"
+        className="smk-sheet flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl shadow-2xl transition-all"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -87,7 +87,7 @@ export default function PrayerTimesModal({ isOpen, onClose }: PrayerTimesModalPr
               <h2 id="prayer-calendar-title" className="text-sm font-bold sm:text-base">
                 {language === 'ce' ? 'Ламазан рузма (ДУМ ЧР)' : 'Расписание намазов (ДУМ ЧР)'}
               </h2>
-              <p className="text-[11px] text-emerald-100">
+              <p className="smk-text-label text-emerald-100">
                 {language === 'ce' ? 'Даймохк, Нохчийн Республика' : 'Даймохк, Чеченская Республика (UTC+3)'}
               </p>
             </div>
@@ -96,7 +96,7 @@ export default function PrayerTimesModal({ isOpen, onClose }: PrayerTimesModalPr
             type="button"
             onClick={onClose}
             aria-label="Закрыть"
-            className="flex h-7 w-7 items-center justify-center rounded-lg bg-black/20 text-white transition hover:bg-black/40"
+            className="smk-hit flex h-7 w-7 items-center justify-center rounded-lg bg-black/20 text-white transition hover:bg-black/40"
           >
             <X className="h-4 w-4" />
           </button>
@@ -107,7 +107,7 @@ export default function PrayerTimesModal({ isOpen, onClose }: PrayerTimesModalPr
           <button
             type="button"
             onClick={handlePrevMonth}
-            className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-slate-700 shadow-sm transition hover:bg-slate-100 dark:bg-zinc-700 dark:text-zinc-300"
+            className="smk-hit flex h-7 w-7 items-center justify-center rounded-lg bg-white text-slate-700 shadow-sm transition hover:bg-slate-100 dark:bg-zinc-700 dark:text-zinc-300"
             aria-label="Предыдущий месяц"
           >
             <ChevronLeft className="h-4 w-4" />
@@ -121,13 +121,13 @@ export default function PrayerTimesModal({ isOpen, onClose }: PrayerTimesModalPr
             aria-expanded={isYearPickerOpen}
           >
             <span>{monthName}</span>
-            <span className="rounded-md bg-emerald-600 px-1.5 py-0.5 text-[10px] font-black text-white">{currentYear}</span>
+            <span className="rounded-md bg-emerald-600 px-1.5 py-0.5 smk-text-label font-black text-white">{currentYear}</span>
           </button>
 
           <button
             type="button"
             onClick={handleNextMonth}
-            className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-slate-700 shadow-sm transition hover:bg-slate-100 dark:bg-zinc-700 dark:text-zinc-300"
+            className="smk-hit flex h-7 w-7 items-center justify-center rounded-lg bg-white text-slate-700 shadow-sm transition hover:bg-slate-100 dark:bg-zinc-700 dark:text-zinc-300"
             aria-label="Следующий месяц"
           >
             <ChevronRight className="h-4 w-4" />
@@ -141,17 +141,17 @@ export default function PrayerTimesModal({ isOpen, onClose }: PrayerTimesModalPr
               <button
                 type="button"
                 onClick={() => setCurrentYear(y => y - 21)}
-                className="rounded-lg bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-200 dark:bg-zinc-700 dark:text-zinc-300"
+                className="rounded-lg bg-slate-100 px-2.5 py-1 smk-text-label font-bold text-slate-700 hover:bg-slate-200 dark:bg-zinc-700 dark:text-zinc-300"
               >
                 ◀ −21
               </button>
-              <span className="text-[11px] font-bold text-slate-500 dark:text-zinc-500">
+              <span className="smk-text-label font-bold text-slate-500 dark:text-zinc-500">
                 {currentYear - 10} — {currentYear + 10}
               </span>
               <button
                 type="button"
                 onClick={() => setCurrentYear(y => y + 21)}
-                className="rounded-lg bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-200 dark:bg-zinc-700 dark:text-zinc-300"
+                className="rounded-lg bg-slate-100 px-2.5 py-1 smk-text-label font-bold text-slate-700 hover:bg-slate-200 dark:bg-zinc-700 dark:text-zinc-300"
               >
                 +21 ▶
               </button>
@@ -185,16 +185,16 @@ export default function PrayerTimesModal({ isOpen, onClose }: PrayerTimesModalPr
           <table className="w-full table-fixed text-center text-xs">
             <thead>
               <tr className="border-b border-slate-200 text-slate-500 dark:border-zinc-800 dark:text-zinc-500">
-                <th className="w-[12%] pb-2 text-center text-[10px] sm:text-xs font-bold">{language === 'ce' ? 'Де' : 'Число'}</th>
-                <th className="w-[14%] pb-2 text-center text-[10px] sm:text-xs font-bold leading-tight truncate">{language === 'ce' ? 'Iуьйра' : 'Фаджр'}</th>
-                <th className="w-[15%] pb-2 text-center text-[10px] sm:text-xs font-bold leading-tight truncate">{language === 'ce' ? 'Малхбала' : 'Восход'}</th>
-                <th className="w-[14%] pb-2 text-center text-[10px] sm:text-xs font-bold leading-tight truncate">{language === 'ce' ? 'Делкъа' : 'Зухр'}</th>
-                <th className="w-[15%] pb-2 text-center text-[10px] sm:text-xs font-bold leading-tight truncate">{language === 'ce' ? 'Малхбуза' : 'Аср'}</th>
-                <th className="w-[15%] pb-2 text-center text-[10px] sm:text-xs font-bold leading-tight truncate">{language === 'ce' ? 'Маьрккажа' : 'Магриб'}</th>
-                <th className="w-[15%] pb-2 text-center text-[10px] sm:text-xs font-bold leading-tight truncate">{language === 'ce' ? 'Пхьуьйра' : 'Иша'}</th>
+                <th className="w-[12%] pb-2 text-center smk-text-label sm:text-xs font-bold">{language === 'ce' ? 'Де' : 'Число'}</th>
+                <th className="w-[14%] pb-2 text-center smk-text-label sm:text-xs font-bold leading-tight truncate">{language === 'ce' ? 'Iуьйра' : 'Фаджр'}</th>
+                <th className="w-[15%] pb-2 text-center smk-text-label sm:text-xs font-bold leading-tight truncate">{language === 'ce' ? 'Малхбала' : 'Восход'}</th>
+                <th className="w-[14%] pb-2 text-center smk-text-label sm:text-xs font-bold leading-tight truncate">{language === 'ce' ? 'Делкъа' : 'Зухр'}</th>
+                <th className="w-[15%] pb-2 text-center smk-text-label sm:text-xs font-bold leading-tight truncate">{language === 'ce' ? 'Малхбуза' : 'Аср'}</th>
+                <th className="w-[15%] pb-2 text-center smk-text-label sm:text-xs font-bold leading-tight truncate">{language === 'ce' ? 'Маьрккажа' : 'Магриб'}</th>
+                <th className="w-[15%] pb-2 text-center smk-text-label sm:text-xs font-bold leading-tight truncate">{language === 'ce' ? 'Пхьуьйра' : 'Иша'}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 font-mono text-[11px] sm:text-xs dark:divide-zinc-800/60">
+            <tbody className="divide-y divide-slate-100 font-mono smk-text-label sm:text-xs dark:divide-zinc-800/60">
               {schedule.map((row) => {
                 const isToday = isCurrentMonth && row.day === todayDate;
                 return (

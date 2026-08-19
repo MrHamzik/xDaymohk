@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { rateLimit, withRateLimitHeaders } from '@/lib/rate-limit';
+import { areUsersBlocked, BLOCKED_MESSAGE } from '@/lib/blacklist';
 import { isAdminEmail } from '@/lib/admin';
 import { log } from '@/lib/logger';
 
@@ -110,6 +111,11 @@ export async function POST(request: Request) {
   }
   if (target.owner_id && String(target.owner_id) === userData.user.id) {
     return NextResponse.json({ error: 'Нельзя оставить отзыв самому себе' }, { status: 400 });
+  }
+  // Чёрный список (обновление 32): скрыть анкету на клиенте мало —
+  // запрос можно отправить напрямую, минуя интерфейс.
+  if (await areUsersBlocked(admin, userData.user.id, target.owner_id)) {
+    return NextResponse.json({ error: BLOCKED_MESSAGE }, { status: 403 });
   }
 
   // Один аккаунт — один отзыв на одну анкету (защита от накрутки/спама).

@@ -2,79 +2,149 @@
 
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ShieldBan, X } from 'lucide-react';
+import { Loader2, ShieldBan, X } from 'lucide-react';
+import Avatar from '@/components/Avatar';
 import { useI18n } from '@/lib/i18n';
+import { useBlacklist } from '@/components/BlacklistProvider';
+import EmptyState from '@/components/ui/EmptyState';
+import { useSheetSwipe } from '@/lib/hooks/useSheetSwipe';
+import { ListSkeleton } from '@/components/ui/FeedSkeleton';
 
 interface BlacklistModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+/**
+ * Чёрный список пользователя.
+ *
+ * Раньше это была заглушка с текстом «список пуст» — блокировки не
+ * существовало вовсе. Теперь показывает реальные записи из
+ * blocked_users (обновление 32) и позволяет снять блокировку.
+ *
+ * Показываем ТОЛЬКО тех, кого заблокировал сам пользователь. Кто
+ * заблокировал его — он не видит и знать не должен: иначе чёрный
+ * список превращается в инструмент выяснения отношений.
+ */
 export default function BlacklistModal({ isOpen, onClose }: BlacklistModalProps) {
   const { language } = useI18n();
+  const L = (ru: string, ce: string) => (language === 'ce' ? ce : ru);
+  const { list, unblock, isLoading } = useBlacklist();
+  const swipe = useSheetSwipe(onClose);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') onClose();
-      };
-      window.addEventListener('keydown', handleKeyDown);
-      return () => {
-        document.body.style.overflow = '';
-        window.removeEventListener('keydown', handleKeyDown);
-      };
-    }
+    if (!isOpen) return;
+    document.body.style.overflow = 'hidden';
+    const handleKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, [isOpen, onClose]);
 
   if (typeof document === 'undefined' || !isOpen) return null;
 
+  const handleUnblock = async (userId: string) => {
+    setBusyId(userId);
+    setError('');
+    try {
+      await unblock(userId);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : L('Не удалось снять блокировку', 'Блоки дIаяккха ца делира'));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   return createPortal(
     <div
-      className="fixed inset-0 z-[85] flex items-center justify-center bg-zinc-950/70 p-4 backdrop-blur-md"
+      className="fixed inset-0 z-[85] flex items-end justify-center bg-zinc-950/70 backdrop-blur-md sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="blacklist-title"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-sm overflow-hidden rounded-3xl bg-white p-6 shadow-2xl transition-all dark:bg-zinc-950 border border-slate-200/50 dark:border-zinc-700"
+        className="smk-sheet flex max-h-[85dvh] w-full flex-col overflow-hidden rounded-t-3xl shadow-2xl sm:max-w-md sm:rounded-3xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3 dark:border-zinc-800">
-          <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-red-100 text-red-600 dark:bg-red-950/60 dark:text-red-400">
-              <ShieldBan className="h-4 w-4 shrink-0" />
+        <div
+          className="smk-sheet-head flex items-center justify-between gap-2 px-4 pb-3 pt-4"
+          onTouchStart={swipe.onTouchStart}
+          onTouchEnd={swipe.onTouchEnd}
+        >
+          <div className="flex min-w-0 items-center gap-2.5">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-rose-100 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400">
+              <ShieldBan className="h-4 w-4" />
             </div>
-            <h2 id="blacklist-title" className="text-base font-bold text-slate-900 dark:text-white">
-              {language === 'ce' ? 'Iаьржа мугIам' : 'Черный список'}
+            <h2 id="blacklist-title" className="truncate text-sm font-extrabold text-slate-900 dark:text-white">
+              {L('Чёрный список', 'IаьржамогIам')}
             </h2>
           </div>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Закрыть"
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400"
+            aria-label={L('Закрыть', 'ДIакъовла')}
+            className="smk-act rounded-lg p-1.5"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        <div className="my-6 text-center">
-          <p className="text-sm text-slate-500 dark:text-zinc-400">
-            {language === 'ce' ? 'Кхузахь цкъачунна хIумма а дац.' : 'Ваш черный список пока пуст.'}
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
+          <p className="smk-meta mb-3 smk-text-label leading-relaxed">
+            {L(
+              'Вы не видите анкеты этих людей, а они — ваши. Они не могут оставлять отзывы и вопросы у вас и откликаться на ваши задания.',
+              'Ахьа хIокху нехан анкеташ ца го, цара хьан а. Цара хьуна хастамаш, хаттарш яздан а, хьан тIедилларш тIеэца а ца ло.',
+            )}
           </p>
-        </div>
 
-        <button
-          type="button"
-          onClick={onClose}
-          className="w-full rounded-2xl bg-emerald-600 py-3 text-xs font-bold text-white transition hover:bg-emerald-700"
-        >
-          {language === 'ce' ? 'Къовла' : 'Понятно'}
-        </button>
+          {error && (
+            <p className="smk-note smk-note-danger mb-2 px-3 py-2">
+              {error}
+            </p>
+          )}
+
+          {isLoading && list.length === 0 && <ListSkeleton count={3} />}
+
+          {!isLoading && list.length === 0 && (
+            <EmptyState
+              title={L('Список пуст', 'МогIам баьржина бац')}
+              hint={L('Ваш чёрный список пуст.', 'Хьан IаьржамогIам баьржина бац.')}
+            />
+          )}
+
+          <div className="space-y-1.5">
+            {list.map((person) => (
+              <div key={person.userId} className="smk-sheet-row flex items-center gap-2.5 p-2.5">
+                <Avatar src={person.avatarUrl} className="h-8 w-8 shrink-0 rounded-lg object-cover" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-xs font-bold text-slate-900 dark:text-white">
+                    {person.fullName || L('Житель', 'Бахархо')}
+                  </p>
+                  {person.reason && (
+                    <p className="smk-meta truncate smk-text-label">{person.reason}</p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleUnblock(person.userId)}
+                  disabled={busyId === person.userId}
+                  className="shrink-0 rounded-lg px-2.5 py-1 smk-text-label font-bold text-emerald-700 transition hover:bg-emerald-50 disabled:opacity-50 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
+                >
+                  {busyId === person.userId
+                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    : L('Разблокировать', 'Схьаяккха')}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>,
-    document.body
+    document.body,
   );
 }

@@ -6,9 +6,7 @@ import { usePathname } from 'next/navigation';
 import {
   BookOpen,
   Bot,
-  Briefcase,
   CarFront,
-  ChevronRight,
   Compass,
   Globe2,
   HandHeart,
@@ -19,8 +17,7 @@ import {
   Sparkles,
   UserRound,
   Users,
-  Wrench,
-} from 'lucide-react';
+  Wrench, BookMarked, Landmark } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import MenuProfileCard from '@/components/MenuProfileCard';
 import { useI18n } from '@/lib/i18n';
@@ -30,6 +27,7 @@ import QiblaModal from '@/components/QiblaModal';
 import QuranModal from '@/components/QuranModal';
 import SpecialDaysModal from '@/components/SpecialDaysModal';
 import BlacklistModal from '@/components/BlacklistModal';
+import { shareLink, siteOrigin } from '@/lib/share';
 
 interface SidebarNavProps {
   onClose?: () => void;
@@ -63,7 +61,7 @@ export default function SidebarNav({ onClose, isAdmin = false }: SidebarNavProps
 
             {/* 3. Section: НАВИГАЦИЯ (Clean flat vertical list rows) */}
             <div className="space-y-0.5">
-              <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-200 px-2 py-1">
+              <span className="block smk-text-label font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-200 px-2 py-1">
                 {language === 'ce' ? 'Навигаци' : 'Навигация'}
               </span>
 
@@ -81,7 +79,6 @@ export default function SidebarNav({ onClose, isAdmin = false }: SidebarNavProps
                     <Home className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
                     <span>{language === 'ce' ? 'ЦIа' : 'Главная'}</span>
                   </div>
-                  <ChevronRight className="h-3.5 w-3.5 opacity-40" />
                 </Link>
 
                 <Link
@@ -97,7 +94,6 @@ export default function SidebarNav({ onClose, isAdmin = false }: SidebarNavProps
                     <Users className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
                     <span>{t.catalog}</span>
                   </div>
-                  <ChevronRight className="h-3.5 w-3.5 opacity-40" />
                 </Link>
 
                 <Link
@@ -113,7 +109,6 @@ export default function SidebarNav({ onClose, isAdmin = false }: SidebarNavProps
                     <MapPin className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
                     <span>{t.map}</span>
                   </div>
-                  <ChevronRight className="h-3.5 w-3.5 opacity-40" />
                 </Link>
 
                                 {isAdmin && (
@@ -130,7 +125,6 @@ export default function SidebarNav({ onClose, isAdmin = false }: SidebarNavProps
                       <ShieldAlert className="h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
                       <span>{t.admin}</span>
                     </div>
-                    <ChevronRight className="h-3.5 w-3.5 opacity-40" />
                   </Link>
                 )}
               <Link
@@ -146,7 +140,6 @@ export default function SidebarNav({ onClose, isAdmin = false }: SidebarNavProps
                     <Sparkles className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
                     <span>{t.about}</span>
                   </div>
-                  <ChevronRight className="h-3.5 w-3.5 opacity-40" />
                 </Link>
 
 
@@ -154,8 +147,8 @@ export default function SidebarNav({ onClose, isAdmin = false }: SidebarNavProps
             </div>
 
             {/* 4. Section: РЕЛИГИЯ И ИСЛАМ (Clean titles without brackets or "Суры") */}
-            <div className="space-y-0.5 border-t border-slate-100 pt-2 dark:border-zinc-800">
-              <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-200 px-2 py-1">
+            <div className="space-y-0.5 border-t border-slate-100 smk-hr pt-2">
+              <span className="block smk-text-label font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-200 px-2 py-1">
                 {language === 'ce' ? 'Дин а, ислам а' : 'Религия и ислам'}
               </span>
 
@@ -169,7 +162,6 @@ export default function SidebarNav({ onClose, isAdmin = false }: SidebarNavProps
                     <Compass className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                     <span>{language === 'ce' ? 'Къилба' : 'Кибла'}</span>
                   </div>
-                  <ChevronRight className="h-3.5 w-3.5 opacity-40" />
                 </button>
 
                 <Link href="/quran" onClick={onClose}
@@ -179,7 +171,6 @@ export default function SidebarNav({ onClose, isAdmin = false }: SidebarNavProps
                     <BookOpen className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                     <span>{language === 'ce' ? 'Сийлахь Къуръан' : 'Священный Коран'}</span>
                   </div>
-                  <ChevronRight className="h-3.5 w-3.5 opacity-40" />
                 </Link>
 
                 <button
@@ -191,8 +182,16 @@ export default function SidebarNav({ onClose, isAdmin = false }: SidebarNavProps
                     <Sparkles className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                     <span>{language === 'ce' ? 'Исламан сийлахь денош' : 'Особые дни по Хиджре'}</span>
                   </div>
-                  <ChevronRight className="h-3.5 w-3.5 opacity-40" />
                 </button>
+
+                <Link href="/sira" onClick={onClose}
+                  className="flex items-center justify-between rounded-xl px-3 py-2 text-left text-xs font-bold text-slate-800 transition hover:bg-slate-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <BookMarked className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span>{language === 'ce' ? 'Пайхамаран Сира ﷺ' : 'Сира Пророка ﷺ'}</span>
+                  </div>
+                </Link>
 
                 
 
@@ -201,8 +200,8 @@ export default function SidebarNav({ onClose, isAdmin = false }: SidebarNavProps
             </div>
 
             {/* 5. Section: СЕРВИСЫ ДАЙМОХК */}
-            <div className="space-y-0.5 border-t border-slate-100 pt-2 dark:border-zinc-800">
-              <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-200 px-2 py-1">
+            <div className="space-y-0.5 border-t border-slate-100 smk-hr pt-2">
+              <span className="block smk-text-label font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-200 px-2 py-1">
                 {language === 'ce' ? 'Вай сервисаш' : 'Сервисы экосистемы'}
               </span>
 
@@ -212,7 +211,7 @@ export default function SidebarNav({ onClose, isAdmin = false }: SidebarNavProps
                     <CarFront className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                     <span>{t.taxiTitle}</span>
                   </div>
-                  <span className="rounded-md bg-orange-100 px-2 py-0.5 text-[9px] font-extrabold text-orange-800 dark:bg-orange-950/70 dark:text-orange-400">{t.inDevelopment}</span>
+                  <span className="smk-chip smk-note-warn">{t.inDevelopment}</span>
                 </Link>
 
                 <Link href="/" onClick={onClose} className="flex items-center justify-between rounded-xl px-3 py-2 text-xs font-bold text-slate-800 transition hover:bg-slate-100 dark:text-zinc-300 dark:hover:bg-zinc-800">
@@ -220,31 +219,28 @@ export default function SidebarNav({ onClose, isAdmin = false }: SidebarNavProps
                     <Globe2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                     <span>{t.vpnTitle}</span>
                   </div>
-                  <span className="rounded-md bg-orange-100 px-2 py-0.5 text-[9px] font-extrabold text-orange-800 dark:bg-orange-950/70 dark:text-orange-400">{t.inDevelopment}</span>
+                  <span className="smk-chip smk-note-warn">{t.inDevelopment}</span>
                 </Link>
 
-                <Link href="/" onClick={onClose} className="flex items-center justify-between rounded-xl px-3 py-2 text-xs font-bold text-slate-800 transition hover:bg-slate-100 dark:text-zinc-300 dark:hover:bg-zinc-800">
+                <Link href="/vaynakh" onClick={onClose} className="flex items-center justify-between rounded-xl px-3 py-2 text-xs font-bold text-slate-800 transition hover:bg-slate-100 dark:text-zinc-300 dark:hover:bg-zinc-800">
                   <div className="flex items-center gap-2.5">
-                    <Briefcase className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <Landmark className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                     <span>{t.vaynakhTitle}</span>
                   </div>
-                  <span className="rounded-md bg-orange-100 px-2 py-0.5 text-[9px] font-extrabold text-orange-800 dark:bg-orange-950/70 dark:text-orange-400">{t.inDevelopment}</span>
                 </Link>
 
-                <Link href="/" onClick={onClose} className="flex items-center justify-between rounded-xl px-3 py-2 text-xs font-bold text-slate-800 transition hover:bg-slate-100 dark:text-zinc-300 dark:hover:bg-zinc-800">
+                <Link href="/vaygo" onClick={onClose} className="flex items-center justify-between rounded-xl px-3 py-2 text-xs font-bold text-slate-800 transition hover:bg-slate-100 dark:text-zinc-300 dark:hover:bg-zinc-800">
                   <div className="flex items-center gap-2.5">
                     <HandHeart className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                     <span>{t.goTitle}</span>
                   </div>
-                  <span className="rounded-md bg-orange-100 px-2 py-0.5 text-[9px] font-extrabold text-orange-800 dark:bg-orange-950/70 dark:text-orange-400">{t.inDevelopment}</span>
                 </Link>
 
-                <Link href="/" onClick={onClose} className="flex items-center justify-between rounded-xl px-3 py-2 text-xs font-bold text-slate-800 transition hover:bg-slate-100 dark:text-zinc-300 dark:hover:bg-zinc-800">
+                <Link href="/vayghullakh" onClick={onClose} className="flex items-center justify-between rounded-xl px-3 py-2 text-xs font-bold text-slate-800 transition hover:bg-slate-100 dark:text-zinc-300 dark:hover:bg-zinc-800">
                   <div className="flex items-center gap-2.5">
                     <Wrench className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                     <span>{t.gullaqTitle}</span>
                   </div>
-                  <span className="rounded-md bg-orange-100 px-2 py-0.5 text-[9px] font-extrabold text-orange-800 dark:bg-orange-950/70 dark:text-orange-400">{t.inDevelopment}</span>
                 </Link>
 
                 <Link href="/" onClick={onClose} className="flex items-center justify-between rounded-xl px-3 py-2 text-xs font-bold text-slate-800 transition hover:bg-slate-100 dark:text-zinc-300 dark:hover:bg-zinc-800">
@@ -252,13 +248,13 @@ export default function SidebarNav({ onClose, isAdmin = false }: SidebarNavProps
                     <Bot className="h-4 w-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
                     <span>{t.djannaTitle}</span>
                   </div>
-                  <span className="rounded-md bg-indigo-100 px-2 py-0.5 text-[9px] font-extrabold text-indigo-900 dark:bg-indigo-950/60 dark:text-indigo-200">{t.inPlans}</span>
+                  <span className="smk-chip smk-note-info">{t.inPlans}</span>
                 </Link>
               </div>
             </div>
 
-            <div className="space-y-0.5 border-t border-slate-100 pt-2 dark:border-zinc-800">
-              <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-200 px-2 py-1">
+            <div className="space-y-0.5 border-t border-slate-100 smk-hr pt-2">
+              <span className="block smk-text-label font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-200 px-2 py-1">
                 {language === 'ce' ? 'Кхиндерш' : 'Дополнительно'}
               </span>
               <div className="flex flex-col space-y-0.5">
@@ -286,6 +282,22 @@ export default function SidebarNav({ onClose, isAdmin = false }: SidebarNavProps
                     <span>{language === 'ce' ? 'Правовин соглашени' : 'Правовые соглашения'}</span>
                   </div>
                 </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void shareLink(
+                      t.siteName,
+                      t.inviteNeighbor,
+                      `${siteOrigin()}/catalog`,
+                    );
+                  }}
+                  className="w-full flex items-center justify-between rounded-xl px-3 py-2 text-xs font-bold text-slate-800 transition hover:bg-slate-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Users className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                    <span>{t.inviteNeighbor}</span>
+                  </div>
+                </button>
                 <button type="button" onClick={() => { onClose && onClose(); setIsBlacklistOpen(true); }} className="w-full flex items-center justify-between rounded-xl px-3 py-2 text-xs font-bold text-slate-800 transition hover:bg-slate-100 dark:text-zinc-300 dark:hover:bg-zinc-800">
                   <div className="flex items-center gap-2.5">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-shield-ban h-4 w-4 shrink-0 text-red-600 dark:text-red-400"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2-1 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 4 19 5a1 1 0 0 1 1 1z"></path><path d="m4.706 8.5 14.588 11.006"></path></svg>

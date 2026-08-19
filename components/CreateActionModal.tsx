@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Bot, Briefcase, CarFront, Compass, Globe2, HandHeart, UserPlus, X } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import QiblaModal from '@/components/QiblaModal';
@@ -25,6 +26,7 @@ export default function CreateActionModal({
   onOpenDjanna,
 }: CreateActionModalProps) {
   const { t } = useI18n();
+  const router = useRouter();
   const [isQiblaOpen, setIsQiblaOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
@@ -54,7 +56,7 @@ export default function CreateActionModal({
   const ringActions = [
     {
       id: 'profile',
-      label: 'Анкета',
+      label: t.createProfileOption2,
       icon: UserPlus,
       angleDeg: -90, // Top (12 o'clock)
       bg: 'bg-emerald-600 text-white shadow-xl shadow-emerald-600/40 hover:bg-emerald-700',
@@ -92,7 +94,11 @@ export default function CreateActionModal({
       bg: 'bg-emerald-700 text-white shadow-xl shadow-emerald-700/40 hover:bg-emerald-800',
       action: () => {
         onClose();
-        onOpenGullaq?.();
+        // «+» — быстрое СОЗДАНИЕ, а не просто переход в раздел.
+        // Если мы уже на странице раздела, она даёт свой колбэк и форма
+        // открывается на месте. С любой другой страницы уходим в раздел
+        // с ?create=1 — там этот флаг сразу открывает форму задания.
+        if (onOpenGullaq) onOpenGullaq(); else router.push('/vayghullakh?create=1');
       },
     },
     {
@@ -103,7 +109,7 @@ export default function CreateActionModal({
       bg: 'bg-rose-500 text-white shadow-xl shadow-rose-500/40 hover:bg-rose-600',
       action: () => {
         onClose();
-        onOpenGo?.();
+        if (onOpenGo) onOpenGo(); else router.push('/vaygo?create=1');
       },
     },
     {
@@ -127,7 +133,7 @@ export default function CreateActionModal({
         }`}
         role="dialog"
         aria-modal="true"
-        aria-label="Быстрый выбор услуги"
+        aria-label={t.quickCreateAria}
         onClick={onClose}
       >
         {/* Single Center Anchor Container: all circular items are strictly relative to this center */}
@@ -167,7 +173,7 @@ export default function CreateActionModal({
                 >
                   <Icon className="h-5.5 w-5.5 stroke-[2.2]" />
                 </button>
-                <span className="mt-1 max-w-[80px] truncate text-center text-[10px] font-extrabold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] select-none">
+                <span className="mt-1 max-w-[80px] truncate text-center smk-text-label font-extrabold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] select-none">
                   {item.label}
                 </span>
               </div>
@@ -180,7 +186,7 @@ export default function CreateActionModal({
             onClick={onClose}
             aria-label={t.close}
             title={t.close}
-            className="z-20 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white/25 text-white shadow-2xl backdrop-blur-xl border border-white/50 transition-all duration-300 hover:bg-white/35 hover:scale-110 active:scale-95"
+            className="smk-close-orb z-20 flex h-14 w-14 shrink-0 items-center justify-center rounded-full transition-all duration-300 hover:scale-110 active:scale-95"
           >
             <X className="h-7 w-7 stroke-[2.5]" />
           </button>

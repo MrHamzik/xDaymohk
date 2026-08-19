@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { rateLimit, withRateLimitHeaders } from '@/lib/rate-limit';
 import { isAdminEmail, isDevEmail } from '@/lib/admin';
+import { writeAdminAudit } from '@/lib/admin-audit';
 
 /**
  * Temporary / permanent user ban for admins.
@@ -40,7 +41,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Сессия не найдена' }, { status: 401 });
   }
 
-  let body: { userId?: string; hours?: number | null } = {};
+  let body: { userId?: string; hours?: number | null; reason?: string } = {};
   try {
     body = await request.json();
   } catch {
@@ -75,7 +76,7 @@ export async function POST(request: Request) {
   // но НЕ применяется — на него блокировки не действуют.
   const { data: targetUser, error: targetLookupError } = await admin
     .from('user_profiles')
-    .select('email')
+    .select('email, full_name')
     .eq('id', userId)
     .maybeSingle();
   if (!targetLookupError && targetUser && isDevEmail(targetUser.email)) {
@@ -113,6 +114,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: profilesError.message }, { status: 500 });
   }
 
+  // Журнал (обновление 47). Пишем ПОСЛЕ успешного действия: запись о
+  // блокировке, которой не случилось, хуже её отсутствия.
+  await writeAdminAudit(admin, {
+    actorId: caller.user.id,
+    actorEmail: caller.user.email ?? '',
+    action: 'user_ban',
+    targetUserId: userId,
+    targetLabel: targetUser?.full_name || targetUser?.email || '',
+    reason: String(body.reason ?? '').trim(),
+    details: { bannedUntil, permanent: bannedUntil === null, hours: hours ?? null },
+  });
+
   return NextResponse.json({
     success: true,
     userId,
@@ -143,7 +156,7 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: 'Сессия не найдена' }, { status: 401 });
   }
 
-  let body: { userId?: string } = {};
+  let body: { userId?: string; reason?: string } = {};
   try {
     body = await request.json();
   } catch {
@@ -172,7 +185,7 @@ export async function DELETE(request: Request) {
   // Невидимый разработчик не блокируется (см. POST).
   const { data: targetUser, error: targetLookupError } = await admin
     .from('user_profiles')
-    .select('email')
+    .select('email, full_name')
     .eq('id', userId)
     .maybeSingle();
   if (!targetLookupError && targetUser && isDevEmail(targetUser.email)) {
@@ -204,6 +217,15 @@ export async function DELETE(request: Request) {
   if (profilesError) {
     return NextResponse.json({ error: profilesError.message }, { status: 500 });
   }
+
+  await writeAdminAudit(admin, {
+    actorId: caller.user.id,
+    actorEmail: caller.user.email ?? '',
+    action: 'user_unban',
+    targetUserId: userId,
+    targetLabel: targetUser?.full_name || targetUser?.email || '',
+    reason: String(body.reason ?? '').trim(),
+  });
 
   return NextResponse.json({ success: true, userId, blocked: false });
 }

@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
-const THEME_STORAGE_KEY = 'samashki-theme';
+const THEME_STORAGE_KEY = 'daymohk-theme';
 
 type Theme = 'light' | 'dark';
 
@@ -36,12 +36,14 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
     setTheme(getPreferredTheme());
   }, []);
 
+  // DOM НЕ трогаем.
+  //
+  // Раньше класс .dark ставили и здесь, и в SettingsProvider — два
+  // эффекта перетирали друг друга, и переключение светлой/тёмной темы
+  // срабатывало через раз. Теперь этот провайдер только хранит выбор,
+  // а единственный владелец класса — SettingsProvider: он знает ещё и
+  // про пользовательские темы и применяет всё одним проходом.
   useEffect(() => {
-    const root = document.documentElement;
-    const isDark = theme === 'dark';
-
-    root.classList.toggle('dark', isDark);
-    root.style.colorScheme = theme;
     window.localStorage.setItem(THEME_STORAGE_KEY, theme);
   }, [theme]);
 

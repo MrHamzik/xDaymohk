@@ -1,12 +1,17 @@
 'use client';
 
 import Image from 'next/image';
-import { Award, Ban, ChevronRight, Flag, MapPin, Star } from 'lucide-react';
+import {
+  Award, Ban, Briefcase, BriefcaseBusiness, CalendarDays, ChevronRight, FileText,
+  Flag, MapPin, Star, VenusAndMars,
+} from 'lucide-react';
 import { Profile } from '@/lib/types';
-import { formatDisplayName, formatReviews } from '@/lib/text';
+import { calculateAge, formatCount, formatReviews } from '@/lib/text';
 import { useI18n } from '@/lib/i18n';
-import ProfileBadges, { WorkingStatusBadge } from '@/components/ProfileBadges';
+import { useProfiles } from '@/components/ProfilesProvider';
+import ProfileBadges, { useWorkingStatusRing } from '@/components/ProfileBadges';
 import { cacheBustAvatarUrl } from '@/lib/media';
+import { displayName } from '@/lib/profile-name';
 
 interface ProfileCardProps {
   profile: Profile;
@@ -22,6 +27,18 @@ interface ProfileCardProps {
   onBlock?: (profile: Profile) => void;
 }
 
+/**
+ * Карточка анкеты.
+ *
+ * Оформление сделано по референсу connection-channel/«макет и иконки»:
+ * тёмное полотно с золотой окантовкой и диагональными бликами,
+ * серифное имя, крупная золотая звезда рейтинга, строки данных с
+ * иконками (документ, календарь, пол, зелёная булавка адреса) и
+ * подвал с золотой кнопкой действия.
+ *
+ * Классы .smk-* описаны в globals.css — там же светлая тема, где
+ * золото приглушено до охры ради читаемости на белом.
+ */
 export default function ProfileCard({
   profile,
   onSelect,
@@ -33,13 +50,41 @@ export default function ProfileCard({
   onBlock,
 }: ProfileCardProps) {
   const { t } = useI18n();
+  const { reputation } = useProfiles();
   const openProfile = () => onSelect(profile);
-  const profileIsAdmin = Boolean(isAdminStatus);
-  const hasAction = Boolean((isAdmin && !profileIsAdmin && onBlock) || (!isOwnProfile && !profile.isVerified && profile.verificationStatus !== 'verified' && onReport));
 
-  const age = profile.birthDate
-    ? Math.floor((new Date().getTime() - new Date(profile.birthDate).getTime()) / 31557600000)
-    : null;
+  // Репутация в заданиях привязана к ЧЕЛОВЕКУ, а не к анкете, поэтому
+  // берём её у владельца из публичной вьюхи.
+  //
+  // Показываем ТОЛЬКО в личной анкете: у специалиста своя оценка —
+  // profile.rating, она про навыки в профессии. Смешивать их нельзя,
+  // иначе на карточке мастера оказывались бы две разные звёздочки.
+  const ownerReputation = profile.ownerId ? reputation[profile.ownerId] : undefined;
+  const showResidentRating = !profile.isSpecialist;
+  const residentRating = Number(ownerReputation?.rating ?? 0);
+  const residentReviews = Number(ownerReputation?.reviewCount ?? 0);
+
+  const profileIsAdmin = Boolean(isAdminStatus);
+  const hasAction = Boolean(
+    (isAdmin && !profileIsAdmin && onBlock)
+    || (!isOwnProfile && !profile.isVerified && profile.verificationStatus !== 'verified' && onReport),
+  );
+
+  // Возраст считаем по полной дате рождения (с учётом того, прошёл ли
+  // день рождения в этом году). Деление разницы в миллисекундах на
+  // «средний год» давало ошибку ±1 год.
+  const age = calculateAge(profile.birthDate);
+
+  // Рабочий статус специалиста показываем цветом кольца аватара.
+  const statusRing = useWorkingStatusRing(profile);
+
+  // Какой рейтинг показывать в шапке: у специалиста — профессиональный,
+  // у жителя — репутация по заданиям.
+  const headRating = profile.isSpecialist ? profile.rating : residentRating;
+  const headCount = profile.isSpecialist ? profile.reviewCount : residentReviews;
+  const showHeadRating = profile.isSpecialist
+    ? profile.rating > 0
+    : showResidentRating && residentReviews > 0;
 
   return (
     <article
@@ -52,89 +97,165 @@ export default function ProfileCard({
       }}
       role="button"
       tabIndex={0}
-      aria-label={`Открыть ${profile.fullName}`}
-      className="group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-sm transition hover:border-emerald-300/80 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-800"
+      aria-label={`${t.open} ${displayName(profile)}`}
+      className={`smk-lux smk-rays smk-enter smk-cat smk-cat--${profile.professionCategory || (profile.isSpecialist ? 'other' : 'resident')} group flex h-full cursor-pointer flex-col overflow-hidden text-slate-900 dark:text-white`}
     >
-      {/* Шапка: аватар + имя + статус + стрелка */}
-      <div className="flex items-start gap-3 p-3.5 sm:p-4">
-        <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-slate-200/60 bg-slate-100 dark:border-zinc-800/60 dark:bg-zinc-950">
-          <Image
-            src={cacheBustAvatarUrl(profile.avatarUrl)}
-            alt={profile.fullName}
-            fill
-            sizes="48px"
-            className="object-cover transition duration-300 group-hover:scale-105"
-          />
+      {/* ── Шапка: аватар · имя · рейтинг ─────────────────────────
+             Рабочий статус — цвет кольца вокруг аватара, отдельной
+             строки под него не нужно. */}
+      <div className="flex items-center gap-3 px-3.5 pb-2.5 pt-3">
+        <div className="shrink-0">
+          <div
+            className={`smk-ring h-11 w-11 sm:h-12 sm:w-12 ${statusRing.className}`}
+            title={statusRing.label ?? undefined}
+            aria-label={statusRing.label ?? undefined}
+          >
+            <Image
+              src={cacheBustAvatarUrl(profile.avatarUrl)}
+              alt={displayName(profile)}
+              width={56}
+              height={56}
+              className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+            />
+          </div>
         </div>
 
         <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-            <h3 className="truncate text-sm font-bold text-slate-900 dark:text-white">
-              <span className="sm:hidden">{formatDisplayName(profile.fullName, true)}</span>
-              <span className="hidden sm:inline">{profile.fullName}</span>
-            </h3>
-            <WorkingStatusBadge profile={profile} />
-          </div>
-          <div className="mt-0.5">
-            <ProfileBadges profile={profile} adminStatus={profileIsAdmin} showPending={showPending} />
-          </div>
+          {/* Имя пишем полностью, без сокращений; не влезло — обрезаем */}
+          <h3 className="smk-title truncate smk-text-display font-bold leading-tight sm:text-xl">
+            {displayName(profile)}
+          </h3>
 
-          {profile.isSpecialist && profile.professionTitle && (
-            <p className="mt-1.5 line-clamp-2 text-xs font-semibold leading-5 text-emerald-700 dark:text-emerald-400">
+          {showHeadRating && (
+            <div className="mt-0.5 flex items-baseline gap-1.5">
+              <Star className="h-4 w-4 shrink-0 translate-y-0.5 smk-star" />
+              <span className="smk-rating-value text-sm font-extrabold">
+                {headRating.toFixed(1)}
+              </span>
+              <span className="truncate smk-text-label text-slate-500 dark:text-zinc-400">
+                {profile.isSpecialist
+                  ? formatReviews(headCount)
+                  : formatCount(headCount, t.cardRatingOne, t.cardRatingFew, t.cardRatingMany)}
+              </span>
+            </div>
+          )}
+        </div>
+
+        <ChevronRight className="h-5 w-5 shrink-0 self-center smk-arrow" />
+      </div>
+
+      {/* Золотой разделитель, затухающий к краям */}
+      <hr className="smk-orn mx-3.5" />
+
+      {/* ── Строки данных ─────────────────────────────────────────
+             Без подложек: строки разделены тонкими линиями (.smk-rows),
+             как в карточке задания. Подложка на каждой строке дробила
+             карточку на плитки и съедала воздух. */}
+      <div className="px-3.5 pb-1 pt-2">
+        <ProfileBadges profile={profile} adminStatus={profileIsAdmin} showPending={showPending} />
+      </div>
+
+      <div className="smk-rows px-3.5 smk-text-body">
+        {/* Строку профессии прячем, если она дословно повторяет бейдж
+            «Специалист» рядом с именем — иначе выходило «Специалист
+            Специалист». Осмысленные названия («Электрик») остаются. */}
+        {profile.isSpecialist && profile.professionTitle
+          && profile.professionTitle.trim().toLowerCase() !== t.roleSpecialist.toLowerCase() && (
+          <div className="flex items-start gap-2.5 py-2">
+            <Briefcase className="smk-ico mt-0.5 h-3.5 w-3.5" />
+            <p className="line-clamp-2 font-bold leading-snug text-emerald-700 dark:text-emerald-400">
               {profile.professionTitle}
             </p>
-          )}
-        </div>
-
-        <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-emerald-500 dark:text-zinc-600" />
-      </div>
-
-      {/* Разделитель */}
-      <div className="border-t border-slate-100 dark:border-zinc-800/70" />
-
-      {/* Описание */}
-      {profile.bio && (
-        <p className="line-clamp-2 px-3.5 py-2.5 break-words [overflow-wrap:anywhere] whitespace-pre-wrap text-xs leading-5 text-slate-600 dark:text-zinc-400 sm:px-4">
-          {profile.bio}
-        </p>
-      )}
-
-      {/* Инфо-строка: рейтинг, возраст/пол, адрес */}
-      <div className="mt-auto space-y-1.5 px-3.5 pb-3 text-xs text-slate-500 dark:text-zinc-400 sm:px-4">
-        {(profile.isSpecialist && profile.rating > 0) && (
-          <div className="flex items-center gap-1">
-            <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-            <span className="font-bold text-amber-500">{profile.rating.toFixed(1)}</span>
-            <span className="text-slate-400 dark:text-zinc-500">({formatReviews(profile.reviewCount)})</span>
           </div>
         )}
-        {!profile.isSpecialist && (age !== null || profile.gender) && (
-          <div className="flex items-center gap-1.5">
-            {age !== null && <span>Возраст: {age}</span>}
-            {age !== null && profile.gender && <span className="text-slate-300 dark:text-zinc-700">·</span>}
-            {profile.gender && <span>{t.genderLabel}: {profile.gender === 'male' ? t.genderMale : t.genderFemale}</span>}
+
+        {profile.bio && (
+          <div className="flex items-start gap-2.5 py-2">
+            <FileText className="smk-ico mt-0.5 h-3.5 w-3.5" />
+            <p className="line-clamp-2 break-words [overflow-wrap:anywhere] leading-snug text-slate-600 dark:text-zinc-300">
+              {profile.bio}
+            </p>
           </div>
         )}
-        <div className="flex items-center gap-1.5">
-          <MapPin className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
-          <span className="truncate">{profile.workplaceAddress}</span>
-        </div>
+
+        {/* У специалиста — стаж и рабочий статус: возраст мастера
+            клиенту неинтересен, а «сколько лет в деле» и «работает ли
+            сейчас» решают, звонить или нет.
+            У жителя остаются возраст и пол. */}
+        {profile.isSpecialist ? (
+          (profile.experience || statusRing.status) && (
+            <div className="flex items-center gap-2 py-2">
+              {profile.experience && (
+                <span className="flex min-w-0 items-center gap-1.5 text-slate-600 dark:text-zinc-300">
+                  <BriefcaseBusiness className="smk-ico h-3.5 w-3.5" />
+                  <span className="smk-row-label">{t.experienceLabel}:</span>
+                  <span className="truncate font-semibold">{profile.experience}</span>
+                </span>
+              )}
+              {profile.experience && statusRing.status && <span className="smk-sep" aria-hidden />}
+              {statusRing.status && (
+                <span className="flex min-w-0 items-center gap-1.5 text-slate-600 dark:text-zinc-300">
+                  {/* Точка пульсирует только у «живых» статусов —
+                      мигающий «выходной» выглядел бы как ошибка. */}
+                  <span
+                    className={`smk-status-dot smk-status-dot--${statusRing.status}`}
+                    aria-hidden
+                  />
+                  <span className="truncate font-semibold">{statusRing.shortLabel}</span>
+                </span>
+              )}
+            </div>
+          )
+        ) : (
+          (age !== null || profile.gender) && (
+            <div className="flex items-center gap-2 py-2">
+              {age !== null && (
+                <span className="flex min-w-0 items-center gap-1.5 text-slate-600 dark:text-zinc-300">
+                  <CalendarDays className="smk-ico h-3.5 w-3.5" />
+                  <span className="smk-row-label">{t.ageLabel}:</span>
+                  <span className="font-semibold">{age}</span>
+                </span>
+              )}
+              {age !== null && profile.gender && <span className="smk-sep" aria-hidden />}
+              {profile.gender && (
+                <span className="flex min-w-0 items-center gap-1.5 text-slate-600 dark:text-zinc-300">
+                  <VenusAndMars className="smk-ico h-3.5 w-3.5" />
+                  <span className="truncate font-semibold">
+                    {profile.gender === 'male' ? t.genderMale : t.genderFemale}
+                  </span>
+                </span>
+              )}
+            </div>
+          )
+        )}
+
+        {profile.workplaceAddress && (
+          <div className="flex items-start gap-2.5 py-2">
+            {/* Булавка зелёная — единственный цветной акцент в блоке */}
+            <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500" />
+            <span className="line-clamp-2 break-words leading-snug text-slate-600 dark:text-zinc-300">
+              {profile.workplaceAddress}
+            </span>
+          </div>
+        )}
       </div>
 
-      {/* Нижний блок: документы / действия. Выше, когда есть кнопка действия. */}
-      <div className={`flex items-center justify-between gap-2 border-t border-slate-100 px-3.5 text-xs dark:border-zinc-800 sm:px-4 ${hasAction ? 'bg-slate-50/90 py-2.5 dark:bg-zinc-900/60' : 'bg-transparent py-2'}`}>
-        <div className="font-medium text-slate-600 dark:text-zinc-400">
+      {/* ── Подвал: документы · действие ────────────────────────── */}
+      <div className={`smk-card-foot mt-auto flex items-center justify-between gap-2 px-3.5 ${
+        hasAction ? 'py-2' : 'py-1.5'
+      }`}>
+        <div className="min-w-0">
           {profile.certificates.length > 0 ? (
-            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-500 dark:text-zinc-400">
-              <Award className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
-              Документы: {profile.certificates.length}
+            <span className="inline-flex min-w-0 items-center gap-1.5 whitespace-nowrap smk-text-label font-bold text-slate-500 dark:text-zinc-400">
+              <Award className="smk-ico h-3.5 w-3.5" />
+              {t.cardDocuments}: {profile.certificates.length}
             </span>
           ) : (
-            <span className="text-[11px] text-slate-300 dark:text-zinc-700">{hasAction ? '' : ' '}</span>
+            <span aria-hidden>&nbsp;</span>
           )}
         </div>
 
-        <div className="relative flex min-w-0 items-center gap-2">
+        <div className="flex min-w-0 shrink-0 items-center gap-2">
           {isAdmin && !profileIsAdmin && onBlock ? (
             <button
               type="button"
@@ -142,10 +263,10 @@ export default function ProfileCard({
                 event.stopPropagation();
                 onBlock(profile);
               }}
-              className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-lg bg-red-50 px-2.5 py-1 text-[11px] font-bold text-red-600 transition hover:bg-red-100 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-950/70"
+              className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl bg-red-50 px-3 py-1.5 smk-text-label font-bold text-red-600 transition hover:bg-red-100 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-950/70"
             >
               <Ban className="h-3.5 w-3.5 shrink-0" />
-              Заблокировать
+              {t.cardBlock}
             </button>
           ) : !isOwnProfile && !profile.isVerified && profile.verificationStatus !== 'verified' && onReport ? (
             <button
@@ -154,11 +275,11 @@ export default function ProfileCard({
                 event.stopPropagation();
                 onReport(profile);
               }}
-              className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600 transition hover:bg-amber-50 hover:text-amber-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-amber-950/40 dark:hover:text-amber-400"
-              aria-label="Пожаловаться на анкету"
+              className="smk-btn-gold smk-shine inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap px-3.5 py-1.5 smk-text-label"
+              aria-label={t.cardReportAria}
             >
-              <Flag className="h-3.5 w-3.5 shrink-0 text-amber-500" />
-              Пожаловаться
+              <Flag className="h-3.5 w-3.5 shrink-0" />
+              {t.cardReport}
             </button>
           ) : null}
         </div>

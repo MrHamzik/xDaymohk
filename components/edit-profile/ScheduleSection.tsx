@@ -35,11 +35,11 @@ export default function ScheduleSection({
 }: ScheduleSectionProps) {
   const { t } = useI18n();
   return (
-    <div className="space-y-2.5 border-t border-slate-200/80 pt-2.5 dark:border-zinc-800">
+    <div className="space-y-2.5 border-t border-[color:var(--smk-divider)] pt-2.5">
       <div className="flex items-center justify-between gap-3">
         <div>
           <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-400">{t.workScheduleTitle}</h4>
-          <p className="text-[10px] text-slate-500 dark:text-zinc-500">{t.workScheduleHint}</p>
+          <p className="smk-text-label text-slate-500 dark:text-zinc-500">{t.workScheduleHint}</p>
         </div>
         <Clock className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
       </div>
@@ -80,7 +80,7 @@ export default function ScheduleSection({
         />
         <span>
           <span className="block font-bold">{t.flexibleScheduleLabel}</span>
-          <span className="block font-normal text-[10px] text-sky-700 dark:text-sky-300">
+          <span className="block font-normal smk-text-label text-sky-700 dark:text-sky-300">
             {t.flexibleScheduleHint}
           </span>
         </span>
@@ -90,46 +90,46 @@ export default function ScheduleSection({
         <>
           <div className="grid grid-cols-2 gap-2.5">
             <div>
-              <label htmlFor="work-start" className="mb-1 block text-[11px] font-semibold text-slate-700 dark:text-zinc-400">{t.workHoursStart}</label>
+              <label htmlFor="work-start" className="mb-1 block smk-text-label font-semibold text-slate-700 dark:text-zinc-400">{t.workHoursStart}</label>
               <input
                 id="work-start"
                 type="time"
                 value={workHoursStart}
                 onChange={(event) => setWorkHoursStart(event.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white shadow-sm px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white"
+                className="w-full smk-field px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:text-white"
               />
             </div>
             <div>
-              <label htmlFor="work-end" className="mb-1 block text-[11px] font-semibold text-slate-700 dark:text-zinc-400">{t.workHoursEnd}</label>
+              <label htmlFor="work-end" className="mb-1 block smk-text-label font-semibold text-slate-700 dark:text-zinc-400">{t.workHoursEnd}</label>
               <input
                 id="work-end"
                 type="time"
                 value={workHoursEnd}
                 onChange={(event) => setWorkHoursEnd(event.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white shadow-sm px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white"
+                className="w-full smk-field px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:text-white"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-2.5 pt-1">
             <div>
-              <label htmlFor="break-start" className="mb-1 block text-[11px] font-semibold text-slate-700 dark:text-zinc-400">{t.breakStart}</label>
+              <label htmlFor="break-start" className="mb-1 block smk-text-label font-semibold text-slate-700 dark:text-zinc-400">{t.breakStart}</label>
               <input
                 id="break-start"
                 type="time"
                 value={breakStart}
                 onChange={(event) => setBreakStart(event.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white shadow-sm px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white"
+                className="w-full smk-field px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:text-white"
               />
             </div>
             <div>
-              <label htmlFor="break-end" className="mb-1 block text-[11px] font-semibold text-slate-700 dark:text-zinc-400">{t.breakEnd}</label>
+              <label htmlFor="break-end" className="mb-1 block smk-text-label font-semibold text-slate-700 dark:text-zinc-400">{t.breakEnd}</label>
               <input
                 id="break-end"
                 type="time"
                 value={breakEnd}
                 onChange={(event) => setBreakEnd(event.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white shadow-sm px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white"
+                className="w-full smk-field px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:text-white"
               />
             </div>
           </div>

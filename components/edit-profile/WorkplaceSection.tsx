@@ -1,11 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ExternalLink, MapPin } from 'lucide-react';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 import InteractiveMap from '@/components/InteractiveMapLazy';
+import MapSegmentedControl from '@/components/MapSegmentedControl';
 import { type MapLayerMode } from '@/components/InteractiveMap';
 import { findClosestSamashkiHouse, getEffectiveHouseAddresses } from '@/lib/samashki-addresses';
+import { getMapCategories, fetchMapCategories } from '@/lib/map-categories';
 import { MapPosition } from '@/lib/types';
 import { useI18n } from '@/lib/i18n';
 
@@ -31,6 +33,17 @@ export default function WorkplaceSection({
   const [mapLayerMode, setMapLayerMode] = useState<MapLayerMode>('streets');
   const [showHouses, setShowHouses] = useState(true);
   const [showPlaces, setShowPlaces] = useState(true);
+  const [placesCategory, setPlacesCategory] = useState('');
+  // Справочник категорий берём из общего источника, а не из уже
+  // загруженных адресов: иначе список пуст, пока объектов нет.
+  const [placeCategories, setPlaceCategories] = useState<string[]>(() => getMapCategories());
+  useEffect(() => {
+    let cancelled = false;
+    const used = getEffectiveHouseAddresses().filter((a) => a.isNotHouse).map((a) => a.category);
+    setPlaceCategories(getMapCategories(used));
+    fetchMapCategories(used).then((list) => { if (!cancelled) setPlaceCategories(list); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   const handleMapSelect = (position: MapPosition, explicitAddress?: string) => {
     if (explicitAddress) {
@@ -82,7 +95,7 @@ export default function WorkplaceSection({
           <button
             type="button"
             onClick={() => setShowMap((isShown) => !isShown)}
-            className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 hover:underline dark:text-emerald-400"
+            className="inline-flex items-center gap-1 smk-text-label font-semibold text-emerald-600 hover:underline dark:text-emerald-400"
           >
             <MapPin className="h-3 w-3" />
             {showMap ? t.hideMap : t.showMap}
@@ -103,36 +116,17 @@ export default function WorkplaceSection({
           {/* Слои карты вынесены НАД картой — единый сегмент-стиль как на
               странице «Карта» */}
           <div className="flex items-center gap-1.5 pt-1">
-            <span className="text-[10px] font-bold text-slate-400">{t.showLabel}</span>
-            <div className="flex items-center gap-1 rounded-xl bg-slate-100 p-1 dark:bg-zinc-800" role="tablist" aria-label="Тип карты">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={mapLayerMode === 'streets'}
-                onClick={() => setMapLayerMode('streets')}
-                className={`rounded-lg px-2 py-1 text-[11px] font-bold transition ${mapLayerMode === 'streets' ? 'bg-white text-slate-900 shadow-sm dark:bg-zinc-700 dark:text-white' : 'text-slate-500 hover:text-slate-800 dark:text-zinc-500 dark:hover:text-zinc-200'}`}
-              >
-                {t.mapLayerStreets}
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={mapLayerMode === 'satellite'}
-                onClick={() => setMapLayerMode('satellite')}
-                className={`rounded-lg px-2 py-1 text-[11px] font-bold transition ${mapLayerMode === 'satellite' ? 'bg-white text-slate-900 shadow-sm dark:bg-zinc-700 dark:text-white' : 'text-slate-500 hover:text-slate-800 dark:text-zinc-500 dark:hover:text-zinc-200'}`}
-              >
-                {t.mapLayerSatellite}
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={mapLayerMode === 'hybrid'}
-                onClick={() => setMapLayerMode('hybrid')}
-                className={`rounded-lg px-2 py-1 text-[11px] font-bold transition ${mapLayerMode === 'hybrid' ? 'bg-white text-slate-900 shadow-sm dark:bg-zinc-700 dark:text-white' : 'text-slate-500 hover:text-slate-800 dark:text-zinc-500 dark:hover:text-zinc-200'}`}
-              >
-                {t.mapLayerHybrid}
-              </button>
-            </div>
+            <span className="smk-sheet-label">{t.showLabel}</span>
+            <MapSegmentedControl
+              ariaLabel="Тип карты"
+              active={[mapLayerMode]}
+              onSelect={setMapLayerMode}
+              options={[
+                { value: 'streets' as MapLayerMode, label: t.mapLayerStreets },
+                { value: 'satellite' as MapLayerMode, label: t.mapLayerSatellite },
+                { value: 'hybrid' as MapLayerMode, label: t.mapLayerHybrid },
+              ]}
+            />
           </div>
           <InteractiveMap
             selectedPosition={workplaceCoords}
@@ -141,33 +135,56 @@ export default function WorkplaceSection({
             showProfiles={false}
             showHouses={showHouses}
             showPlaces={showPlaces}
+            placesCategory={placesCategory}
             mapLayerMode={mapLayerMode}
             onMapLayerModeChange={setMapLayerMode}
             className="h-56 sm:h-72"
           />
           <div className="flex items-center gap-1.5 px-1">
-            <span className="text-[10px] font-bold text-slate-400">{t.showLabel}</span>
+            <span className="smk-sheet-label">{t.showLabel}</span>
             {/* Независимые переключатели (можно включить оба) в том же
                 сегмент-стиле. */}
-            <div className="flex items-center gap-1 rounded-xl bg-slate-100 p-1 dark:bg-zinc-800" aria-label="Слои объектов">
-              <button
-                type="button"
-                aria-pressed={showHouses}
-                onClick={() => setShowHouses((v) => !v)}
-                className={`rounded-lg px-2 py-1 text-[11px] font-bold transition ${showHouses ? 'bg-white text-slate-900 shadow-sm dark:bg-zinc-700 dark:text-white' : 'text-slate-500 hover:text-slate-800 dark:text-zinc-500 dark:hover:text-zinc-200'}`}
-              >
-                {t.layerHouses}
-              </button>
-              <button
-                type="button"
-                aria-pressed={showPlaces}
-                onClick={() => setShowPlaces((v) => !v)}
-                className={`rounded-lg px-2 py-1 text-[11px] font-bold transition ${showPlaces ? 'bg-white text-slate-900 shadow-sm dark:bg-zinc-700 dark:text-white' : 'text-slate-500 hover:text-slate-800 dark:text-zinc-500 dark:hover:text-zinc-200'}`}
-              >
-                {t.layerOther}
-              </button>
-            </div>
+            <MapSegmentedControl
+              ariaLabel="Слои объектов"
+              // Независимые тумблеры: дома и «другое» можно включить вместе.
+              radio={false}
+              active={[
+                ...(showHouses ? (['houses'] as const) : []),
+                ...(showPlaces ? (['places'] as const) : []),
+              ]}
+              onSelect={(value) => {
+                if (value === 'houses') setShowHouses((v) => !v);
+                else setShowPlaces((v) => !v);
+              }}
+              options={[
+                { value: 'houses' as const, label: t.layerHouses },
+                { value: 'places' as const, label: t.layerOther },
+              ]}
+            />
           </div>
+
+          {/* Категории объектов «Другое» — тот же справочник, что и на
+              странице «Карта» (админка → «Адреса» → «Поиск и категории»). */}
+          {/* Категории «Другое» — общий справочник из БД
+              (админка → «Фильтры» → «Карта»). */}
+          {showPlaces && placeCategories.length > 0 && (
+            <div className="-mt-1 flex flex-wrap items-center gap-2 px-1">
+              <label htmlFor="workplace-place-category" className="smk-text-label font-bold text-slate-400">
+                Категория:
+              </label>
+              <select
+                id="workplace-place-category"
+                value={placesCategory}
+                onChange={(e) => setPlacesCategory(e.target.value)}
+                className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 smk-text-label font-bold text-slate-700 outline-none transition focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+              >
+                <option value="">Все категории</option>
+                {placeCategories.map((cat) => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
       )}
       <AddressAutocomplete

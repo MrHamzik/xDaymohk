@@ -18,10 +18,13 @@ import MobileMenuDrawer from '@/components/MobileMenuDrawer';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/lib/supabase';
 import { useProfiles } from '@/components/ProfilesProvider';
+import { useBlacklist } from '@/components/BlacklistProvider';
 import { formatCount } from '@/lib/text';
 import { filterProfiles } from '@/lib/profile-filters';
 import { useI18n } from '@/lib/i18n';
 import { AudienceFilter, Profile } from '@/lib/types';
+import EmptyState from '@/components/ui/EmptyState';
+import { usePullRefresh } from '@/lib/hooks/usePullRefresh';
 
 const PAGE_SIZE_DESKTOP = 30;
 const PAGE_SIZE_TABLET = 24;
@@ -43,6 +46,8 @@ export default function Home() {
   const [audienceFilters, setAudienceFilters] = useState<AudienceFilter[]>([]);
   const [professionFilters, setProfessionFilters] = useState<string[]>([]);
   const [activeProfileId, setActiveProfileId] = useState<string | null>(null);
+  const [favOnly, setFavOnly] = useState(false);
+  const [favIds, setFavIds] = useState<string[]>([]);
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -66,23 +71,52 @@ export default function Home() {
     return () => window.removeEventListener('resize', update);
   }, []);
 
-  const visibleProfiles = useMemo(() => profiles.filter((profile) => !profile.isHidden && !profile.isBanned), [profiles]);
+  // Чёрный список фильтруем ЗДЕСЬ, а не в ProfilesProvider: скрытие
+  // взаимное и зависит от того, кто смотрит, — общий кеш анкет должен
+  // оставаться одинаковым для всех.
+  const { isHidden: isBlockedOwner } = useBlacklist();
+  const visibleProfiles = useMemo(
+    () => profiles.filter((profile) =>
+      !profile.isHidden && !profile.isBanned && !isBlockedOwner(profile.ownerId)),
+    [profiles, isBlockedOwner],
+  );
   const adminOwnerId = account?.isAdmin ? account.id : undefined;
   const activeProfile = useMemo(
     () => profiles.find((profile) => profile.id === activeProfileId && ((isCurrentUserAdmin || !profile.isHidden) && !profile.isBanned)) ?? null,
     [profiles, activeProfileId, isCurrentUserAdmin],
   );
 
-  const filteredProfiles = useMemo(
-    () => filterProfiles(visibleProfiles, {
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const id = new URLSearchParams(window.location.search).get('profile');
+    if (id) setActiveProfileId(id);
+  }, []);
+
+  useEffect(() => {
+    if (!account || !supabase) return;
+    let cancelled = false;
+    void (async () => {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      if (!token) return;
+      const res = await fetch('/api/favorites', { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json().catch(() => null);
+      if (!cancelled && Array.isArray(data?.ids)) setFavIds(data.ids);
+    })();
+    return () => { cancelled = true; };
+  }, [account?.id]);
+
+  const filteredProfiles = useMemo(() => {
+    const base = filterProfiles(visibleProfiles, {
       query: searchQuery,
       audienceFilters,
       professionFilters,
       adminOwnerId,
       users,
-    }),
-    [visibleProfiles, searchQuery, audienceFilters, professionFilters, adminOwnerId, users],
-  );
+    });
+    if (!favOnly) return base;
+    return base.filter((profile) => favIds.includes(profile.id));
+  }, [visibleProfiles, searchQuery, audienceFilters, professionFilters, adminOwnerId, users, favOnly, favIds]);
 
   // Reset paging when the filtered set shrinks (search/filters change)
   useEffect(() => {
@@ -191,6 +225,7 @@ export default function Home() {
 
   const pagedProfiles = filteredProfiles.slice(0, visibleCount);
   const hasMore = visibleCount < filteredProfiles.length;
+  const pull = usePullRefresh(async () => { await refreshRemoteData(); });
 
   return (
     <div className="flex min-h-[100dvh] min-w-0 flex-col overflow-x-hidden bg-slate-50 bg-radial-gradient transition-colors dark:bg-zinc-950">
@@ -205,11 +240,18 @@ export default function Home() {
         </aside>
 
         {/* Main Content Area */}
-        <main className="flex-1 min-w-0 max-w-3xl">
+        <main
+          className="flex-1 min-w-0 max-w-3xl"
+          onTouchStart={pull.onTouchStart}
+          onTouchEnd={pull.onTouchEnd}
+        >
+          {pull.refreshing && (
+            <p className="mb-3 text-center smk-text-label text-slate-500 dark:text-zinc-400">{t.loading}</p>
+          )}
         {/* Compact, clean Hero Banner */}
-        <section className="relative mb-4 overflow-hidden rounded-2xl bg-hero-gradient p-4 text-white shadow-md sm:p-5" aria-labelledby="hero-title">
+        <section className="smk-sign relative mb-4 overflow-hidden rounded-2xl bg-hero-gradient p-4 text-white shadow-md sm:p-5" aria-labelledby="hero-title">
           <div className="relative z-10 max-w-2xl">
-            <span className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-600/60 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-100 backdrop-blur-md">
+            <span className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-600/60 px-2.5 py-0.5 smk-text-label font-semibold text-emerald-100 backdrop-blur-md">
               <Sparkles className="h-3 w-3 text-emerald-300" />
               {t.heroBadge}
             </span>
@@ -248,6 +290,18 @@ export default function Home() {
           setProfessionFilters={setProfessionFilters}
         />
 
+        {account && (
+          <button
+            type="button"
+            onClick={() => setFavOnly((value) => !value)}
+            className={`mb-2 rounded-xl px-3 py-2 text-xs font-bold ${
+              favOnly ? 'bg-emerald-600 text-white' : 'smk-field text-slate-700 dark:text-zinc-200'
+            }`}
+          >
+            {t.favFilter}
+          </button>
+        )}
+
         <div className="mb-2.5 flex items-center justify-between">
           <h3 className="text-sm font-bold text-slate-700 dark:text-zinc-400">
             {filteredProfiles.length > 0
@@ -273,21 +327,19 @@ export default function Home() {
             ))}
           </div>
         ) : (
-          <div className="my-4 rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm dark:border-zinc-700 dark:bg-zinc-800">
-            <div className="mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-zinc-800 dark:text-emerald-400">
-              <Users className="h-5 w-5" />
-            </div>
-            <h4 className="mb-1 text-sm font-bold text-slate-800 dark:text-white">{t.nothingFound}</h4>
-            <p className="mx-auto mb-3 max-w-sm text-xs text-slate-500 dark:text-zinc-500">
-              {t.searchEmptyHint}
-            </p>
-            <button
-              onClick={openAddProfile}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white transition hover:bg-emerald-700"
-            >
-              {account?.isBlocked ? t.addUnavailable : account ? t.addProfileBtn : t.signInToAdd}
-            </button>
-          </div>
+          <EmptyState
+            title={t.nothingFound}
+            hint={t.searchEmptyHint}
+            action={
+              <button
+                type="button"
+                onClick={openAddProfile}
+                className="smk-btn-gold smk-shine inline-flex items-center px-3.5 py-2 smk-text-label"
+              >
+                {account?.isBlocked ? t.addUnavailable : account ? t.addProfileBtn : t.signInToAdd}
+              </button>
+            }
+          />
         )}
 
         {/* Infinite scroll sentinel + explicit "load more" button for accessibility */}
@@ -303,14 +355,14 @@ export default function Home() {
               onClick={() => setVisibleCount((current) => Math.min(current + pageSize, filteredProfiles.length))}
               className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
             >
-              Показать ещё ({Math.min(pageSize, filteredProfiles.length - visibleCount)})
+              {t.loadMoreTasks} ({Math.min(pageSize, filteredProfiles.length - visibleCount)})
             </button>
           </div>
         )}
 
         {!hasMore && filteredProfiles.length > pageSize && (
-          <p className="mt-4 text-center text-[10px] text-slate-400 dark:text-zinc-500">
-            Вы просмотрели все {filteredProfiles.length} анкет
+          <p className="mt-4 text-center smk-text-label text-slate-400 dark:text-zinc-500">
+            {t.catalogViewedAll.replace('{count}', String(filteredProfiles.length))}
           </p>
         )}
       </main>

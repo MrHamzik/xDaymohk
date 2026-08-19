@@ -70,10 +70,37 @@ export type NotificationType =
   | 'complaint_result'
   // Такси
   | 'taxi_request'
-  | 'taxi_info';
+  | 'taxi_info'
+  // Аренца Темщик / ГIончалла
+  | 'task_taken'
+  | 'task_submitted'
+  | 'task_confirmed'
+  | 'task_auto_confirmed'
+  | 'task_cancel_requested'
+  | 'task_cancelled'
+  | 'task_expired'
+  | 'task_joined'
+  | 'task_excluded'
+  | 'task_reminder'
+  | 'task_rated'
+  | 'task_rate_pending'
+  // Одобрение исполнителя заказчиком (обновление 27)
+  | 'task_join_request'
+  | 'task_join_approved'
+  | 'task_join_rejected'
+  // Спор об оплате (обновление 35)
+  | 'task_disputed'
+  | 'task_dispute_released'
+  // Исполнитель подтвердил получение денег (обновление 38)
+  | 'task_payment_received'
+  // Заказчик изменил условия до одобрения исполнителя (обновление 40)
+  | 'task_updated'
+  // Ответ поддержки на вопрос из раздела «Помощь»
+  | 'support_answered';
 
 /** Категории уведомлений (вкладки в центре уведомлений). */
-export type NotificationCategory = 'system' | 'activity' | 'complaint' | 'taxi';
+export type NotificationCategory =
+  | 'system' | 'activity' | 'complaint' | 'taxi' | 'task' | 'support';
 
 export function notificationCategory(type: NotificationType): NotificationCategory {
   switch (type) {
@@ -84,9 +111,35 @@ export function notificationCategory(type: NotificationType): NotificationCatego
       return 'activity';
     case 'complaint_result':
       return 'complaint';
+    // Ответ поддержки — своя вкладка «Помощь», а не «Система».
+    // Раньше case отсутствовал вовсе, тип падал в default и письмо
+    // подписывалось «Система»: человек искал ответ на свой вопрос в
+    // системных уведомлениях.
+    case 'support_answered':
+      return 'support';
     case 'taxi_request':
     case 'taxi_info':
       return 'taxi';
+    case 'task_taken':
+    case 'task_submitted':
+    case 'task_confirmed':
+    case 'task_auto_confirmed':
+    case 'task_cancel_requested':
+    case 'task_cancelled':
+    case 'task_expired':
+    case 'task_joined':
+    case 'task_excluded':
+    case 'task_reminder':
+    case 'task_rated':
+    case 'task_rate_pending':
+    case 'task_join_request':
+    case 'task_join_approved':
+    case 'task_join_rejected':
+    case 'task_disputed':
+    case 'task_dispute_released':
+    case 'task_payment_received':
+    case 'task_updated':
+      return 'task';
     default:
       return 'system';
   }
@@ -131,6 +184,8 @@ export interface Certificate {
 
 export interface Profile {
   isPersonal?: boolean; // личная анкета, нельзя скрыть/удалить, минимальная инфа
+  nickname?: string;
+  showNickname?: boolean;
   gender?: 'male' | 'female';
   birthDate?: string;
   settlement?: string;
@@ -155,6 +210,14 @@ export interface Profile {
   certificates: Certificate[];
   phone: string;
   hidePhone?: boolean;
+  /**
+   * Контакты существуют, но скрыты, потому что смотрит гость
+   * (обновление 47: вьюха v_profiles отдаёт телефон только вошедшим).
+   *
+   * Отличается от «контактов нет»: в первом случае показываем
+   * приглашение войти, во втором — ничего.
+   */
+  contactsLocked?: boolean;
   /** Whether the questionnaire WhatsApp is synchronized with the account phone. */
   sameAsPhoneWhatsapp?: boolean;
   isVerified?: boolean;
@@ -325,3 +388,256 @@ export const PROFESSION_CATEGORIES = [
   { id: 'agriculture', label: 'Сельское хозяйство', labelCe: 'Юьртбахам', icon: 'Sprout' },
   { id: 'other', label: 'Другое', labelCe: 'Кхидерш', icon: 'Briefcase' },
 ];
+
+// ---------------------------------------------------------------------------
+// «Аренца Темщик» (ВайГIуллакх) и «ГIончалла» (ВайГIо) — движок заданий.
+// Один движок на оба раздела, различаются флагом isPaid.
+// ---------------------------------------------------------------------------
+
+/** urgent — сделать до дедлайна; scheduled — запись на конкретный день. */
+export type TaskKind = 'urgent' | 'scheduled';
+
+/** Надбавка сверх награды за срочность (платит заказчик). */
+export type TaskPriority = 'normal' | 'high' | 'critical';
+
+export type TaskStatus =
+  | 'open'
+  | 'in_progress'
+  | 'awaiting_confirm'
+  /**
+   * Заказчик не принял работу. Задание заморожено на сутки: отменить и
+   * удалить его нельзя, стороны договариваются или подают жалобу.
+   * По истечении срока возвращается в in_progress.
+   */
+  | 'disputed'
+  | 'completed'
+  | 'cancelled'
+  | 'expired';
+
+/**
+ * Задел под эскроу. Сейчас всегда 'offline' — расчёт вне приложения
+ * (провайдеры безопасной сделки требуют оборот от 800 тыс./мес).
+ */
+export type TaskPaymentStatus = 'offline' | 'pending' | 'held' | 'released' | 'refunded';
+
+export type TaskParticipantStatus =
+  /** Заявка ждёт одобрения заказчика (только платные задания, обновление 27). */
+  | 'pending'
+  | 'joined'
+  | 'excluded'
+  | 'attended'
+  | 'no_show'
+  | 'done'
+  | 'cancelled';
+
+/** Надбавка за приоритет, доли от награды. */
+export const TASK_PRIORITY_SURCHARGE: Record<TaskPriority, number> = {
+  normal: 0,
+  high: 0.1,
+  critical: 0.25,
+};
+
+/** Минимальная награда исполнителю, ₽. */
+export const TASK_MIN_REWARD = 50;
+
+/** Комиссия эквайринга (ЮKassa). Платформа свой процент не берёт. */
+export const TASK_ACQUIRING_FEE = 0.035;
+
+/**
+ * Разбивка стоимости для заказчика.
+ *
+ * reward   — чистая награда исполнителю;
+ * surcharge — надбавка за срочность (её тоже получает исполнитель);
+ * budget   — деньги на закупку (категория «Покупки»): исполнитель
+ *            тратит свои и получает их обратно вместе с наградой;
+ * fee      — комиссия платёжного сервиса;
+ * total    — сколько платит заказчик.
+ */
+export function taskCostBreakdown(
+  reward: number,
+  priority: TaskPriority,
+  purchaseBudget = 0,
+) {
+  const base = Number.isFinite(reward) && reward > 0 ? Math.round(reward) : 0;
+  const budget = Number.isFinite(purchaseBudget) && purchaseBudget > 0 ? Math.round(purchaseBudget) : 0;
+  const surcharge = Math.round(base * TASK_PRIORITY_SURCHARGE[priority]);
+  const executorGets = base + surcharge + budget;
+  const fee = Math.round(executorGets * TASK_ACQUIRING_FEE);
+  return {
+    reward: base,
+    surcharge,
+    budget,
+    /** Сколько всего придёт исполнителю (награда + срочность + закупка). */
+    executorGets,
+    fee,
+    total: executorGets + fee,
+  };
+}
+
+/** Сколько заданий одновременно может вести один исполнитель. */
+export const TASK_MAX_ACTIVE_PER_USER = 5;
+
+/** Через сколько после «Выполнил» задание подтверждается само. */
+export const TASK_AUTO_CONFIRM_HOURS = 3;
+
+/**
+ * Через сколько после сдачи работы напомнить о незакрытом переводе.
+ * Наличные не трогаем: там отметки «Оплата получена» нет.
+ */
+export const TASK_PAYOUT_REMIND_HOURS = 1;
+
+/**
+ * Сколько часов задание висит «на рассмотрении» после отказа принять
+ * работу. В этом окне заказчик не может его отменить или удалить —
+ * иначе исполнитель остаётся без работы и без следов спора.
+ */
+export const TASK_DISPUTE_HOURS = 24;
+
+/** Блокировка заказчика за неподтверждение оплаты. */
+export const TASK_BLOCK_HOURS = 6;
+
+/**
+ * Блокировка ОБЕИХ сторон, если спор не решён за отведённые сутки.
+ *
+ * Спор — это несостоявшаяся договорённость, и виноват в ней редко
+ * кто-то один: заказчик не принял работу, исполнитель не доказал, что
+ * сделал. Возвращать задание в работу без последствий значит поощрять
+ * тех, кто просто игнорирует вторую сторону сутки.
+ *
+ * 24 часа: столько же, сколько длился сам спор. Наказание соразмерно
+ * времени, которое обе стороны потратили впустую.
+ */
+export const TASK_DISPUTE_BLOCK_HOURS = 24;
+
+/** Радиус вкладки «Близко», метры. */
+export const TASK_NEARBY_RADIUS_M = 1000;
+
+/** Минимальный возраст исполнителя (закон: подработка с 14 лет). */
+export const TASK_MIN_EXECUTOR_AGE = 14;
+
+/**
+ * Итоговая сумма к оплате за одного исполнителя с учётом приоритета.
+ * Комиссию площадки не берём — заказчик платит только награду и надбавку.
+ */
+export function taskTotalReward(reward: number, priority: TaskPriority): number {
+  const base = Number.isFinite(reward) && reward > 0 ? reward : 0;
+  return Math.round(base * (1 + TASK_PRIORITY_SURCHARGE[priority]));
+}
+
+export interface TaskParticipant {
+  id: string;
+  taskId: string;
+  userId: string;
+  status: TaskParticipantStatus;
+  attended?: boolean | null;
+  bonusPercent: number;
+  joinedAt: string;
+  excludedAt?: string | null;
+  /** Когда заказчик одобрил заявку. null — ещё на рассмотрении. */
+  approvedAt?: string | null;
+  /** Условия менялись после отклика — нужно согласие исполнителя. */
+  needsConsent?: boolean;
+  /** Когда исполнитель принял изменённые условия. */
+  consentAt?: string | null;
+  /** Живые данные из user_profiles (подтягиваются вьюхой). */
+  fullName?: string;
+  avatarUrl?: string;
+  rating?: number;
+  tasksDoneCount?: number;
+  accountDays?: number;
+}
+
+export interface Task {
+  id: string;
+  authorId: string;
+  /** true — «Аренца Темщик» (за деньги), false — «ГIончалла» (безвозмездно). */
+  isPaid: boolean;
+  kind: TaskKind;
+  title: string;
+  description: string;
+  category: string;
+  /** Награда ОДНОМУ исполнителю, ₽ (для ГIончалла = 0). */
+  reward: number;
+  /** Деньги на закупку («Покупки»): исполнитель тратит свои и получает обратно. */
+  purchaseBudget?: number;
+  priority: TaskPriority;
+  /** Сколько исполнителей нужно (срочное = 1). */
+  slots: number;
+  deadlineAt?: string | null;
+  scheduledAt?: string | null;
+  address: string;
+  lat?: number | null;
+  lng?: number | null;
+  minRating: number;
+  minAccountDays: number;
+  minTasksDone: number;
+  allowNewcomers: boolean;
+  /** До какого момента задание заморожено спором (ISO). */
+  disputeUntil?: string | null;
+  /** Почему заказчик не принял работу. */
+  disputeReason?: string | null;
+  /** Когда заказчик согласился закрыть спор. */
+  disputeAuthorOk?: string | null;
+  /** Когда исполнитель согласился закрыть спор. */
+  disputeExecutorOk?: string | null;
+  /** Когда исполнитель отметил, что получил оплату (ISO). NULL — не отмечал. */
+  paymentReceivedAt?: string | null;
+  /** До какого момента отменённое задание ещё видно сторонам (ISO). */
+  visibleUntil?: string | null;
+  /** Как заказчик рассчитается: 'cash' | 'sbp' | 'card' | 'yoomoney'. */
+  paymentMethod?: string;
+  status: TaskStatus;
+  paymentStatus: TaskPaymentStatus;
+  submittedAt?: string | null;
+  completedAt?: string | null;
+  cancelledAt?: string | null;
+  cancelReason?: string | null;
+  isArchived: boolean;
+  createdAt: string;
+
+  /** Шапка карточки: по кому судим о заказчике. */
+  authorName?: string;
+  authorAvatarUrl?: string;
+  authorRating?: number;
+  authorReviewCount?: number;
+  authorTasksCreated?: number;
+  authorAccountDays?: number;
+
+  takenSlots?: number;
+  participants?: TaskParticipant[];
+  /** Расстояние до задания от текущей позиции, метры (считается на клиенте). */
+  distanceM?: number;
+}
+
+/** Отзыв о ЧЕЛОВЕКЕ (не о навыках специалиста — те живут в Review). */
+export interface ResidentReview {
+  id: string;
+  taskId: string;
+  targetId: string;
+  authorId: string;
+  targetRole: 'customer' | 'executor';
+  rating: number;
+  text: string;
+  createdAt: string;
+  authorName?: string;
+  authorAvatarUrl?: string;
+}
+
+/** Тумблер «Активен/Неактивен» в разделе заданий. */
+export interface ExecutorStatus {
+  isActive: boolean;
+  activeUntil?: string | null;
+}
+
+/** Управляемый из админки справочник фильтров. */
+export interface AppFilter {
+  id: string;
+  scope: 'tasks' | 'catalog' | 'map';
+  value: string;
+  labelRu: string;
+  labelCe?: string | null;
+  /** Имя иконки lucide-react; пусто — иконка по умолчанию. */
+  icon?: string | null;
+  sortOrder: number;
+  isActive: boolean;
+}

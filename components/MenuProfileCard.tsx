@@ -1,5 +1,6 @@
 'use client';
 
+import Avatar from '@/components/Avatar';
 import Link from 'next/link';
 import { Ban } from 'lucide-react';
 import { cacheBustAvatarUrl } from '@/lib/media';
@@ -31,40 +32,37 @@ export default function MenuProfileCard() {
   const banLabel = isLocked ? banRemainingLabel(account?.bannedUntil, language, now) : null;
 
   const openConsent = () => {
-    window.dispatchEvent(new Event('samashki-open-consent'));
+    window.dispatchEvent(new Event('daymohk-open-consent'));
   };
 
-  const cls = `flex w-full items-center gap-3 rounded-2xl p-2.5 text-left transition ${
+  // .smk-panel — общий слот панелей бокового меню (см. globals.css).
+  const cls = `flex w-full items-center gap-3 p-2.5 text-left transition ${
     isLocked
       ? 'bg-red-100 ring-1 ring-red-300 dark:bg-red-900/60 dark:ring-red-800'
-      : 'bg-slate-50/90 hover:bg-slate-100 dark:bg-zinc-950 dark:hover:bg-zinc-800'
+      : 'smk-panel hover:brightness-95 dark:hover:brightness-110'
   }`;
 
   const inner = (
     <>
       <div className={`relative h-11 w-11 shrink-0 rounded-full p-0.5 shadow-sm overflow-hidden bg-white dark:bg-zinc-950 ${isLocked ? 'ring-2 ring-red-400/80' : 'ring-2 ring-emerald-500/80'}`}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={cacheBustAvatarUrl(account?.avatarUrl || '/icon.png')}
-          alt={account?.fullName || 'Даймохк'}
-          className="h-full w-full object-cover rounded-full"
-        />
+        <Avatar src={account?.avatarUrl || '/icon.png'} className="h-full w-full object-cover rounded-full" />
       </div>
       <div className="min-w-0 flex-1">
         <h3 className="truncate text-xs font-bold text-slate-900 dark:text-white">
           {account?.fullName || 'Даймохк'}
         </h3>
-        <p className="truncate text-[10px] text-slate-500 dark:text-zinc-500">
+        <p className="truncate smk-text-label text-slate-500 dark:text-zinc-500">
           {account?.email || (language === 'ce' ? 'Нохчийн Республика' : 'Чеченская Республика')}
         </p>
       </div>
       <div className="flex shrink-0 items-center">
         {account ? (
-          <span className={`rounded-md px-1.5 py-0.5 text-[9px] font-bold ${isLocked ? 'bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-300' : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'}`}>
+          <span className={`rounded-md px-1.5 py-0.5 smk-text-label font-bold ${isLocked ? 'bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-300' : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'}`}>
             Профиль
           </span>
         ) : (
-          <span className="rounded-md bg-slate-200 px-1.5 py-0.5 text-[9px] font-bold text-slate-700 dark:bg-zinc-700 dark:text-zinc-300">
+          <span className="rounded-md bg-slate-200 px-1.5 py-0.5 smk-text-label font-bold text-slate-700 dark:bg-zinc-700 dark:text-zinc-300">
             {t.signIn}
           </span>
         )}
@@ -81,7 +79,7 @@ export default function MenuProfileCard() {
       )}
 
       {isLocked && (
-        <div className="mt-1.5 flex items-center gap-1.5 rounded-xl bg-red-100 px-2.5 py-1.5 text-[10px] font-bold text-red-800 dark:bg-red-900/50 dark:text-red-200">
+        <div className="mt-1.5 flex items-center gap-1.5 rounded-xl bg-red-100 px-2.5 py-1.5 smk-text-label font-bold text-red-800 dark:bg-red-900/50 dark:text-red-200">
           <Ban className="h-3 w-3 shrink-0" />
           <span className="truncate">{banLabel ?? (language === 'ce' ? 'Аккаунт билсена яьлла' : 'Аккаунт заблокирован')}</span>
         </div>

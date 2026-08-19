@@ -20,6 +20,10 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
   const dialRef = useRef<HTMLDivElement | null>(null);
   const needleRef = useRef<HTMLDivElement | null>(null);
   const headingLabelRef = useRef<HTMLDivElement | null>(null);
+  // Буквы сторон света вращаются вместе с циферблатом, но каждая
+  // доворачивается обратно на +heading — как на компасе iOS: «Ю»
+  // остаётся читаемой, а не переворачивается вверх ногами.
+  const lettersRef = useRef<SVGGElement | null>(null);
   const turnLabelRef = useRef<HTMLDivElement | null>(null);
 
   const [qiblaAngle, setQiblaAngle] = useState<number>(DEFAULT_QIBLA_AZIMUTH);
@@ -188,6 +192,19 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
       const dial = dialRef.current;
       const needle = needleRef.current;
       if (dial) dial.style.transform = `rotate(${-heading}deg)`;
+      // Контрвращение подписей: сам циферблат повернулся на -heading,
+      // каждая буква возвращается на +heading вокруг своего центра.
+      if (lettersRef.current) {
+        for (const node of Array.from(lettersRef.current.children)) {
+          const cx = node.getAttribute('data-cx');
+          const cy = node.getAttribute('data-cy');
+          if (cx && cy) {
+            (node as SVGElement).setAttribute(
+              'transform', `rotate(${heading} ${cx} ${cy})`,
+            );
+          }
+        }
+      }
       // Needle rotates by (qiblaAngle - heading) so it visually
       // swings to where the Kaaba is from the user's current
       // perspective. When the needle points straight up, the
@@ -224,7 +241,7 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
 
   return createPortal(
     <div className="fixed inset-0 z-[85] flex items-center justify-center bg-zinc-950/70 p-4 backdrop-blur-md" role="dialog" aria-modal="true" aria-labelledby="qibla-title">
-      <div className="w-full max-w-md overflow-hidden rounded-3xl bg-white p-6 shadow-2xl dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800">
+      <div className="smk-sheet w-full max-w-md overflow-hidden rounded-3xl p-6 shadow-2xl">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3 dark:border-zinc-800">
           <div className="flex items-center gap-3">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-md">
@@ -239,13 +256,19 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
               </p>
             </div>
           </div>
-          <button type="button" onClick={onClose} aria-label="Закрыть" className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400">
+          <button type="button" onClick={onClose} aria-label="Закрыть" className="smk-hit flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400">
             <X className="h-4 w-4" />
           </button>
         </div>
 
         <div className="my-5 flex flex-col items-center justify-center">
-          <div className="relative flex h-[273.6px] w-[273.6px] items-center justify-center rounded-full border-4 border-slate-200 bg-white shadow-[0_16px_40px_-16px_rgba(15,45,60,0.3)] dark:border-8 dark:border-[#2c4b61] dark:bg-[#0b2c41] dark:shadow-[0_18px_45px_-18px_rgba(0,0,0,0.8)]">
+          {/* Корпус: цвета из палитры темы вместо литералов #0b2c41 /
+              #2c4b61, которые ломались на светлых и цветных темах.
+              Латунное кольцо — двойная обводка золотом акцента плюс
+              мягкое свечение, отсюда «аристократический» вид. */}
+          <div
+            className="smk-qibla relative flex h-[273.6px] w-[273.6px] items-center justify-center rounded-full"
+          >
             {/* ROTATING dial — the ring with N/S/E/W and tick marks.
                 The whole ring rotates by -heading so N always points
                 to local North. The N/S/E/W letters are CHILDREN of
@@ -272,8 +295,14 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
                   </mask>
                 </defs>
                 <g mask="url(#qibla-letter-mask)">
-                  <circle cx="136.8" cy="136.8" r="124.8" fill="none" strokeWidth="1" className="stroke-slate-200 dark:stroke-white/10" />
-                  <circle cx="136.8" cy="136.8" r="112.8" fill="none" strokeWidth="1" className="stroke-slate-100 dark:stroke-white/5" />
+                  {/* Направляющие круги и орнаментальное золотое кольцо. */}
+                  <circle cx="136.8" cy="136.8" r="124.8" fill="none" strokeWidth="1" style={{ stroke: 'var(--smk-divider)' }} />
+                  <circle cx="136.8" cy="136.8" r="112.8" fill="none" strokeWidth="1" style={{ stroke: 'var(--smk-divider)', opacity: 0.6 }} />
+                  <circle
+                    cx="136.8" cy="136.8" r="103" fill="none" strokeWidth="1"
+                    strokeDasharray="2 7" strokeLinecap="round"
+                    style={{ stroke: 'var(--smk-gold)', opacity: 0.55 }}
+                  />
                   {Array.from({ length: 60 }).map((_, i) => {
                     const a = (i * 6 * Math.PI) / 180;
                     const major = i % 15 === 0;
@@ -292,15 +321,52 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
                         x2={x2.toFixed(2)}
                         y2={y2.toFixed(2)}
                         strokeWidth={major ? 1.5 : 1}
-                        className={major ? 'stroke-slate-500 dark:stroke-slate-200' : medium ? 'stroke-slate-400 dark:stroke-slate-300/70' : 'stroke-slate-300 dark:stroke-slate-400/40'}
+                        style={{
+                          stroke: major ? 'var(--foreground)' : 'var(--smk-muted)',
+                          opacity: major ? 0.9 : medium ? 0.6 : 0.35,
+                        }}
                       />
                     );
                   })}
                 </g>
-                <text x="136.8" y="21" textAnchor="middle" dominantBaseline="central" fontSize="19" fontWeight="900" className="fill-red-600 dark:fill-red-500">С</text>
-                <text x="136.8" y="252.6" textAnchor="middle" dominantBaseline="central" fontSize="19" fontWeight="900" className="fill-slate-800 dark:fill-slate-100">Ю</text>
-                <text x="21" y="136.8" textAnchor="middle" dominantBaseline="central" fontSize="19" fontWeight="900" className="fill-slate-800 dark:fill-slate-100">З</text>
-                <text x="252.6" y="136.8" textAnchor="middle" dominantBaseline="central" fontSize="19" fontWeight="900" className="fill-slate-800 dark:fill-slate-100">В</text>
+                {/* Подписи сторон света. Каждая доворачивается обратно
+                    на +heading (см. tick выше), поэтому читается прямо
+                    при любом повороте телефона — как на компасе iOS.
+                    Цвета из палитры темы, а не литералами Tailwind. */}
+                <g ref={lettersRef}>
+                  <text
+                    x="136.8" y="21" data-cx="136.8" data-cy="21"
+                    textAnchor="middle" dominantBaseline="central"
+                    fontSize="19" fontWeight="900"
+                    style={{ fill: 'rgb(var(--smk-danger-rgb))' }}
+                  >
+                    С
+                  </text>
+                  <text
+                    x="136.8" y="252.6" data-cx="136.8" data-cy="252.6"
+                    textAnchor="middle" dominantBaseline="central"
+                    fontSize="19" fontWeight="900"
+                    style={{ fill: 'var(--foreground)' }}
+                  >
+                    Ю
+                  </text>
+                  <text
+                    x="21" y="136.8" data-cx="21" data-cy="136.8"
+                    textAnchor="middle" dominantBaseline="central"
+                    fontSize="19" fontWeight="900"
+                    style={{ fill: 'var(--foreground)' }}
+                  >
+                    З
+                  </text>
+                  <text
+                    x="252.6" y="136.8" data-cx="252.6" data-cy="136.8"
+                    textAnchor="middle" dominantBaseline="central"
+                    fontSize="19" fontWeight="900"
+                    style={{ fill: 'var(--foreground)' }}
+                  >
+                    В
+                  </text>
+                </g>
               </svg>
             </div>
 
@@ -318,29 +384,39 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
                 className="absolute left-1/2 top-1/2 h-[171.6px] w-[171.6px] -translate-x-1/2 -translate-y-1/2"
                 aria-hidden="true"
               >
-                <path d="M 32 6 L 28.5 40 L 35.5 40 Z" className="fill-[#0d7379] dark:fill-[#2ba6ad]" />
+                {/* Стрелка: остриё главным цветом темы, хвост — тенью
+                    того же тона, чтобы читался объём. */}
+                <path d="M 32 6 L 28.5 40 L 35.5 40 Z" style={{ fill: 'var(--color-emerald-600)' }} />
+                <path d="M 32 6 L 32 40 L 35.5 40 Z" style={{ fill: 'var(--color-emerald-700)', opacity: 0.55 }} />
               </svg>
             </div>
 
             {/* Center pivot — tiny static axis dot */}
-            <div className="absolute left-1/2 top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-slate-400 dark:bg-slate-200" />
+            {/* Ось: золотая точка в тон латунному кольцу. */}
+            <div
+              className="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full"
+              style={{
+                background: 'var(--smk-gold)',
+                boxShadow: '0 0 0 2px var(--smk-card-a), 0 0 8px -1px var(--smk-gold)',
+              }}
+            />
           </div>
 
           <div className="mt-6 grid w-full grid-cols-3 gap-2 text-center">
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-2.5 shadow-[0_2px_10px_-2px_rgba(15,45,60,0.1)] dark:border-zinc-700/60 dark:bg-zinc-900 dark:shadow-[0_2px_10px_-2px_rgba(0,0,0,0.5)]">
-              <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Кибла</p>
-              <p className="text-[14px] font-black text-[#0d7379] dark:text-[#2ba6ad]">{qiblaAngle.toFixed(1)}°</p>
-              <p className="text-[9px] text-slate-500">от севера</p>
+              <p className="smk-text-label font-bold uppercase tracking-wider text-slate-400">Кибла</p>
+              <p className="smk-text-title font-black text-[#0d7379] dark:text-[#2ba6ad]">{qiblaAngle.toFixed(1)}°</p>
+              <p className="smk-text-label text-slate-500">от севера</p>
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-2.5 shadow-[0_2px_10px_-2px_rgba(15,45,60,0.1)] dark:border-zinc-700/60 dark:bg-zinc-900 dark:shadow-[0_2px_10px_-2px_rgba(0,0,0,0.5)]">
-              <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Вы</p>
+              <p className="smk-text-label font-bold uppercase tracking-wider text-slate-400">Вы</p>
               <p
                 ref={headingLabelRef}
-                className="text-[12px] font-black text-slate-900 dark:text-white"
+                className="smk-text-label font-black text-slate-900 dark:text-white"
               >
                 —
               </p>
-              <p className="text-[9px] text-slate-500">
+              <p className="smk-text-label text-slate-500">
                 {mode === 'ready' ? 'компас' : mode === 'needs-calibration' ? 'калибровка' : mode === 'no-permission' ? 'нужно разрешение' : 'нет датчика'}
               </p>
             </div>
@@ -351,10 +427,10 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
                   : 'border-slate-200 bg-slate-50 dark:border-zinc-700/60 dark:bg-zinc-900'
               }`}
             >
-              <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Поворот</p>
+              <p className="smk-text-label font-bold uppercase tracking-wider text-slate-400">Поворот</p>
               <p
                 ref={turnLabelRef}
-                className={`text-[12px] font-black ${
+                className={`smk-text-label font-black ${
                   mode === 'ready'
                     ? 'text-amber-700 dark:text-amber-300'
                     : 'text-slate-500 dark:text-zinc-500'
@@ -362,7 +438,7 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
               >
                 —
               </p>
-              <p className="text-[9px] text-slate-500">
+              <p className="smk-text-label text-slate-500">
                 {mode === 'ready' ? 'повернитесь' : '—'}
               </p>
             </div>
@@ -392,14 +468,14 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
             <button
               type="button"
               onClick={handleCalibrate}
-              className="mt-3 w-full rounded-xl bg-slate-100 px-4 py-2 text-[11px] font-bold text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+              className="mt-3 w-full rounded-xl bg-slate-100 px-4 py-2 smk-text-label font-bold text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
             >
               {language === 'ce' ? 'Цакалибровкха' : 'Перекалибровать'}
             </button>
           )}
 
           {mode === 'no-support' && (
-            <p className="mt-3 rounded-xl border border-slate-200 bg-slate-100 p-2 text-center text-[11px] text-slate-500 shadow-[0_2px_10px_-2px_rgba(15,45,60,0.1)] dark:border-zinc-700/60 dark:bg-zinc-800 dark:text-zinc-400 dark:shadow-[0_2px_10px_-2px_rgba(0,0,0,0.5)]">
+            <p className="mt-3 rounded-xl border border-slate-200 bg-slate-100 p-2 text-center smk-text-label text-slate-500 shadow-[0_2px_10px_-2px_rgba(15,45,60,0.1)] dark:border-zinc-700/60 dark:bg-zinc-800 dark:text-zinc-400 dark:shadow-[0_2px_10px_-2px_rgba(0,0,0,0.5)]">
               На этом устройстве нет датчика компаса. Стрелка показывает статичное направление на Каабу: {qiblaAngle.toFixed(1)}° от севера.
             </p>
           )}

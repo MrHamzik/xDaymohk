@@ -13,6 +13,7 @@ import ScheduleSection from '@/components/edit-profile/ScheduleSection';
 import DocumentsSection from '@/components/edit-profile/DocumentsSection';
 import WorkplaceSection from '@/components/edit-profile/WorkplaceSection';
 import ExperienceSection, { calculateExperience } from '@/components/edit-profile/ExperienceSection';
+import { useSheetSwipe } from '@/lib/hooks/useSheetSwipe';
 
 interface EditProfileModalProps {
   isOpen: boolean;
@@ -70,6 +71,9 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
   const [breakEnd, setBreakEnd] = useState('');
   const [isFlexibleSchedule, setIsFlexibleSchedule] = useState(false);
   const [notice, setNotice] = useState('');
+  const [nickname, setNickname] = useState('');
+  const [showNickname, setShowNickname] = useState(false);
+  const swipe = useSheetSwipe(onClose);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -106,6 +110,8 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
     setTelegram(profile?.telegram?.replace(/^@/, '') ?? '');
     setVideoUrl(profile?.videoUrl ?? '');
     setCertificates(profile?.certificates ?? []);
+    setNickname(profile?.nickname ?? '');
+    setShowNickname(Boolean(profile?.showNickname));
     setNotice('');
   }, [isOpen, profile?.id, account?.id]);
 
@@ -200,6 +206,9 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
       fullName: account.fullName,
       avatarUrl: account.avatarUrl,
       photos: profile?.photos ?? [],
+      isPersonal: Boolean(profile?.isPersonal),
+      nickname: profile?.isPersonal ? nickname.trim() : profile?.nickname,
+      showNickname: profile?.isPersonal ? showNickname : Boolean(profile?.showNickname),
       isSpecialist,
       professionCategory: isSpecialist ? professionCategory : undefined,
       professionTitle: isSpecialist ? professionTitle.trim() || undefined : undefined,
@@ -245,55 +254,69 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
     <>
       {notice && <Notice message={notice} type="error" onClose={() => setNotice('')} />}
       <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/60 p-0 backdrop-blur-sm sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label={profile ? t.editProfileTitle : t.newProfileTitle}>
-        <div className="flex max-h-[90vh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl transition-colors dark:bg-zinc-950 sm:max-w-2xl sm:rounded-2xl border border-slate-200/50 dark:border-zinc-800">
-          <div className="flex shrink-0 items-center justify-between border-b border-slate-100 p-4 dark:border-zinc-800 dark:bg-zinc-950">
+        <div className="smk-sheet flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-3xl shadow-2xl transition-colors sm:max-w-2xl sm:rounded-3xl">
+          <div className="flex shrink-0 items-center justify-between smk-sheet-head border-b border-[color:var(--smk-divider)] p-4">
             <div className="flex items-center gap-2.5">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-sm">
                 <UserPlus className="h-4 w-4" />
               </div>
               <div>
                 <h2 className="text-sm font-bold text-slate-900 dark:text-white">{profile ? t.editProfileTitle : t.newProfileTitle}</h2>
-                <p className="text-[11px] text-slate-500 dark:text-zinc-500">{profile ? t.editProfileSubtitle : t.newProfileSubtitle}</p>
+                <p className="smk-text-label text-slate-500 dark:text-zinc-500">{profile ? t.editProfileSubtitle : t.newProfileSubtitle}</p>
               </div>
             </div>
-            <button onClick={onClose} aria-label="Закрыть форму" className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400"><X className="h-3.5 w-3.5" /></button>
+            <button onClick={onClose} aria-label="Закрыть форму" className="smk-act flex h-7 w-7 items-center justify-center"><X className="h-3.5 w-3.5" /></button>
           </div>
 
           <form onSubmit={handleSubmit} className="flex-1 space-y-4 overflow-y-auto p-4 text-xs text-slate-800 dark:text-zinc-300 no-scrollbar">
             {account ? (
-              <section className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-800">
+              <section className="smk-field flex items-center gap-3 p-3">
                 <img src={account.avatarUrl} alt="" className="h-12 w-12 rounded-xl object-cover" />
                 <div>
                   <p className="font-bold text-slate-900 dark:text-white">{account.fullName}</p>
                   <p className="mt-1 text-xs text-slate-500 dark:text-zinc-500">{account.phone || t.phoneNotSet}</p>
-                  {!profile?.isPersonal && <p className="mt-0.5 text-[11px] text-emerald-700 dark:text-emerald-400">{t.profileInfoUsed}</p>}
+                  {!profile?.isPersonal && <p className="mt-0.5 smk-text-label text-emerald-700 dark:text-emerald-400">{t.profileInfoUsed}</p>}
                 </div>
               </section>
             ) : (
-              <p className="rounded-xl bg-amber-50 p-3 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">{t.signInToCreate}</p>
+              <p className="smk-note smk-note-warn p-3">{t.signInToCreate}</p>
+            )}
+
+            {profile?.isPersonal && (
+              <section className="space-y-2">
+                <div>
+                  <label htmlFor="profile-nick" className="mb-1 block text-xs font-bold text-slate-700 dark:text-zinc-400">{t.nicknameLabel}</label>
+                  <input id="profile-nick" value={nickname} onChange={(event) => setNickname(event.target.value)} maxLength={24} className="smk-field w-full px-3 py-2.5 text-xs text-slate-900 dark:text-white" />
+                  <p className="mt-1 smk-text-label text-slate-500 dark:text-zinc-500">{t.nicknameHint}</p>
+                </div>
+                <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-600 dark:text-zinc-400">
+                  <input type="checkbox" checked={showNickname} onChange={(event) => setShowNickname(event.target.checked)} className="h-3.5 w-3.5 rounded text-emerald-600" />
+                  {t.nicknameShow}
+                </label>
+              </section>
             )}
 
             {!profile?.isPersonal && !profile?.id && (
               <div className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 dark:border-emerald-900 dark:bg-emerald-950/30">
                 <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-700 dark:text-emerald-300" />
-                <p className="text-[11px] leading-relaxed text-emerald-800 dark:text-emerald-200">
+                <p className="smk-text-label leading-relaxed text-emerald-800 dark:text-emerald-200">
                   {t.personalProfileExists}
                 </p>
               </div>
             )}
 
             {isSpecialist && (
-              <section className="space-y-3.5 rounded-xl border border-slate-100 bg-slate-50/60 p-3.5 dark:border-zinc-800 dark:bg-zinc-950">
+              <section className="smk-group">
                 <div>
                   <label htmlFor="profile-category" className="mb-1 block text-xs font-bold text-slate-700 dark:text-zinc-400">{t.professionCategory}</label>
-                  <select id="profile-category" value={professionCategory} onChange={(event) => setProfessionCategory(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white shadow-sm pl-3 pr-10 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white">
+                  <select id="profile-category" value={professionCategory} onChange={(event) => setProfessionCategory(event.target.value)} className="smk-field w-full pl-3 pr-10 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:text-white">
                     {PROFESSION_CATEGORIES.filter((category) => category.id !== 'all').map((category) => <option key={category.id} value={category.id}>{category.label}</option>)}
                   </select>
                 </div>
 
                 <div>
                   <label htmlFor="profile-specialization" className="mb-1 block text-xs font-bold text-slate-700 dark:text-zinc-400">{t.professionSpecialization}</label>
-                  <input id="profile-specialization" value={professionTitle} onChange={(event) => setProfessionTitle(event.target.value)} placeholder={t.professionSpecializationPlaceholder} className="w-full rounded-xl border border-slate-200 bg-white shadow-sm px-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white" />
+                  <input id="profile-specialization" value={professionTitle} onChange={(event) => setProfessionTitle(event.target.value)} placeholder={t.professionSpecializationPlaceholder} className="smk-field w-full px-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:text-white" />
                 </div>
 
                 <ExperienceSection
@@ -326,18 +349,18 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
                   onNotice={setNotice}
                 />
 
-                <div className="border-t border-slate-200/80 pt-2.5 dark:border-zinc-800">
+                <div className="border-t border-[color:var(--smk-divider)] pt-2.5">
                   <div className="mb-1 flex items-center justify-between gap-2">
                     <label htmlFor="profile-video" className="text-xs font-semibold text-slate-700 dark:text-zinc-400">{t.videoTitle}</label>
                     <button type="button" onClick={() => setShowVideoHint((isShown) => !isShown)} aria-label="Пояснение о видео" className="text-amber-500 transition hover:text-amber-600"><Info className="h-3.5 w-3.5" /></button>
                   </div>
-                  {showVideoHint && <p className="mb-2 rounded-xl bg-amber-50 p-2 text-xs leading-relaxed text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">{t.videoHint}</p>}
-                  <input id="profile-video" type="url" value={videoUrl} onChange={(event) => setVideoUrl(event.target.value)} placeholder="https://youtu.be/..." className="w-full rounded-xl border border-slate-200 bg-white shadow-sm px-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white" />
+                  {showVideoHint && <p className="smk-note smk-note-warn mb-2 p-2">{t.videoHint}</p>}
+                  <input id="profile-video" type="url" value={videoUrl} onChange={(event) => setVideoUrl(event.target.value)} placeholder="https://youtu.be/..." className="smk-field w-full px-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:text-white" />
                 </div>
 
                 <label className="flex cursor-pointer items-start gap-2 border-t border-slate-200/80 pt-2.5 text-xs dark:border-zinc-800">
                   <input type="checkbox" checked={requestVerification} onChange={(event) => setRequestVerification(event.target.checked)} className="mt-0.5 h-3.5 w-3.5 rounded text-emerald-600 focus:ring-emerald-500" />
-                  <span><span className="block font-semibold text-slate-700 dark:text-zinc-300">{t.requestVerificationLabel}</span><span className="mt-0.5 block text-[10px] text-slate-500 dark:text-zinc-500">{t.requestVerificationHint}</span></span>
+                  <span><span className="block font-semibold text-slate-700 dark:text-zinc-300">{t.requestVerificationLabel}</span><span className="mt-0.5 block smk-text-label text-slate-500 dark:text-zinc-500">{t.requestVerificationHint}</span></span>
                 </label>
               </section>
             )}
@@ -351,27 +374,27 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
 
             <div>
               <label htmlFor="profile-bio" className="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-400">{t.bioLabel}</label>
-              <textarea id="profile-bio" rows={3} maxLength={MAX_BIO_LENGTH} value={bio} onChange={(event) => setBio(event.target.value)} placeholder={t.bioPlaceholder} className="w-full resize-y break-words [overflow-wrap:anywhere] rounded-xl border border-slate-200 bg-white shadow-sm px-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white" />
-              <p className="mt-0.5 text-right text-[10px] text-slate-400">{bio.length}/{MAX_BIO_LENGTH}</p>
+              <textarea id="profile-bio" rows={3} maxLength={MAX_BIO_LENGTH} value={bio} onChange={(event) => setBio(event.target.value)} placeholder={t.bioPlaceholder} className="w-full resize-y break-words [overflow-wrap:anywhere] smk-field px-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:text-white" />
+              <p className="mt-0.5 text-right smk-text-label text-slate-400">{bio.length}/{MAX_BIO_LENGTH}</p>
             </div>
 
             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
               <div>
                 <div className="mb-1 flex items-center justify-between gap-2">
                   <label htmlFor="profile-whatsapp" className="block text-xs font-semibold text-slate-700 dark:text-zinc-400">WhatsApp</label>
-                  <label className="flex cursor-pointer items-center gap-1 text-[11px] text-emerald-700 dark:text-emerald-400"><input type="checkbox" checked={sameAsPhoneWhatsapp} onChange={(event) => { setSameAsPhoneWhatsapp(event.target.checked); if (event.target.checked && account) setWhatsappDigits(extractPhoneDigits(account.phone)); }} className="h-3 w-3 rounded text-emerald-600 focus:ring-emerald-500" />{t.useCommonNumber}</label>
+                  <label className="flex cursor-pointer items-center gap-1 smk-text-label text-emerald-700 dark:text-emerald-400"><input type="checkbox" checked={sameAsPhoneWhatsapp} onChange={(event) => { setSameAsPhoneWhatsapp(event.target.checked); if (event.target.checked && account) setWhatsappDigits(extractPhoneDigits(account.phone)); }} className="h-3 w-3 rounded text-emerald-600 focus:ring-emerald-500" />{t.useCommonNumber}</label>
                 </div>
                 <PhoneField id="profile-whatsapp" value={whatsappDigits} onChange={handleWhatsappChange} />
               </div>
               <div>
                 <label htmlFor="profile-telegram" className="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-400">Telegram</label>
-                <div className="relative"><span className="absolute inset-y-0 left-0 flex items-center pl-3 font-bold text-slate-400">@</span><input id="profile-telegram" value={telegram} onChange={(event) => setTelegram(event.target.value.replace(/^@/, ''))} placeholder={t.telegramUsername} className="w-full rounded-xl border border-slate-200 bg-white shadow-sm py-2.5 pl-8 pr-4 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800 dark:text-white" /></div>
+                <div className="relative"><span className="absolute inset-y-0 left-0 flex items-center pl-3 font-bold text-slate-400">@</span><input id="profile-telegram" value={telegram} onChange={(event) => setTelegram(event.target.value.replace(/^@/, ''))} placeholder={t.telegramUsername} className="smk-field w-full py-2.5 pl-8 pr-4 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:text-white" /></div>
               </div>
             </div>
 
             <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-600 dark:text-zinc-400"><input type="checkbox" checked={hidePhone} onChange={(event) => setHidePhone(event.target.checked)} className="h-3.5 w-3.5 rounded text-emerald-600 focus:ring-emerald-500" />{t.hidePhoneLabel}</label>
 
-            <div className="rounded-xl border border-amber-200/80 bg-amber-50/80 p-2.5 text-[11px] text-amber-800 dark:border-amber-200/80 dark:bg-amber-50/80">
+            <div className="smk-note smk-note-warn p-2.5">
               {t.emptyContactsWarning}
             </div>
 

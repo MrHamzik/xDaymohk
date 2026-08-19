@@ -108,7 +108,7 @@ export default function AdminBanModal({ profile, onClose, onConfirm }: AdminBanM
       onClick={onClose}
     >
       <div
-        className="flex max-h-[92vh] w-full max-w-md flex-col overflow-hidden rounded-3xl bg-white shadow-2xl dark:bg-zinc-950 border border-slate-200/50 dark:border-zinc-700"
+        className="smk-sheet flex max-h-[92vh] w-full max-w-md flex-col overflow-hidden rounded-3xl shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex shrink-0 items-center justify-between border-b border-slate-100 p-4 dark:border-zinc-800">
@@ -120,18 +120,18 @@ export default function AdminBanModal({ profile, onClose, onConfirm }: AdminBanM
               <h2 className="text-sm font-bold text-slate-900 dark:text-white">
                 {language === 'ce' ? 'Билсдаккхар' : 'Заблокировать'} — {profile.fullName}
               </h2>
-              <p className="text-[11px] text-slate-500 dark:text-zinc-500">
+              <p className="smk-text-label text-slate-500 dark:text-zinc-500">
                 {language === 'ce' ? 'Цхьатера арз: бакъонаш хьакхар' : 'Одностороннее: нарушение правил сообщества'}
               </p>
             </div>
           </div>
-          <button type="button" onClick={onClose} aria-label="Закрыть" className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400">
+          <button type="button" onClick={onClose} aria-label="Закрыть" className="smk-hit flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400">
             <X className="h-4 w-4" />
           </button>
         </div>
 
         <div className="border-b border-slate-100 px-4 py-2 dark:border-zinc-800">
-          <label className="mb-1 block text-[10px] font-semibold text-slate-400 dark:text-zinc-500">
+          <label className="mb-1 block smk-text-label font-semibold text-slate-400 dark:text-zinc-500">
             {language === 'ce' ? 'Царара (дIахьошверг)' : 'Отправитель'}
           </label>
           <input
@@ -144,7 +144,7 @@ export default function AdminBanModal({ profile, onClose, onConfirm }: AdminBanM
 
         <div className="flex-1 space-y-3 overflow-y-auto p-4 no-scrollbar">
           <div>
-            <label className="mb-1 block text-[11px] font-semibold text-slate-600 dark:text-zinc-400">
+            <label className="mb-1 block smk-text-label font-semibold text-slate-600 dark:text-zinc-400">
               {language === 'ce' ? 'Срок' : 'Срок блокировки'}
             </label>
             <div className="flex flex-wrap gap-1.5">
@@ -153,7 +153,7 @@ export default function AdminBanModal({ profile, onClose, onConfirm }: AdminBanM
                   key={opt.value}
                   type="button"
                   onClick={() => setBan(opt.value)}
-                  className={`rounded-lg px-2.5 py-1.5 text-[11px] font-bold transition ${ban === opt.value ? 'bg-red-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700'}`}
+                  className={`rounded-lg px-2.5 py-1.5 smk-text-label font-bold transition ${ban === opt.value ? 'bg-red-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700'}`}
                 >
                   {opt.label}
                 </button>
@@ -163,10 +163,10 @@ export default function AdminBanModal({ profile, onClose, onConfirm }: AdminBanM
 
           <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-2.5 dark:border-zinc-800 dark:bg-zinc-900">
             <div className="mb-1 flex items-center justify-between gap-2">
-              <label className="block text-[11px] font-semibold text-slate-600 dark:text-zinc-400">
+              <label className="block smk-text-label font-semibold text-slate-600 dark:text-zinc-400">
                 {language === 'ce' ? 'Хаам (тема а, хьажорг а)' : 'Письмо пользователю'}
               </label>
-              <button type="button" onClick={() => void translate()} className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2 py-1 text-[10px] font-bold text-white transition hover:bg-emerald-700" title="Автоперевод">
+              <button type="button" onClick={() => void translate()} className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2 py-1 smk-text-label font-bold text-white transition hover:bg-emerald-700" title="Автоперевод">
                 <Languages className="h-3 w-3" /> Автоперевод
               </button>
             </div>

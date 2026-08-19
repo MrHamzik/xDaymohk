@@ -12,6 +12,7 @@ import {
   ShieldAlert,
   Star,
   ThumbsUp,
+  LifeBuoy,
   Trash2,
   UserCheck,
   X,
@@ -31,6 +32,9 @@ function iconFor(notification: AppNotification) {
     case 'comment_replied': return { Icon: Reply, cls: 'bg-sky-100 text-sky-600 dark:bg-sky-950/60 dark:text-sky-400' };
     case 'like_received': return { Icon: ThumbsUp, cls: 'bg-rose-100 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400' };
     case 'complaint_result': return { Icon: ShieldAlert, cls: 'bg-red-100 text-red-600 dark:bg-red-950/60 dark:text-red-400' };
+    // Ответ поддержки — свой значок, иначе письмо приходило с общим
+    // колокольчиком и не отличалось от системного.
+    case 'support_answered': return { Icon: LifeBuoy, cls: 'bg-sky-100 text-sky-600 dark:bg-sky-950/60 dark:text-sky-400' };
     case 'taxi_request':
     case 'taxi_info': return { Icon: CarFront, cls: 'bg-orange-100 text-orange-600 dark:bg-orange-950/60 dark:text-orange-400' };
     default: return { Icon: Bell, cls: 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-300' };
@@ -41,6 +45,8 @@ const CATEGORY_LABEL: Record<string, { ru: string; ce: string }> = {
   system: { ru: 'Система', ce: 'Система' },
   activity: { ru: 'Активность', ce: 'Жималла' },
   complaint: { ru: 'Жалобы', ce: 'Арз' },
+  support: { ru: 'Помощь', ce: 'ГIо' },
+  task: { ru: 'Задания', ce: 'ТIедилларш' },
   taxi: { ru: 'Такси', ce: 'Такси' },
 };
 
@@ -123,7 +129,7 @@ export default function NotificationLetterModal({ notification, onClose, onDelet
                   onClick={() => onDelete(notification)}
                   aria-label={language === 'ce' ? 'ДIаяккха' : 'Удалить'}
                   title={language === 'ce' ? 'ДIаяккха' : 'Удалить'}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-red-50 text-red-600 transition hover:bg-red-100 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-950/70"
+                  className="smk-hit flex h-8 w-8 items-center justify-center rounded-full bg-red-50 text-red-600 transition hover:bg-red-100 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-950/70"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -132,7 +138,7 @@ export default function NotificationLetterModal({ notification, onClose, onDelet
                 type="button"
                 onClick={onClose}
                 aria-label="Закрыть"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-slate-500 transition hover:bg-slate-100 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+                className="smk-hit flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-slate-500 transition hover:bg-slate-100 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
               >
                 <X className="h-4 w-4" />
               </button>

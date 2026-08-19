@@ -13,6 +13,7 @@ import {
   loadUsersFromSupabase,
 } from '@/lib/profiles/load';
 import { persistProfileToSupabase } from '@/lib/profiles/persist';
+import { fetchResidentReputationMap, type ResidentReputation } from '@/lib/reputation';
 import { sanitizeReason } from '@/lib/validation';
 import { extractPhoneDigits } from '@/lib/phone';
 import { Complaint, ComplaintStatus, NotificationType, Profile, Review, UserSummary } from '@/lib/types';
@@ -20,6 +21,8 @@ import { Complaint, ComplaintStatus, NotificationType, Profile, Review, UserSumm
 interface ProfilesContextValue {
   profiles: Profile[];
   users: UserSummary[];
+  /** Публичная репутация по заданиям: userId → рейтинг и счётчики. */
+  reputation: Record<string, ResidentReputation>;
   complaints: Complaint[];
   isCurrentUserAdmin: boolean;
   isProfileAdmin: (profile: Profile) => boolean;
@@ -43,6 +46,10 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
   const { createNotification } = useNotifications();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [users, setUsers] = useState<UserSummary[]>([]);
+  // Репутация грузится отдельным запросом к публичной вьюхе:
+  // v_users_with_profile_count из-за RLS отдаёт только свою строку,
+  // поэтому чужие рейтинги оттуда взять нельзя.
+  const [reputation, setReputation] = useState<Record<string, ResidentReputation>>({});
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [isHydrated, setIsHydrated] = useState(false);
 
@@ -63,6 +70,20 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
     }
     setUsers(remoteUsers);
     setComplaints(remoteComplaints);
+
+    // Репутация — отдельным запросом к публичной вьюхе: рейтинг нужен
+    // для ЧУЖИХ карточек, а v_users_with_profile_count под RLS отдаёт
+    // только собственную строку.
+    const ownerIds = (remoteProfiles ?? [])
+      .map((p) => p.ownerId)
+      .filter((id): id is string => Boolean(id));
+    if (ownerIds.length > 0) {
+      try {
+        setReputation(await fetchResidentReputationMap(ownerIds));
+      } catch {
+        // не критично: карточки просто не покажут рейтинг
+      }
+    }
   }, []);
 
   // Initial bootstrap + realtime + refresh hook.
@@ -80,7 +101,7 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
     let channel: ReturnType<NonNullable<typeof supabase>['channel']> | null = null;
     if (isSupabaseConfigured && supabase) {
       channel = supabase
-        .channel('samashki-live-data')
+        .channel('daymohk-live-data')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
           void refreshRemoteData();
         })
@@ -109,8 +130,8 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
       // user's profiles disappear from the UI on the next render.
       void refreshRemoteData();
     };
-    window.addEventListener('samashki-account-deleted', handleAccountDeleted);
-    return () => window.removeEventListener('samashki-account-deleted', handleAccountDeleted);
+    window.addEventListener('daymohk-account-deleted', handleAccountDeleted);
+    return () => window.removeEventListener('daymohk-account-deleted', handleAccountDeleted);
   }, [refreshRemoteData]);
 
   /**
@@ -208,8 +229,8 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
         void syncAccountToQuestionnaires(detail.account);
       }
     };
-    window.addEventListener('samashki-account-updated', handleAccountUpdated);
-    return () => window.removeEventListener('samashki-account-updated', handleAccountUpdated);
+    window.addEventListener('daymohk-account-updated', handleAccountUpdated);
+    return () => window.removeEventListener('daymohk-account-updated', handleAccountUpdated);
   }, [syncAccountToQuestionnaires]);
 
   useEffect(() => {
@@ -584,13 +605,19 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
 
   const isCurrentUserAdmin = Boolean(account?.isAdmin);
   const isProfileAdmin = useCallback(
-    (profile: Profile) => isAdminProfile(profile, account?.isAdmin ? account.id : undefined, users),
-    [account?.id, account?.isAdmin, users],
+    (profile: Profile) => {
+      // Публичная витрина знает про админа даже тогда, когда владельца
+      // нет в users: RLS отдаёт оттуда только свою строку, из-за чего
+      // бейдж «Админ» не показывался на чужих анкетах (обновление 29).
+      if (profile.ownerId && reputation[profile.ownerId]?.isAdmin) return true;
+      return isAdminProfile(profile, account?.isAdmin ? account.id : undefined, users);
+    },
+    [account?.id, account?.isAdmin, users, reputation],
   );
 
   const value = useMemo(
-    () => ({ profiles, users, complaints, isCurrentUserAdmin, isProfileAdmin, addProfile, updateProfile, updateUserBlocked, deleteProfile, addComplaint, updateComplaint, addReview, createNotification, refreshRemoteData }),
-    [profiles, users, complaints, isCurrentUserAdmin, isProfileAdmin, addProfile, updateProfile, updateUserBlocked, deleteProfile, addComplaint, updateComplaint, addReview, createNotification, refreshRemoteData],
+    () => ({ profiles, users, reputation, complaints, isCurrentUserAdmin, isProfileAdmin, addProfile, updateProfile, updateUserBlocked, deleteProfile, addComplaint, updateComplaint, addReview, createNotification, refreshRemoteData }),
+    [profiles, users, reputation, complaints, isCurrentUserAdmin, isProfileAdmin, addProfile, updateProfile, updateUserBlocked, deleteProfile, addComplaint, updateComplaint, addReview, createNotification, refreshRemoteData],
   );
 
   return <ProfilesContext.Provider value={value}>{children}</ProfilesContext.Provider>;

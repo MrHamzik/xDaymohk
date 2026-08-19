@@ -3,11 +3,14 @@
 import { useState, useEffect } from 'react';
 import { Calendar, Timer } from 'lucide-react';
 import { getCurrentDayPrayerTimes, DEFAULT_LAT, DEFAULT_LNG } from '@/lib/islamic';
+import { getUserCoords } from '@/lib/geo';
 import { useI18n } from '@/lib/i18n';
+import { useSettings } from '@/components/SettingsProvider';
 import PrayerTimesModal from '@/components/PrayerTimesModal';
 
 export default function PrayerTimesBar() {
   const { language } = useI18n();
+  const { settings } = useSettings();
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   // Рендер счётчика только после mount — иначе new Date() на сервере и
   // клиенте различаются и Next.js падает с hydration mismatch.
@@ -21,21 +24,20 @@ export default function PrayerTimesBar() {
   // Geolocation lookup per DUM RF standard
   useEffect(() => { setMounted(true); }, []);
 
+  // Виджет живёт в боковом меню и монтируется на КАЖДОЙ странице.
+  // Раньше он на каждом монтировании вызывал getCurrentPosition — Chrome
+  // после нескольких проигнорированных окон блокировал разрешение и
+  // засыпал консоль предупреждениями даже на /admin.
+  //
+  // Теперь берём координаты из общего кеша (lib/geo.ts) и НЕ показываем
+  // окно запроса сами: без разрешения считаем время по Самашкам, что для
+  // сельского сервиса — правильное умолчание, а не ошибка.
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setCoords({
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-          });
-        },
-        () => {
-          // Keep default Samashki/Chechnya coordinates
-        },
-        { timeout: 8000 },
-      );
-    }
+    let cancelled = false;
+    void getUserCoords().then((position) => {
+      if (!cancelled && position) setCoords(position);
+    });
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
@@ -54,10 +56,11 @@ export default function PrayerTimesBar() {
     : `${minsRemaining} мин`;
 
   const nextPrayerName = language === 'ce' ? data.nextPrayer.item.nameCe : data.nextPrayer.item.nameRu;
+  if (settings.hidePrayer) return null;
 
   return (
     <>
-      <div className="space-y-1.5 rounded-xl border border-slate-200/80 bg-white p-2 shadow-sm dark:border-zinc-800/60 dark:bg-zinc-900" >
+      <div className="smk-panel space-y-1.5 p-2 shadow-sm" >
         {/* Countdown Header: Strictly "До [Название]" */}
         <div className="flex items-center justify-between gap-1.5 border-b border-slate-100 pb-1.5 dark:border-zinc-800/60 text-xs">
           <div className="flex items-center gap-1.5 font-extrabold text-emerald-700 dark:text-emerald-400">
@@ -68,7 +71,7 @@ export default function PrayerTimesBar() {
           </div>
 
           <div className="flex items-center gap-1.5">
-            <span className="rounded-lg bg-emerald-100 px-2 py-0.5 font-mono text-[11px] font-black text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300">
+            <span className="rounded-lg bg-emerald-100 px-2 py-0.5 font-mono smk-text-label font-black text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300">
               {mounted ? countdownText : '— мин'}
             </span>
 
@@ -77,7 +80,7 @@ export default function PrayerTimesBar() {
               onClick={() => setIsCalendarOpen(true)}
               title="Открыть календарь намазов (ДУМ РФ)"
               aria-label="Календарь намазов"
-              className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-950/80 dark:text-emerald-400 dark:hover:bg-emerald-900 transition"
+              className="smk-hit flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-950/80 dark:text-emerald-400 dark:hover:bg-emerald-900 transition"
             >
               <Calendar className="h-3.5 w-3.5" />
             </button>
@@ -85,7 +88,7 @@ export default function PrayerTimesBar() {
         </div>
 
         {/* Horizontal All-in-One Row (Фаджр, Восход, Зухр, Аср, Магриб, Иша strictly in one line) */}
-        <div className="grid grid-cols-6 gap-1 text-[10px] sm:text-[11px] font-semibold text-center">
+        <div className="grid grid-cols-6 gap-1 smk-text-label sm:smk-text-label font-semibold text-center">
           {data.items.map((prayer) => {
             const isActive = prayer.id === data.activePrayer?.id;
             const name = language === 'ce' ? prayer.nameCe : prayer.nameRu;
@@ -98,8 +101,8 @@ export default function PrayerTimesBar() {
                     : 'bg-slate-50 text-slate-700 dark:bg-zinc-900 dark:text-zinc-400'
                 }`}
               >
-                <span className="text-[9px] sm:text-[10px] leading-tight truncate w-full opacity-90">{name}</span>
-                <span className="font-mono text-[10px] sm:text-xs leading-tight">{prayer.time}</span>
+                <span className="smk-text-label sm:smk-text-label leading-tight truncate w-full opacity-90">{name}</span>
+                <span className="font-mono smk-text-label sm:text-xs leading-tight">{prayer.time}</span>
               </div>
             );
           })}

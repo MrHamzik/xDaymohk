@@ -240,19 +240,19 @@ export default function ComplaintResolveModal({
       <div className="mb-2 flex items-center justify-between gap-2">
         <h4 className="text-xs font-bold text-slate-900 dark:text-white">{title}</h4>
         {draft.userId ? (
-          <span className="truncate rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-600 shadow-sm dark:bg-zinc-800 dark:text-zinc-300">
+          <span className="truncate rounded-full bg-white px-2 py-0.5 smk-text-label font-semibold text-slate-600 shadow-sm dark:bg-zinc-800 dark:text-zinc-300">
             {draft.name}
           </span>
         ) : (
-          <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-500 dark:bg-zinc-800 dark:text-zinc-500">
+          <span className="rounded-full bg-slate-200 px-2 py-0.5 smk-text-label font-semibold text-slate-500 dark:bg-zinc-800 dark:text-zinc-500">
             получатель недоступен
           </span>
         )}
       </div>
-      <p className="mb-2 text-[10px] text-slate-400 dark:text-zinc-500">{subtitle}</p>
+      <p className="mb-2 smk-text-label text-slate-400 dark:text-zinc-500">{subtitle}</p>
       <div className="space-y-2">
         <div>
-          <label className="mb-1 block text-[11px] font-semibold text-slate-600 dark:text-zinc-400">{language === 'ce' ? 'Хаттар' : 'Тема'}</label>
+          <label className="mb-1 block smk-text-label font-semibold text-slate-600 dark:text-zinc-400">{language === 'ce' ? 'Хаттар' : 'Тема'}</label>
           <input
             value={draft.topic}
             onChange={(e) => updateDraft(setter, { topic: e.target.value })}
@@ -261,7 +261,7 @@ export default function ComplaintResolveModal({
           />
         </div>
         <div>
-          <label className="mb-1 block text-[11px] font-semibold text-slate-600 dark:text-zinc-400">{language === 'ce' ? 'Хьажорг' : 'Текст письма'}</label>
+          <label className="mb-1 block smk-text-label font-semibold text-slate-600 dark:text-zinc-400">{language === 'ce' ? 'Хьажорг' : 'Текст письма'}</label>
           <textarea
             rows={3}
             value={draft.message}
@@ -272,11 +272,11 @@ export default function ComplaintResolveModal({
         </div>
         <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-2 dark:border-emerald-900/50 dark:bg-emerald-950/20">
           <div className="mb-1 flex items-center justify-between gap-2">
-            <label className="block text-[11px] font-semibold text-slate-600 dark:text-zinc-300">{language === 'ce' ? 'Нохчийн (тема а, хьажорг а)' : 'Чеченский (тема и текст)'}</label>
+            <label className="block smk-text-label font-semibold text-slate-600 dark:text-zinc-300">{language === 'ce' ? 'Нохчийн (тема а, хьажорг а)' : 'Чеченский (тема и текст)'}</label>
             <button
               type="button"
               onClick={() => void translateAutofill(setter, draft)}
-              className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2 py-1 text-[10px] font-bold text-white transition hover:bg-emerald-700"
+              className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2 py-1 smk-text-label font-bold text-white transition hover:bg-emerald-700"
               title="Автоперевод (русский → чеченский)"
             >
               <Languages className="h-3 w-3" /> Автоперевод
@@ -297,7 +297,7 @@ export default function ComplaintResolveModal({
           />
         </div>
         <div>
-          <label className="mb-1 block text-[11px] font-semibold text-slate-600 dark:text-zinc-400">{language === 'ce' ? 'Билсдаккхар' : 'Блокировка'}</label>
+          <label className="mb-1 block smk-text-label font-semibold text-slate-600 dark:text-zinc-400">{language === 'ce' ? 'Билсдаккхар' : 'Блокировка'}</label>
           <div className="flex items-center gap-2">
             <select
               value={draft.ban}
@@ -333,7 +333,7 @@ export default function ComplaintResolveModal({
       onClick={onClose}
     >
       <div
-        className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl dark:bg-zinc-950 border border-slate-200/50 dark:border-zinc-700"
+        className="smk-sheet flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex shrink-0 items-center justify-between border-b border-slate-100 p-4 dark:border-zinc-800">
@@ -347,18 +347,18 @@ export default function ComplaintResolveModal({
                   ? (language === 'ce' ? 'Арз тIеэца' : 'Принять жалобу')
                   : (language === 'ce' ? 'Арз дIаяккха' : 'Отклонить жалобу')}
               </h2>
-              <p className="text-[11px] text-slate-500 dark:text-zinc-500">
+              <p className="smk-text-label text-slate-500 dark:text-zinc-500">
                 {language === 'ce' ? 'Кехаташ: тIебелиначарна а, дIахьочунна а · анкета: ' : 'Письма нарушителю и отправителю · анкета: '}{profileName}
               </p>
             </div>
           </div>
-          <button type="button" onClick={onClose} aria-label="Закрыть" className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400">
+          <button type="button" onClick={onClose} aria-label="Закрыть" className="smk-hit flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400">
             <X className="h-4 w-4" />
           </button>
         </div>
 
         <div className="border-b border-slate-100 px-4 py-2 dark:border-zinc-800">
-          <label className="mb-1 block text-[10px] font-semibold text-slate-400 dark:text-zinc-500">
+          <label className="mb-1 block smk-text-label font-semibold text-slate-400 dark:text-zinc-500">
             {language === 'ce' ? 'Царара (дIахьошверг)' : 'Отправитель'}
           </label>
           <input

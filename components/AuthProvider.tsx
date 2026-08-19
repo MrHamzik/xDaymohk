@@ -6,7 +6,7 @@ import { uploadImageIfStorageConfigured } from '@/lib/media';
 import { isAdminEmail } from '@/lib/admin';
 import { AVATAR_PRESETS, UserMasterStatus } from '@/lib/types';
 
-const ACCOUNT_STORAGE_KEY = 'samashki-account';
+const ACCOUNT_STORAGE_KEY = 'daymohk-account';
 
 export interface Account {
   gender?: 'male' | 'female';
@@ -17,6 +17,8 @@ export interface Account {
   fullName: string;
   avatarUrl: string;
   phone: string;
+  /** Номер подтверждён SMS-кодом (обновление 49). */
+  phoneVerified?: boolean;
   isAdmin?: boolean;
   isBlocked?: boolean;
   /** ISO timestamp when a temporary ban expires (undefined = no ban / permanent). */
@@ -28,10 +30,12 @@ interface AuthContextValue {
   account: Account | null;
   isLoading: boolean;
   signInWithGoogle: () => Promise<void>;
-  updateAccount: (updates: Partial<Pick<Account, 'fullName' | 'avatarUrl' | 'phone' | 'gender' | 'birthDate' | 'settlement'>>) => Promise<void>;
+  updateAccount: (updates: Partial<Pick<Account, 'fullName' | 'avatarUrl' | 'phone' | 'phoneVerified' | 'gender' | 'birthDate' | 'settlement'>>) => Promise<void>;
   setMasterStatus: (status: UserMasterStatus) => Promise<void>;
   deleteAccount: () => Promise<void>;
   signOut: () => Promise<void>;
+  /** Завершить сессии на ВСЕХ устройствах, а не только в этом браузере. */
+  signOutEverywhere: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -55,6 +59,7 @@ type StoredAccount = {
   full_name: string;
   avatar_url: string;
   phone: string;
+  phone_verified_at?: string | null;
   is_admin: boolean;
   is_blocked: boolean;
   status_override?: UserMasterStatus;
@@ -94,10 +99,29 @@ async function resolveAccount(user: AuthUser): Promise<Account> {
 
   const { data, error } = await supabase
     .from('user_profiles')
-    .select('id, email, full_name, avatar_url, phone, is_admin, is_blocked, status_override, gender, birth_date, birth_year, settlement')
+    .select('id, email, full_name, avatar_url, phone, phone_verified_at, is_admin, is_blocked, status_override, gender, birth_date, birth_year, settlement')
     .eq('id', user.id)
     .maybeSingle();
 
+  if (error && /phone_verified_at/i.test(error.message)) {
+    const retry = await supabase
+      .from('user_profiles')
+      .select('id, email, full_name, avatar_url, phone, is_admin, is_blocked, status_override, gender, birth_date, birth_year, settlement')
+      .eq('id', user.id)
+      .maybeSingle();
+    return resolveFromRow(retry.data as StoredAccount | null, retry.error, user, fallbackAccount, local);
+  }
+
+  return resolveFromRow(data as StoredAccount | null, error, user, fallbackAccount, local);
+}
+
+async function resolveFromRow(
+  data: StoredAccount | null,
+  error: { message: string } | null,
+  user: AuthUser,
+  fallbackAccount: Account,
+  local: Account | null,
+): Promise<Account> {
   if (!error && data) {
     const stored = data as StoredAccount;
     const emailForCheck = (stored.email || fallbackAccount.email || '').toLowerCase();
@@ -106,7 +130,7 @@ async function resolveAccount(user: AuthUser): Promise<Account> {
     // права из БД (их можно давать/отбирать через админ-панель). НЕ сбрасываем
     // выданный статус до «false» — иначе выдача прав не работала бы.
     const effectiveIsAdmin = isAdminByEmail || Boolean(stored.is_admin);
-    if (Boolean(stored.is_admin) !== effectiveIsAdmin) {
+    if (Boolean(stored.is_admin) !== effectiveIsAdmin && supabase) {
       await supabase.from('user_profiles').update({ is_admin: effectiveIsAdmin }).eq('id', user.id);
     }
     // Мержим с локальным аккаунтом, чтобы не потерять gender/birthDate/ник/аватар,
@@ -122,6 +146,7 @@ async function resolveAccount(user: AuthUser): Promise<Account> {
       fullName: stored.full_name || (localMine ? localMine.fullName : undefined) || fallbackAccount.fullName,
       avatarUrl: stored.avatar_url || (localMine ? localMine.avatarUrl : undefined) || fallbackAccount.avatarUrl,
       phone: stored.phone || fallbackAccount.phone,
+      phoneVerified: Boolean(stored.phone_verified_at),
       gender: mergedGender,
       birthDate: mergedBirth,
       settlement: mergedSettlement,
@@ -134,7 +159,7 @@ async function resolveAccount(user: AuthUser): Promise<Account> {
 
   // First Google login: create the local user profile once. Later logins read it
   // instead of replacing custom name/avatar values with Google metadata.
-  await supabase.from('user_profiles').upsert({
+  if (supabase) await supabase.from('user_profiles').upsert({
     id: fallbackAccount.id,
     email: fallbackAccount.email,
     full_name: fallbackAccount.fullName,
@@ -165,7 +190,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       if (!detail?.userId) return;
       setAccount((current) => current && current.id === detail.userId ? { ...current, isBlocked: Boolean(detail.isBlocked) } : current);
     };
-    window.addEventListener('samashki-account-status', handleAccountStatus);
+    window.addEventListener('daymohk-account-status', handleAccountStatus);
 
     const restoreSession = async () => {
       if (isSupabaseConfigured && supabase) {
@@ -212,7 +237,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     if (!supabase || !isSupabaseConfigured) {
       return () => {
         cancelled = true;
-        window.removeEventListener('samashki-account-status', handleAccountStatus);
+        window.removeEventListener('daymohk-account-status', handleAccountStatus);
       };
     }
 
@@ -232,7 +257,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
     return () => {
       cancelled = true;
-      window.removeEventListener('samashki-account-status', handleAccountStatus);
+      window.removeEventListener('daymohk-account-status', handleAccountStatus);
       listener.subscription.unsubscribe();
     };
   }, []);
@@ -250,10 +275,11 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     if (error) throw new Error(error.message);
   }, []);
 
-  const updateAccount = useCallback(async (updates: Partial<Pick<Account, 'fullName' | 'avatarUrl' | 'phone' | 'gender' | 'birthDate' | 'settlement'>>) => {
+  const updateAccount = useCallback(async (updates: Partial<Pick<Account, 'fullName' | 'avatarUrl' | 'phone' | 'phoneVerified' | 'gender' | 'birthDate' | 'settlement'>>) => {
     if (!account) return;
 
     const normalizedPhone = updates.phone ? normalizePhone(updates.phone) : account.phone;
+    const phoneChanged = Boolean(updates.phone) && normalizedPhone !== account.phone;
     const safeAvatarUrl = updates.avatarUrl
       ? await uploadImageIfStorageConfigured(updates.avatarUrl, account.id, 'avatars')
       : account.avatarUrl;
@@ -262,6 +288,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       ...updates,
       avatarUrl: safeAvatarUrl,
       phone: normalizedPhone,
+      phoneVerified: phoneChanged ? false : (updates.phoneVerified ?? account.phoneVerified),
       gender: updates.gender !== undefined ? updates.gender : account.gender,
       birthDate: updates.birthDate !== undefined ? updates.birthDate : account.birthDate,
       settlement: updates.settlement !== undefined ? updates.settlement : account.settlement,
@@ -301,7 +328,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       }
     }
 
-    window.dispatchEvent(new CustomEvent('samashki-account-updated', { detail: { account: nextAccount } }));
+    window.dispatchEvent(new CustomEvent('daymohk-account-updated', { detail: { account: nextAccount } }));
   }, [account]);
 
   const setMasterStatus = useCallback(async (status: UserMasterStatus) => {
@@ -317,7 +344,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         .eq('id', nextAccount.id);
     }
 
-    window.dispatchEvent(new CustomEvent('samashki-account-updated', { detail: { account: nextAccount } }));
+    window.dispatchEvent(new CustomEvent('daymohk-account-updated', { detail: { account: nextAccount } }));
   }, [account]);
 
   const deleteAccount = useCallback(async () => {
@@ -344,13 +371,13 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     // will refresh the local view on the next postgres_changes
     // event triggered by the server-side deletion.
 
-    window.dispatchEvent(new CustomEvent('samashki-account-deleted', { detail: { ownerId: account.id } }));
+    window.dispatchEvent(new CustomEvent('daymohk-account-deleted', { detail: { ownerId: account.id } }));
     setAccount(null);
     saveLocalAccount(null);
     // Сбрасываем локальные флаги, чтобы при повторной регистрации
     // онбординг (welcome-письмо) показался заново.
     try {
-      window.localStorage.removeItem('samashki-onboarded-v1');
+      window.localStorage.removeItem('daymohk-onboarded-v1');
     } catch {}
   }, [account]);
 
@@ -360,9 +387,32 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     saveLocalAccount(null);
   }, []);
 
+  /**
+   * Выход со всех устройств.
+   *
+   * scope: 'global' отзывает у Supabase ВСЕ refresh-токены пользователя,
+   * а не только токен текущего браузера. Нужно, когда телефон потерян
+   * или вход остался на чужом компьютере: обычный «Выйти» там ничего не
+   * закрывает — та сессия живёт своей жизнью.
+   *
+   * Локальное состояние сбрасываем в любом случае, даже если запрос не
+   * прошёл: держать в интерфейсе аккаунт, из которого человек только
+   * что попросил выйти, нельзя.
+   */
+  const signOutEverywhere = useCallback(async () => {
+    try {
+      if (isSupabaseConfigured && supabase) {
+        await supabase.auth.signOut({ scope: 'global' });
+      }
+    } finally {
+      setAccount(null);
+      saveLocalAccount(null);
+    }
+  }, []);
+
   const value = useMemo(
-    () => ({ account, isLoading, signInWithGoogle, updateAccount, setMasterStatus, deleteAccount, signOut }),
-    [account, isLoading, signInWithGoogle, updateAccount, setMasterStatus, deleteAccount, signOut],
+    () => ({ account, isLoading, signInWithGoogle, updateAccount, setMasterStatus, deleteAccount, signOut, signOutEverywhere }),
+    [account, isLoading, signInWithGoogle, updateAccount, setMasterStatus, deleteAccount, signOut, signOutEverywhere],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

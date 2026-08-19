@@ -1,0 +1,112 @@
+import { NextResponse } from 'next/server';
+import { rateLimit, withRateLimitHeaders } from '@/lib/rate-limit';
+import { log } from '@/lib/logger';
+import { authenticateTaskRequest, taskAuthError } from '@/lib/tasks/server';
+import { mapTaskRow } from '@/lib/tasks/map';
+
+/**
+ * GET /api/tasks/mine — задания, где текущий пользователь ИСПОЛНИТЕЛЬ.
+ *
+ * Отдельный роут, потому что общая лента /api/tasks публичная и ничего
+ * не знает о сессии, а вкладка «В работе» до этого угадывала участие по
+ * статусу задания — и показывала чужие. Здесь связь берётся из
+ * task_participants по проверенному JWT.
+ *
+ * Возвращает и завершённые: по ним нужно поставить оценку («ожидает
+ * оценки» — жёлтая метка у исполнителя).
+ */
+export async function GET(request: Request) {
+  const limit = await rateLimit(request, { limit: 120, windowMs: 60_000, scope: 'tasks-mine' });
+  if (!limit.allowed) {
+    return withRateLimitHeaders(
+      NextResponse.json({ error: 'Too many requests' }, { status: 429 }),
+      { ...limit, limit: 120 },
+    );
+  }
+
+  const auth = await authenticateTaskRequest(request);
+  if ('error' in auth) return taskAuthError(auth);
+  const { userId, admin } = auth;
+
+  // 1. Все задания, где я участник (кроме отменённых мной и исключений).
+  // 'pending' здесь обязателен: на нём держится раздел «Изменённые».
+  // Отклик, ждущий согласия с новыми условиями, лежит именно в этом
+  // статусе — без него задание не доходило до ленты исполнителя.
+  const { data: parts, error: partsError } = await admin
+    .from('task_participants')
+    .select('task_id, status, needs_consent')
+    .eq('user_id', userId)
+    .in('status', ['pending', 'joined', 'attended', 'done'])
+    .order('joined_at', { ascending: false })
+    .limit(200);
+
+  if (partsError) {
+    log.warn('tasks/mine participants failed:', partsError.message);
+    return NextResponse.json({ error: 'Не удалось загрузить задания' }, { status: 500 });
+  }
+
+  // 1b. Задания, где я ЗАКАЗЧИК и они уже закрыты.
+  //
+  // Без них заказчик не мог поставить оценку: завершённое задание
+  // уходит в архив, вьюха ленты архивные скрывает, а этот роут искал
+  // только участие в task_participants. Форма оценки в карточке была,
+  // но открыть карточку было неоткуда — «задание просто исчезало».
+  const { data: authored } = await admin
+    .from('tasks')
+    .select('id')
+    .eq('author_id', userId)
+    .eq('status', 'completed')
+    .order('completed_at', { ascending: false })
+    .limit(100);
+
+  const taskIds = [...new Set([
+    ...(parts ?? []).map((p) => String(p.task_id)),
+    ...(authored ?? []).map((r) => String(r.id)),
+  ])];
+  if (taskIds.length === 0) {
+    return NextResponse.json({ tasks: [], pendingReview: [] });
+  }
+
+  // 2. Сами задания — через ту же вьюху, что и лента, чтобы карточка
+  //    рисовалась одинаково (шапка заказчика, счётчик мест).
+  // v_task_details: сюда должны попадать и завершённые (архивные)
+  // задания — по ним считается pendingReview «ожидает оценки».
+  // v_tasks_feed архивные скрывает, поэтому она здесь не подходит.
+  const { data: rows, error: tasksError } = await admin
+    .from('v_task_details')
+    .select('*')
+    .in('id', taskIds)
+    .order('created_at', { ascending: false });
+
+  if (tasksError) {
+    log.warn('tasks/mine tasks failed:', tasksError.message);
+    return NextResponse.json({ error: 'Не удалось загрузить задания' }, { status: 500 });
+  }
+
+  // 3. Какие завершённые я ещё не оценил — для метки «ожидает оценки».
+  const { data: myReviews } = await admin
+    .from('resident_reviews')
+    .select('task_id')
+    .eq('author_id', userId)
+    .in('task_id', taskIds);
+  const ratedTaskIds = new Set((myReviews ?? []).map((r) => String(r.task_id)));
+
+  const tasks = (rows ?? []).map(mapTaskRow);
+  // «Ожидает оценки» — завершённое задание, где я ещё не высказался.
+  // Заказчику задания «на дату» оценку ставить не нужно: он уже
+  // оценил каждого в отметке явки, и вторая форма просила бы то же
+  // самое повторно.
+  const pendingReview = tasks
+    .filter((t) => t.status === 'completed' && !ratedTaskIds.has(t.id))
+    .filter((t) => !(t.authorId === userId && t.kind === 'scheduled'))
+    .map((t) => t.id);
+
+  // Задания, где условия изменились после моего отклика и я ещё не
+  // подтвердил согласие. Отдаём списком id — лента показывает по нему
+  // скрытый раздел «Изменённые».
+  const needsConsent = (parts ?? [])
+    .filter((p) => (p as { needs_consent?: boolean }).needs_consent === true)
+    .map((p) => String(p.task_id));
+
+  return NextResponse.json({ tasks, pendingReview, needsConsent });
+}

@@ -41,7 +41,7 @@ export default function QuranModal({ isOpen, onClose }: QuranModalProps) {
       aria-modal="true"
       aria-labelledby="quran-title"
     >
-      <div className="flex max-h-[90vh] w-full max-w-xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl transition-all dark:bg-zinc-950">
+      <div className="smk-sheet flex max-h-[90vh] w-full max-w-xl flex-col overflow-hidden rounded-3xl shadow-2xl transition-all">
         <div className="flex items-center justify-between border-b border-slate-100 bg-gradient-to-r from-emerald-800 via-teal-800 to-slate-900 p-5 text-white dark:border-zinc-800">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 shadow-sm">
@@ -60,7 +60,7 @@ export default function QuranModal({ isOpen, onClose }: QuranModalProps) {
             type="button"
             onClick={onClose}
             aria-label="Закрыть"
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-black/20 text-white transition hover:bg-black/40"
+            className="smk-hit flex h-8 w-8 items-center justify-center rounded-full bg-black/20 text-white transition hover:bg-black/40"
           >
             <X className="h-4 w-4" />
           </button>
@@ -69,7 +69,7 @@ export default function QuranModal({ isOpen, onClose }: QuranModalProps) {
         {/* Search */}
         <div className="border-b border-slate-100 bg-slate-50 p-3 dark:border-zinc-800 dark:bg-zinc-800/60">
           <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="smk-ico pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -97,7 +97,7 @@ export default function QuranModal({ isOpen, onClose }: QuranModalProps) {
                   <p className="truncate text-xs text-emerald-700 dark:text-emerald-400">
                     {language === 'ce' ? surah.nameCe : surah.nameRu}
                   </p>
-                  <p className="text-[10px] text-slate-400">
+                  <p className="smk-text-label text-slate-400">
                     {surah.versesCount} {language === 'ce' ? 'аят' : 'аятов'} · {surah.place}
                   </p>
                 </div>

@@ -8,7 +8,7 @@ export default function Navbar() {
 
   return (
     <header
-      className="site-header fixed inset-x-0 top-0 lg:left-[290px] z-50 border-b border-slate-200/80 bg-white/95 shadow-sm backdrop-blur-md transition-colors dark:border-zinc-800 dark:bg-zinc-950/95 "
+      className="site-header fixed inset-x-0 top-0 lg:left-[290px] z-50 shadow-sm backdrop-blur-md transition-colors"
       /* replaced with tailwind classes */
     >
       <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-4">
@@ -29,7 +29,7 @@ export default function Navbar() {
             <h1 className="text-base font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-lg">
               Даймохк
             </h1>
-            <p className="text-[10px] font-medium text-slate-500 dark:text-zinc-500 sm:text-xs">
+            <p className="smk-text-label font-medium text-slate-500 dark:text-zinc-500 sm:text-xs">
               {t.siteSubtitle}
             </p>
           </div>

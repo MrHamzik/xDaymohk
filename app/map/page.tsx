@@ -1,11 +1,15 @@
 'use client';
 
+import Avatar from '@/components/Avatar';
+import { useBlacklist } from '@/components/BlacklistProvider';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, FileText, LocateFixed, MapPinned, Phone, Users, Star } from 'lucide-react';
 import { cacheBustAvatarUrl } from '@/lib/media';
 import { fetchEffectiveHouseAddresses, type SamashkiHouseAddress } from '@/lib/samashki-addresses';
+import { getMapCategories, fetchMapCategories } from '@/lib/map-categories';
 import InteractiveMap from '@/components/InteractiveMapLazy';
+import MapSegmentedControl from '@/components/MapSegmentedControl';
 import { type MapLayerMode, type MapObjectMode } from '@/components/InteractiveMap';
 import AccountModal from '@/components/AccountModal';
 import EditProfileModal from '@/components/EditProfileModal';
@@ -22,13 +26,24 @@ import MobileMenuDrawer from '@/components/MobileMenuDrawer';
 import { useAuth } from '@/components/AuthProvider';
 import { useProfiles } from '@/components/ProfilesProvider';
 import { filterProfiles } from '@/lib/profile-filters';
-import { calculateWorkingStatus } from '@/lib/schedule';
+import { calculateWorkingStatus, resolveOwnerOverride } from '@/lib/schedule';
 import { formatReviews } from '@/lib/text';
 import { useI18n } from '@/lib/i18n';
 import { AudienceFilter, Profile } from '@/lib/types';
 
+// Заглушка координат из массового импорта (центр села) и «нет координат».
+// Такие адреса на карту не попадают, значит и кликом по карте выбраны быть
+// не могут — иначе панель показала бы анкеты по адресу, которого не видно.
+const VILLAGE_CENTER = { lat: 43.291081, lng: 45.301384 };
+const hasRealAddressCoords = (lat: number, lng: number) => {
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+  if (Math.abs(lat) < 1e-6 && Math.abs(lng) < 1e-6) return false;
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return false;
+  return !(Math.abs(lat - VILLAGE_CENTER.lat) < 1e-3 && Math.abs(lng - VILLAGE_CENTER.lng) < 1e-3);
+};
+
 export default function MapPage() {
-  const { profiles, users, isCurrentUserAdmin, isProfileAdmin, addProfile, updateProfile, addReview, addComplaint } = useProfiles();
+  const { profiles, users, reputation, isCurrentUserAdmin, isProfileAdmin, addProfile, updateProfile, addReview, addComplaint } = useProfiles();
   const { account } = useAuth();
   const { t } = useI18n();
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
@@ -54,13 +69,19 @@ export default function MapPage() {
   // домом): панель «Анкеты по адресу» показывает анкеты всех, кто привязан
   // к этому адресу — независимо от того, чья это точка.
   const [selectedAddress, setSelectedAddress] = useState<SamashkiHouseAddress | null>(null);
-  // Список категорий «Других» объектов из загруженных адресов.
-  const placeCategories = useMemo(() => {
-    const cats = new Set<string>();
-    for (const a of allAddresses) {
-      if (a.isNotHouse && a.category) cats.add(a.category);
-    }
-    return Array.from(cats).sort();
+  // Категории «Других» объектов. Берём общий справочник (базовый набор
+  // + добавленные админом в «Адреса» → «Поиск и категории») и дополняем
+  // теми, что реально встречаются у адресов. Раньше список строился
+  // только из адресов, поэтому до появления объектов был пустым.
+  const [placeCategories, setPlaceCategories] = useState<string[]>(() => getMapCategories());
+  useEffect(() => {
+    // Справочник общий и живёт в БД (app_filters, scope='map'):
+    // getMapCategories() отдаёт кэш мгновенно, fetch — актуальный список.
+    let cancelled = false;
+    const used = allAddresses.filter((a) => a.isNotHouse).map((a) => a.category);
+    setPlaceCategories(getMapCategories(used));
+    fetchMapCategories(used).then((list) => { if (!cancelled) setPlaceCategories(list); }).catch(() => {});
+    return () => { cancelled = true; };
   }, [allAddresses]);
 
   useEffect(() => {
@@ -72,9 +93,15 @@ export default function MapPage() {
   }, []);
 
   const adminOwnerId = account?.isAdmin ? account.id : undefined;
+  // Скрытые чёрным списком не должны появляться и на карте: иначе
+  // человек, которого вы заблокировали, остаётся виден точкой.
+  const { isHidden: isBlockedOwner } = useBlacklist();
   const profilesWithAddresses = useMemo(
-    () => profiles.filter((profile) => Boolean(profile.workplaceAddress.trim()) && !profile.isHidden && !profile.isBanned),
-    [profiles],
+    () => profiles.filter((profile) =>
+      Boolean(profile.workplaceAddress.trim())
+      && !profile.isHidden && !profile.isBanned
+      && !isBlockedOwner(profile.ownerId)),
+    [profiles, isBlockedOwner],
   );
   const filteredProfiles = useMemo(
     () => filterProfiles(profilesWithAddresses, {
@@ -106,28 +133,51 @@ export default function MapPage() {
   const selectedOwnerProfiles = useMemo(() => {
     if (!selectedProfile) return [];
     if (!selectedProfile.ownerId) return [selectedProfile];
-    return profiles.filter((profile) => profile.ownerId === selectedProfile.ownerId && !profile.isHidden && !profile.isBanned);
+    return profiles.filter((profile) => profile.ownerId === selectedProfile.ownerId && !profile.isHidden && !profile.isBanned && !isBlockedOwner(profile.ownerId));
   }, [profiles, selectedProfile]);
 
-  // Анкеты всех жителей/специалистов по выбранному адресу. Совпадение — по
-  // координатам (адреса анкет «привязаны» к координатам дома; допуск ~40 м
-  // покрывает спиральное разнесение домов с общими координатами) ИЛИ по
-  // тексту адреса без названия населённого пункта (старые записи).
+  // Анкеты ВСЕХ жителей и специалистов, у кого указан выбранный адрес.
+  // Берём из полного списка profiles (а не из filteredProfiles) — поиск и
+  // фильтры сверху не должны урезать список по адресу.
+  //
+  // Совпадение по двум признакам:
+  //  1) координаты (адреса анкет привязаны к координатам дома; допуск
+  //     ~50 м покрывает спиральное разнесение домов с общими координатами);
+  //  2) нормализованный текст адреса — для старых записей, где координаты
+  //     не проставлены или отличаются.
   const addressProfiles = useMemo(() => {
     if (!selectedAddress) return [];
-    const stripRegion = (value: string) =>
+    // Нормализация: убираем населённый пункт, приводим «улица/ул.» и
+    // «дом/д.» к единому виду, схлопываем пробелы и знаки препинания.
+    const normalizeAddress = (value: string) =>
       value
-        .replace(/^(с\.|г\.)?\s*(даймохк|самашки)\s*,\s*/i, '')
+        .toLowerCase()
+        .replace(/ё/g, 'е')
+        .replace(/^\s*(с\.|c\.|г\.|село|город)?\s*(даймохк|самашки)\s*,?\s*/i, '')
+        .replace(/\b(улица|ул)\b\.?/g, 'ул')
+        .replace(/\b(переулок|пер)\b\.?/g, 'пер')
+        .replace(/\b(проспект|пр-т|пр)\b\.?/g, 'пр')
+        .replace(/\b(дом|д)\b\.?/g, 'д')
+        .replace(/[.,;]+/g, ' ')
         .replace(/\s+/g, ' ')
-        .trim()
-        .toLowerCase();
-    const target = stripRegion(selectedAddress.fullAddress);
+        .trim();
+
+    const target = normalizeAddress(selectedAddress.fullAddress);
+    const hasTargetCoords = hasRealAddressCoords(selectedAddress.lat, selectedAddress.lng);
+
     return profiles.filter((profile) => {
-      if (profile.isHidden || profile.isBanned || !profile.workplaceAddress.trim()) return false;
-      const byCoords =
-        Math.abs(profile.workplaceCoords.lat - selectedAddress.lat) < 0.0005 &&
-        Math.abs(profile.workplaceCoords.lng - selectedAddress.lng) < 0.0005;
-      const byText = stripRegion(profile.workplaceAddress) === target;
+      if (profile.isHidden || profile.isBanned) return false;
+      const address = profile.workplaceAddress?.trim();
+      const coords = profile.workplaceCoords;
+      const byCoords = Boolean(
+        hasTargetCoords
+        && coords
+        && Number.isFinite(coords.lat)
+        && Number.isFinite(coords.lng)
+        && Math.abs(coords.lat - selectedAddress.lat) < 0.0005
+        && Math.abs(coords.lng - selectedAddress.lng) < 0.0005,
+      );
+      const byText = Boolean(address && target && normalizeAddress(address) === target);
       return byCoords || byText;
     });
   }, [profiles, selectedAddress]);
@@ -135,9 +185,9 @@ export default function MapPage() {
   /** Клик по карте/дому выбирает ближайший адрес (в пределах ~250 м) —
    *  панель выше покажет анкеты всех, кто живёт/работает по этому адресу. */
   const handleMapSelect = (position: { lat: number; lng: number }) => {
-    const pool = allAddresses.filter(
-      (a) => Number.isFinite(a.lat) && Number.isFinite(a.lng),
-    );
+    // Адреса без настоящих координат («нет координат», нули, заглушка
+    // центра села) не участвуют — они и на карте не отображаются.
+    const pool = allAddresses.filter((a) => hasRealAddressCoords(a.lat, a.lng));
     if (pool.length === 0) return;
     let closest = pool[0];
     let best = Infinity;
@@ -190,7 +240,10 @@ export default function MapPage() {
         </aside>
         
         {/* Main Content Area */}
-        <main className="flex-1 min-w-0 max-w-3xl">
+        {/* Без max-w-3xl: на этой странице главный элемент — карта, и
+            ограничивать её 48rem посреди широкого экрана незачем.
+            Остальные страницы ширину сохраняют — правка только здесь. */}
+        <main className="min-w-0 flex-1">
         <div className="mb-5 flex items-center gap-3">
           <Link
             href="/catalog"
@@ -204,6 +257,7 @@ export default function MapPage() {
             <p className="text-sm text-slate-500 dark:text-zinc-500">{t.mapPageSubtitle}</p>
           </div>
         </div>
+        <hr className="smk-orn mb-5" />
 
         <SearchFilter
           searchQuery={searchQuery}
@@ -237,7 +291,7 @@ export default function MapPage() {
                   onClick={() => setSelectedAddress(null)}
                   aria-label="Сбросить выбранный адрес"
                   title="Сбросить адрес"
-                  className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200 dark:bg-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-600"
+                  className="smk-hit flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200 dark:bg-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-600"
                 >
                   ✕
                 </button>
@@ -254,21 +308,30 @@ export default function MapPage() {
                   <button
                     key={profile.id}
                     type="button"
-                    onClick={() => hasMapPoint ? setSelectedProfileId(profile.id) : setActiveProfileId(profile.id)}
+                    onClick={() => {
+                      if (hasMapPoint) {
+                        setSelectedProfileId(profile.id);
+                        window.setTimeout(() => {
+                          document.getElementById('map-selected-profile')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }, 40);
+                      } else {
+                        setActiveProfileId(profile.id);
+                      }
+                    }}
                     className={`flex min-w-0 items-center gap-2 rounded-xl border p-2 text-left transition ${isSelected ? 'border-emerald-400 bg-emerald-50 dark:border-emerald-700 dark:bg-emerald-950/30' : 'border-slate-200 bg-slate-50 hover:border-emerald-300 dark:border-zinc-700 dark:bg-zinc-800/70 dark:hover:border-emerald-800'}`}
                   >
-                    <img src={cacheBustAvatarUrl(profile.avatarUrl)} alt="" className="h-10 w-10 shrink-0 rounded-lg object-cover" />
+                    <Avatar src={profile.avatarUrl} className="h-10 w-10 shrink-0 rounded-lg object-cover" />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-xs font-bold text-slate-900 dark:text-white">{profile.professionTitle || 'Личная анкета'}</span>
-                      <span className="block truncate text-[11px] text-slate-500 dark:text-zinc-500">{profile.workplaceAddress || 'Адрес не указан'}</span>
+                      <span className="block truncate smk-text-label text-slate-500 dark:text-zinc-500">{profile.workplaceAddress || 'Адрес не указан'}</span>
                     </span>
-                    {profile.verificationStatus === 'pending' && <span className="shrink-0 text-[10px] text-slate-500 dark:text-zinc-500">На проверке</span>}
+                    {profile.verificationStatus === 'pending' && <span className="shrink-0 smk-text-label text-slate-500 dark:text-zinc-500">На проверке</span>}
                   </button>
                 );
               })}
             </div>
           ) : (
-            <p className="rounded-2xl border border-dashed border-slate-300 p-4 text-center text-sm text-slate-500 dark:border-zinc-700 dark:text-zinc-500">
+            <p className="smk-sheet-row p-4 text-center text-sm text-slate-500 dark:text-zinc-500">
               {selectedAddress ? 'По этому адресу анкет не найдено.' : 'Выберите точку анкеты на карте.'}
             </p>
           )}
@@ -281,11 +344,26 @@ export default function MapPage() {
                 <MapPinned className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
                 <h3 id="map-section-title" className="truncate text-sm font-bold text-slate-900 dark:text-white">Даймохк</h3>
               </div>
-              <div className="flex shrink-0 items-center gap-1 rounded-xl bg-slate-100 p-1 dark:bg-zinc-800" aria-label="Управление картой">
-                <button type="button" onClick={() => setLocationRequestKey((key) => key + 1)} aria-label={t.mapMyLoc} title={t.mapMyLoc} className="rounded-lg p-1.5 text-emerald-700 transition hover:bg-white dark:text-emerald-300 dark:hover:bg-zinc-700"><LocateFixed className="h-4 w-4" /></button>
-                <button type="button" onClick={() => setMapLayerMode('streets')} aria-pressed={mapLayerMode === 'streets'} className={`rounded-lg px-2 py-1 text-[11px] font-bold transition ${mapLayerMode === 'streets' ? 'bg-white text-slate-900 shadow-sm dark:bg-zinc-700 dark:text-white' : 'text-slate-500 dark:text-zinc-500'}`}>{t.mapLayerStreets}</button>
-                <button type="button" onClick={() => setMapLayerMode('satellite')} aria-pressed={mapLayerMode === 'satellite'} className={`rounded-lg px-2 py-1 text-[11px] font-bold transition ${mapLayerMode === 'satellite' ? 'bg-white text-slate-900 shadow-sm dark:bg-zinc-700 dark:text-white' : 'text-slate-500 dark:text-zinc-500'}`}>{t.mapLayerSatellite}</button>
-                <button type="button" onClick={() => setMapLayerMode('hybrid')} aria-pressed={mapLayerMode === 'hybrid'} className={`rounded-lg px-2 py-1 text-[11px] font-bold transition ${mapLayerMode === 'hybrid' ? 'bg-white text-slate-900 shadow-sm dark:bg-zinc-700 dark:text-white' : 'text-slate-500 dark:text-zinc-500'}`}>{t.mapLayerHybrid}</button>
+              <div className="flex shrink-0 items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setLocationRequestKey((key) => key + 1)}
+                  aria-label={t.mapMyLoc}
+                  title={t.mapMyLoc}
+                  className="rounded-lg bg-slate-100 p-1.5 text-emerald-700 transition hover:bg-white dark:bg-zinc-800 dark:text-emerald-300 dark:hover:bg-zinc-700"
+                >
+                  <LocateFixed className="h-4 w-4" />
+                </button>
+                <MapSegmentedControl
+                  ariaLabel="Тип карты"
+                  active={[mapLayerMode]}
+                  onSelect={setMapLayerMode}
+                  options={[
+                    { value: 'streets', label: t.mapLayerStreets },
+                    { value: 'satellite', label: t.mapLayerSatellite },
+                    { value: 'hybrid', label: t.mapLayerHybrid },
+                  ]}
+                />
               </div>
             </div>
             <InteractiveMap
@@ -302,7 +380,13 @@ export default function MapPage() {
               onMapLayerModeChange={setMapLayerMode}
               locationRequestKey={locationRequestKey}
               markers={filteredProfiles.map((profile) => {
-                const statusInfo = calculateWorkingStatus(profile, account?.id === profile.ownerId ? account?.statusOverride : profile.statusOverride);
+                // Режим работы владельца действует на всех его анкетах:
+                // чужому зрителю берём его из публичной репутации.
+                const statusInfo = calculateWorkingStatus(profile, resolveOwnerOverride({
+                  isOwner: Boolean(account && profile.ownerId && account.id === profile.ownerId),
+                  viewerOverride: account?.statusOverride,
+                  ownerOverride: profile.ownerId ? reputation[profile.ownerId]?.statusOverride : undefined,
+                }));
                 return {
                   id: profile.id,
                   position: profile.workplaceCoords,
@@ -313,69 +397,53 @@ export default function MapPage() {
                   onClick: () => { setSelectedAddress(null); setSelectedProfileId(profile.id); },
                 };
               })}
-              className="h-[380px] sm:h-[460px]"
+              // Высота от экрана, а не фиксированные 380/460 px: на
+              // большом мониторе карта занимала треть окна, а вокруг
+              // оставалась пустота.
+              className="h-[420px] sm:h-[min(70vh,720px)]"
             />
             
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 px-2 pt-3 dark:border-zinc-700">
               <div className="flex flex-wrap items-center gap-1.5" aria-label="Слои объектов">
-                <span className="text-[11px] font-bold text-slate-400">{t.mapShowLayers}</span>
-                {/* Единый сегмент-переключатель — то же оформление, что у
-                    «Карта/Спутник/Гибрид» сверху. Число — только у активного. */}
-                <div className="flex items-center gap-1 rounded-xl bg-slate-100 p-1 dark:bg-zinc-800" role="tablist" aria-label="Слои объектов">
-                  {(() => {
-                    // Счётчики: у «Анкеты» — число точек на карте, у «Дома» и
-                    // «Другие» — сколько адресов загружено из БД. Показываем
-                    // число ТОЛЬКО на активном слое — остальные кнопки чистые.
-                    const houseCount = allAddresses.filter((a) => !a.isNotHouse).length;
-                    const placeCount = allAddresses.filter((a) => a.isNotHouse).length;
-                    return [
-                      ['profiles', t.mapLayerProfiles, filteredProfiles.length],
-                      ['houses', t.mapLayerHouses, houseCount],
-                      ['places', t.mapLayerPlaces, placeCount],
-                    ] as [MapObjectMode, string, number][];
-                  })().map(([mode, label, count]) => (
-                    <button
-                      key={mode}
-                      type="button"
-                      role="tab"
-                      aria-selected={objectMode === mode}
-                      // Повторный клик по активному — отключает слой (none).
-                      onClick={() => setObjectMode(objectMode === mode ? 'none' : mode)}
-                      className={`rounded-lg px-2 py-1 text-[11px] font-bold transition ${
-                        objectMode === mode
-                          ? 'bg-white text-slate-900 shadow-sm dark:bg-zinc-700 dark:text-white'
-                          : 'text-slate-500 hover:text-slate-800 dark:text-zinc-500 dark:hover:text-zinc-200'
-                      }`}
-                    >
-                      {label}
-                      {objectMode === mode && <span className="ml-1 rounded-full bg-slate-100 px-1.5 text-[9px] text-slate-500 dark:bg-zinc-600 dark:text-zinc-200">{count}</span>}
-                    </button>
-                  ))}
-                </div>
+                <span className="smk-text-label font-bold text-slate-400">{t.mapShowLayers}</span>
+                {/* Ровно тот же компонент, что и «Карта/Спутник/Гибрид»
+                    сверху — одинаковое оформление гарантировано. Число
+                    показывается только у активного слоя. */}
+                <MapSegmentedControl
+                  ariaLabel="Слои объектов"
+                  active={[objectMode]}
+                  // Повторный клик по активному слою выключает его (none).
+                  onSelect={(mode) => setObjectMode(objectMode === mode ? 'none' : mode)}
+                  options={[
+                    { value: 'profiles' as MapObjectMode, label: t.mapLayerProfiles, count: filteredProfiles.length },
+                    { value: 'houses' as MapObjectMode, label: t.mapLayerHouses, count: allAddresses.filter((a) => !a.isNotHouse).length },
+                    { value: 'places' as MapObjectMode, label: t.mapLayerPlaces, count: allAddresses.filter((a) => a.isNotHouse).length },
+                  ]}
+                />
               </div>
 
               {/* Фильтр категорий для слоя «Другое» (как в админке) */}
               {objectMode === 'places' && (
-                <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                  <span className="text-[11px] font-bold text-slate-400">Категория:</span>
-                  {(['', ...placeCategories]).map((cat) => (
-                    <button
-                      key={cat || 'all'}
-                      type="button"
-                      onClick={() => setPlacesCategory(cat)}
-                      className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold transition ${
-                        placesCategory === cat
-                          ? 'bg-emerald-600 text-white'
-                          : 'border border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-500'
-                      }`}
-                    >
-                      {cat || 'Все'}
-                    </button>
-                  ))}
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <label htmlFor="map-place-category" className="smk-text-label font-bold text-slate-400">
+                    Категория:
+                  </label>
+                  {/* Выпадающий список: категорий могут быть десятки,
+                      набор кнопок занимал бы несколько строк. */}
+                  <select
+                    id="map-place-category"
+                    value={placesCategory}
+                    onChange={(e) => setPlacesCategory(e.target.value)}
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 smk-text-label font-bold text-slate-700 outline-none transition focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                  >
+                    <option value="">Все категории</option>
+                    {placeCategories.map((cat) => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
                 </div>
               )}
 
-              <p className="text-[11px] text-slate-400">{t.mapClearHint}</p>
             </div>
           </section>
 
@@ -384,7 +452,7 @@ export default function MapPage() {
               <div>
                 <div className="mb-4 flex items-start gap-3">
                   <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 dark:border-zinc-700 dark:bg-zinc-800">
-                    <img src={cacheBustAvatarUrl(selectedProfile.avatarUrl)} alt={selectedProfile.fullName} className="h-full w-full object-cover" />
+                    <Avatar src={selectedProfile.avatarUrl} className="h-full w-full object-cover" />
                   </div>
                   <div className="min-w-0">
                     <h3 id="profile-location-title" className="break-words text-sm font-bold text-slate-900 dark:text-white">{selectedProfile.fullName}</h3>

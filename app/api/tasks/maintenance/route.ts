@@ -1,0 +1,384 @@
+import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+import { rateLimit, withRateLimitHeaders } from '@/lib/rate-limit';
+import { log } from '@/lib/logger';
+import { notifyTaskEvent } from '@/lib/tasks/server';
+import {
+  TASK_AUTO_CONFIRM_HOURS, TASK_BLOCK_HOURS,
+  TASK_DISPUTE_BLOCK_HOURS, TASK_DISPUTE_HOURS,
+  TASK_PAYOUT_REMIND_HOURS,
+} from '@/lib/types';
+
+/**
+ * Обслуживание заданий по расписанию:
+ *   1. автоподтверждение — заказчик молчит 3 часа после «Выполнил»;
+ *   1b. напоминание о переводе — час после сдачи, отметки нет;
+ *   2. просрочка — срок вышел, задание никто не взял: такое удаляется
+ *      из базы сразу, оно уже никому не нужно;
+ *   3. уборка — отменённые уходят в архив после срока показа.
+ *
+ * Вызывается тихо при открытии раздела (как раздел «Письма» в админке) и
+ * может дублироваться pg_cron. Идемпотентен: выбираются только строки в
+ * подходящем статусе, повторный вызов ничего не портит.
+ *
+ * Доступ: без сессии, но с обязательным секретом в заголовке ЛИБО
+ * с ограничением по частоте — иначе любой мог бы дёргать эндпоинт.
+ */
+export async function POST(request: Request) {
+  const limit = await rateLimit(request, { limit: 30, windowMs: 60_000, scope: 'tasks-maintenance' });
+  if (!limit.allowed) {
+    return withRateLimitHeaders(
+      NextResponse.json({ error: 'Too many requests' }, { status: 429 }),
+      { ...limit, limit: 30 },
+    );
+  }
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceRoleKey) {
+    return NextResponse.json({ error: 'Supabase not configured' }, { status: 503 });
+  }
+
+  // Если секрет задан — требуем его (для pg_cron / внешнего планировщика).
+  // Без секрета работает как «тихий» вызов из UI, защищённый rate-limit.
+  const cronSecret = process.env.TASKS_CRON_SECRET;
+  if (cronSecret) {
+    const provided = request.headers.get('x-cron-secret');
+    if (provided !== cronSecret) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+  }
+
+  const admin = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+
+  const now = Date.now();
+  let autoConfirmed = 0;
+  let expired = 0;
+
+  // ---------------------------------------------------------------
+  // 1. Автоподтверждение: 3 часа тишины после «Выполнил».
+  //    Заказчик получает блокировку на создание заданий (6 ч) —
+  //    штраф за то, что заставил исполнителя ждать.
+  // ---------------------------------------------------------------
+  const confirmCutoff = new Date(now - TASK_AUTO_CONFIRM_HOURS * 3_600_000).toISOString();
+  const { data: stale, error: staleError } = await admin
+    .from('tasks')
+    .select('id, title, author_id, submitted_at')
+    .eq('status', 'awaiting_confirm')
+    .lt('submitted_at', confirmCutoff)
+    .limit(100);
+
+  if (staleError) {
+    log.warn('maintenance: stale query failed:', staleError.message);
+  }
+
+  for (const task of stale ?? []) {
+    const taskId = String(task.id);
+
+    const { data: parts } = await admin
+      .from('task_participants')
+      .select('user_id')
+      .eq('task_id', taskId)
+      .in('status', ['joined', 'attended']);
+
+    for (const p of parts ?? []) {
+      const executorId = String(p.user_id);
+      await admin
+        .from('task_participants')
+        .update({ status: 'done' })
+        .eq('task_id', taskId)
+        .eq('user_id', executorId);
+
+      const { data: u } = await admin
+        .from('user_profiles')
+        .select('tasks_done_count')
+        .eq('id', executorId)
+        .maybeSingle();
+      await admin
+        .from('user_profiles')
+        .update({ tasks_done_count: Number(u?.tasks_done_count ?? 0) + 1 })
+        .eq('id', executorId);
+
+      await notifyTaskEvent(admin, {
+        recipientId: executorId,
+        type: 'task_auto_confirmed',
+        title: 'Задание подтверждено автоматически',
+        message: `«${task.title}»: заказчик не ответил за ${TASK_AUTO_CONFIRM_HOURS} ч.`,
+      });
+    }
+
+    await admin
+      .from('tasks')
+      .update({
+        status: 'completed',
+        completed_at: new Date().toISOString(),
+        is_archived: true,
+      })
+      .eq('id', taskId);
+
+    // Блокировка заказчика на 6 часов.
+    const blockedUntil = new Date(now + TASK_BLOCK_HOURS * 3_600_000).toISOString();
+    await admin
+      .from('user_profiles')
+      .update({ tasks_blocked_until: blockedUntil })
+      .eq('id', String(task.author_id));
+
+    await notifyTaskEvent(admin, {
+      recipientId: String(task.author_id),
+      type: 'task_auto_confirmed',
+      title: 'Задание закрыто автоматически',
+      message: `«${task.title}». Вы не подтвердили за ${TASK_AUTO_CONFIRM_HOURS} ч — `
+        + `создание новых заданий заблокировано на ${TASK_BLOCK_HOURS} ч.`,
+    });
+
+    autoConfirmed += 1;
+  }
+
+  // ---------------------------------------------------------------
+  // 1b. Напоминание о незакрытом переводе.
+  //     Работа сдана, «Оплата получена» не нажата, прошёл час.
+  //     Наличные пропускаем: там второй отметки нет.
+  //     Идёт ПОСЛЕ автоподтверждения: тем, кому уже стукнуло 3 ч,
+  //     уйдёт закрытие, а не мягкое «не забудьте».
+  // ---------------------------------------------------------------
+  let payoutReminded = 0;
+  const remindCutoff = new Date(now - TASK_PAYOUT_REMIND_HOURS * 3_600_000).toISOString();
+  const { data: unpaid, error: unpaidError } = await admin
+    .from('tasks')
+    .select('id, title, author_id, payment_method')
+    .eq('status', 'awaiting_confirm')
+    .eq('is_paid', true)
+    .in('payment_method', ['sbp', 'card', 'yoomoney'])
+    .is('payment_received_at', null)
+    .is('payout_reminder_sent_at', null)
+    .lt('submitted_at', remindCutoff)
+    .limit(100);
+
+  if (unpaidError) {
+    // Колонки ещё нет (обновление 48 не применено) — этот шаг молча
+    // пропускаем, остальное обслуживание не роняем.
+    if (!/payout_reminder_sent_at/i.test(unpaidError.message)) {
+      log.warn('maintenance: payout reminder query failed:', unpaidError.message);
+    }
+  } else {
+    for (const task of unpaid ?? []) {
+      const taskId = String(task.id);
+      const { data: parts } = await admin
+        .from('task_participants')
+        .select('user_id')
+        .eq('task_id', taskId)
+        .in('status', ['joined', 'attended', 'done']);
+
+      for (const part of parts ?? []) {
+        await notifyTaskEvent(admin, {
+          recipientId: String(part.user_id),
+          type: 'task_reminder',
+          title: 'Отметьте получение оплаты',
+          titleCe: 'Ахча схьаэцна аьлла билгалде',
+          message: `«${task.title}»: когда деньги придут — нажмите «Оплата получена», иначе задание не закроется.`,
+          messageCe: `«${task.title}»: ахча кхаьчча «Ахча схьаэцна» тIетаIае — цхьаьна тIедиллар дIакъовлалур дац.`,
+        });
+      }
+
+      await notifyTaskEvent(admin, {
+        recipientId: String(task.author_id),
+        type: 'task_reminder',
+        title: 'Незавершённый расчёт',
+        titleCe: 'Дехар чекхдаккха деза',
+        message: `«${task.title}»: исполнитель сдал работу. Переведите оплату — он отметит получение, и задание закроется.`,
+        messageCe: `«${task.title}»: кхочушдийриг болх бина. Ахча дIало — цо схьаэцна аьлла билгалдаккха, тIедиллар дIакъовлур ду.`,
+      });
+
+      const { error: markError } = await admin
+        .from('tasks')
+        .update({ payout_reminder_sent_at: new Date().toISOString() })
+        .eq('id', taskId);
+      if (markError) {
+        log.warn('maintenance: payout reminder mark failed', { message: markError.message });
+        continue;
+      }
+      payoutReminded += 1;
+    }
+  }
+
+  // ---------------------------------------------------------------
+  // 2. Просрочка: срок вышел, задание так и не взяли.
+  // ---------------------------------------------------------------
+  // ВАЖНО: срок у заданий хранится в РАЗНЫХ колонках — deadline_at у
+  // срочных, scheduled_at у заданий «на дату» (см. ограничение в
+  // миграции 18). Прежний фильтр .lt('deadline_at', …) молча пропускал
+  // все запланированные: у них deadline_at = NULL, а NULL не проходит
+  // сравнение. Поэтому «на дату» никогда не помечались просроченными и
+  // висели в ленте вечно — при этом cleanup_closed_tasks() честно
+  // возвращала 0, ведь до статуса 'expired' они не доходили.
+  const nowIso = new Date(now).toISOString();
+  const { data: overdue, error: overdueError } = await admin
+    .from('tasks')
+    .select('id, title, author_id')
+    .eq('status', 'open')
+    .eq('is_archived', false)
+    .or(`deadline_at.lt.${nowIso},scheduled_at.lt.${nowIso}`)
+    .limit(100);
+
+  if (overdueError) {
+    log.warn('maintenance: overdue query failed:', overdueError.message);
+  }
+
+  for (const task of overdue ?? []) {
+    // Уведомляем ДО удаления: после него строка исчезнет вместе с
+    // заголовком, а заказчик должен понять, какое задание закрылось.
+    // notifications на tasks не ссылаются, поэтому запись переживёт
+    // удаление самого задания.
+    await notifyTaskEvent(admin, {
+      recipientId: String(task.author_id),
+      type: 'task_expired',
+      title: 'Срок задания истёк',
+      message: `«${task.title}»: задание никто не взял, оно удалено.`,
+    });
+
+    // Удаляем сразу, а не помечаем 'expired': задание, которое никто
+    // не взял, никому больше не нужно. Раньше оно оставалось в базе
+    // (сначала навсегда, потом на неделю) и копилось без пользы.
+    //
+    // Безопасно: исполнителей нет, task_participants уходят каскадом
+    // (on delete cascade, миграция 18), а resident_reviews ставятся
+    // только по завершённой сделке.
+    const { error: deleteError } = await admin
+      .from('tasks')
+      .delete()
+      .eq('id', String(task.id));
+
+    if (deleteError) {
+      // Не смогли удалить — хотя бы уводим из ленты, как раньше.
+      log.warn('maintenance: expired delete failed', { message: deleteError.message });
+      await admin
+        .from('tasks')
+        .update({ status: 'expired', is_archived: true })
+        .eq('id', String(task.id));
+    }
+
+    expired += 1;
+  }
+
+  // ── Хвосты: записи 'expired' от прежней версии кода ────────────
+  // Раньше просрочка помечалась статусом и оставалась в базе. Такие
+  // строки уже скрыты из ленты (is_archived), но занимают место и
+  // мешают счётчикам — убираем их тем же прогоном.
+  const { data: leftovers } = await admin
+    .from('tasks')
+    .select('id')
+    .eq('status', 'expired')
+    .limit(100);
+  const leftoverIds = (leftovers ?? []).map((t) => String(t.id));
+  if (leftoverIds.length > 0) {
+    const { error: leftoverError } = await admin
+      .from('tasks')
+      .delete()
+      .in('id', leftoverIds);
+    if (leftoverError) {
+      log.warn('maintenance: leftover cleanup failed', { message: leftoverError.message });
+    } else {
+      expired += leftoverIds.length;
+    }
+  }
+
+  // ── Споры: истёк срок — задание в работу, обе стороны наказаны ──
+  //
+  // Спор не должен висеть вечно: если за сутки не договорились и никто
+  // не подал жалобу, задание возвращается в работу.
+  //
+  // Но безнаказанно это оставлять нельзя. Спор — несостоявшаяся
+  // договорённость, и виноват в ней редко кто-то один: заказчик не
+  // принял работу, исполнитель не доказал, что сделал. Раньше обе
+  // стороны просто игнорировали друг друга сутки и расходились без
+  // последствий. Теперь обе получают блокировку действий с заданиями
+  // на 24 часа — она закрывает и создание, и взятие.
+  let disputesReleased = 0;
+  const { data: staleDisputes } = await admin
+    .from('tasks')
+    .select('id, title, author_id')
+    .eq('status', 'disputed')
+    .lt('dispute_until', new Date().toISOString());
+
+  for (const task of staleDisputes ?? []) {
+    const { error } = await admin
+      .from('tasks')
+      .update({ status: 'in_progress', dispute_until: null })
+      .eq('id', task.id);
+    if (error) {
+      log.warn('maintenance: dispute release failed', { message: error.message });
+      continue;
+    }
+
+    const { data: parts } = await admin
+      .from('task_participants')
+      .select('user_id')
+      .eq('task_id', task.id)
+      .in('status', ['joined', 'attended']);
+
+    const blockedUntilDispute = new Date(
+      now + TASK_DISPUTE_BLOCK_HOURS * 3_600_000,
+    ).toISOString();
+
+    for (const p of [...(parts ?? []), { user_id: task.author_id }]) {
+      if (!p.user_id) continue;
+
+      // Блокировку не продлеваем поверх более долгой существующей: если
+      // человек уже наказан дольше, новая метка не должна её сокращать.
+      const { data: current } = await admin
+        .from('user_profiles')
+        .select('tasks_blocked_until')
+        .eq('id', String(p.user_id))
+        .maybeSingle();
+      const existing = current?.tasks_blocked_until
+        ? Date.parse(current.tasks_blocked_until)
+        : 0;
+      if (!existing || existing < Date.parse(blockedUntilDispute)) {
+        await admin
+          .from('user_profiles')
+          .update({ tasks_blocked_until: blockedUntilDispute })
+          .eq('id', String(p.user_id));
+      }
+
+      await notifyTaskEvent(admin, {
+        recipientId: String(p.user_id),
+        type: 'task_dispute_released',
+        title: 'Срок рассмотрения истёк',
+        message: `«${task.title}» снова в работе. Спор не был решён за `
+          + `${TASK_DISPUTE_HOURS} ч, поэтому действия с заданиями `
+          + `заблокированы на ${TASK_DISPUTE_BLOCK_HOURS} ч для обеих сторон.`,
+      });
+    }
+    disputesReleased += 1;
+  }
+
+  // Отменённых заданий в базе не остаётся: они удаляются в момент
+  // отмены (обновление 42). Отдельный шаг уборки больше не нужен —
+  // подчищаем лишь то, что осталось от прежней версии.
+  let cancelledArchived = 0;
+  const { data: staleCancelled } = await admin
+    .from('tasks')
+    .select('id')
+    .eq('status', 'cancelled')
+    .limit(100);
+  const cancelledIds = (staleCancelled ?? []).map((t) => String(t.id));
+  if (cancelledIds.length > 0) {
+    const { error: dropError } = await admin.from('tasks').delete().in('id', cancelledIds);
+    if (dropError) {
+      log.warn('maintenance: cancelled cleanup failed', { message: dropError.message });
+    } else {
+      cancelledArchived = cancelledIds.length;
+    }
+  }
+
+  return NextResponse.json({
+    success: true,
+    autoConfirmed,
+    // expired — сколько просроченных удалено в этом прогоне.
+    expired,
+    disputesReleased,
+    cancelledArchived,
+  });
+}

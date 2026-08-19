@@ -22,8 +22,17 @@ export default function PhoneField({ id, value, onChange, placeholder = '928 000
   };
 
   return (
-    <div className="flex w-full items-center overflow-hidden rounded-xl border border-slate-200/70 bg-white shadow-sm transition focus-within:ring-2 focus-within:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-800">
-      <span className="select-none border-r border-slate-200 px-3 py-2.5 text-xs font-bold text-slate-700 dark:border-zinc-800 dark:text-zinc-300">+7</span>
+    // Тот же класс .smk-field, что у остальных полей формы: раньше
+    // телефон рисовался своим bg-white с рамкой и выглядел приподнятым
+    // рядом с «вдавленными» соседями. Разделитель перед +7 — из слота
+    // «Разделители», а не из литерала slate-200.
+    <div className="smk-field flex w-full items-center overflow-hidden transition focus-within:ring-2 focus-within:ring-emerald-500">
+      <span
+        className="select-none px-3 py-2.5 text-xs font-bold text-slate-700 dark:text-zinc-300"
+        style={{ borderRight: '1px solid var(--smk-divider)' }}
+      >
+        +7
+      </span>
       <input
         id={id}
         type="tel"

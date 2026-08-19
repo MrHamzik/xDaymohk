@@ -52,7 +52,7 @@ export default function SpecialDaysModal({ isOpen, onClose }: SpecialDaysModalPr
             type="button"
             onClick={onClose}
             aria-label="Закрыть"
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-black/20 text-white transition hover:bg-black/40"
+            className="smk-hit flex h-8 w-8 items-center justify-center rounded-full bg-black/20 text-white transition hover:bg-black/40"
           >
             <X className="h-4 w-4" />
           </button>
@@ -68,7 +68,7 @@ export default function SpecialDaysModal({ isOpen, onClose }: SpecialDaysModalPr
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white">
                   {language === 'ce' ? item.nameCe : item.nameRu}
                 </h3>
-                <span className="rounded-md bg-emerald-600 px-2 py-0.5 text-[11px] font-bold text-white shadow-sm">
+                <span className="rounded-md bg-emerald-600 px-2 py-0.5 smk-text-label font-bold text-white shadow-sm">
                   {item.hijriDate}
                 </span>
               </div>
