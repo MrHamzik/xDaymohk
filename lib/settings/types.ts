@@ -367,6 +367,14 @@ export interface UserSettings {
    * перестанет работать, и человек не поймёт почему.
    */
   hideHints: boolean;
+  /** Карточки без описания и меток. */
+  compactLists: boolean;
+  /** Спрашивать перед отменой и удалением. */
+  confirmDanger: boolean;
+  /** Не звучать ночью и во время намаза. */
+  quietHours: boolean;
+  /** Виброотклик на важные действия. */
+  vibrate: boolean;
   /** 'light' | 'dark' | 'space' | 'sunset' | 'custom:<id>' */
   themeId: string;
   customThemes: CustomTheme[];

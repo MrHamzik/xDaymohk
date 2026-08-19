@@ -26,6 +26,7 @@ import {
 } from '@/lib/tasks/client';
 import { TASK_NEARBY_RADIUS_M, type AppFilter, type Task } from '@/lib/types';
 import { useTasksRealtime } from '@/lib/tasks/realtime';
+import { usePullRefresh } from '@/lib/hooks/usePullRefresh';
 
 type FeedTab = 'nearby' | 'all' | 'mine';
 
@@ -57,20 +58,27 @@ export default function VaygoPage() {
   // Задание, открытое на правку. Та же форма, что и для создания:
   // набор полей и проверки совпадают.
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [seedTask, setSeedTask] = useState<Task | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [isMenuDrawerOpen, setIsMenuDrawerOpen] = useState(false);
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
 
-  const load = useCallback(async () => {
-    setIsLoading(true);
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setIsLoading(true);
     setError('');
     try {
-      setTasks(await fetchTasks({ paid: false, limit: 100 }));
+      const list = await fetchTasks({ paid: false, limit: 20, offset: 0 });
+      setTasks(list);
+      setHasMore(list.length === 20);
     } catch (e) {
       setError(e instanceof Error ? e.message : t.tasksLoadError);
     } finally {
       setIsLoading(false);
     }
   }, [t.tasksLoadError]);
+
+  const pull = usePullRefresh(() => load({ silent: true }));
 
   useEffect(() => {
     // Обслуживание идёт ПЕРЕД загрузкой, а не параллельно с ней.
@@ -112,6 +120,12 @@ export default function VaygoPage() {
     const rest = params.toString();
     router.replace(rest ? `${window.location.pathname}?${rest}` : window.location.pathname);
   }, [router]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const id = new URLSearchParams(window.location.search).get('task');
+    if (id) setOpenTaskId(id);
+  }, []);
 
 
   useEffect(() => {
@@ -183,7 +197,14 @@ export default function VaygoPage() {
           </div>
         </aside>
 
-        <main className="min-w-0 max-w-3xl flex-1">
+        <main
+          className="min-w-0 max-w-3xl flex-1"
+          onTouchStart={pull.onTouchStart}
+          onTouchEnd={pull.onTouchEnd}
+        >
+          {pull.refreshing && (
+            <p className="mb-3 text-center smk-text-label text-slate-500 dark:text-zinc-400">{t.loading}</p>
+          )}
           <div className="mb-4 flex items-center gap-3">
             <Link
               href="/catalog"
@@ -235,11 +256,34 @@ export default function VaygoPage() {
           {isLoading ? (
             <FeedSkeleton />
           ) : visibleTasks.length > 0 ? (
+            <>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {visibleTasks.map((task) => (
-                <TaskCard key={task.id} task={task} onOpen={(t) => setOpenTaskId(t.id)} />
+                <TaskCard key={task.id} task={task} onOpen={(opened) => setOpenTaskId(opened.id)} />
               ))}
             </div>
+            {hasMore && tab === 'all' && (
+              <div className="mt-3 flex justify-center">
+                <button
+                  type="button"
+                  disabled={loadingMore}
+                  onClick={async () => {
+                    setLoadingMore(true);
+                    try {
+                      const more = await fetchTasks({ paid: false, limit: 20, offset: tasks.length });
+                      setTasks((current) => [...current, ...more]);
+                      setHasMore(more.length === 20);
+                    } finally {
+                      setLoadingMore(false);
+                    }
+                  }}
+                  className="rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white disabled:opacity-60"
+                >
+                  {t.loadMoreTasks}
+                </button>
+              </div>
+            )}
+            </>
           ) : (
             <EmptyState
               title={
@@ -270,7 +314,7 @@ export default function VaygoPage() {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => { setEditingTask(null); setIsCreateOpen(true); }}
+                    onClick={() => { setEditingTask(null); setSeedTask(null); setIsCreateOpen(true); }}
                     className="smk-btn-gold smk-shine inline-flex items-center px-3.5 py-2 smk-text-label"
                   >
                     {t.emptyCreateGo}
@@ -287,7 +331,8 @@ export default function VaygoPage() {
         isOpen={isCreateOpen}
         isPaid={false}
         editTask={editingTask}
-        onClose={() => { setIsCreateOpen(false); setEditingTask(null); }}
+        seedTask={seedTask}
+        onClose={() => { setIsCreateOpen(false); setEditingTask(null); setSeedTask(null); }}
         onCreated={load}
       />
       <TaskDetailModal
@@ -299,7 +344,14 @@ export default function VaygoPage() {
           // Карточку закрываем: форма правки — тоже модалка, две
           // наложенные друг на друга читались бы как сбой.
           setOpenTaskId(null);
+          setSeedTask(null);
           setEditingTask(task);
+          setIsCreateOpen(true);
+        }}
+        onRepeat={(task) => {
+          setOpenTaskId(null);
+          setEditingTask(null);
+          setSeedTask(task);
           setIsCreateOpen(true);
         }}
       />
@@ -320,7 +372,7 @@ export default function VaygoPage() {
         isOpen={isCreateSheetOpen}
         onClose={() => setIsCreateSheetOpen(false)}
         onOpenCreateProfile={() => router.push('/catalog')}
-        onOpenGo={() => { setEditingTask(null); setIsCreateOpen(true); }}
+        onOpenGo={() => { setEditingTask(null); setSeedTask(null); setIsCreateOpen(true); }}
       />
     </div>
   );

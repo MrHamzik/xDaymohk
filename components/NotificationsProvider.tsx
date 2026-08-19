@@ -8,6 +8,7 @@ import { useSettings } from '@/components/SettingsProvider';
 import { notificationGroup } from '@/lib/settings/types';
 import { prefFor } from '@/lib/settings/defaults';
 import { DEFAULT_GROUP_SOUND, playSound, type SoundId } from '@/lib/notification-sounds';
+import { isQuietNow } from '@/lib/quiet-hours';
 
 interface NotificationsContextValue {
   notifications: AppNotification[];
@@ -101,7 +102,8 @@ export default function NotificationsProvider({ children }: { children: React.Re
         // или жалоба, не доставая телефон.
         const group = notificationGroup(nextNotification.type);
         const pref = prefFor(settings, group);
-        if (pref.sound) {
+        const muted = settings.quietHours && isQuietNow();
+        if (pref.sound && !muted) {
           playSound((pref.soundId ?? DEFAULT_GROUP_SOUND[group] ?? 'chime') as SoundId);
         }
         if (nextNotification.type === 'user_blocked' || nextNotification.type === 'user_unblocked') {

@@ -1,7 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import {
+  clearTaskDraft, draftIsEmpty, loadTaskDraft, loadTemplates, saveTaskDraft, saveTemplate,
+  type TaskDraft,
+} from '@/lib/tasks/drafts';
 import { X, Loader2, MapPin } from 'lucide-react';
+import { useSheetSwipe } from '@/lib/hooks/useSheetSwipe';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 import InteractiveMap from '@/components/InteractiveMapLazy';
 import MapSegmentedControl from '@/components/MapSegmentedControl';
@@ -36,6 +41,8 @@ interface CreateTaskModalProps {
    * почти одинаковых файла разъехались бы при первой же правке.
    */
   editTask?: Task | null;
+  /** Предзаполнить форму новым заданием (повторить / шаблон). */
+  seedTask?: Task | null;
   onClose: () => void;
   onCreated: () => void;
 }
@@ -47,9 +54,10 @@ function toLocalInput(date: Date): string {
 }
 
 export default function CreateTaskModal({
-  isOpen, isPaid, editTask = null, onClose, onCreated,
+  isOpen, isPaid, editTask = null, seedTask = null, onClose, onCreated,
 }: CreateTaskModalProps) {
   const isEditing = Boolean(editTask);
+  const source = editTask ?? seedTask;
   const { t, language } = useI18n();
   const { account } = useAuth();
   const { profiles } = useProfiles();
@@ -82,6 +90,26 @@ export default function CreateTaskModal({
   const [allowNewcomers, setAllowNewcomers] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
+  const [draftAsk, setDraftAsk] = useState(false);
+  const [templates, setTemplates] = useState(() => loadTemplates(isPaid));
+  const swipe = useSheetSwipe(onClose);
+
+  const applyDraft = (draft: TaskDraft) => {
+    setKind(draft.kind);
+    setTitle(draft.title ?? '');
+    setDescription(draft.description ?? '');
+    setCategory(draft.category || 'other');
+    setReward(draft.reward || String(TASK_MIN_REWARD));
+    setPurchaseBudget(draft.purchaseBudget ?? '');
+    setPriority(draft.priority ?? 'normal');
+    setSlots(draft.slots || '1');
+    setAddress(draft.address ?? '');
+    if (isPaymentMethod(draft.paymentMethod)) setPaymentMethod(draft.paymentMethod);
+    setMinRating(draft.minRating || '4.5');
+    setMinAccountDays(draft.minAccountDays || '0');
+    setMinTasksDone(draft.minTasksDone || '0');
+    setAllowNewcomers(draft.allowNewcomers !== false);
+  };
 
   // Реквизиты заказчика: способ расчёта, для которого их нет, выбрать
   // нельзя — иначе задание создастся, а платить будет нечем.
@@ -110,6 +138,7 @@ export default function CreateTaskModal({
   useEffect(() => {
     if (!isOpen) return;
     fetchTaskFilters('tasks').then(setCategories).catch(() => setCategories([]));
+    setTemplates(loadTemplates(isPaid));
 
     // В режиме правки поля берём из задания, а не подставляем умолчания.
     if (editTask) {
@@ -136,16 +165,58 @@ export default function CreateTaskModal({
       if (isPaymentMethod(editTask.paymentMethod)) {
         setPaymentMethod(editTask.paymentMethod as PaymentMethod);
       }
+      setDraftAsk(false);
       return;
     }
 
     // Срочное — через 30 минут (чаще всего «принеси сейчас»),
-    // запланированное — на завтра.
+    // запланированное — на завтра. Повтор тоже получает новые сроки:
+    // старый дедлайн уже в прошлом.
     const soon = new Date(Date.now() + 30 * 60_000);
     const tomorrow = new Date(Date.now() + 24 * 3600_000);
     setDeadlineAt(toLocalInput(soon));
     setScheduledAt(toLocalInput(tomorrow));
-  }, [isOpen, editTask]);
+
+    if (seedTask) {
+      setKind(seedTask.kind as TaskKind);
+      setTitle(seedTask.title ?? '');
+      setDescription(seedTask.description ?? '');
+      setCategory(seedTask.category || 'other');
+      setReward(String(seedTask.reward ?? TASK_MIN_REWARD));
+      setPurchaseBudget(seedTask.purchaseBudget ? String(seedTask.purchaseBudget) : '');
+      setPriority((seedTask.priority as TaskPriority) ?? 'normal');
+      setSlots(String(seedTask.slots ?? 1));
+      setAddress(seedTask.address ?? '');
+      setCoords(
+        typeof seedTask.lat === 'number' && typeof seedTask.lng === 'number'
+          ? { lat: seedTask.lat, lng: seedTask.lng }
+          : null,
+      );
+      setMinRating(String(seedTask.minRating ?? 4.5));
+      setMinAccountDays(String(seedTask.minAccountDays ?? 0));
+      setMinTasksDone(String(seedTask.minTasksDone ?? 0));
+      setAllowNewcomers(seedTask.allowNewcomers !== false);
+      if (isPaymentMethod(seedTask.paymentMethod)) {
+        setPaymentMethod(seedTask.paymentMethod as PaymentMethod);
+      }
+      setDraftAsk(false);
+      return;
+    }
+
+    const draft = loadTaskDraft(isPaid);
+    setDraftAsk(Boolean(draft && !draftIsEmpty(draft)));
+  }, [isOpen, editTask, seedTask, isPaid]);
+
+  useEffect(() => {
+    if (!isOpen || isEditing) return;
+    const draft: TaskDraft = {
+      kind, title, description, category, reward, purchaseBudget, priority, slots,
+      address, paymentMethod, minRating, minAccountDays, minTasksDone, allowNewcomers,
+    };
+    if (draftIsEmpty(draft)) return;
+    saveTaskDraft(isPaid, draft);
+  }, [isOpen, isEditing, isPaid, kind, title, description, category, reward, purchaseBudget,
+    priority, slots, address, paymentMethod, minRating, minAccountDays, minTasksDone, allowNewcomers]);
 
   // Адрес подставляем сам, в два источника по убыванию точности:
   //   1. GPS → ближайший дом из адресной книги (как кнопка «Моё место»);
@@ -275,6 +346,7 @@ export default function CreateTaskModal({
       setSlots('1');
       setAddress('');
       setCoords(null);
+      clearTaskDraft(isPaid);
       onCreated();
       onClose();
     } catch (e) {
@@ -320,6 +392,56 @@ export default function CreateTaskModal({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
+          {draftAsk && !isEditing && (
+            <div className="smk-note smk-note-warn mx-4 mt-4 px-3.5 py-3">
+              <p className="smk-text-body">{t.taskDraftBanner}</p>
+              <div className="mt-2 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const draft = loadTaskDraft(isPaid);
+                    if (draft) applyDraft(draft);
+                    setDraftAsk(false);
+                  }}
+                  className="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white"
+                >
+                  {t.taskDraftKeep}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    clearTaskDraft(isPaid);
+                    setDraftAsk(false);
+                  }}
+                  className="rounded-xl px-3 py-2 text-xs font-bold text-slate-600 dark:text-zinc-300"
+                >
+                  {t.taskDraftDrop}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!isEditing && templates.length > 0 && (
+            <div className="px-4 pt-4">
+              <span className={labelClass}>{t.taskTemplates}</span>
+              <div className="flex flex-wrap gap-1.5">
+                {templates.map((tpl) => (
+                  <button
+                    key={tpl.id}
+                    type="button"
+                    onClick={() => {
+                      applyDraft(tpl);
+                      setDraftAsk(false);
+                    }}
+                    className="rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700 dark:bg-zinc-800 dark:text-zinc-200"
+                  >
+                    {tpl.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {isPaid && !isEditing && (
             <div className="smk-sheet-section space-y-2 px-4 py-4">
               <h3 className="smk-sheet-label">{t.phoneVerifyTitle}</h3>
@@ -737,6 +859,21 @@ export default function CreateTaskModal({
           >
             {t.cancel}
           </button>
+          {!isEditing && title.trim().length >= 3 && (
+            <button
+              type="button"
+              onClick={() => {
+                const name = title.trim().slice(0, 40);
+                setTemplates(saveTemplate(isPaid, {
+                  kind, title, description, category, reward, purchaseBudget, priority, slots,
+                  address, paymentMethod, minRating, minAccountDays, minTasksDone, allowNewcomers,
+                }, name));
+              }}
+              className="rounded-xl px-3 py-2.5 text-xs font-bold text-slate-600 dark:text-zinc-300"
+            >
+              {t.taskSaveTemplate}
+            </button>
+          )}
           <button
             type="button"
             onClick={handleSubmit}

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import Avatar from '@/components/Avatar';
 import { useI18n } from '@/lib/i18n';
+import { useSettings } from '@/components/SettingsProvider';
 import { formatTimeLeft, formatTaskDateTime } from '@/lib/tasks/client';
 import { taskCostBreakdown, TASK_PRIORITY_SURCHARGE, type Task } from '@/lib/types';
 import { isPaymentMethod, type PaymentMethod } from '@/lib/payments';
@@ -50,6 +51,8 @@ const PRIORITY_META = {
  */
 export default function TaskCard({ task, needsReview = false, onOpen }: TaskCardProps) {
   const { t } = useI18n();
+  const { settings } = useSettings();
+  const compact = settings.compactLists;
   const priority = PRIORITY_META[task.priority];
   // Процент надбавки берём из единого источника, чтобы подпись на
   // карточке не расходилась с расчётом стоимости.
@@ -173,17 +176,17 @@ export default function TaskCard({ task, needsReview = false, onOpen }: TaskCard
         <h4 className="line-clamp-2 smk-text-title font-bold leading-snug text-slate-900 dark:text-white">
           {task.title}
         </h4>
-        {task.description && (
+        {!compact && task.description && (
           <p className="mt-1.5 line-clamp-2 break-words smk-text-body leading-relaxed text-slate-600 dark:text-zinc-400">
             {task.description}
           </p>
         )}
       </div>
 
-      <hr className="smk-orn mx-4" />
+      {!compact && <hr className="smk-orn mx-4" />}
 
       {/* ── Метки ──────────────────────────────────────────────── */}
-      <div className="mt-auto flex flex-wrap items-center gap-1.5 px-4 py-3 smk-text-label font-bold">
+      <div className={`mt-auto flex flex-wrap items-center gap-1.5 px-4 smk-text-label font-bold ${compact ? 'pb-2 pt-0' : 'py-3'}`}>
         {/* Отменённое задание остаётся в списках неделю — обе стороны
             должны увидеть, что случилось. Метка идёт первой: она
             отменяет смысл всех остальных (срок, места, оплата). */}

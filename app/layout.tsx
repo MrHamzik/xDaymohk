@@ -8,7 +8,7 @@ import NotificationsProvider from '@/components/NotificationsProvider';
 import SettingsProvider from '@/components/SettingsProvider';
 import OnboardingModal from '@/components/OnboardingModal';
 import { I18nProvider } from '@/lib/i18n';
-import SidebarNav from '@/components/SidebarNav';
+import ServiceWorkerRegister from '@/components/ServiceWorkerRegister';
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://daymohk.vercel.app'),
@@ -75,6 +75,7 @@ export default function RootLayout({
                   <BlacklistProvider>
                     <ProfilesProvider>
                       {children}
+                      <ServiceWorkerRegister />
                       <OnboardingModal />
                     </ProfilesProvider>
                   </BlacklistProvider>

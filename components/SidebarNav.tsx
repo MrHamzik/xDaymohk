@@ -27,6 +27,7 @@ import QiblaModal from '@/components/QiblaModal';
 import QuranModal from '@/components/QuranModal';
 import SpecialDaysModal from '@/components/SpecialDaysModal';
 import BlacklistModal from '@/components/BlacklistModal';
+import { shareLink, siteOrigin } from '@/lib/share';
 
 interface SidebarNavProps {
   onClose?: () => void;
@@ -281,6 +282,22 @@ export default function SidebarNav({ onClose, isAdmin = false }: SidebarNavProps
                     <span>{language === 'ce' ? 'Правовин соглашени' : 'Правовые соглашения'}</span>
                   </div>
                 </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void shareLink(
+                      t.siteName,
+                      t.inviteNeighbor,
+                      `${siteOrigin()}/catalog`,
+                    );
+                  }}
+                  className="w-full flex items-center justify-between rounded-xl px-3 py-2 text-xs font-bold text-slate-800 transition hover:bg-slate-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Users className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                    <span>{t.inviteNeighbor}</span>
+                  </div>
+                </button>
                 <button type="button" onClick={() => { onClose && onClose(); setIsBlacklistOpen(true); }} className="w-full flex items-center justify-between rounded-xl px-3 py-2 text-xs font-bold text-slate-800 transition hover:bg-slate-100 dark:text-zinc-300 dark:hover:bg-zinc-800">
                   <div className="flex items-center gap-2.5">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-shield-ban h-4 w-4 shrink-0 text-red-600 dark:text-red-400"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2-1 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 4 19 5a1 1 0 0 1 1 1z"></path><path d="m4.706 8.5 14.588 11.006"></path></svg>

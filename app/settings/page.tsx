@@ -208,6 +208,34 @@ export default function SettingsPage() {
                     label={t.settingsHideHints}
                   />
                 </SettingRow>
+                <SettingRow title={t.settingsCompact} hint={t.settingsCompactHint}>
+                  <Toggle
+                    checked={settings.compactLists}
+                    onChange={(next) => update({ compactLists: next })}
+                    label={t.settingsCompact}
+                  />
+                </SettingRow>
+                <SettingRow title={t.settingsConfirmDanger} hint={t.settingsConfirmDangerHint}>
+                  <Toggle
+                    checked={settings.confirmDanger}
+                    onChange={(next) => update({ confirmDanger: next })}
+                    label={t.settingsConfirmDanger}
+                  />
+                </SettingRow>
+                <SettingRow title={t.settingsQuietHours} hint={t.settingsQuietHoursHint}>
+                  <Toggle
+                    checked={settings.quietHours}
+                    onChange={(next) => update({ quietHours: next })}
+                    label={t.settingsQuietHours}
+                  />
+                </SettingRow>
+                <SettingRow title={t.settingsVibrate} hint={t.settingsVibrateHint}>
+                  <Toggle
+                    checked={settings.vibrate}
+                    onChange={(next) => update({ vibrate: next })}
+                    label={t.settingsVibrate}
+                  />
+                </SettingRow>
               </div>
             </section>
             )}

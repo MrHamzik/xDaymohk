@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   X, Loader2, Star, MapPin, Clock, Users, CalendarDays, ShieldAlert, Trash2,
-  Ban, Check, Pencil, Wallet,
+  Ban, Check, Pencil, Wallet, Share2, Copy,
 } from 'lucide-react';
 import Link from 'next/link';
 import Avatar from '@/components/Avatar';
@@ -26,6 +26,9 @@ import MapSegmentedControl from '@/components/MapSegmentedControl';
 import { type MapLayerMode } from '@/components/InteractiveMap';
 import { useI18n } from '@/lib/i18n';
 import { useSettings } from '@/components/SettingsProvider';
+import { useSheetSwipe } from '@/lib/hooks/useSheetSwipe';
+import { shareLink, siteOrigin } from '@/lib/share';
+import { haptic } from '@/lib/haptics';
 import { useTaskRealtime } from '@/lib/tasks/realtime';
 import {
   taskTotalReward,
@@ -42,6 +45,8 @@ interface TaskDetailModalProps {
   onChanged: () => void;
   /** Открыть форму правки. Без обработчика кнопка «Изменить» не показывается. */
   onEdit?: (task: Task) => void;
+  /** Создать такое же новое задание. */
+  onRepeat?: (task: Task) => void;
 }
 
 export default function TaskDetailModal({
@@ -50,12 +55,14 @@ export default function TaskDetailModal({
   onClose,
   onChanged,
   onEdit,
+  onRepeat,
 }: TaskDetailModalProps) {
   const { t } = useI18n();
   // «Скрыть подсказки» прячет только статичные пояснения. Сообщения о
   // состоянии и причины неактивных кнопок остаются всегда.
   const { settings } = useSettings();
   const showHints = !settings.hideHints;
+  const swipe = useSheetSwipe(onClose);
   const [task, setTask] = useState<Task | null>(null);
   const [participants, setParticipants] = useState<TaskParticipant[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -283,11 +290,31 @@ export default function TaskDetailModal({
         className="smk-sheet flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl shadow-2xl sm:rounded-3xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="smk-sheet-head flex items-center justify-between px-4 pb-3 pt-4">
+        <div
+          className="smk-sheet-head flex items-center justify-between px-4 pb-3 pt-4"
+          onTouchStart={swipe.onTouchStart}
+          onTouchEnd={swipe.onTouchEnd}
+        >
           <h2 className="truncate pr-2 text-sm font-extrabold text-slate-900 dark:text-white">
             {task?.title ?? t.taskDetailTitle}
           </h2>
           <div className="flex shrink-0 items-center gap-1">
+            {task && (
+              <button
+                type="button"
+                onClick={() => {
+                  void shareLink(
+                    task.title,
+                    task.title,
+                    `${siteOrigin()}/${task.isPaid ? 'vayghullakh' : 'vaygo'}?task=${encodeURIComponent(task.id)}`,
+                  );
+                }}
+                aria-label={t.shareAction}
+                className="smk-act rounded-lg p-1.5"
+              >
+                <Share2 className="h-4 w-4" />
+              </button>
+            )}
             <button
               type="button"
               onClick={onClose}
@@ -781,7 +808,10 @@ export default function TaskDetailModal({
                 <button
                   type="button"
                   disabled={Boolean(busy) || !canTake}
-                  onClick={() => act('take', () => runTaskAction(task.id, task.kind === 'urgent' ? 'take' : 'join'))}
+                  onClick={() => {
+                    haptic(settings.vibrate);
+                    void act('take', () => runTaskAction(task.id, task.kind === 'urgent' ? 'take' : 'join'));
+                  }}
                   className={`${btn} bg-emerald-600 text-white hover:bg-emerald-700`}
                 >
                   {busy === 'take' && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -867,7 +897,10 @@ export default function TaskDetailModal({
                   <button
                     type="button"
                     disabled={Boolean(busy)}
-                    onClick={() => act('paid', () => runTaskAction(task.id, 'paid'))}
+                    onClick={() => {
+                      haptic(settings.vibrate);
+                      void act('paid', () => runTaskAction(task.id, 'paid'));
+                    }}
                     className={`${btn} bg-emerald-600 text-white hover:bg-emerald-700`}
                   >
                     {busy === 'paid' && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -956,6 +989,17 @@ export default function TaskDetailModal({
               >
                 <Pencil className="h-4 w-4" />
                 {t.taskEditBtn}
+              </button>
+            )}
+
+            {isAuthor && task.status === 'completed' && onRepeat && (
+              <button
+                type="button"
+                onClick={() => onRepeat(task)}
+                className={`${btn} smk-field text-slate-700 hover:brightness-95 dark:text-zinc-200 dark:hover:brightness-110`}
+              >
+                <Copy className="h-4 w-4" />
+                {t.taskRepeat}
               </button>
             )}
 

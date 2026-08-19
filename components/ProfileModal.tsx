@@ -1,9 +1,11 @@
 'use client';
 
 import Avatar from '@/components/Avatar';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { Lock, MapPin, MessageSquare, Phone, Send, ShieldBan, Star, X } from 'lucide-react';
+import { Heart, Lock, MapPin, MessageSquare, Phone, Send, Share2, ShieldBan, Star, X } from 'lucide-react';
+import { shareLink, siteOrigin } from '@/lib/share';
+import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
 import { useProfiles } from '@/components/ProfilesProvider';
 import { useBlacklist } from '@/components/BlacklistProvider';
@@ -70,6 +72,21 @@ export default function ProfileModal({
   });
   const [questionCount, setQuestionCount] = useState(0);
   const { block: blockUser } = useBlacklist();
+  const [fav, setFav] = useState(false);
+
+  useEffect(() => {
+    if (!profile || !supabase || !account) { setFav(false); return; }
+    let cancelled = false;
+    void (async () => {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      if (!token) return;
+      const res = await fetch('/api/favorites', { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json().catch(() => null);
+      if (!cancelled && Array.isArray(data?.ids)) setFav(data.ids.includes(profile.id));
+    })();
+    return () => { cancelled = true; };
+  }, [profile?.id, account?.id]);
 
   if (!profile) return null;
 
@@ -116,6 +133,49 @@ export default function ProfileModal({
       <div className="smk-sheet flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-3xl shadow-2xl transition-colors sm:max-w-2xl sm:rounded-3xl">
         <div className="smk-sheet-head relative shrink-0 px-4 pb-3.5 pt-4 text-slate-900 dark:text-white">
           <div className="absolute right-3.5 top-3.5 flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => {
+                void shareLink(
+                  profile.fullName,
+                  profile.professionTitle || profile.fullName,
+                  `${siteOrigin()}/catalog?profile=${encodeURIComponent(profile.id)}`,
+                );
+              }}
+              aria-label={t.shareAction}
+              className="smk-act flex h-7 w-7 items-center justify-center"
+            >
+              <Share2 className="h-4 w-4" />
+            </button>
+            {account && (
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!supabase) return;
+                  const session = await supabase.auth.getSession();
+                  const token = session.data.session?.access_token;
+                  if (!token) return;
+                  const next = !fav;
+                  setFav(next);
+                  const res = await fetch(
+                    next ? '/api/favorites' : `/api/favorites?profileId=${encodeURIComponent(profile.id)}`,
+                    {
+                      method: next ? 'POST' : 'DELETE',
+                      headers: {
+                        Authorization: `Bearer ${token}`,
+                        ...(next ? { 'Content-Type': 'application/json' } : {}),
+                      },
+                      body: next ? JSON.stringify({ profileId: profile.id }) : undefined,
+                    },
+                  );
+                  if (!res.ok) setFav(!next);
+                }}
+                aria-label={fav ? t.favOff : t.favAdd}
+                className="smk-act flex h-7 w-7 items-center justify-center"
+              >
+                <Heart className={`h-4 w-4 ${fav ? 'fill-rose-500 text-rose-500' : ''}`} />
+              </button>
+            )}
             {canBlockOwner && (
               <button
                 onClick={() => setIsBlockConfirmOpen(true)}

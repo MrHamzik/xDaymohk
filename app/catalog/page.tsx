@@ -24,6 +24,7 @@ import { filterProfiles } from '@/lib/profile-filters';
 import { useI18n } from '@/lib/i18n';
 import { AudienceFilter, Profile } from '@/lib/types';
 import EmptyState from '@/components/ui/EmptyState';
+import { usePullRefresh } from '@/lib/hooks/usePullRefresh';
 
 const PAGE_SIZE_DESKTOP = 30;
 const PAGE_SIZE_TABLET = 24;
@@ -45,6 +46,8 @@ export default function Home() {
   const [audienceFilters, setAudienceFilters] = useState<AudienceFilter[]>([]);
   const [professionFilters, setProfessionFilters] = useState<string[]>([]);
   const [activeProfileId, setActiveProfileId] = useState<string | null>(null);
+  const [favOnly, setFavOnly] = useState(false);
+  const [favIds, setFavIds] = useState<string[]>([]);
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -83,16 +86,37 @@ export default function Home() {
     [profiles, activeProfileId, isCurrentUserAdmin],
   );
 
-  const filteredProfiles = useMemo(
-    () => filterProfiles(visibleProfiles, {
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const id = new URLSearchParams(window.location.search).get('profile');
+    if (id) setActiveProfileId(id);
+  }, []);
+
+  useEffect(() => {
+    if (!account || !supabase) return;
+    let cancelled = false;
+    void (async () => {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      if (!token) return;
+      const res = await fetch('/api/favorites', { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json().catch(() => null);
+      if (!cancelled && Array.isArray(data?.ids)) setFavIds(data.ids);
+    })();
+    return () => { cancelled = true; };
+  }, [account?.id]);
+
+  const filteredProfiles = useMemo(() => {
+    const base = filterProfiles(visibleProfiles, {
       query: searchQuery,
       audienceFilters,
       professionFilters,
       adminOwnerId,
       users,
-    }),
-    [visibleProfiles, searchQuery, audienceFilters, professionFilters, adminOwnerId, users],
-  );
+    });
+    if (!favOnly) return base;
+    return base.filter((profile) => favIds.includes(profile.id));
+  }, [visibleProfiles, searchQuery, audienceFilters, professionFilters, adminOwnerId, users, favOnly, favIds]);
 
   // Reset paging when the filtered set shrinks (search/filters change)
   useEffect(() => {
@@ -201,6 +225,7 @@ export default function Home() {
 
   const pagedProfiles = filteredProfiles.slice(0, visibleCount);
   const hasMore = visibleCount < filteredProfiles.length;
+  const pull = usePullRefresh(async () => { await refreshRemoteData(); });
 
   return (
     <div className="flex min-h-[100dvh] min-w-0 flex-col overflow-x-hidden bg-slate-50 bg-radial-gradient transition-colors dark:bg-zinc-950">
@@ -215,7 +240,14 @@ export default function Home() {
         </aside>
 
         {/* Main Content Area */}
-        <main className="flex-1 min-w-0 max-w-3xl">
+        <main
+          className="flex-1 min-w-0 max-w-3xl"
+          onTouchStart={pull.onTouchStart}
+          onTouchEnd={pull.onTouchEnd}
+        >
+          {pull.refreshing && (
+            <p className="mb-3 text-center smk-text-label text-slate-500 dark:text-zinc-400">{t.loading}</p>
+          )}
         {/* Compact, clean Hero Banner */}
         <section className="smk-sign relative mb-4 overflow-hidden rounded-2xl bg-hero-gradient p-4 text-white shadow-md sm:p-5" aria-labelledby="hero-title">
           <div className="relative z-10 max-w-2xl">
@@ -257,6 +289,18 @@ export default function Home() {
           professionFilters={professionFilters}
           setProfessionFilters={setProfessionFilters}
         />
+
+        {account && (
+          <button
+            type="button"
+            onClick={() => setFavOnly((value) => !value)}
+            className={`mb-2 rounded-xl px-3 py-2 text-xs font-bold ${
+              favOnly ? 'bg-emerald-600 text-white' : 'smk-field text-slate-700 dark:text-zinc-200'
+            }`}
+          >
+            {t.favFilter}
+          </button>
+        )}
 
         <div className="mb-2.5 flex items-center justify-between">
           <h3 className="text-sm font-bold text-slate-700 dark:text-zinc-400">
