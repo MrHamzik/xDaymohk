@@ -493,16 +493,6 @@ export const TASK_BLOCK_HOURS = 6;
  */
 export const TASK_DISPUTE_BLOCK_HOURS = 24;
 
-/**
- * Сколько суток отменённое задание остаётся видно ОБЕИМ сторонам.
- *
- * Раньше отмена прятала задание мгновенно: у заказчика оно пропадало из
- * ленты (is_archived), а у исполнителя продолжало висеть в «В работе»
- * как живое. Ни следа, ни объяснения. Неделя — достаточный срок, чтобы
- * обе стороны увидели пометку «Отменено» и при желании обсудили её.
- */
-export const TASK_CANCELLED_VISIBLE_DAYS = 7;
-
 /** Радиус вкладки «Близко», метры. */
 export const TASK_NEARBY_RADIUS_M = 1000;
 
@@ -529,6 +519,10 @@ export interface TaskParticipant {
   excludedAt?: string | null;
   /** Когда заказчик одобрил заявку. null — ещё на рассмотрении. */
   approvedAt?: string | null;
+  /** Условия менялись после отклика — нужно согласие исполнителя. */
+  needsConsent?: boolean;
+  /** Когда исполнитель принял изменённые условия. */
+  consentAt?: string | null;
   /** Живые данные из user_profiles (подтягиваются вьюхой). */
   fullName?: string;
   avatarUrl?: string;
@@ -566,6 +560,10 @@ export interface Task {
   disputeUntil?: string | null;
   /** Почему заказчик не принял работу. */
   disputeReason?: string | null;
+  /** Когда заказчик согласился закрыть спор. */
+  disputeAuthorOk?: string | null;
+  /** Когда исполнитель согласился закрыть спор. */
+  disputeExecutorOk?: string | null;
   /** Когда исполнитель отметил, что получил оплату (ISO). NULL — не отмечал. */
   paymentReceivedAt?: string | null;
   /** До какого момента отменённое задание ещё видно сторонам (ISO). */

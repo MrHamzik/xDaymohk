@@ -285,28 +285,22 @@ export async function POST(request: Request) {
     disputesReleased += 1;
   }
 
-  // ── Отменённые: прячем после недели показа ─────────────────────
-  // Отмена больше не архивирует задание сразу — обе стороны должны
-  // увидеть пометку «Отменено» (см. обновление 38). Через неделю запись
-  // уходит из лент, но остаётся в БД: на ней держатся счётчики и
-  // разбор жалоб.
+  // Отменённых заданий в базе не остаётся: они удаляются в момент
+  // отмены (обновление 42). Отдельный шаг уборки больше не нужен —
+  // подчищаем лишь то, что осталось от прежней версии.
   let cancelledArchived = 0;
-  const { data: staleCancelled, error: cancelledError } = await admin
+  const { data: staleCancelled } = await admin
     .from('tasks')
     .select('id')
     .eq('status', 'cancelled')
-    .eq('is_archived', false)
-    .lt('visible_until', new Date(now).toISOString())
     .limit(100);
-
-  // Колонки visible_until может не быть, пока не применено обновление
-  // 38 — тогда просто пропускаем шаг, остальное обслуживание работает.
-  if (cancelledError) {
-    log.warn('maintenance: visible_until missing', { message: cancelledError.message });
-  } else {
-    for (const task of staleCancelled ?? []) {
-      await admin.from('tasks').update({ is_archived: true }).eq('id', String(task.id));
-      cancelledArchived += 1;
+  const cancelledIds = (staleCancelled ?? []).map((t) => String(t.id));
+  if (cancelledIds.length > 0) {
+    const { error: dropError } = await admin.from('tasks').delete().in('id', cancelledIds);
+    if (dropError) {
+      log.warn('maintenance: cancelled cleanup failed', { message: dropError.message });
+    } else {
+      cancelledArchived = cancelledIds.length;
     }
   }
 

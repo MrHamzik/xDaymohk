@@ -17,6 +17,15 @@ interface MapSegmentedControlProps<T extends string> {
   ariaLabel: string;
   /** true — radio (role="tablist"/aria-selected), false — независимые кнопки. */
   radio?: boolean;
+  /**
+   * Не сжимать кнопки, а прокручивать ряд по горизонтали.
+   *
+   * Нужно там, где подписей много или они длинные («Уведомления»,
+   * «Расширенные»): при равном делении ширины текст переставал
+   * помещаться и обрезался. Скролл невидимый — полоса не занимает
+   * место и не мозолит глаза.
+   */
+  scrollable?: boolean;
   className?: string;
 }
 
@@ -35,11 +44,14 @@ export default function MapSegmentedControl<T extends string>({
   onSelect,
   ariaLabel,
   radio = true,
+  scrollable = false,
   className = '',
 }: MapSegmentedControlProps<T>) {
   return (
     <div
-      className={`flex shrink-0 items-center gap-1 rounded-xl bg-slate-100 p-1 dark:bg-zinc-800 ${className}`}
+      className={`flex shrink-0 items-center gap-1 rounded-xl bg-slate-100 p-1 dark:bg-zinc-800 ${
+        scrollable ? 'no-scrollbar overflow-x-auto' : ''
+      } ${className}`}
       role={radio ? 'tablist' : undefined}
       aria-label={ariaLabel}
     >
@@ -53,7 +65,11 @@ export default function MapSegmentedControl<T extends string>({
             aria-selected={radio ? isActive : undefined}
             aria-pressed={radio ? undefined : isActive}
             onClick={() => onSelect(option.value)}
-            className={`rounded-lg px-2 py-1 text-[11px] font-bold transition ${className.includes('w-full') ? 'flex-1 ' : ''}${
+            className={`rounded-lg px-2 py-1 text-[11px] font-bold transition ${
+              scrollable
+                ? 'shrink-0 whitespace-nowrap '
+                : className.includes('w-full') ? 'flex-1 ' : ''
+            }${
               isActive
                 ? 'bg-white text-slate-900 shadow-sm dark:bg-zinc-700 dark:text-white'
                 : 'text-slate-500 hover:text-slate-800 dark:text-zinc-500 dark:hover:text-zinc-200'

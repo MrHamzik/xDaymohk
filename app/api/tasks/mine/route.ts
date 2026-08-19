@@ -29,11 +29,14 @@ export async function GET(request: Request) {
   const { userId, admin } = auth;
 
   // 1. Все задания, где я участник (кроме отменённых мной и исключений).
+  // 'pending' здесь обязателен: на нём держится раздел «Изменённые».
+  // Отклик, ждущий согласия с новыми условиями, лежит именно в этом
+  // статусе — без него задание не доходило до ленты исполнителя.
   const { data: parts, error: partsError } = await admin
     .from('task_participants')
-    .select('task_id, status')
+    .select('task_id, status, needs_consent')
     .eq('user_id', userId)
-    .in('status', ['joined', 'attended', 'done'])
+    .in('status', ['pending', 'joined', 'attended', 'done'])
     .order('joined_at', { ascending: false })
     .limit(200);
 
@@ -98,5 +101,12 @@ export async function GET(request: Request) {
     .filter((t) => !(t.authorId === userId && t.kind === 'scheduled'))
     .map((t) => t.id);
 
-  return NextResponse.json({ tasks, pendingReview });
+  // Задания, где условия изменились после моего отклика и я ещё не
+  // подтвердил согласие. Отдаём списком id — лента показывает по нему
+  // скрытый раздел «Изменённые».
+  const needsConsent = (parts ?? [])
+    .filter((p) => (p as { needs_consent?: boolean }).needs_consent === true)
+    .map((p) => String(p.task_id));
+
+  return NextResponse.json({ tasks, pendingReview, needsConsent });
 }

@@ -156,14 +156,20 @@ export default function SettingsPage() {
             ariaLabel={t.settingsSectionsAria}
             active={[section]}
             onSelect={setSection}
+            // Порядок повторяет порядок блоков на странице, «Все» —
+            // первым: это состояние по умолчанию, и логично, что оно
+            // стоит в начале ряда, а не в конце.
             options={[
+              { value: 'all' as const, label: t.settingsSectionAll },
               { value: 'tasks' as const, label: t.settingsSectionTasks },
               { value: 'notifications' as const, label: t.settingsSectionNotifications },
               { value: 'payout' as const, label: t.settingsSectionPayout },
               { value: 'advanced' as const, label: t.settingsSectionAdvanced },
-              { value: 'all' as const, label: t.settingsSectionAll },
             ]}
-            className="mb-3 w-full"
+            // Подписи длинные: при равном делении ширины они не
+            // помещались и обрезались. Прокручиваем ряд вместо сжатия.
+            scrollable
+            className="mb-3"
           />
 
           <div className="smk-lux space-y-5 p-4">

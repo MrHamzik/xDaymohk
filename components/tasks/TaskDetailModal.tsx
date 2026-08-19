@@ -8,6 +8,7 @@ import {
 import Link from 'next/link';
 import Avatar from '@/components/Avatar';
 import { supabase } from '@/lib/supabase';
+import { findClosestSamashkiHouse } from '@/lib/samashki-addresses';
 import {
   canAcceptPayment, isPaymentMethod, type PaymentMethod, type PayoutMethods,
 } from '@/lib/payments';
@@ -16,6 +17,7 @@ import {
   formatTimeLeft, formatTaskDateTime,
 } from '@/lib/tasks/client';
 import AttendanceModal from '@/components/tasks/AttendanceModal';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import DisputeComplaintModal from '@/components/tasks/DisputeComplaintModal';
 import PayoutPanel from '@/components/tasks/PayoutPanel';
 import InteractiveMap from '@/components/InteractiveMapLazy';
@@ -69,6 +71,8 @@ export default function TaskDetailModal({
   const [isMapOpen, setIsMapOpen] = useState(false);
   // Жалоба по спору: модалка поверх карточки, чтобы не терять контекст.
   const [isComplaintOpen, setIsComplaintOpen] = useState(false);
+  // Что подтверждаем: удаление (никто не взял) или отмену (взяли).
+  const [confirmClose, setConfirmClose] = useState<'delete' | 'cancel' | null>(null);
   const [complaintSent, setComplaintSent] = useState(false);
   const [mapLayerMode, setMapLayerMode] = useState<MapLayerMode>('streets');
 
@@ -180,12 +184,54 @@ export default function TaskDetailModal({
   );
   const canConfirm = !needsPaymentProof || isPaymentReceived || autoConfirmDue;
 
-  // Править условия можно, пока задание открыто и никто не одобрен.
-  // Заявки на рассмотрении (pending) не мешают: заказчик ещё никого
-  // не выбрал, а откликнувшимся уйдёт уведомление об изменениях.
+  // Править условия можно, пока работу не сдали.
+  //
+  // После одобрения правка тоже разрешена (обновление 42): одобренный
+  // отклик вернётся «на рассмотрение», исполнитель заново примет
+  // условия. А вот после «Выполнил» поздно — он делал работу по
+  // прежним договорённостям.
   const canEdit = Boolean(
-    task && task.status === 'open' && activeParticipants.length === 0 && onEdit,
+    task && ['open', 'in_progress'].includes(task.status) && onEdit,
   );
+
+  // Мои изменённые условия, которые я ещё не принял.
+  const myNeedsConsent = Boolean(myPart?.needsConsent);
+
+  // В споре согласие нужно от обеих сторон.
+  const iAgreedDispute = isAuthor
+    ? Boolean(task?.disputeAuthorOk)
+    : Boolean(task?.disputeExecutorOk);
+  const otherAgreedDispute = isAuthor
+    ? Boolean(task?.disputeExecutorOk)
+    : Boolean(task?.disputeAuthorOk);
+
+  /**
+   * Выбор точки на карте автором.
+   *
+   * Клик по карте отдаёт только координаты (адрес приходит лишь при
+   * выборе объекта), поэтому приводим точку к ближайшему известному
+   * дому — так же, как в форме создания и в редакторе анкеты. Иначе у
+   * задания были бы координаты без адреса, и исполнитель не понял бы,
+   * куда ехать.
+   *
+   * Дальше открываем форму правки с новым адресом: сохранять молча
+   * нельзя, заказчик должен увидеть, что именно поменялось, и
+   * подтвердить.
+   */
+  const handleMapPick = useCallback((
+    position: { lat: number; lng: number },
+    explicitAddress?: string,
+  ) => {
+    if (!task || !onEdit) return;
+    const picked = explicitAddress
+      ? { address: explicitAddress, lat: position.lat, lng: position.lng }
+      : (() => {
+        const closest = findClosestSamashkiHouse(position);
+        return { address: closest.fullAddress, lat: closest.lat, lng: closest.lng };
+      })();
+    setIsMapOpen(false);
+    onEdit({ ...task, ...picked });
+  }, [task, onEdit]);
 
 
   const act = async (label: string, fn: () => Promise<void>) => {
@@ -373,11 +419,18 @@ export default function TaskDetailModal({
                           ]}
                         />
                       </div>
-                      {/* Карта только на просмотр: точку задал заказчик,
-                          менять её из чужой карточки нельзя — поэтому
-                          без onSelect. */}
+                      {/* Автор задания может выбрать точку прямо здесь:
+                          клик по карте подставляет ближайший известный
+                          адрес и открывает форму правки с ним. Раньше
+                          onSelect не передавался вовсе — человек кликал
+                          по дому, и ничего не происходило.
+
+                          Остальным карта только на просмотр: точку
+                          задал заказчик, менять её из чужой карточки
+                          нельзя. */}
                       <InteractiveMap
                         selectedPosition={{ lat: task.lat, lng: task.lng }}
+                        onSelect={canEdit ? handleMapPick : undefined}
                         showControls={false}
                         showProfiles={false}
                         showHouses
@@ -386,6 +439,11 @@ export default function TaskDetailModal({
                         onMapLayerModeChange={setMapLayerMode}
                         className="h-56 overflow-hidden rounded-xl sm:h-72"
                       />
+                      {canEdit && (
+                        <p className="smk-note smk-note-info px-3 py-2">
+                          {t.taskMapPickHint}
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -563,24 +621,32 @@ export default function TaskDetailModal({
                   )}
 
                   <div className="mt-2.5 flex flex-wrap gap-1.5">
-                    {/* Заказчик закрывает спор, если договорились.
-                        Кнопка НЕ блокируется отметкой об оплате: спор
-                        и так означает, что расчёт под вопросом, и
-                        требовать отметку значило бы сделать спор
-                        нерешаемым — заказчик не может принять работу,
-                        исполнитель не может её сдать. */}
-                    {isAuthor && (
-                      <button
-                        type="button"
-                        disabled={Boolean(busy)}
-                        onClick={() => act('confirm', () => runTaskAction(task.id, 'confirm'))}
-                        className="smk-act rounded-lg px-2.5 py-1.5"
-                      >
-                        {busy === 'confirm'
-                          ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          : <Check className="h-3.5 w-3.5" />}
-                        {t.taskDisputeResolve}
-                      </button>
+                    {/* «Договорились» — у ОБЕИХ сторон. Задание
+                        закрывается, только когда нажали оба: раньше
+                        кнопку жал заказчик, и сделка закрывалась, даже
+                        если исполнитель денег не видел.
+
+                        Отметкой об оплате кнопка не блокируется: спор
+                        и так означает, что расчёт под вопросом. */}
+                    {(isAuthor || isExecutor) && (
+                      iAgreedDispute ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 font-bold">
+                          <Check className="h-3.5 w-3.5" />
+                          {t.taskDisputeWaitingOther}
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={Boolean(busy)}
+                          onClick={() => act('confirm', () => runTaskAction(task.id, 'confirm'))}
+                          className="smk-act rounded-lg px-2.5 py-1.5"
+                        >
+                          {busy === 'confirm'
+                            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            : <Check className="h-3.5 w-3.5" />}
+                          {otherAgreedDispute ? t.taskDisputeResolveLast : t.taskDisputeResolve}
+                        </button>
+                      )
                     )}
 
                     {/* Исполнителю — своя кнопка: отметить, что деньги
@@ -721,6 +787,22 @@ export default function TaskDetailModal({
                   </p>
                 )}
               </>
+            )}
+
+            {/* Условия изменились после отклика — нужно согласие.
+                Пока не принял, заказчик не может одобрить. */}
+            {isPendingMe && myNeedsConsent && (
+              <button
+                type="button"
+                disabled={Boolean(busy)}
+                onClick={() => act('accept', () => runTaskAction(task.id, 'accept'))}
+                className={`${btn} bg-emerald-600 text-white hover:bg-emerald-700`}
+              >
+                {busy === 'accept'
+                  ? <Loader2 className="h-4 w-4 animate-spin" />
+                  : <Check className="h-4 w-4" />}
+                {t.taskAcceptChangesBtn}
+              </button>
             )}
 
             {/* Заявку можно отозвать, пока заказчик не ответил */}
@@ -865,18 +947,10 @@ export default function TaskDetailModal({
                 <button
                   type="button"
                   disabled={Boolean(busy)}
-                  onClick={() => {
-                    if (canDelete) {
-                      if (!window.confirm(t.taskDeleteConfirm)) return;
-                      act('delete', async () => {
-                        await deleteTask(task.id);
-                        onClose();
-                      });
-                      return;
-                    }
-                    if (!window.confirm(t.taskCancelConfirm)) return;
-                    act('cancel', () => runTaskAction(task.id, 'cancel'));
-                  }}
+                  // Подтверждение — наша модалка ConfirmDialog, а не
+                  // системный alert: тот игнорирует тему, шрифт и язык
+                  // приложения и выглядит инородно.
+                  onClick={() => setConfirmClose(canDelete ? 'delete' : 'cancel')}
                   className={`${btn} bg-rose-50 text-rose-700 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-950/70`}
                 >
                   {busy === 'delete' || busy === 'cancel'
@@ -890,6 +964,29 @@ export default function TaskDetailModal({
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        isOpen={confirmClose !== null}
+        title={confirmClose === 'delete' ? t.taskDeleteBtn : t.taskCancelBtn}
+        message={confirmClose === 'delete' ? t.taskDeleteConfirm : t.taskCancelConfirm}
+        confirmLabel={confirmClose === 'delete' ? t.taskDeleteBtn : t.taskCancelBtn}
+        danger
+        isBusy={busy === 'delete' || busy === 'cancel'}
+        onCancel={() => setConfirmClose(null)}
+        onConfirm={() => {
+          const mode = confirmClose;
+          setConfirmClose(null);
+          if (!task || !mode) return;
+          if (mode === 'delete') {
+            act('delete', async () => {
+              await deleteTask(task.id);
+              onClose();
+            });
+            return;
+          }
+          act('cancel', () => runTaskAction(task.id, 'cancel'));
+        }}
+      />
 
       {isComplaintOpen && task && (
         <DisputeComplaintModal

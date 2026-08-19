@@ -69,12 +69,20 @@ export async function fetchTask(id: string): Promise<{ task: Task; participants:
  * pendingReview — завершённые, которые я ещё не оценил: по ним в
  * интерфейсе горит жёлтая метка «ожидает оценки».
  */
-export async function fetchMyTasks(): Promise<{ tasks: Task[]; pendingReview: string[] }> {
+export async function fetchMyTasks(): Promise<{
+  tasks: Task[];
+  pendingReview: string[];
+  /** Задания, где условия изменились и ждут моего согласия. */
+  needsConsent: string[];
+}> {
   const response = await fetch('/api/tasks/mine', {
     headers: await authHeaders(),
     cache: 'no-store',
   });
-  return parse<{ tasks: Task[]; pendingReview: string[] }>(response);
+  const data = await parse<{
+    tasks: Task[]; pendingReview: string[]; needsConsent?: string[];
+  }>(response);
+  return { ...data, needsConsent: data.needsConsent ?? [] };
 }
 
 export interface CreateTaskInput {
@@ -128,6 +136,8 @@ export async function updateTask(
 
 export type TaskAction =
   | 'take' | 'join' | 'leave' | 'exclude'
+  // 'accept' — исполнитель принимает изменённые условия (обновление 42).
+  | 'accept'
   // Одобрение исполнителя заказчиком на платных заданиях (обновление 27).
   | 'approve' | 'decline'
   // 'paid' — отметка ИСПОЛНИТЕЛЯ «Оплата получена»: без неё заказчик

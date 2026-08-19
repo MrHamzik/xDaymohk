@@ -34,6 +34,9 @@ export function mapTaskRow(row: Record<string, unknown>) {
     // отменённого задания. У заданий, созданных до миграции, колонок
     // нет — undefined трактуем как «не отмечено» / «без ограничения».
     paymentReceivedAt: row.payment_received_at ?? null,
+    // Обновление 42: согласие сторон на закрытие спора.
+    disputeAuthorOk: row.dispute_author_ok ?? null,
+    disputeExecutorOk: row.dispute_executor_ok ?? null,
     visibleUntil: row.visible_until ?? null,
     status: row.status,
     paymentStatus: row.payment_status,

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2, Power, MapPin, Search, ShieldAlert, Star } from 'lucide-react';
+import { ArrowLeft, FileWarning, Loader2, Power, MapPin, Search, ShieldAlert, Star } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import SidebarNav from '@/components/SidebarNav';
 import BottomNav from '@/components/BottomNav';
@@ -27,11 +27,10 @@ import {
   distanceMeters,
 } from '@/lib/tasks/client';
 import { TASK_NEARBY_RADIUS_M, type AppFilter, type Task } from '@/lib/types';
-import { isTaskStillVisible } from '@/lib/tasks/visibility';
 import { useTasksRealtime } from '@/lib/tasks/realtime';
 
 /** Вкладки ленты. «Близко» — по умолчанию, 1 км от текущей позиции. */
-type FeedTab = 'nearby' | 'all' | 'mine' | 'taken' | 'disputed' | 'review';
+type FeedTab = 'nearby' | 'all' | 'mine' | 'taken' | 'disputed' | 'review' | 'changed';
 
 export default function VayghullakhPage() {
   const { t } = useI18n();
@@ -45,6 +44,8 @@ export default function VayghullakhPage() {
   // публичная и о моём участии не знает.
   const [myTasks, setMyTasks] = useState<Task[]>([]);
   const [pendingReview, setPendingReview] = useState<string[]>([]);
+  // Задания, где заказчик изменил условия и ждёт моего согласия.
+  const [needsConsent, setNeedsConsent] = useState<string[]>([]);
   const [categories, setCategories] = useState<AppFilter[]>([]);
   const [tab, setTab] = useState<FeedTab>('nearby');
   const [category, setCategory] = useState('');
@@ -81,6 +82,7 @@ export default function VayghullakhPage() {
           const mine = await fetchMyTasks();
           setMyTasks(mine.tasks.filter((t) => t.isPaid));
           setPendingReview(mine.pendingReview);
+          setNeedsConsent(mine.needsConsent);
         } catch {
           // не критично: лента уже показана
         }
@@ -205,14 +207,9 @@ export default function VayghullakhPage() {
    * висело «4», а внутри после фильтрации не оставалось ничего.
    */
   const takenTasks = useMemo(() => myTasks.filter(
-    (t) => (
-      !['completed', 'cancelled', 'expired', 'disputed'].includes(t.status)
-      // Отменённое заказчиком задание остаётся здесь с пометкой
-      // «Отменено», пока не истёк срок показа. Раньше оно просто
-      // пропадало из «В работе», и исполнитель не понимал, куда делся
-      // заказ; либо, наоборот, висело как живое (см. обновление 38).
-      || (t.status === 'cancelled' && isTaskStillVisible(t))
-    ),
+    // Отменённые сюда не попадают: они удаляются в момент отмены
+    // (обновление 42), исполнителю уходит уведомление.
+    (t) => !['completed', 'cancelled', 'expired', 'disputed'].includes(t.status),
   ), [myTasks]);
 
   /**
@@ -245,6 +242,19 @@ export default function VayghullakhPage() {
     [myTasks, pendingReview],
   );
 
+  /**
+   * Скрытый раздел «Изменённые».
+   *
+   * Заказчик поправил награду, адрес или срок после моего отклика —
+   * пока я не приму новые условия, он не сможет меня одобрить. Раздел
+   * нужен, чтобы такие задания не терялись: в общей ленте они выглядят
+   * как обычные открытые.
+   */
+  const changedTasks = useMemo(
+    () => myTasks.filter((t) => needsConsent.includes(t.id)),
+    [myTasks, needsConsent],
+  );
+
   const visibleTasks = useMemo(() => {
     let list = withDistance;
 
@@ -256,6 +266,8 @@ export default function VayghullakhPage() {
       list = disputedTasks;
     } else if (tab === 'review') {
       list = reviewTasks;
+    } else if (tab === 'changed') {
+      list = changedTasks;
     } else if (tab === 'nearby' && position) {
       list = list.filter((t) => typeof t.distanceM === 'number' && t.distanceM <= TASK_NEARBY_RADIUS_M);
     }
@@ -263,7 +275,7 @@ export default function VayghullakhPage() {
     // Отменённые видны только СТОРОНАМ сделки: заказчику в «Мои» и
     // исполнителю в «В работе». В общей ленте им делать нечего — это
     // закрытые заказы, а не предложения работы.
-    if (!['mine', 'taken', 'disputed', 'review'].includes(tab)) {
+    if (!['mine', 'taken', 'disputed', 'review', 'changed'].includes(tab)) {
       list = list.filter((t) => t.status !== 'cancelled');
     }
     // Споры живут в своём разделе и в общей ленте не мешаются.
@@ -291,8 +303,8 @@ export default function VayghullakhPage() {
       return [...list].sort((a, b) => (a.distanceM ?? 1e9) - (b.distanceM ?? 1e9));
     }
     return list;
-  }, [withDistance, takenTasks, disputedTasks, reviewTasks, tab, category,
-    priorityFilter, minReward, payment, query, account?.id, position]);
+  }, [withDistance, takenTasks, disputedTasks, reviewTasks, changedTasks, tab,
+    category, priorityFilter, minReward, payment, query, account?.id, position]);
 
   return (
     <div className="flex min-h-[100dvh] min-w-0 flex-col overflow-x-hidden bg-slate-50 bg-radial-gradient transition-colors dark:bg-zinc-950">
@@ -391,6 +403,22 @@ export default function VayghullakhPage() {
               <span className="min-w-0 flex-1">
                 {t.tasksDisputedBanner}: {disputedTasks.length} —{' '}
                 {tab === 'disputed' ? t.tasksHiddenBack : t.tasksDisputedHint}
+              </span>
+            </button>
+          )}
+
+          {/* Изменённые условия — «опасность»: без согласия исполнителя
+              заказчик не сможет его одобрить, и отклик зависнет. */}
+          {changedTasks.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setTab(tab === 'changed' ? 'all' : 'changed')}
+              className="smk-note smk-note-danger mb-3 flex w-full items-center gap-2 px-3 py-2 text-left"
+            >
+              <FileWarning className="h-3.5 w-3.5 shrink-0" />
+              <span className="min-w-0 flex-1">
+                {t.tasksChangedBanner}: {changedTasks.length} —{' '}
+                {tab === 'changed' ? t.tasksHiddenBack : t.tasksChangedHint}
               </span>
             </button>
           )}

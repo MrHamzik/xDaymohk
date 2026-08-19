@@ -24,8 +24,7 @@ import {
   type ExecutorProfile,
 } from '@/lib/tasks/server';
 import {
-  TASK_AUTO_CONFIRM_HOURS, TASK_CANCELLED_VISIBLE_DAYS, TASK_DISPUTE_HOURS,
-  TASK_MIN_REWARD,
+  TASK_AUTO_CONFIRM_HOURS, TASK_DISPUTE_HOURS, TASK_MIN_REWARD,
 } from '@/lib/types';
 import { checkTaskContent, moderationMessage } from '@/lib/tasks/moderation';
 import { mapTaskRow } from '@/lib/tasks/map';
@@ -38,6 +37,7 @@ import { mapTaskRow } from '@/lib/tasks/map';
  *   take     — взять срочное задание (на платных — заявка на одобрение)
  *   join     — записаться на запланированное
  *   leave    — отказаться от записи
+ *   accept   — исполнитель принимает изменённые условия
  *   approve  — заказчик одобряет заявку (только платные задания)
  *   decline  — заказчик отклоняет заявку, задание снова открыто
  *   exclude  — заказчик исключает участника (обратно не записаться)
@@ -50,7 +50,7 @@ import { mapTaskRow } from '@/lib/tasks/map';
  */
 
 type Action =
-  | 'take' | 'join' | 'leave' | 'approve' | 'decline' | 'exclude'
+  | 'take' | 'join' | 'leave' | 'approve' | 'decline' | 'exclude' | 'accept'
   | 'submit' | 'paid' | 'confirm' | 'reject' | 'cancel' | 'attend';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -110,7 +110,7 @@ function canConfirmTask(task: any): boolean {
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 const ACTIONS: Action[] = [
-  'take', 'join', 'leave', 'approve', 'decline', 'exclude',
+  'take', 'join', 'leave', 'approve', 'decline', 'exclude', 'accept',
   'submit', 'paid', 'confirm', 'reject', 'cancel', 'attend',
 ];
 
@@ -176,6 +176,8 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
       joinedAt: p.joined_at,
       excludedAt: p.excluded_at,
       approvedAt: p.approved_at,
+      needsConsent: p.needs_consent === true,
+      consentAt: p.consent_at ?? null,
       fullName: p.full_name ?? '',
       avatarUrl: p.avatar_url ?? '',
       rating: Number(p.rating ?? 0),
@@ -332,25 +334,26 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     return NextResponse.json({ error: 'Можно менять только свои задания' }, { status: 403 });
   }
 
-  if (String(task.status) !== 'open' && !isAdmin) {
+  // 'in_progress' теперь тоже можно: правка после одобрения разрешена,
+  // но одобренный отклик возвращается «на рассмотрение» и требует
+  // согласия исполнителя с новыми условиями (см. ниже).
+  if (!['open', 'in_progress'].includes(String(task.status)) && !isAdmin) {
     return NextResponse.json(
-      { error: 'Менять можно только открытое задание' },
+      { error: 'Менять можно только открытое задание или задание в работе' },
       { status: 409 },
     );
   }
 
-  // Ключевая проверка: одобренный исполнитель закрывает правку.
-  const { count: approvedCount } = await admin
+  // Работу уже сдали — поздно менять условия: исполнитель делал её по
+  // прежним. Дальше только приёмка или спор.
+  const { count: doneCount } = await admin
     .from('task_participants')
     .select('id', { count: 'exact', head: true })
     .eq('task_id', id)
-    .in('status', ['joined', 'attended', 'done']);
-  if ((approvedCount ?? 0) > 0 && !isAdmin) {
+    .eq('status', 'done');
+  if ((doneCount ?? 0) > 0 && !isAdmin) {
     return NextResponse.json(
-      {
-        error: 'Исполнитель уже одобрен — условия менять нельзя. '
-          + 'Отмените задание, если договорённости изменились.',
-      },
+      { error: 'Работа уже сдана — условия менять поздно.' },
       { status: 409 },
     );
   }
@@ -483,19 +486,43 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     return NextResponse.json({ error: 'Не удалось сохранить изменения' }, { status: 500 });
   }
 
-  // Откликнувшимся сообщаем: они ждут решения по ЭТИМ условиям, и те
-  // изменились до того, как заказчик кого-то выбрал.
-  const { data: pending } = await admin
+  // Все, кто уже откликнулся, должны согласиться с новыми условиями.
+  //
+  // Одобренные (joined/attended) ВОЗВРАЩАЮТСЯ в 'pending': человек
+  // соглашался на другую награду и другой адрес, и молча оставлять его
+  // одобренным нельзя. Заказчик сможет одобрить снова только после
+  // того, как исполнитель нажмёт «Принять изменения».
+  const { data: affected } = await admin
     .from('task_participants')
-    .select('user_id')
+    .select('id, user_id, status')
     .eq('task_id', id)
-    .eq('status', 'pending');
-  for (const p of pending ?? []) {
+    .in('status', ['pending', 'joined', 'attended']);
+
+  const consentError = affected && affected.length > 0
+    ? (await admin
+      .from('task_participants')
+      .update({ status: 'pending', needs_consent: true, consent_at: null, approved_at: null })
+      .eq('task_id', id)
+      .in('status', ['pending', 'joined', 'attended'])).error
+    : null;
+  // Колонки появляются в миграции 42 — без неё просто уведомляем,
+  // как раньше.
+  if (consentError) {
+    log.warn('task edit: consent columns missing', { message: consentError.message });
+  }
+
+  // Задание снова открыто для откликов: одобренных исполнителей не
+  // осталось, пока никто не подтвердил новые условия.
+  if (String(task.status) === 'in_progress') {
+    await admin.from('tasks').update({ status: 'open' }).eq('id', id);
+  }
+
+  for (const p of affected ?? []) {
     await notifyTaskEvent(admin, {
       recipientId: String(p.user_id),
       type: 'task_updated',
       title: 'Условия задания изменились',
-      message: `«${title}» — откройте задание и проверьте новые условия.`,
+      message: `«${title}» — откройте задание и примите изменения, чтобы остаться в нём.`,
       titleCe: 'ТIедилларан хьелаш хийцина',
     });
   }
@@ -792,12 +819,21 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
       const { data: candidate } = await admin
         .from('task_participants')
-        .select('id, status')
+        .select('id, status, needs_consent')
         .eq('task_id', id)
         .eq('user_id', targetUserId)
         .maybeSingle();
       if (!candidate || candidate.status !== 'pending') {
         return NextResponse.json({ error: 'Заявка не найдена' }, { status: 404 });
+      }
+      // Условия менялись после отклика — исполнитель ещё не подтвердил,
+      // что согласен с новыми. Одобрять нельзя: иначе он оказался бы в
+      // задании на условиях, которых не видел.
+      if (candidate.needs_consent === true) {
+        return NextResponse.json(
+          { error: 'Исполнитель ещё не принял изменённые условия' },
+          { status: 409 },
+        );
       }
 
       // Свободные места считаем заново: пока заявка ждала, место мог
@@ -830,6 +866,50 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         title: 'Заявка одобрена',
         message: meeting ? `«${task.title}»: ${meeting}.` : `«${task.title}»`,
         titleCe: 'Дехар тIеэцна',
+      });
+
+      return NextResponse.json({ success: true });
+    }
+
+    // ---------------------------------------------------------------
+    // Исполнитель принимает изменённые условия
+    //
+    // Пока согласия нет, заказчик не может его одобрить: иначе человек
+    // попадёт в задание с наградой и адресом, которых не видел.
+    // ---------------------------------------------------------------
+    case 'accept': {
+      const { data: mine } = await admin
+        .from('task_participants')
+        .select('id, status, needs_consent')
+        .eq('task_id', id)
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (!mine) {
+        return NextResponse.json({ error: 'Вы не откликались на это задание' }, { status: 404 });
+      }
+      if (mine.needs_consent !== true) {
+        // Повторный клик не ошибка: соглашаться уже не с чем.
+        return NextResponse.json({ success: true });
+      }
+
+      const { error: acceptError } = await admin
+        .from('task_participants')
+        .update({ needs_consent: false, consent_at: new Date().toISOString() })
+        .eq('id', mine.id);
+      if (acceptError) {
+        log.warn('task accept: consent columns missing', { message: acceptError.message });
+        return NextResponse.json(
+          { error: 'Приём изменений пока недоступен: примените обновление 42' },
+          { status: 503 },
+        );
+      }
+
+      await notifyTaskEvent(admin, {
+        recipientId: String(task.author_id),
+        type: 'task_changes_accepted',
+        title: 'Исполнитель принял изменения',
+        message: `«${task.title}» — теперь его можно одобрить.`,
+        titleCe: 'Кхочушдийрачо хийцамаш тIеэцна',
       });
 
       return NextResponse.json({ success: true });
@@ -1040,7 +1120,21 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     // Подтверждение заказчиком
     // ---------------------------------------------------------------
     case 'confirm': {
-      if (!isAuthor && !isAdmin) {
+      // В СПОРЕ подтверждать могут обе стороны: закрытие требует
+      // согласия каждого. Вне спора — только заказчик, как и раньше.
+      const inDispute = String(task.status) === 'disputed';
+      const { data: myPart } = inDispute
+        ? await admin
+          .from('task_participants')
+          .select('id, status')
+          .eq('task_id', id)
+          .eq('user_id', userId)
+          .maybeSingle()
+        : { data: null };
+      const isDisputeExecutor = Boolean(
+        myPart && ['joined', 'attended', 'done'].includes(String(myPart.status)),
+      );
+      if (!isAuthor && !isAdmin && !(inDispute && isDisputeExecutor)) {
         return NextResponse.json({ error: 'Только заказчик может подтвердить' }, { status: 403 });
       }
       // 'disputed' здесь обязателен. Кнопка «Договорились — принять
@@ -1072,10 +1166,69 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         );
       }
 
+      // В споре закрываем ТОЛЬКО когда согласились обе стороны.
+      //
+      // Раньше кнопку нажимал кто-то один — и задание закрывалось, даже
+      // если исполнитель денег не видел. Теперь отметка каждой стороны
+      // сохраняется отдельно, и completeTask вызывается лишь когда обе
+      // на месте. Администратор закрывает сразу: он разбирает жалобы.
+      if (inDispute && !isAdmin) {
+        const nowIso = new Date().toISOString();
+        const patch = isAuthor
+          ? { dispute_author_ok: nowIso }
+          : { dispute_executor_ok: nowIso };
+
+        const { error: agreeError } = await admin
+          .from('tasks')
+          .update(patch)
+          .eq('id', id);
+        // Колонки появляются в миграции 42. Без неё возвращаемся к
+        // прежнему поведению, чтобы кнопка не отказывала совсем.
+        if (agreeError) {
+          log.warn('task confirm: consent columns missing', { message: agreeError.message });
+          await completeTask(admin, id, String(task.title));
+          await admin.from('tasks').update({ dispute_until: null }).eq('id', id);
+          return NextResponse.json({ success: true });
+        }
+
+        const authorOk = isAuthor ? nowIso : task.dispute_author_ok;
+        const executorOk = isAuthor ? task.dispute_executor_ok : nowIso;
+
+        if (!authorOk || !executorOk) {
+          // Ждём вторую сторону — сообщаем ей, что от неё нужен шаг.
+          const waitingFor = isAuthor ? null : String(task.author_id);
+          if (waitingFor) {
+            await notifyTaskEvent(admin, {
+              recipientId: waitingFor,
+              type: 'task_dispute_agreed',
+              title: 'Исполнитель согласился закрыть спор',
+              message: `«${task.title}» — подтвердите со своей стороны.`,
+              titleCe: 'Кхочушдийриг къовсам дIакъовла реза ву',
+            });
+          } else {
+            const { data: parts } = await admin
+              .from('task_participants')
+              .select('user_id')
+              .eq('task_id', id)
+              .in('status', ['joined', 'attended', 'done']);
+            for (const p of parts ?? []) {
+              await notifyTaskEvent(admin, {
+                recipientId: String(p.user_id),
+                type: 'task_dispute_agreed',
+                title: 'Заказчик согласился закрыть спор',
+                message: `«${task.title}» — подтвердите со своей стороны.`,
+                titleCe: 'ТIедиллархо къовсам дIакъовла реза ву',
+              });
+            }
+          }
+          return NextResponse.json({ success: true, awaitingOtherSide: true });
+        }
+      }
+
       await completeTask(admin, id, String(task.title));
       // Спор закрыт согласием — снимаем его следы, чтобы карточка не
       // показывала «идёт рассмотрение» у завершённого задания.
-      if (task.status === 'disputed') {
+      if (inDispute) {
         await admin
           .from('tasks')
           .update({ dispute_until: null })
@@ -1163,35 +1316,42 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       }
       const reason = String(body.reason ?? '').trim().slice(0, 500);
 
-      // Отменённое задание НЕ прячем сразу.
+      // Уведомляем ДО удаления: после него не останется ни заголовка,
+      // ни причины, а исполнитель должен понять, что произошло.
+      // notifications на tasks не ссылаются и удаление переживают.
+      const { data: cancelParts } = await admin
+        .from('task_participants')
+        .select('user_id')
+        .eq('task_id', id)
+        .in('status', ['pending', 'joined', 'attended']);
+      for (const p of cancelParts ?? []) {
+        await notifyTaskEvent(admin, {
+          recipientId: String(p.user_id),
+          type: 'task_cancelled',
+          title: 'Задание отменено',
+          message: reason ? `«${task.title}»: ${reason}` : `«${task.title}»`,
+        });
+      }
+
+      // Отменённое задание УДАЛЯЕМ сразу.
       //
-      // Раньше здесь стоял is_archived = true: задание мгновенно
-      // выпадало из ленты у заказчика (вьюха v_tasks_feed скрывает
-      // архивные), а у исполнителя продолжало висеть в «В работе» как
-      // живое — он даже не понимал, что заказ отменён. Ни следа, ни
-      // объяснения ни у одной стороны.
+      // До оценок и расчёта оно не дошло: работы не было, отзывов нет
+      // (они ставятся только после завершения), участники уходят
+      // каскадом. Держать такую запись неделю, как раньше, незачем —
+      // она лишь мозолила глаза обеим сторонам.
       //
-      // Теперь оно остаётся видимым ОБЕИМ сторонам с пометкой
-      // «Отменено» и уходит из списков через неделю (visible_until).
-      // В архив его переводит обслуживание по расписанию.
-      const visibleUntil = new Date(
-        Date.now() + TASK_CANCELLED_VISIBLE_DAYS * 24 * 3600_000,
-      ).toISOString();
+      // Если появится эскроу и штрафы за отмену, историю придётся
+      // хранить: статус 'cancelled' и cancelled_at остались в схеме,
+      // поэтому вернуться к «скрывать вместо удаления» можно правкой
+      // этого блока, не трогая структуру.
       const { error: cancelError } = await admin
         .from('tasks')
-        .update({
-          status: 'cancelled',
-          cancelled_at: new Date().toISOString(),
-          cancel_reason: reason || null,
-          is_archived: false,
-          visible_until: visibleUntil,
-        })
+        .delete()
         .eq('id', id);
 
-      // Колонка visible_until появляется в миграции 38. Пока её нет —
-      // возвращаемся к прежнему поведению, чтобы отмена не отказывала.
       if (cancelError) {
-        log.warn('task cancel: visible_until missing', { message: cancelError.message });
+        // Не удалось удалить — хотя бы уводим из лент, как раньше.
+        log.warn('task cancel: delete failed', { message: cancelError.message });
         await admin
           .from('tasks')
           .update({
@@ -1201,20 +1361,6 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
             is_archived: true,
           })
           .eq('id', id);
-      }
-
-      const { data: parts } = await admin
-        .from('task_participants')
-        .select('user_id')
-        .eq('task_id', id)
-        .in('status', ['joined', 'attended']);
-      for (const p of parts ?? []) {
-        await notifyTaskEvent(admin, {
-          recipientId: String(p.user_id),
-          type: 'task_cancelled',
-          title: 'Задание отменено',
-          message: reason ? `«${task.title}»: ${reason}` : `«${task.title}»`,
-        });
       }
 
       return NextResponse.json({ success: true });
