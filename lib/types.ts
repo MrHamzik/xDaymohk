@@ -208,6 +208,14 @@ export interface Profile {
   certificates: Certificate[];
   phone: string;
   hidePhone?: boolean;
+  /**
+   * Контакты существуют, но скрыты, потому что смотрит гость
+   * (обновление 47: вьюха v_profiles отдаёт телефон только вошедшим).
+   *
+   * Отличается от «контактов нет»: в первом случае показываем
+   * приглашение войти, во втором — ничего.
+   */
+  contactsLocked?: boolean;
   /** Whether the questionnaire WhatsApp is synchronized with the account phone. */
   sameAsPhoneWhatsapp?: boolean;
   isVerified?: boolean;

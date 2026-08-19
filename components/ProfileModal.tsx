@@ -3,7 +3,7 @@
 import Avatar from '@/components/Avatar';
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { Ban, BriefcaseBusiness, CalendarDays, ChevronDown, Clock, Flag, MapPin, MessageSquare, Pencil, Phone, Send, ShieldBan, Star, Trash2, VenusAndMars, X } from 'lucide-react';
+import { Ban, BriefcaseBusiness, CalendarDays, ChevronDown, Clock, Flag, Lock, MapPin, MessageSquare, Pencil, Phone, Send, ShieldBan, Star, Trash2, VenusAndMars, X } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { useProfiles } from '@/components/ProfilesProvider';
 import { useBlacklist } from '@/components/BlacklistProvider';
@@ -596,6 +596,14 @@ export default function ProfileModal({
   const hasWhatsapp = !isPersonal && Boolean(profile.whatsapp && profile.whatsapp.trim().length > 0);
   const hasTelegram = !isPersonal && Boolean(profile.telegram && profile.telegram.trim().length > 0);
   const hasAnyContact = !isPersonal && (hasPhone || hasWhatsapp || hasTelegram);
+  /**
+   * Контакты есть, но их не отдали: смотрит гость (обновление 47).
+   *
+   * Флаг приходит из вьюхи v_profiles, а не считается на клиенте, —
+   * значений телефона здесь просто нет, скрывать их «по-честному»
+   * можно только на сервере.
+   */
+  const contactsLocked = !isPersonal && Boolean(profile.contactsLocked);
 
   const handleCall = () => {
     if (!hasPhone) {
@@ -1482,6 +1490,19 @@ export default function ProfileModal({
             </section>
           )}
         </div>
+
+        {contactsLocked && (
+          <div className="smk-sheet-section smk-sheet-foot shrink-0 p-3">
+            <p className="smk-note smk-note-info flex items-start gap-2 px-3 py-2.5">
+              <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <span>
+                <span className="font-bold">{t.contactsLocked}</span>
+                <br />
+                {t.contactsLockedHint}
+              </span>
+            </p>
+          </div>
+        )}
 
         {hasAnyContact && (
           <div className="smk-sheet-section smk-sheet-foot flex shrink-0 items-center gap-2.5 p-3">

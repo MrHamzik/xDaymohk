@@ -9,8 +9,13 @@ type DbRow = Record<string, any>;
 export async function loadProfilesFromSupabase(): Promise<Profile[] | null> {
   if (!isSupabaseConfigured || !supabase) return null;
 
+  // Читаем через v_profiles, а не напрямую из таблицы (обновление 47):
+  // вьюха отдаёт телефон, WhatsApp и Telegram только вошедшим, а гостям
+  // — пустые значения плюс признак contacts_locked. Права на строки при
+  // этом те же: у вьюхи security_invoker = true, RLS таблицы работает
+  // как работал, скрытые и забаненные анкеты остаются скрытыми.
   const { data: profileRows, error } = await supabase
-    .from('profiles')
+    .from('v_profiles')
     .select('*')
     .order('created_at', { ascending: false });
 

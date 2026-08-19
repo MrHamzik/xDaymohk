@@ -32,6 +32,8 @@ interface AuthContextValue {
   setMasterStatus: (status: UserMasterStatus) => Promise<void>;
   deleteAccount: () => Promise<void>;
   signOut: () => Promise<void>;
+  /** Завершить сессии на ВСЕХ устройствах, а не только в этом браузере. */
+  signOutEverywhere: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -360,9 +362,32 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     saveLocalAccount(null);
   }, []);
 
+  /**
+   * Выход со всех устройств.
+   *
+   * scope: 'global' отзывает у Supabase ВСЕ refresh-токены пользователя,
+   * а не только токен текущего браузера. Нужно, когда телефон потерян
+   * или вход остался на чужом компьютере: обычный «Выйти» там ничего не
+   * закрывает — та сессия живёт своей жизнью.
+   *
+   * Локальное состояние сбрасываем в любом случае, даже если запрос не
+   * прошёл: держать в интерфейсе аккаунт, из которого человек только
+   * что попросил выйти, нельзя.
+   */
+  const signOutEverywhere = useCallback(async () => {
+    try {
+      if (isSupabaseConfigured && supabase) {
+        await supabase.auth.signOut({ scope: 'global' });
+      }
+    } finally {
+      setAccount(null);
+      saveLocalAccount(null);
+    }
+  }, []);
+
   const value = useMemo(
-    () => ({ account, isLoading, signInWithGoogle, updateAccount, setMasterStatus, deleteAccount, signOut }),
-    [account, isLoading, signInWithGoogle, updateAccount, setMasterStatus, deleteAccount, signOut],
+    () => ({ account, isLoading, signInWithGoogle, updateAccount, setMasterStatus, deleteAccount, signOut, signOutEverywhere }),
+    [account, isLoading, signInWithGoogle, updateAccount, setMasterStatus, deleteAccount, signOut, signOutEverywhere],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

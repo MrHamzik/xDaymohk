@@ -36,6 +36,9 @@ export function profileFromDb(row: DbRow, certificateRows: DbRow[] = [], reviewR
     })),
     phone: row.phone ?? '',
     hidePhone: Boolean(row.hide_phone),
+    // Приходит только из вьюхи v_profiles; при чтении таблицы напрямую
+    // колонки нет — тогда false, и интерфейс ведёт себя как раньше.
+    contactsLocked: Boolean(row.contacts_locked),
     sameAsPhoneWhatsapp: row.same_as_phone_whatsapp !== undefined ? Boolean(row.same_as_phone_whatsapp) : true,
     isVerified: Boolean(row.is_verified),
     verificationStatus: row.verification_status ?? 'none',

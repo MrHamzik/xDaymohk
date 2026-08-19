@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { rateLimit, withRateLimitHeaders } from '@/lib/rate-limit';
 import { authenticateAdmin } from '@/lib/auth';
 import { isDevEmail } from '@/lib/admin';
+import { writeAdminAudit } from '@/lib/admin-audit';
 
 /**
  * POST /api/admin/role   { userId, makeAdmin: boolean }
@@ -47,7 +48,7 @@ export async function POST(request: Request) {
   // Цель: нельзя менять права самого разработчика.
   const { data: targetUser, error: targetError } = await admin
     .from('user_profiles')
-    .select('email')
+    .select('email, full_name, is_admin')
     .eq('id', userId)
     .maybeSingle();
   if (targetError) return NextResponse.json({ error: targetError.message }, { status: 500 });
@@ -61,6 +62,17 @@ export async function POST(request: Request) {
     .update({ is_admin: makeAdmin })
     .eq('id', userId);
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
+
+  // Журнал (обновление 47): выдача и снятие прав — самое чувствительное
+  // из административных действий, след обязателен.
+  await writeAdminAudit(admin, {
+    actorId: auth.userId,
+    actorEmail: auth.email,
+    action: makeAdmin ? 'role_grant' : 'role_revoke',
+    targetUserId: userId,
+    targetLabel: targetUser.full_name || targetUser.email || '',
+    details: { was: Boolean(targetUser.is_admin), now: makeAdmin },
+  });
 
   return NextResponse.json({ success: true, userId, makeAdmin });
 }

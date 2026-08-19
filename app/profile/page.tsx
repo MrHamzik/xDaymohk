@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, CircleUserRound, Clock3, LogIn, LogOut, Pencil, RotateCcw, Trash2, UserPlus, UserRound, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, CircleUserRound, Clock3, LogIn, LogOut, Pencil, RotateCcw, ShieldOff, Trash2, UserPlus, UserRound, Eye, EyeOff } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import SidebarNav from '@/components/SidebarNav';
 import BottomNav from '@/components/BottomNav';
@@ -19,7 +19,7 @@ import { extractPhoneDigits, formatPhone, isValidCyrillicName } from '@/lib/phon
 import { Profile } from '@/lib/types';
 
 export default function ProfilePage() {
-  const { account, isLoading, signInWithGoogle, updateAccount, deleteAccount, signOut } = useAuth();
+  const { account, isLoading, signInWithGoogle, updateAccount, deleteAccount, signOut, signOutEverywhere } = useAuth();
   const { profiles, isCurrentUserAdmin, updateProfile, deleteProfile, addProfile } = useProfiles();
   const { t } = useI18n();
 
@@ -39,6 +39,8 @@ export default function ProfilePage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isMenuDrawerOpen, setIsMenuDrawerOpen] = useState(false);
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
+  const [isSignOutAllOpen, setIsSignOutAllOpen] = useState(false);
+  const [isSigningOutAll, setIsSigningOutAll] = useState(false);
 
   useEffect(() => {
     if (!account) return;
@@ -134,6 +136,24 @@ export default function ProfilePage() {
 
   const handleSignOut = async () => {
     await signOut();
+  };
+
+  /**
+   * Выход со всех устройств.
+   *
+   * Отдельно от обычного «Выйти» и с подтверждением: действие
+   * необратимое для остальных сессий — человек, который читает эту
+   * страницу с планшета, останется без входа и там тоже.
+   */
+  const confirmSignOutEverywhere = async () => {
+    if (isSigningOutAll) return;
+    setIsSigningOutAll(true);
+    try {
+      await signOutEverywhere();
+      setIsSignOutAllOpen(false);
+    } finally {
+      setIsSigningOutAll(false);
+    }
   };
 
   const handleDeleteProfile = (profile: Profile) => {
@@ -377,6 +397,10 @@ export default function ProfilePage() {
 
             <div className="flex flex-col gap-1.5 pt-2">
               <button type="button" onClick={handleSignOut} className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl py-1.5 text-xs font-bold text-red-600 transition hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"><LogOut className="h-3.5 w-3.5" />{t.signOut}</button>
+              {/* Отдельная кнопка, а не галочка рядом с «Выйти»: обычный
+                  выход нажимают каждый день, этот — раз в жизни, когда
+                  потерян телефон. Смешивать их опасно. */}
+              <button type="button" onClick={() => setIsSignOutAllOpen(true)} className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl py-1.5 text-[11px] font-semibold text-slate-500 transition hover:text-red-600 dark:text-zinc-500 dark:hover:text-red-400"><ShieldOff className="h-3.5 w-3.5" />{t.signOutEverywhere}</button>
               <button type="button" onClick={handleDeleteAccount} disabled={isSaving || Boolean(account.isBlocked)} className="w-full rounded-xl py-1 text-[11px] font-semibold text-slate-400 transition hover:text-red-600 disabled:opacity-50 dark:text-zinc-500 dark:hover:text-red-400">Удалить аккаунт и все данные</button>
             </div>
           </form>
@@ -420,6 +444,16 @@ export default function ProfilePage() {
         isBusy={isDeletingProfile}
         onConfirm={confirmDeleteProfile}
         onCancel={() => setProfileToDelete(null)}
+      />
+      <ConfirmDialog
+        isOpen={isSignOutAllOpen}
+        title={t.signOutEverywhereConfirm}
+        message={t.signOutEverywhereMessage}
+        confirmLabel={t.signOutEverywhere}
+        danger
+        isBusy={isSigningOutAll}
+        onConfirm={confirmSignOutEverywhere}
+        onCancel={() => setIsSignOutAllOpen(false)}
       />
       <ConfirmDialog
         isOpen={isDeleteConfirmOpen}
