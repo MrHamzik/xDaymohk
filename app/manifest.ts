@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'Даймохк',
     short_name: 'Даймохк',
-    description: 'Даймохк — платформа Чеченской Республики: каталог жителей, специалистов, ВайГIуллакх и ВайГIо.',
+    description: 'Даймохк — платформа Чеченской Республики: каталог жителей, специалистов, Темщик и Помощь.',
     start_url: '/',
     display: 'standalone',
     background_color: '#17181b',

@@ -311,7 +311,7 @@ export default function TaskDetailModal({
                   void shareLink(
                     task.title,
                     task.title,
-                    `${siteOrigin()}/${task.isPaid ? 'vayghullakh' : 'vaygo'}?task=${encodeURIComponent(task.id)}`,
+                    `${siteOrigin()}/${task.isPaid ? 'temshik' : 'goncholla'}?task=${encodeURIComponent(task.id)}`,
                   ).then((result) => {
                     if (result === 'copied') {
                       setShareHint(true);

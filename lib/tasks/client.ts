@@ -1,5 +1,6 @@
-import type { PaymentMethod } from '@/lib/payments';
 'use client';
+
+import type { PaymentMethod } from '@/lib/payments';
 
 /**
  * Клиентский слой раздела заданий: обёртки над /api/tasks.

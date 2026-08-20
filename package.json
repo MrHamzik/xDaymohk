@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "stylelint": "stylelint \"app/**/*.css\"",
+    "prepare": "husky"
   },
   "dependencies": {
     "@sentry/nextjs": "^10.70.0",
@@ -17,7 +19,7 @@
     "leaflet": "^1.9.4",
     "leaflet.markercluster": "^1.5.3",
     "lucide-react": "^0.475.0",
-    "next": "15.1.11",
+    "next": "^15.5.23",
     "qrcode": "^1.5.4",
     "react": "19.0.0",
     "react-dom": "19.0.0"
@@ -33,8 +35,17 @@
     "@types/react-dom": "^19.0.8",
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.3.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.3.0",
     "postcss": "^8.5.1",
+    "stylelint": "^17.14.1",
+    "stylelint-config-standard": "^40.0.0",
     "tailwindcss": "^4.0.3",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.67.0"
+  },
+  "lint-staged": {
+    "*.css": "stylelint",
+    "*.{ts,tsx}": "eslint --max-warnings=200"
   }
 }

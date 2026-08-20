@@ -92,7 +92,7 @@ export default function CreateActionModal({
       run: () => {
         onClose();
         if (onOpenGullaq) onOpenGullaq();
-        else router.push('/vayghullakh?create=1');
+        else router.push('/temshik?create=1');
       },
     },
     {
@@ -103,7 +103,7 @@ export default function CreateActionModal({
       run: () => {
         onClose();
         if (onOpenGo) onOpenGo();
-        else router.push('/vaygo?create=1');
+        else router.push('/goncholla?create=1');
       },
     },
     {

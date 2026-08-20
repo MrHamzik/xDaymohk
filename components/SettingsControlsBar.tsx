@@ -310,9 +310,9 @@ export default function SettingsControlsBar() {
             </button>
           );
       case 'gullaq':
-        return navTile('/vayghullakh', t.gullaqTitle, <Wrench className="h-5 w-5" />);
+        return navTile('/temshik', t.gullaqTitle, <Wrench className="h-5 w-5" />);
       case 'go':
-        return navTile('/vaygo', t.goTitle, <HandHeart className="h-5 w-5" />);
+        return navTile('/goncholla', t.goTitle, <HandHeart className="h-5 w-5" />);
       case 'vaynakh':
         return navTile('/vaynakh', t.vaynakhTitle, <Landmark className="h-5 w-5" />);
       case 'taxi':

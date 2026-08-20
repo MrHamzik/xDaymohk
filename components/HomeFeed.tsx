@@ -180,7 +180,7 @@ export default function HomeFeed() {
             </h2>
             <p className="smk-text-label text-slate-500 dark:text-zinc-400">{t.homeTopTasksHint}</p>
           </div>
-          <Link href="/vayghullakh" className="smk-text-label font-bold text-emerald-700 dark:text-emerald-400">
+          <Link href="/temshik" className="smk-text-label font-bold text-emerald-700 dark:text-emerald-400">
             {t.homeAllTasks}
           </Link>
         </div>
