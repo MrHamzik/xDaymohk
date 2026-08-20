@@ -16,10 +16,10 @@ interface CreateActionModalProps {
 }
 
 /**
- * Меню плюса: змейка вверх зигзагом, полный текст, связующая линия.
+ * Меню плюса: мягкая сияющая змейка.
  *
- * Растёт от живой кнопки «+» (низ экрана), а не кольцом из центра —
- * иначе на телефоне пункты наезжали на контент и обрезали подписи.
+ * Телефон — дуга вверх, подписи сбоку от линии.
+ * ПК — сначала влево (место под текст), потом вверх; иконки и текст справа.
  */
 export default function CreateActionModal({
   isOpen,
@@ -33,7 +33,7 @@ export default function CreateActionModal({
   const { t } = useI18n();
   const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
-  const [anchor, setAnchor] = useState({ x: 0, y: 0, desktop: false });
+  const [anchor, setAnchor] = useState({ x: 0, y: 0, desktop: false, scale: 1 });
 
   useEffect(() => {
     if (!isOpen) {
@@ -43,17 +43,20 @@ export default function CreateActionModal({
     document.body.style.overflow = 'hidden';
     const place = () => {
       const desktop = window.innerWidth >= 1024;
+      const scale = window.visualViewport?.scale || window.devicePixelRatio || 1;
       if (desktop) {
         setAnchor({
           x: window.innerWidth - 24 - 28,
           y: window.innerHeight - 24 - 28,
           desktop: true,
+          scale,
         });
       } else {
         setAnchor({
           x: window.innerWidth / 2,
           y: window.innerHeight - 36,
           desktop: false,
+          scale,
         });
       }
     };
@@ -64,11 +67,13 @@ export default function CreateActionModal({
     };
     window.addEventListener('keydown', onKey);
     window.addEventListener('resize', place);
+    window.visualViewport?.addEventListener('resize', place);
     return () => {
       document.body.style.overflow = '';
       cancelAnimationFrame(raf);
       window.removeEventListener('keydown', onKey);
       window.removeEventListener('resize', place);
+      window.visualViewport?.removeEventListener('resize', place);
     };
   }, [isOpen, onClose]);
 
@@ -126,23 +131,39 @@ export default function CreateActionModal({
   ], [t, onClose, onOpenCreateProfile, onOpenGullaq, onOpenGo, onOpenTaxi, onOpenDjanna, router]);
 
   const laid = useMemo(() => {
-    const gapY = 62;
-    const zig = anchor.desktop ? 18 : 56;
+    const gapY = 68;
+    const longest = actions.reduce((max, item) => Math.max(max, item.label.length), 0);
+    const textW = Math.min(280, Math.max(148, longest * 8.2));
+    const reach = Math.min(anchor.x - 28, textW + 88 + (anchor.scale > 1 ? 36 : 0));
     return actions.map((item, index) => {
       const step = index + 1;
+      if (anchor.desktop) {
+        return {
+          ...item,
+          x: -reach,
+          y: -step * gapY,
+          align: 'right' as const,
+        };
+      }
       const side = index % 2 === 0 ? -1 : 1;
-      const x = anchor.desktop ? -(48 + index * 10) : side * zig;
-      const y = -step * gapY;
-      return { ...item, x, y };
+      return {
+        ...item,
+        x: side * 18,
+        y: -step * gapY,
+        align: (side < 0 ? 'left' : 'right') as 'left' | 'right',
+      };
     });
-  }, [actions, anchor.desktop]);
+  }, [actions, anchor.desktop, anchor.x, anchor.scale]);
 
   if (!isOpen) return null;
 
-  const linePoints = [
-    `${anchor.x},${anchor.y}`,
-    ...laid.map((item) => `${anchor.x + item.x},${anchor.y + item.y}`),
-  ].join(' ');
+  const last = laid[laid.length - 1];
+  const midX = last ? anchor.x + last.x : anchor.x;
+  const path = last
+    ? `M ${anchor.x} ${anchor.y}
+       C ${anchor.x - 8} ${anchor.y - 18}, ${midX + 48} ${anchor.y - 10}, ${midX} ${anchor.y - 52}
+       C ${midX - 10} ${anchor.y - 90}, ${midX + 10} ${last.y + anchor.y + 40}, ${midX} ${last.y + anchor.y}`
+    : '';
 
   return (
     <div
@@ -154,27 +175,32 @@ export default function CreateActionModal({
       aria-label={t.quickCreateAria}
       onClick={onClose}
     >
-      <svg
-        className="pointer-events-none absolute inset-0 h-full w-full"
-        aria-hidden
-      >
-        <polyline
-          points={linePoints}
+      <svg className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden>
+        <defs>
+          <filter id="smk-snake-glow" x="-40%" y="-40%" width="180%" height="180%">
+            <feGaussianBlur stdDeviation="3.5" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+        <path
+          d={path}
           fill="none"
           stroke="var(--smk-gold)"
-          strokeWidth="2"
+          strokeWidth="2.4"
           strokeLinecap="round"
           strokeLinejoin="round"
-          strokeDasharray="5 7"
-          style={{
-            opacity: isMounted ? 0.85 : 0,
-            transition: 'opacity 0.35s ease',
-          }}
+          filter="url(#smk-snake-glow)"
+          className="smk-snake-line"
+          style={{ opacity: isMounted ? 1 : 0 }}
         />
       </svg>
 
       {laid.map((item, index) => {
         const Icon = item.icon;
+        const rowOnRight = item.align === 'right';
         return (
           <button
             key={item.id}
@@ -184,21 +210,23 @@ export default function CreateActionModal({
               item.run();
             }}
             aria-label={item.label}
-            className="absolute z-10 flex max-w-[min(18rem,calc(100vw-1.5rem))] items-center gap-2.5 text-left"
+            className={`absolute z-10 flex max-w-[min(18rem,calc(100vw-1.5rem))] items-center gap-2.5 ${
+              rowOnRight ? 'flex-row' : 'flex-row-reverse text-right'
+            }`}
             style={{
               left: anchor.x + item.x,
               top: anchor.y + item.y,
               transform: isMounted
-                ? 'translate(-50%, -50%) scale(1)'
-                : 'translate(-50%, -50%) scale(0.6)',
+                ? (rowOnRight ? 'translate(0, -50%) scale(1)' : 'translate(-100%, -50%) scale(1)')
+                : (rowOnRight ? 'translate(0, -50%) scale(0.7)' : 'translate(-100%, -50%) scale(0.7)'),
               opacity: isMounted ? 1 : 0,
-              transition: `transform 0.35s cubic-bezier(0.16, 1, 0.3, 1) ${index * 40}ms, opacity 0.3s ease ${index * 40}ms`,
+              transition: `transform 0.4s cubic-bezier(0.16, 1, 0.3, 1) ${index * 45}ms, opacity 0.3s ease ${index * 45}ms`,
             }}
           >
             <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl shadow-lg ${item.tone}`}>
               <Icon className="h-5 w-5" />
             </span>
-            <span className="smk-text-body font-extrabold leading-snug text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.85)]">
+            <span className="rounded-xl bg-zinc-950/55 px-2.5 py-1.5 smk-text-body font-extrabold leading-snug text-white backdrop-blur-sm">
               {item.label}
             </span>
           </button>

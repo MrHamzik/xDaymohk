@@ -71,7 +71,7 @@ export default function MenuProfileCard() {
   );
 
   return (
-    <div className="shrink-0 border-t border-slate-100 pt-3 dark:border-zinc-800 bg-white dark:bg-zinc-950">
+    <div className="smk-rail-profile shrink-0 pt-3">
       {account ? (
         <Link href="/profile" className={cls}>{inner}</Link>
       ) : (

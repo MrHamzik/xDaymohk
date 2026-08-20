@@ -1,13 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Save, WalletCards } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
+import { HintMark } from '@/components/settings/SettingsPrimitives';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 
 const DEFAULT_USD_RUB_RATE = 90;
 const MONTHLY_VERCEL_USD = 20;
 const MONTHLY_SUPABASE_USD = 20;
+const MONTHLY_UPSTASH_USD = 10;
+const MONTHLY_SENTRY_USD = 26;
 const MONTHLY_SERVER_RUB = 1140;
 const MONTHLY_DOMAIN_RUB = 25;
 const MONTHLY_WHOIS_RUB = 21;
@@ -115,6 +118,8 @@ export default function SupportBudget() {
 
   const totalRub = MONTHLY_VERCEL_USD * usdRate
     + MONTHLY_SUPABASE_USD * usdRate
+    + MONTHLY_UPSTASH_USD * usdRate
+    + MONTHLY_SENTRY_USD * usdRate
     + MONTHLY_SERVER_RUB
     + MONTHLY_DOMAIN_RUB
     + MONTHLY_WHOIS_RUB
@@ -161,30 +166,46 @@ export default function SupportBudget() {
       </div>
 
       <div className="space-y-2 text-sm">
-        <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-2 dark:border-zinc-800">
-          <span className="text-slate-600 dark:text-zinc-400">Vercel</span>
-          <span className="font-semibold text-slate-900 dark:text-white">20 $ <span className="font-normal text-slate-500 dark:text-zinc-500">(~ {formatRubles(MONTHLY_VERCEL_USD * usdRate)})</span></span>
-        </div>
-        <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-2 dark:border-zinc-800">
-          <span className="text-slate-600 dark:text-zinc-400">Supabase</span>
-          <span className="font-semibold text-slate-900 dark:text-white">20 $ <span className="font-normal text-slate-500 dark:text-zinc-500">(~ {formatRubles(MONTHLY_SUPABASE_USD * usdRate)})</span></span>
-        </div>
-        <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-2 dark:border-zinc-800">
-          <span className="text-slate-600 dark:text-zinc-400">Выделенный сервер</span>
-          <span className="font-semibold text-slate-900 dark:text-white">{formatRubles(MONTHLY_SERVER_RUB)}</span>
-        </div>
-        <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-2 dark:border-zinc-800">
-          <span className="text-slate-600 dark:text-zinc-400">Домен .ru</span>
-          <span className="font-semibold text-slate-900 dark:text-white">{formatRubles(MONTHLY_DOMAIN_RUB)}</span>
-        </div>
-        <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-2 dark:border-zinc-800">
-          <span className="text-slate-600 dark:text-zinc-400">Скрытие данных в WHOIS</span>
-          <span className="font-semibold text-slate-900 dark:text-white">{formatRubles(MONTHLY_WHOIS_RUB)}</span>
-        </div>
-        <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-2 dark:border-zinc-800">
-          <span className="text-slate-600 dark:text-zinc-400">Прочие расходы</span>
-          <span className="font-semibold text-slate-900 dark:text-white">{formatRubles(otherCostsRub)}</span>
-        </div>
+        <BudgetRow
+          name="Vercel"
+          hint="Это дом сайта в интернете. Без него страница не откроется на телефоне."
+          value={<>20 $ <span className="font-normal text-slate-500 dark:text-zinc-500">(~ {formatRubles(MONTHLY_VERCEL_USD * usdRate)})</span></>}
+        />
+        <BudgetRow
+          name="Supabase"
+          hint="Сейф с анкетами, письмами и входом через Google. Здесь живут ваши данные."
+          value={<>20 $ <span className="font-normal text-slate-500 dark:text-zinc-500">(~ {formatRubles(MONTHLY_SUPABASE_USD * usdRate)})</span></>}
+        />
+        <BudgetRow
+          name="Upstash"
+          hint="Быстрая память сервера: очередь писем и защита от спама, чтобы сайт не падал от наплыва."
+          value={<>10 $ <span className="font-normal text-slate-500 dark:text-zinc-500">(~ {formatRubles(MONTHLY_UPSTASH_USD * usdRate)})</span></>}
+        />
+        <BudgetRow
+          name="Sentry"
+          hint="Журнал поломок. Показывает, где сайт упал, чтобы починить до жалоб."
+          value={<>26 $ <span className="font-normal text-slate-500 dark:text-zinc-500">(~ {formatRubles(MONTHLY_SENTRY_USD * usdRate)})</span></>}
+        />
+        <BudgetRow
+          name="Выделенный сервер"
+          hint="Отдельная машина для тяжёлых дел: карта, файлы, ночные проверки."
+          value={formatRubles(MONTHLY_SERVER_RUB)}
+        />
+        <BudgetRow
+          name="Домен"
+          hint="Имя daymohk.xyz. Это адрес, по которому люди находят сайт."
+          value={formatRubles(MONTHLY_DOMAIN_RUB)}
+        />
+        <BudgetRow
+          name="Скрытие данных в WHOIS"
+          hint="Прячет личные данные владельца домена от чужих глаз."
+          value={formatRubles(MONTHLY_WHOIS_RUB)}
+        />
+        <BudgetRow
+          name="Прочие расходы"
+          hint="Мелкие счета: почта, карты, разовые услуги, которые появляются в течение месяца."
+          value={formatRubles(otherCostsRub)}
+        />
         <div className="flex items-center justify-between gap-3 pt-1 text-base font-extrabold text-slate-900 dark:text-white">
           <span>Итого за месяц</span>
           <span>{formatRubles(totalRub)}</span>
@@ -230,5 +251,25 @@ export default function SupportBudget() {
         </div>
       )}
     </section>
+  );
+}
+
+function BudgetRow({
+  name,
+  hint,
+  value,
+}: {
+  name: string;
+  hint: string;
+  value: ReactNode;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-2 dark:border-zinc-800">
+      <span className="inline-flex min-w-0 items-center gap-1.5 text-slate-600 dark:text-zinc-400">
+        <span className="truncate">{name}</span>
+        <HintMark text={hint} />
+      </span>
+      <span className="shrink-0 font-semibold text-slate-900 dark:text-white">{value}</span>
+    </div>
   );
 }

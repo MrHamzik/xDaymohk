@@ -104,7 +104,13 @@ export default function ProfileCard({
       className={`smk-lux smk-enter smk-cat smk-cat--${cardCategory(profile)} group h-full cursor-pointer text-slate-900 dark:text-white`}
     >
       <div className="smk-cat-banner">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/cards/scene-top.jpg" alt="" className="smk-cat-scene" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/cards/orn-corner.webp" alt="" className="smk-cat-orn" />
         <div className="smk-cat-medal">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/cards/frame-medal.png" alt="" className="smk-cat-frame" />
           <div
             className={`smk-ring ${statusRing.className}`}
             title={statusRing.label ?? undefined}
@@ -139,7 +145,6 @@ export default function ProfileCard({
             </div>
           )}
         </div>
-        <span className="smk-cat-orn" aria-hidden />
       </div>
 
       <div className="smk-cat-body">
@@ -231,6 +236,10 @@ export default function ProfileCard({
       </div>
 
       <div className="smk-cat-land">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/cards/scene-foot.jpg" alt="" className="smk-cat-land-scene" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/cards/orn-strip.png" alt="" className="smk-cat-strip" />
         <div className="smk-cat-actions">
           <div className="min-w-0">
             {profile.certificates.length > 0 ? (

@@ -9,6 +9,7 @@ import {
   Bot,
   CarFront,
   Compass,
+  Crown,
   Eye,
   EyeOff,
   Globe2,
@@ -106,6 +107,7 @@ const SECTIONS: MenuSection[] = [
     titleCe: 'Кхиндерш',
     items: [
       { id: 'settings', href: '/settings', icon: SettingsIcon },
+      { id: 'pro', href: '/pro', icon: Crown },
       { id: 'guide', href: '/guide', icon: BookOpen },
       { id: 'help', href: '/help', icon: LifeBuoy },
       { id: 'legal', href: '/legal', icon: ScrollText },
@@ -243,9 +245,11 @@ export default function SidebarNav({ onClose, isAdmin = false, rail = false }: S
     <>
       <div className={`flex h-full w-full flex-col overflow-hidden ${rail ? 'px-1.5 py-2.5' : 'p-3.5'}`}>
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-0.5 no-scrollbar">
-          <SettingsControlsBar />
           <div className={rail ? 'smk-rail-extra' : undefined}>
-            <PrayerTimesBar />
+            <SettingsControlsBar />
+            <div className="mt-3">
+              <PrayerTimesBar />
+            </div>
           </div>
 
           {editing && (

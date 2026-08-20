@@ -2,6 +2,7 @@ import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 
 const MAX_INLINE_IMAGE_BYTES = 300 * 1024;
 const MAX_IMAGE_DIMENSION = 1400;
+const MAX_AVATAR_DIMENSION = 512;
 
 function dataUrlBytes(dataUrl: string) {
   const base64 = dataUrl.split(',')[1] ?? '';
@@ -38,20 +39,22 @@ function loadImage(dataUrl: string) {
 }
 
 async function compressDataUrl(dataUrl: string, square = false) {
-  if (!dataUrl.startsWith('data:') || dataUrlBytes(dataUrl) <= MAX_INLINE_IMAGE_BYTES) {
+  const maxDim = square ? MAX_AVATAR_DIMENSION : MAX_IMAGE_DIMENSION;
+  const alreadySmall = dataUrl.startsWith('data:') && dataUrlBytes(dataUrl) <= MAX_INLINE_IMAGE_BYTES;
+  if (!dataUrl.startsWith('data:') || (alreadySmall && !square)) {
     return dataUrl;
   }
 
   const image = await loadImage(dataUrl);
-  // Для аватара сразу вырезаем центральный квадрат — меньше пикселей,
-  // меньше вес файла в Storage.
+  // Для аватара сразу вырезаем центральный квадрат и сжимаем до 512:
+  // на карточке круг небольшой, больший файл только тяжелее грузится.
   const cropSize = square ? Math.min(image.width, image.height) : 0;
   const srcX = square ? (image.width - cropSize) / 2 : 0;
   const srcY = square ? (image.height - cropSize) / 2 : 0;
   const srcW = square ? cropSize : image.width;
   const srcH = square ? cropSize : image.height;
 
-  let scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(image.width, image.height));
+  let scale = Math.min(1, maxDim / Math.max(srcW, srcH));
   let smallestDataUrl = dataUrl;
   let smallestBytes = dataUrlBytes(dataUrl);
 

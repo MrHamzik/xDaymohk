@@ -77,7 +77,30 @@ export default function SpecialistLeaders({ onOpen }: SpecialistLeadersProps) {
   }, []);
 
   const local = useMemo(() => fallbackLeaders(profiles), [profiles]);
-  const leaders = remote ?? local;
+  const leaders = useMemo(() => {
+    const source = remote ?? local;
+    const liveOf = (person: Leader | null): Leader | null => {
+      if (!person) return null;
+      const live = profiles.find((profile) => profile.id === person.id);
+      if (!live) return person;
+      return {
+        ...person,
+        fullName: live.fullName,
+        avatarUrl: live.avatarUrl,
+        professionTitle: live.professionTitle || person.professionTitle,
+        nickname: live.nickname,
+        showNickname: live.showNickname,
+        isPersonal: live.isPersonal,
+        rating: live.rating,
+        reviewCount: live.reviewCount,
+      };
+    };
+    return {
+      day: liveOf(source.day),
+      week: liveOf(source.week),
+      month: liveOf(source.month),
+    };
+  }, [remote, local, profiles]);
   const slots: Array<{ key: 'day' | 'week' | 'month'; title: string; person: Leader | null }> = [
     { key: 'day', title: t.specialistDay, person: leaders.day },
     { key: 'week', title: t.specialistWeek, person: leaders.week },

@@ -28,6 +28,7 @@ import { type MapLayerMode } from '@/components/InteractiveMap';
 import { useI18n } from '@/lib/i18n';
 import { useSettings } from '@/components/SettingsProvider';
 import { useSheetSwipe } from '@/lib/hooks/useSheetSwipe';
+import { useLockBody } from '@/lib/hooks/useLockBody';
 import { shareLink, siteOrigin } from '@/lib/share';
 import { haptic } from '@/lib/haptics';
 import { useTaskRealtime } from '@/lib/tasks/realtime';
@@ -146,6 +147,7 @@ export default function TaskDetailModal({
   // Открытая карточка живая: нажатие «Выполнил» у второй стороны,
   // отметка явки и новый отзыв применяются без перезахода.
   useTaskRealtime(taskId, load);
+  useLockBody(Boolean(taskId));
 
   useEffect(() => {
     if (!taskId) return;

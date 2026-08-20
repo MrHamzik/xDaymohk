@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
-  Bell, BookMarked, BookOpen, CarFront, ChevronRight, Landmark,
+  Bell, BookMarked, BookOpen, CarFront, ChevronRight, Crown, Landmark,
 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { useI18n } from '@/lib/i18n';
@@ -102,6 +102,21 @@ export default function HomeFeed() {
             </button>
           )}
         />
+
+        <Link href="/pro" className="smk-lux flex items-center gap-3 px-3.5 py-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--smk-gold)] text-white">
+            <Crown className="h-5 w-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block smk-text-title font-bold text-slate-900 dark:text-white">
+              {t.proTitle}
+            </span>
+            <span className="smk-text-label text-slate-500 dark:text-zinc-400">
+              {t.proOpen}
+            </span>
+          </span>
+          <ChevronRight className="h-4 w-4 shrink-0 smk-arrow" />
+        </Link>
 
         <Link href="/taxi" className="smk-lux flex items-center gap-3 px-3.5 py-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white">

@@ -104,7 +104,21 @@ export default function Home() {
       const data = await res.json().catch(() => null);
       if (!cancelled && Array.isArray(data?.ids)) setFavIds(data.ids);
     })();
-    return () => { cancelled = true; };
+    const onFav = (event: Event) => {
+      const detail = (event as CustomEvent<{ id?: string; on?: boolean }>).detail;
+      if (!detail?.id) return;
+      setFavIds((current) => {
+        const has = current.includes(detail.id!);
+        if (detail.on && !has) return [...current, detail.id!];
+        if (!detail.on && has) return current.filter((id) => id !== detail.id);
+        return current;
+      });
+    };
+    window.addEventListener('daymohk-favorites', onFav);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('daymohk-favorites', onFav);
+    };
   }, [account?.id]);
 
   const filteredProfiles = useMemo(() => {

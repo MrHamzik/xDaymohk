@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, RotateCcw, Settings as SettingsIcon, Volume2 } from 'lucide-react';
+import { ArrowLeft, Eye, RotateCcw, Settings as SettingsIcon, Volume2 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import BottomNav from '@/components/BottomNav';
 import MobileMenuDrawer from '@/components/MobileMenuDrawer';
@@ -13,7 +13,6 @@ import ThemeEditor from '@/components/settings/ThemeEditor';
 import EffectsEditor from '@/components/settings/EffectsEditor';
 import PayoutSettings from '@/components/settings/PayoutSettings';
 import QuickWidgetsEditor from '@/components/settings/QuickWidgetsEditor';
-import ProPlans from '@/components/settings/ProPlans';
 import AppSidebar from '@/components/AppSidebar';
 import {
   CollapsibleSection, SectionTitle, SettingRow, Toggle, WarningBox,
@@ -253,9 +252,13 @@ export default function SettingsPage() {
                 title={t.settingsNotificationsSection}
                 hint={t.settingsNotificationsHint}
                 action={(
-                  <span className="flex shrink-0 items-end gap-3 smk-text-label font-bold leading-tight text-slate-400 dark:text-zinc-500">
-                    <span className="w-11 text-center">{t.settingsColShow}</span>
-                    <span className="w-11 text-center">{t.settingsColSound}</span>
+                  <span className="flex shrink-0 items-end gap-3 text-slate-400 dark:text-zinc-500">
+                    <span className="flex w-11 justify-center" title={t.settingsColShow} aria-hidden>
+                      <Eye className="h-3.5 w-3.5" />
+                    </span>
+                    <span className="flex w-11 justify-center" title={t.settingsColSound} aria-hidden>
+                      <Volume2 className="h-3.5 w-3.5" />
+                    </span>
                   </span>
                 )}
               />
@@ -343,13 +346,6 @@ export default function SettingsPage() {
                  После уведомлений: это не ежедневная настройка, а то,
                  что заполняют один раз перед первым платным заданием. */}
             {shows('payout') && <PayoutSettings />}
-
-            {shows('advanced') && (
-            <section>
-              <SectionTitle title={t.proTitle} hint={t.proHint} />
-              <ProPlans />
-            </section>
-            )}
 
             {/* ── Расширенные ───────────────────────────────────── */}
             {shows('advanced') && (

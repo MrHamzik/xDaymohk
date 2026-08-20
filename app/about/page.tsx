@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, BookOpen, Bot, Briefcase, CarFront, Globe2, HandHeart, Heart, MapPin, ShieldCheck, UserPlus, Users } from 'lucide-react';
+import { ArrowLeft, BookOpen, Bot, Briefcase, CarFront, Compass, Globe2, HandHeart, Heart, MapPin, ShieldCheck, UserPlus, Users } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import AppSidebar from '@/components/AppSidebar';
 import BottomNav from '@/components/BottomNav';
@@ -125,6 +125,16 @@ export default function AboutPage() {
               <h4 className="text-base font-bold text-slate-900 dark:text-white">{t.addYourProfile}</h4>
               <p className="text-sm leading-relaxed text-slate-600 dark:text-zinc-400">
                 {t.addYourProfileText}
+              </p>
+            </div>
+
+            <div className="space-y-3 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-950">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400">
+                <Compass className="h-6 w-6" />
+              </div>
+              <h4 className="text-base font-bold text-slate-900 dark:text-white">{t.religionTitle}</h4>
+              <p className="text-sm leading-relaxed text-slate-600 dark:text-zinc-400">
+                {t.religionText}
               </p>
             </div>
 

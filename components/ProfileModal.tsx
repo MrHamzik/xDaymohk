@@ -29,6 +29,7 @@ import ProfileQuestionsTab from '@/components/profile/ProfileQuestionsTab';
 import ProfileRatingsTab from '@/components/profile/ProfileRatingsTab';
 import { youtubeEmbedId } from '@/components/profile/profile-helpers';
 import { useSheetSwipe } from '@/lib/hooks/useSheetSwipe';
+import { useLockBody } from '@/lib/hooks/useLockBody';
 
 interface ProfileModalProps {
   profile: Profile | null;
@@ -81,6 +82,7 @@ export default function ProfileModal({
   const [fav, setFav] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const swipe = useSheetSwipe(onClose);
+  useLockBody(Boolean(profile));
 
   useEffect(() => {
     if (!profile || !supabase || !account) { setFav(false); return; }
@@ -148,9 +150,11 @@ export default function ProfileModal({
           onTouchStart={swipe.onTouchStart}
           onTouchEnd={swipe.onTouchEnd}
         >
-          <div className="flex items-center justify-between gap-2">
-            <WorkingStatusBadge profile={profile} />
-            <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
+            <div className="min-w-0">
+              <WorkingStatusBadge profile={profile} />
+            </div>
+            <div className="ml-auto flex shrink-0 items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => {
@@ -187,6 +191,11 @@ export default function ProfileModal({
                       },
                     );
                     if (!res.ok) setFav(!next);
+                    else {
+                      window.dispatchEvent(new CustomEvent('daymohk-favorites', {
+                        detail: { id: profile.id, on: next },
+                      }));
+                    }
                   }}
                   aria-label={fav ? t.favOff : t.favAdd}
                   className="smk-act flex h-7 w-7 items-center justify-center"
@@ -203,9 +212,9 @@ export default function ProfileModal({
                   }}
                   aria-label={t.cardReportAria}
                   title={t.cardReport}
-                  className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--smk-gold)] text-white transition hover:brightness-110"
+                  className="smk-act flex h-7 w-7 items-center justify-center text-[var(--smk-gold-deep)]"
                 >
-                  <Flag className="h-3.5 w-3.5" />
+                  <Flag className="h-4 w-4" />
                 </button>
               )}
               {canBlockOwner && (
@@ -222,20 +231,22 @@ export default function ProfileModal({
               <button
                 onClick={onClose}
                 aria-label={t.profileCloseSheet}
-                className="smk-hit flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400"
+                className="smk-act smk-hit flex h-7 w-7 items-center justify-center"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
           </div>
 
-          <div className="mt-3 grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3.5">
-            <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-slate-100 shadow-sm dark:bg-zinc-800 sm:h-24 sm:w-24">
+          <hr className="smk-orn my-3" />
+
+          <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3">
+            <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-slate-100 shadow-sm dark:bg-zinc-800 sm:h-20 sm:w-20">
               <Image
                 src={cacheBustAvatarUrl(profile.avatarUrl)}
                 alt={displayName(profile)}
                 fill
-                sizes="96px"
+                sizes="80px"
                 className="object-cover"
               />
             </div>
@@ -260,7 +271,9 @@ export default function ProfileModal({
             </div>
           </div>
 
-          <div className="mt-3">
+          <hr className="smk-orn my-3" />
+
+          <div>
             <ProfileBadges profile={profile} adminStatus={isAdminStatus} showPending={showPending} />
           </div>
         </div>

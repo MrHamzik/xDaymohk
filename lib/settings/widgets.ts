@@ -23,7 +23,7 @@ export const MENU_IDS = [
   'home', 'catalog', 'map', 'about', 'admin',
   'qibla', 'quran', 'hijri', 'sira',
   'taxi', 'vpn', 'vaynakh', 'go', 'gullaq', 'djanna',
-  'settings', 'guide', 'help', 'legal', 'invite', 'blacklist',
+  'settings', 'pro', 'guide', 'help', 'legal', 'invite', 'blacklist',
   'profile',
 ] as const;
 
@@ -58,6 +58,7 @@ export function widgetLabel(id: string, t: Dict): string {
     case 'about': return t.about;
     case 'admin': return t.admin;
     case 'settings': return t.settings;
+    case 'pro': return t.proTitle;
     case 'guide': return t.navGuide;
     case 'help': return t.navHelp;
     case 'legal': return t.navLegal;
