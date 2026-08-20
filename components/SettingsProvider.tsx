@@ -10,6 +10,7 @@ import {
   DEFAULT_SETTINGS, normalizeSettings, resolveTheme, settingsFromDb, settingsToDb,
 } from '@/lib/settings/defaults';
 import { applyEffects, applyRadiusScale, applyThemeColors, applyTypography } from '@/lib/settings/apply-theme';
+import { forceOwnerPlatinum } from '@/lib/settings/pro';
 import type { UserSettings } from '@/lib/settings/types';
 
 const SETTINGS_STORAGE_KEY = 'daymohk-settings';
@@ -88,7 +89,7 @@ export default function SettingsProvider({ children }: { children: React.ReactNo
         .eq('user_id', account.id)
         .maybeSingle();
       if (cancelled || error || !data) return;
-      const remote = settingsFromDb(data as Record<string, unknown>);
+      const remote = forceOwnerPlatinum(settingsFromDb(data as Record<string, unknown>), account.email);
       setSettings(remote);
       writeLocal(remote);
     })();
@@ -208,13 +209,13 @@ export default function SettingsProvider({ children }: { children: React.ReactNo
 
   const update = useCallback((patch: Partial<UserSettings>) => {
     hasLocalEdit.current = true;
-    setSettings((current) => normalizeSettings({ ...current, ...patch }));
-  }, []);
+    setSettings((current) => forceOwnerPlatinum(normalizeSettings({ ...current, ...patch }), account?.email));
+  }, [account?.email]);
 
   const reset = useCallback(() => {
     hasLocalEdit.current = true;
-    setSettings({ ...DEFAULT_SETTINGS });
-  }, []);
+    setSettings(forceOwnerPlatinum({ ...DEFAULT_SETTINGS }, account?.email));
+  }, [account?.email]);
 
   // Сохраняем после фиксации состояния, а не во время его вычисления.
   useEffect(() => {

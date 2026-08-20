@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import {
-  Bell, BookMarked, BookOpen, Bot, CarFront, Clock, Compass, Globe2,
-  HandHeart, Home, Landmark, MapPin, Palette, Sparkles, Type, UserRound, Users, Wrench,
+  Bell, BookMarked, BookOpen, Bot, CarFront, Clock, Compass, Crown, Globe2,
+  HandHeart, Home, Landmark, LifeBuoy, MapPin, Palette, ScrollText,
+  Settings as SettingsIcon, ShieldAlert, ShieldBan, Sparkles, Type, UserRound, Users, Wrench,
 } from 'lucide-react';
 import { useSettings } from '@/components/SettingsProvider';
 import { useI18n } from '@/lib/i18n';
@@ -19,8 +20,11 @@ const ICONS: Record<QuickWidgetId, typeof Clock> = {
   home: Home,
   catalog: Users,
   map: MapPin,
+  about: Sparkles,
+  admin: ShieldAlert,
   qibla: Compass,
   quran: BookOpen,
+  hijri: Sparkles,
   sira: BookMarked,
   profile: UserRound,
   gullaq: Wrench,
@@ -29,25 +33,32 @@ const ICONS: Record<QuickWidgetId, typeof Clock> = {
   taxi: CarFront,
   vpn: Globe2,
   djanna: Bot,
+  settings: SettingsIcon,
+  pro: Crown,
+  guide: BookOpen,
+  help: LifeBuoy,
+  legal: ScrollText,
+  invite: Users,
+  blacklist: ShieldBan,
 };
 
 /**
- * Выбор четырёх значков — как превью письма в админке:
- * сверху живая панель, ниже слоты, ещё ниже сетка замены.
+ * Четыре слота как шторка телефона: удержал значок и перетащил в слот.
  */
 export default function QuickWidgetsEditor() {
   const { t } = useI18n();
   const { settings, update } = useSettings();
-  const [slot, setSlot] = useState<number | null>(null);
+  const [dragId, setDragId] = useState<QuickWidgetId | null>(null);
+  const [over, setOver] = useState<number | null>(null);
 
-  const pick = (id: QuickWidgetId) => {
-    if (slot === null) return;
+  const place = (slot: number, id: QuickWidgetId) => {
     const next = [...settings.quickWidgets];
     const taken = next.findIndex((item, index) => item === id && index !== slot);
     if (taken >= 0) next[taken] = next[slot];
     next[slot] = id;
     update({ quickWidgets: next.slice(0, 4) });
-    setSlot(null);
+    setDragId(null);
+    setOver(null);
   };
 
   return (
@@ -64,54 +75,68 @@ export default function QuickWidgetsEditor() {
       <div className="grid grid-cols-4 gap-1.5">
         {settings.quickWidgets.slice(0, 4).map((id, index) => {
           const Icon = ICONS[id as QuickWidgetId] ?? Clock;
-          const on = slot === index;
+          const hot = over === index;
           return (
-            <button
+            <div
               key={`${id}-${index}`}
-              type="button"
-              onClick={() => setSlot(on ? null : index)}
-              aria-pressed={on}
-              className={`flex flex-col items-center gap-1 rounded-xl px-1 py-2 transition ${
-                on
-                  ? 'bg-emerald-600 text-white'
-                  : 'smk-field text-slate-700 hover:brightness-95 dark:text-zinc-200'
+              onDragOver={(event) => {
+                event.preventDefault();
+                setOver(index);
+              }}
+              onDragLeave={() => setOver((current) => (current === index ? null : current))}
+              onDrop={(event) => {
+                event.preventDefault();
+                const dropped = (event.dataTransfer.getData('text/plain') || dragId) as QuickWidgetId;
+                if (QUICK_WIDGET_IDS.includes(dropped)) place(index, dropped);
+              }}
+              className={`flex flex-col items-center gap-1 rounded-xl px-1 py-2 ${
+                hot ? 'bg-emerald-600 text-white' : 'smk-field text-slate-700 dark:text-zinc-200'
               }`}
             >
               <Icon className="h-4 w-4" />
               <span className="w-full truncate text-center smk-text-label font-bold">
                 {widgetLabel(id, t)}
               </span>
-            </button>
+            </div>
           );
         })}
       </div>
 
-      {slot !== null && (
-        <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
-          {QUICK_WIDGET_IDS.map((id) => {
-            const Icon = ICONS[id];
-            const used = settings.quickWidgets.includes(id);
-            const current = settings.quickWidgets[slot] === id;
-            return (
-              <button
-                key={id}
-                type="button"
-                onClick={() => pick(id)}
-                className={`flex items-center gap-1.5 rounded-xl px-2 py-2 text-left transition ${
-                  current
-                    ? 'bg-emerald-600 text-white'
-                    : used
-                      ? 'smk-field text-slate-400'
-                      : 'smk-field text-slate-700 hover:brightness-95 dark:text-zinc-200'
-                }`}
-              >
-                <Icon className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate smk-text-label font-bold">{widgetLabel(id, t)}</span>
-              </button>
-            );
-          })}
-        </div>
-      )}
+      <p className="smk-text-label text-slate-500 dark:text-zinc-500">{t.settingsWidgetsDrag}</p>
+
+      <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
+        {QUICK_WIDGET_IDS.map((id) => {
+          const Icon = ICONS[id];
+          const used = settings.quickWidgets.includes(id);
+          return (
+            <button
+              key={id}
+              type="button"
+              draggable
+              onDragStart={(event) => {
+                setDragId(id);
+                event.dataTransfer.setData('text/plain', id);
+                event.dataTransfer.effectAllowed = 'move';
+              }}
+              onDragEnd={() => {
+                setDragId(null);
+                setOver(null);
+              }}
+              onClick={() => {
+                const empty = settings.quickWidgets.findIndex((item) => !item);
+                const slot = empty >= 0 ? empty : 0;
+                place(slot, id);
+              }}
+              className={`flex cursor-grab items-center gap-1.5 rounded-xl px-2 py-2 text-left active:cursor-grabbing ${
+                used ? 'smk-field text-emerald-700 dark:text-emerald-300' : 'smk-field text-slate-700 dark:text-zinc-200'
+              }`}
+            >
+              <Icon className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate smk-text-label font-bold">{widgetLabel(id, t)}</span>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

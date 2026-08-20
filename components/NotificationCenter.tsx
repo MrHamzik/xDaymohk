@@ -35,6 +35,13 @@ export default function NotificationCenter({ trigger }: NotificationCenterProps)
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
+    if (trigger) return;
+    const openMail = () => setIsOpen(true);
+    window.addEventListener('daymohk-open-mail', openMail);
+    return () => window.removeEventListener('daymohk-open-mail', openMail);
+  }, [trigger]);
+
+  useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
       const handleKeyDown = (e: KeyboardEvent) => {

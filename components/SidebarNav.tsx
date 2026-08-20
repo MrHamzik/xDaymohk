@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   BookMarked,
+  Bell,
   BookOpen,
   Bot,
   CarFront,
@@ -28,6 +29,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import MenuProfileCard from '@/components/MenuProfileCard';
+import NotificationCenter from '@/components/NotificationCenter';
 import SettingsControlsBar from '@/components/SettingsControlsBar';
 import PrayerTimesBar from '@/components/PrayerTimesBar';
 import QiblaModal from '@/components/QiblaModal';
@@ -45,7 +47,7 @@ interface SidebarNavProps {
   rail?: boolean;
 }
 
-type MenuAction = 'qibla' | 'hijri' | 'blacklist' | 'invite';
+type MenuAction = 'qibla' | 'hijri' | 'blacklist' | 'invite' | 'notify';
 
 interface MenuItem {
   id: string;
@@ -112,6 +114,7 @@ const SECTIONS: MenuSection[] = [
       { id: 'help', href: '/help', icon: LifeBuoy },
       { id: 'legal', href: '/legal', icon: ScrollText },
       { id: 'invite', action: 'invite', icon: Users },
+      { id: 'notify', action: 'notify', icon: Bell },
       { id: 'blacklist', action: 'blacklist', icon: ShieldBan, danger: true },
     ],
   },
@@ -138,6 +141,17 @@ export default function SidebarNav({ onClose, isAdmin = false, rail = false }: S
   const [isQiblaOpen, setIsQiblaOpen] = useState(false);
   const [isSpecialDaysOpen, setIsSpecialDaysOpen] = useState(false);
   const [isBlacklistOpen, setIsBlacklistOpen] = useState(false);
+
+  useEffect(() => {
+    const openHijri = () => setIsSpecialDaysOpen(true);
+    const openBlacklist = () => setIsBlacklistOpen(true);
+    window.addEventListener('daymohk-open-hijri', openHijri);
+    window.addEventListener('daymohk-open-blacklist', openBlacklist);
+    return () => {
+      window.removeEventListener('daymohk-open-hijri', openHijri);
+      window.removeEventListener('daymohk-open-blacklist', openBlacklist);
+    };
+  }, []);
 
   const editing = settings.lightMode;
   const hidden = new Set(settings.hiddenMenu);
@@ -291,6 +305,9 @@ export default function SidebarNav({ onClose, isAdmin = false, rail = false }: S
         )}
       </div>
 
+      <div className="sr-only">
+        <NotificationCenter />
+      </div>
       <QiblaModal isOpen={isQiblaOpen} onClose={() => setIsQiblaOpen(false)} />
       <SpecialDaysModal isOpen={isSpecialDaysOpen} onClose={() => setIsSpecialDaysOpen(false)} />
       <BlacklistModal isOpen={isBlacklistOpen} onClose={() => setIsBlacklistOpen(false)} />

@@ -163,6 +163,7 @@ const MANAGED_PROPERTIES = [
   // Семантические переменные проекта, завязанные на зелёный.
   '--border-green-dark',
   '--smk-hero-gradient',
+  '--smk-rail-gradient',
 ];
 
 export function applyThemeColors(
@@ -378,6 +379,10 @@ export function applyThemeColors(
   set(
     '--smk-hero-gradient',
     `linear-gradient(135deg, ${mix(colors.heroFrom, '#000000', HERO_SHADE)} 0%, ${mix(colors.heroTo, '#000000', HERO_SHADE)} 100%)`,
+  );
+  set(
+    '--smk-rail-gradient',
+    `linear-gradient(180deg, ${mix(colors.ui, colors.panel, 0.42)} 0%, ${colors.panel} 40%, ${colors.panel} 100%)`,
   );
 
   // ── Главная карточка каталога и карта ───────────────────────────

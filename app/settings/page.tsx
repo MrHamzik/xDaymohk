@@ -39,7 +39,7 @@ import {
  * нечитаемого состояния, поэтому они не должны попадаться случайно.
  */
 /** Разделы страницы настроек. 'all' — прежний вид целиком. */
-type SettingsSection = 'all' | 'tasks' | 'notifications' | 'payout' | 'advanced';
+type SettingsSection = 'all' | 'tasks' | 'widgets' | 'notifications' | 'payout' | 'advanced';
 
 export default function SettingsPage() {
   const { t, language } = useI18n();
@@ -169,6 +169,7 @@ export default function SettingsPage() {
             options={[
               { value: 'all' as const, label: t.settingsSectionAll },
               { value: 'tasks' as const, label: t.settingsSectionTasks },
+              { value: 'widgets' as const, label: t.settingsWidgets },
               { value: 'notifications' as const, label: t.settingsSectionNotifications },
               { value: 'payout' as const, label: t.settingsSectionPayout },
               { value: 'advanced' as const, label: t.settingsSectionAdvanced },
@@ -242,6 +243,13 @@ export default function SettingsPage() {
                   />
                 </SettingRow>
               </div>
+            </section>
+            )}
+
+            {shows('widgets') && (
+            <section>
+              <SectionTitle title={t.settingsWidgets} hint={t.settingsWidgetsHint} />
+              <QuickWidgetsEditor />
             </section>
             )}
 

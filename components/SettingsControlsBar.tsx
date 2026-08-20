@@ -4,14 +4,15 @@ import { useState, useRef, useEffect, useCallback, type ReactNode } from 'react'
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import {
-  BookMarked, BookOpen, Bot, CarFront, Clock, Coffee, Compass, Globe2,
-  HandHeart, Home, Landmark, MapPin, Moon, PowerOff, Sparkles, Sun,
+  Bell, BookMarked, BookOpen, Bot, CarFront, Clock, Coffee, Compass, Crown, Globe2,
+  HandHeart, Home, Landmark, LifeBuoy, MapPin, Moon, PowerOff, ScrollText,
+  Settings as SettingsIcon, ShieldAlert, ShieldBan, Sparkles, Sun,
   UserRound, Users, Wrench,
 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { useTheme } from '@/components/ThemeProvider';
 import { useI18n } from '@/lib/i18n';
-import NotificationCenter from '@/components/NotificationCenter';
+import { useNotifications } from '@/components/NotificationsProvider';
 import ThemePickerButton from '@/components/settings/ThemePickerButton';
 import QiblaModal from '@/components/QiblaModal';
 import { useSettings } from '@/components/SettingsProvider';
@@ -25,6 +26,7 @@ export default function SettingsControlsBar() {
   const { account, setMasterStatus } = useAuth();
   const { toggleTheme } = useTheme();
   const { settings, update } = useSettings();
+  const { unreadCount } = useNotifications();
   const isThemeDark = settings.themeId === 'dark';
   const { language, toggleLanguage, t } = useI18n();
 
@@ -213,7 +215,26 @@ export default function SettingsControlsBar() {
           </button>
         );
       case 'notify':
-        return <NotificationCenter />;
+        return (
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new Event('daymohk-open-mail'))}
+            title={t.settingsSectionNotifications}
+            aria-label={t.settingsSectionNotifications}
+            className={`relative ${TILE} ${
+              unreadCount > 0
+                ? 'bg-orange-500 text-white shadow-orange-500/30 hover:bg-orange-600'
+                : 'bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300'
+            }`}
+          >
+            <Bell className="h-5 w-5" />
+            {unreadCount > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 smk-text-label font-black text-white">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </button>
+        );
       case 'theme':
         return (settings.advancedMode || settings.proTier !== 'none') ? <ThemePickerButton /> : (
           <button
@@ -308,7 +329,7 @@ export default function SettingsControlsBar() {
   const slots = settings.quickWidgets.slice(0, 4);
 
   return (
-    <div className="smk-panel flex w-full items-center justify-between gap-2 p-2">
+    <div className="smk-panel smk-widgets flex w-full items-center justify-between gap-2 p-2">
       {slots.map((id, index) => (
         <div key={`${id}-${index}`} className="flex flex-1 justify-center">
           {renderWidget(id)}

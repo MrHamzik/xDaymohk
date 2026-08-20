@@ -11,8 +11,10 @@ type Dict = Record<string, string>;
 
 export const QUICK_WIDGET_IDS = [
   'status', 'lang', 'notify', 'theme', 'light',
-  'home', 'catalog', 'map', 'qibla', 'quran', 'sira', 'profile',
+  'home', 'catalog', 'map', 'about', 'admin',
+  'qibla', 'quran', 'hijri', 'sira', 'profile',
   'gullaq', 'go', 'vaynakh', 'taxi', 'vpn', 'djanna',
+  'settings', 'pro', 'guide', 'help', 'legal', 'invite', 'blacklist',
 ] as const;
 
 export type QuickWidgetId = (typeof QUICK_WIDGET_IDS)[number];
@@ -24,7 +26,7 @@ export const MENU_IDS = [
   'qibla', 'quran', 'hijri', 'sira',
   'taxi', 'vpn', 'vaynakh', 'go', 'gullaq', 'djanna',
   'settings', 'pro', 'guide', 'help', 'legal', 'invite', 'blacklist',
-  'profile',
+  'notify', 'profile',
 ] as const;
 
 export type MenuId = (typeof MENU_IDS)[number];

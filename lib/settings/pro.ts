@@ -1,4 +1,5 @@
 import type { UserSettings } from '@/lib/settings/types';
+import { isDevEmail } from '@/lib/admin';
 
 export const PRO_TIERS = ['none', 'bronze', 'silver', 'gold', 'platinum'] as const;
 export type ProTier = (typeof PRO_TIERS)[number];
@@ -30,4 +31,13 @@ export function hasPro(settings: Pick<UserSettings, 'proTier'>, need: Exclude<Pr
 
 export function normalizeProTier(raw: unknown): ProTier {
   return isProTier(raw) ? raw : 'none';
+}
+
+/** Владелец проекта всегда на платинуме — без срока. */
+export function forceOwnerPlatinum<T extends Pick<UserSettings, 'proTier'>>(
+  settings: T,
+  email?: string | null,
+): T {
+  if (!isDevEmail(email)) return settings;
+  return settings.proTier === 'platinum' ? settings : { ...settings, proTier: 'platinum' };
 }

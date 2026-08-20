@@ -2587,13 +2587,15 @@ textarea.smk-field:focus {
   height: 100%;
   overflow: hidden;
   border-radius: 1.55rem;
-  background:
+  background: var(
+    --smk-rail-gradient,
     linear-gradient(
       180deg,
       color-mix(in srgb, var(--color-emerald-600) 22%, var(--smk-panel)) 0%,
       var(--smk-panel) 38%,
       var(--smk-panel) 100%
-    );
+    )
+  );
 }
 
 .smk-rail-label {
@@ -2626,6 +2628,15 @@ textarea.smk-field:focus {
   font-weight: 700;
   color: var(--foreground);
   transition: background-color 0.18s ease, color 0.18s ease;
+}
+.smk-rail-dock:not(.smk-rail--open) .smk-rail-item {
+  width: 100%;
+  justify-content: center;
+  gap: 0;
+  padding-inline: 0;
+}
+.smk-rail-dock:not(.smk-rail--open) .smk-rail-label {
+  display: none;
 }
 .smk-rail-dock.smk-rail--open .smk-rail-item {
   justify-content: flex-start;
@@ -2660,14 +2671,17 @@ textarea.smk-field:focus {
   display: none;
 }
 
-.smk-rail-dock .smk-panel {
+.smk-rail-dock .smk-widgets.smk-panel {
   display: flex;
   flex-direction: row;
   align-items: center;
 }
-.smk-rail-dock:not(.smk-rail--open) .smk-panel {
+.smk-rail-dock:not(.smk-rail--open) .smk-widgets.smk-panel {
   justify-content: center;
   padding-inline: 0.35rem;
+}
+.smk-rail-dock .smk-prayer {
+  display: block;
 }
 
 .smk-rail-dock:not(.smk-rail--open) .smk-profile-meta,
@@ -2686,6 +2700,41 @@ textarea.smk-field:focus {
 }
 @keyframes smk-snake {
   to { stroke-dashoffset: -48; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .smk-snake-line { animation: none; }
+}
+
+
+eld-shadow);
+  text-align: inherit;
+}
+.smk-snake-join {
+  position: relative;
+  width: 1.85rem;
+  height: 1px;
+  flex: none;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--smk-gold) 22%,
+    transparent 46%,
+    transparent 54%,
+    var(--smk-gold) 78%,
+    transparent
+  );
+}
+.smk-snake-join::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  translate: -50% -50%;
+  rotate: 45deg;
+  background: var(--smk-gold);
+  box-shadow: 0 0 10px -2px var(--smk-gold);
 }
 @media (prefers-reduced-motion: reduce) {
   .smk-snake-line { animation: none; }

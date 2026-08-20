@@ -62,7 +62,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   lightMode: false,
   radiusScale: 100,
   quickWidgets: [...DEFAULT_QUICK_WIDGETS],
-  hiddenMenu: [],
+  hiddenMenu: ['notify'],
   tourDone: false,
   proTier: 'none',
   themeId: 'light',
@@ -864,7 +864,7 @@ export function normalizeSettings(raw: unknown): UserSettings {
       while (list.length < 4) list.push(DEFAULT_QUICK_WIDGETS[list.length] ?? 'status');
       return list.slice(0, 4);
     })(),
-    hiddenMenu: normalizeStringList(input.hiddenMenu, [], MENU_ID_SET, 24).filter((id) => id !== 'settings'),
+    hiddenMenu: normalizeStringList(input.hiddenMenu, ['notify'], MENU_ID_SET, 28).filter((id) => id !== 'settings'),
     tourDone: input.tourDone === true,
     proTier: normalizeProTier(input.proTier),
     themeId: themeExists ? themeId : 'light',
@@ -921,6 +921,7 @@ export function settingsToDb(settings: UserSettings): Record<string, unknown> {
     quick_widgets: settings.quickWidgets,
     hidden_menu: settings.hiddenMenu,
     tour_done: settings.tourDone,
+    pro_tier: settings.proTier,
     theme_id: settings.themeId,
     custom_themes: settings.customThemes,
     font_scale: settings.fontScale,

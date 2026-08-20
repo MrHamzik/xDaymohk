@@ -16,10 +16,9 @@ interface CreateActionModalProps {
 }
 
 /**
- * Меню плюса: мягкая сияющая змейка.
- *
- * Телефон — дуга вверх, подписи сбоку от линии.
- * ПК — сначала влево (место под текст), потом вверх; иконки и текст справа.
+ * Меню плюса: линия ровно по центру.
+ * Иконка справа от линии — текст слева; иконка слева — текст справа.
+ * Между ними — золотой ромб-связка.
  */
 export default function CreateActionModal({
   isOpen,
@@ -33,7 +32,7 @@ export default function CreateActionModal({
   const { t } = useI18n();
   const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
-  const [anchor, setAnchor] = useState({ x: 0, y: 0, desktop: false, scale: 1 });
+  const [anchor, setAnchor] = useState({ x: 0, y: 0, midX: 0, desktop: false });
 
   useEffect(() => {
     if (!isOpen) {
@@ -43,20 +42,20 @@ export default function CreateActionModal({
     document.body.style.overflow = 'hidden';
     const place = () => {
       const desktop = window.innerWidth >= 1024;
-      const scale = window.visualViewport?.scale || window.devicePixelRatio || 1;
+      const midX = window.innerWidth / 2;
       if (desktop) {
         setAnchor({
           x: window.innerWidth - 24 - 28,
           y: window.innerHeight - 24 - 28,
+          midX,
           desktop: true,
-          scale,
         });
       } else {
         setAnchor({
-          x: window.innerWidth / 2,
+          x: midX,
           y: window.innerHeight - 36,
+          midX,
           desktop: false,
-          scale,
         });
       }
     };
@@ -131,43 +130,28 @@ export default function CreateActionModal({
   ], [t, onClose, onOpenCreateProfile, onOpenGullaq, onOpenGo, onOpenTaxi, onOpenDjanna, router]);
 
   const laid = useMemo(() => {
-    const gapY = 68;
-    const longest = actions.reduce((max, item) => Math.max(max, item.label.length), 0);
-    const textW = Math.min(280, Math.max(148, longest * 8.2));
-    const reach = Math.min(anchor.x - 28, textW + 88 + (anchor.scale > 1 ? 36 : 0));
+    const gapY = 70;
     return actions.map((item, index) => {
-      const step = index + 1;
-      if (anchor.desktop) {
-        return {
-          ...item,
-          x: -reach,
-          y: -step * gapY,
-          align: 'right' as const,
-        };
-      }
-      const side = index % 2 === 0 ? -1 : 1;
+      const iconOnRight = index % 2 === 0;
       return {
         ...item,
-        x: side * 18,
-        y: -step * gapY,
-        align: (side < 0 ? 'left' : 'right') as 'left' | 'right',
+        y: -(index + 1) * gapY,
+        iconOnRight,
       };
     });
-  }, [actions, anchor.desktop, anchor.x, anchor.scale]);
+  }, [actions]);
 
   if (!isOpen) return null;
 
   const last = laid[laid.length - 1];
-  const midX = last ? anchor.x + last.x : anchor.x;
-  const path = last
-    ? `M ${anchor.x} ${anchor.y}
-       C ${anchor.x - 8} ${anchor.y - 18}, ${midX + 48} ${anchor.y - 10}, ${midX} ${anchor.y - 52}
-       C ${midX - 10} ${anchor.y - 90}, ${midX + 10} ${last.y + anchor.y + 40}, ${midX} ${last.y + anchor.y}`
-    : '';
+  const topY = last ? anchor.y + last.y : anchor.y - 80;
+  const path = `M ${anchor.x} ${anchor.y}
+    C ${anchor.x} ${anchor.y - 18}, ${anchor.midX} ${anchor.y - 10}, ${anchor.midX} ${anchor.y - 56}
+    L ${anchor.midX} ${topY}`;
 
   return (
     <div
-      className={`fixed inset-0 z-[90] bg-zinc-950/75 backdrop-blur-md transition-opacity duration-300 ${
+      className={`fixed inset-0 z-[90] bg-zinc-950/55 backdrop-blur-md transition-opacity duration-300 ${
         isMounted ? 'opacity-100' : 'opacity-0'
       }`}
       role="dialog"
@@ -200,7 +184,7 @@ export default function CreateActionModal({
 
       {laid.map((item, index) => {
         const Icon = item.icon;
-        const rowOnRight = item.align === 'right';
+        const top = anchor.y + item.y;
         return (
           <button
             key={item.id}
@@ -210,24 +194,23 @@ export default function CreateActionModal({
               item.run();
             }}
             aria-label={item.label}
-            className={`absolute z-10 flex max-w-[min(18rem,calc(100vw-1.5rem))] items-center gap-2.5 ${
-              rowOnRight ? 'flex-row' : 'flex-row-reverse text-right'
-            }`}
+            className="absolute z-10"
             style={{
-              left: anchor.x + item.x,
-              top: anchor.y + item.y,
-              transform: isMounted
-                ? (rowOnRight ? 'translate(0, -50%) scale(1)' : 'translate(-100%, -50%) scale(1)')
-                : (rowOnRight ? 'translate(0, -50%) scale(0.7)' : 'translate(-100%, -50%) scale(0.7)'),
+              left: anchor.midX,
+              top,
+              transform: isMounted ? 'translate(-50%, -50%) scale(1)' : 'translate(-50%, -50%) scale(0.72)',
               opacity: isMounted ? 1 : 0,
               transition: `transform 0.4s cubic-bezier(0.16, 1, 0.3, 1) ${index * 45}ms, opacity 0.3s ease ${index * 45}ms`,
             }}
           >
-            <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl shadow-lg ${item.tone}`}>
-              <Icon className="h-5 w-5" />
-            </span>
-            <span className="rounded-xl bg-zinc-950/55 px-2.5 py-1.5 smk-text-body font-extrabold leading-snug text-white backdrop-blur-sm">
-              {item.label}
+            <span className={`flex items-center gap-2 ${item.iconOnRight ? 'flex-row' : 'flex-row-reverse'}`}>
+              <span className="smk-snake-label max-w-[min(12.5rem,calc(50vw-3.2rem))] smk-text-body font-extrabold leading-snug">
+                {item.label}
+              </span>
+              <span className="smk-snake-join" aria-hidden />
+              <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl shadow-lg ${item.tone}`}>
+                <Icon className="h-5 w-5" />
+              </span>
             </span>
           </button>
         );
