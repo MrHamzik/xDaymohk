@@ -385,6 +385,8 @@ export interface UserSettings {
   quickWidgets: string[];
   /** Скрытые пункты меню. */
   hiddenMenu: string[];
+  /** Обязательный гид после первого входа уже пройден. */
+  tourDone: boolean;
   /** 'light' | 'dark' | 'space' | 'sunset' | 'custom:<id>' */
   themeId: string;
   customThemes: CustomTheme[];

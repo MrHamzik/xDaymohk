@@ -7,7 +7,7 @@
  *   welcome (гостю, один раз в кеше; зарег. не показывается)
  *     ├─ «Руководство» → окно-гид по разделам (Назад → welcome)
  *     ├─ «Войти в Даймохк» → окно согласия (оферта/политика/рассылка)
- *     │     → Google-вход → окно профиля (все поля; ФИО обязательно)
+ *     │     → Google-вход → обязательный гид → окно профиля
  *     └─ «Продолжить как гость» → закрыть
  *
  * При входе как гость из мини-профиля открывается то же окно согласия.
@@ -17,6 +17,8 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, BookOpen, Check, Globe2, LogIn } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
+import { useSettings } from '@/components/SettingsProvider';
+import FirstTour from '@/components/FirstTour';
 import { useI18n } from '@/lib/i18n';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
@@ -36,7 +38,8 @@ function isValidFullName(name: string): boolean {
 export default function OnboardingModal() {
   const { account, isLoading, updateAccount, signInWithGoogle, signOut } = useAuth();
   const { language, setLanguage, t } = useI18n();
-  const [step, setStep] = useState<'welcome' | 'guide' | 'consent' | 'profile'>('welcome');
+  const { settings } = useSettings();
+  const [step, setStep] = useState<'welcome' | 'guide' | 'consent' | 'tour' | 'profile'>('welcome');
   const [open, setOpen] = useState(false);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -177,20 +180,35 @@ export default function OnboardingModal() {
     try { window.sessionStorage.removeItem(AUTHING_KEY); } catch {}
     if (!authing) return;
 
-    const showProfileStep = () => {
+    const fillProfileFields = () => {
       const parts = (account.fullName || '').trim().split(/\s+/).filter(Boolean);
       setFirstName(parts[0] || '');
       setLastName(parts.slice(1).join(' ') || '');
       setAvatarUrl(account.avatarUrl || '');
       if (account.phone) setPhone(account.phone);
       if (account.settlement) setSettlement(account.settlement);
+    };
+
+    const showProfileStep = () => {
+      fillProfileFields();
       setStep('profile');
       setOpen(true);
     };
 
+    const startAfterAuth = () => {
+      fillProfileFields();
+      let seen = false;
+      try { seen = window.localStorage.getItem(`daymohk-tour-${account.id}`) === '1'; } catch { /* private */ }
+      if (!settings.tourDone && !seen) {
+        setStep('tour');
+        setOpen(true);
+        return;
+      }
+      showProfileStep();
+    };
+
     if (isValidFullName(account.fullName || '')) {
-      // Имя уже есть — окно профиля показываем только если аккаунт создан
-      // прямо сейчас (новая регистрация), а не повторный вход.
+      // Имя уже есть — гид и профиль только у новой регистрации.
       void (async () => {
         let isNewUser = false;
         try {
@@ -200,13 +218,13 @@ export default function OnboardingModal() {
             isNewUser = Number.isFinite(createdAt) && Date.now() - createdAt < 3 * 60_000;
           }
         } catch {}
-        if (isNewUser) showProfileStep();
+        if (isNewUser) startAfterAuth();
         else void finishOnboarding();
       })();
       return;
     }
-    showProfileStep();
-  }, [account]);
+    startAfterAuth();
+  }, [account, settings.tourDone]);
 
   if (!open) return null;
 
