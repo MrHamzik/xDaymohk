@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   X, Loader2, Star, MapPin, Clock, Users, CalendarDays, ShieldAlert, Trash2,
-  Ban, Check, Pencil, Wallet, Share2, Copy,
+  Ban, Check, Pencil, Wallet, Share2, Copy, Phone, MessageSquare, Send,
 } from 'lucide-react';
 import Link from 'next/link';
 import PayoutPeekSheet from '@/components/settings/PayoutPeekSheet';
@@ -376,6 +376,48 @@ export default function TaskDetailModal({
                   </p>
                 )}
               </div>
+
+              {/* Связь с заказчиком (обновление 56).
+                  Номера приходят из анкеты автора и только теми
+                  каналами, которые он разрешил на этом задании.
+                  Вьюха уже вернула пустую строку, если показ запрещён
+                  или посетитель не вошёл, — здесь просто нечего рисовать. */}
+              {(task.authorPhone || task.authorWhatsapp || task.authorTelegram) && (
+                <div className="flex items-center gap-2 px-4 pb-4">
+                  {task.authorPhone && (
+                    <a
+                      href={`tel:${task.authorPhone}`}
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-600 py-2.5 text-xs font-bold text-white shadow-sm shadow-emerald-600/30 transition hover:bg-emerald-700 active:scale-95"
+                    >
+                      <Phone className="h-3.5 w-3.5" />
+                      {t.callBtn}
+                    </a>
+                  )}
+                  {task.authorWhatsapp && (
+                    <a
+                      href={`https://wa.me/${task.authorWhatsapp.replace(/\D/g, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-700 py-2.5 text-xs font-bold text-white transition hover:bg-emerald-800 active:scale-95"
+                    >
+                      <MessageSquare className="h-3.5 w-3.5" />
+                      WhatsApp
+                    </a>
+                  )}
+                  {task.authorTelegram && (
+                    <a
+                      href={`https://t.me/${task.authorTelegram.replace(/^@/, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="Telegram"
+                      title="Telegram"
+                      className="rounded-xl bg-[#229ED9] p-2.5 text-white transition hover:brightness-110 active:scale-95"
+                    >
+                      <Send className="h-4 w-4" />
+                    </a>
+                  )}
+                </div>
+              )}
 
               {task.description && (
                 <div className="smk-sheet-section px-4 py-4">

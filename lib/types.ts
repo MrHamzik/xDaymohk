@@ -586,6 +586,21 @@ export interface Task {
   visibleUntil?: string | null;
   /** Как заказчик рассчитается: 'cash' | 'sbp' | 'card' | 'yoomoney'. */
   paymentMethod?: string;
+
+  /**
+   * Видимость контактов по этому заданию (обновление 56).
+   *
+   * Сами номера в задании не хранятся — они берутся из анкеты автора.
+   * Здесь только разрешение показать: по одному заданию человек готов
+   * принимать звонки, по другому — только сообщения.
+   */
+  showPhone?: boolean;
+  showWhatsapp?: boolean;
+  showTelegram?: boolean;
+  /** Контакты автора, подставленные базой, если показ разрешён. */
+  authorPhone?: string;
+  authorWhatsapp?: string;
+  authorTelegram?: string;
   status: TaskStatus;
   paymentStatus: TaskPaymentStatus;
   submittedAt?: string | null;

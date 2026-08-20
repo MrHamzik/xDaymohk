@@ -242,6 +242,12 @@ export async function POST(request: Request) {
   const minAccountDays = Math.min(Math.max(Math.floor(Number(body.minAccountDays) || 0), 0), 3650);
   const minTasksDone = Math.min(Math.max(Math.floor(Number(body.minTasksDone) || 0), 0), 10_000);
   const allowNewcomers = body.allowNewcomers !== false;
+  // Видимость контактов. Только булевы флаги — номера с клиента не
+  // принимаем вовсе, их подставит база из анкеты автора. Deny by
+  // default: явное true, иначе контакт не раскрывается.
+  const showPhone = body.showPhone === true;
+  const showWhatsapp = body.showWhatsapp === true;
+  const showTelegram = body.showTelegram === true;
 
   // Блокировка за неподтверждение оплаты (6 часов).
   let { data: profile, error: profileError } = await admin
@@ -331,6 +337,21 @@ export async function POST(request: Request) {
       .from('tasks').update({ payment_method: method }).eq('id', createdId);
     if (methodError) {
       log.warn('tasks payment_method skipped', { message: methodError.message });
+    }
+
+    // Видимость контактов — тем же приёмом: колонки появляются в
+    // миграции 56, и на базе без неё задание должно создаваться, а не
+    // падать целиком. Без колонок контакты просто не показываются.
+    const { error: contactsError } = await admin
+      .from('tasks')
+      .update({
+        show_phone: showPhone,
+        show_whatsapp: showWhatsapp,
+        show_telegram: showTelegram,
+      })
+      .eq('id', createdId);
+    if (contactsError) {
+      log.warn('tasks contact flags skipped', { message: contactsError.message });
     }
   }
 

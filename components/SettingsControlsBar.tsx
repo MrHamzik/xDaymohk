@@ -329,7 +329,7 @@ export default function SettingsControlsBar() {
   const slots = settings.quickWidgets.slice(0, 4);
 
   return (
-    <div className="smk-panel smk-widgets flex w-full items-center justify-between gap-2 p-2">
+    <div data-tour="widgets" className="smk-panel smk-widgets flex w-full items-center justify-between gap-2 p-2">
       {slots.map((id, index) => (
         <div key={`${id}-${index}`} className="flex flex-1 justify-center">
           {renderWidget(id)}

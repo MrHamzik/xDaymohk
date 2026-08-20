@@ -486,6 +486,23 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     return NextResponse.json({ error: 'Не удалось сохранить изменения' }, { status: 500 });
   }
 
+  // Видимость контактов — отдельным запросом: колонки появляются в
+  // миграции 56, и на базе без неё правка задания не должна падать
+  // целиком. Номера с клиента не принимаем, только флаги показа.
+  {
+    const { error: contactsError } = await admin
+      .from('tasks')
+      .update({
+        show_phone: body.showPhone === true,
+        show_whatsapp: body.showWhatsapp === true,
+        show_telegram: body.showTelegram === true,
+      })
+      .eq('id', id);
+    if (contactsError) {
+      log.warn('task edit contact flags skipped', { message: contactsError.message });
+    }
+  }
+
   // Все, кто уже откликнулся, должны согласиться с новыми условиями.
   //
   // Одобренные (joined/attended) ВОЗВРАЩАЮТСЯ в 'pending': человек

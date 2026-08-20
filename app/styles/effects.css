@@ -499,3 +499,34 @@ textarea.smk-field:focus {
 .smk-btn-google:hover { filter: brightness(1.04); }
 .smk-btn-google:active { transform: scale(0.98); }
 .smk-btn-google:disabled { opacity: 0.5; }
+
+/* --- Прожектор гида ---------------------------------------------------------
+   Вырез вокруг настоящей кнопки: гид показывает пальцем, а не описывает
+   словами. Затемнение — одна огромная тень вокруг окна, поэтому «дырка»
+   цельная, без щелей на дробных пикселях. */
+.smk-tour-hole {
+  box-shadow:
+    0 0 0 9999px rgb(9 9 11 / 72%),
+    0 0 0 2px var(--color-emerald-400),
+    0 0 22px 4px color-mix(in srgb, var(--color-emerald-400) 55%, transparent);
+  animation: smk-tour-breathe 1.6s ease-in-out infinite;
+}
+@keyframes smk-tour-breathe {
+  0%, 100% {
+    box-shadow:
+      0 0 0 9999px rgb(9 9 11 / 72%),
+      0 0 0 2px var(--color-emerald-400),
+      0 0 22px 4px color-mix(in srgb, var(--color-emerald-400) 55%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 0 9999px rgb(9 9 11 / 72%),
+      0 0 0 3px var(--color-emerald-300),
+      0 0 30px 8px color-mix(in srgb, var(--color-emerald-300) 75%, transparent);
+  }
+}
+
+/* Пульсация — украшение. Рамка и вырез несут смысл, их оставляем. */
+@media (prefers-reduced-motion: reduce) {
+  .smk-tour-hole { animation: none; }
+}

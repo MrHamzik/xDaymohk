@@ -22,12 +22,14 @@ export default function BottomNav({ onOpenMenu, onOpenCreate }: BottomNavProps) 
     <button
       type="button"
       onClick={onOpenCreate}
+      data-tour="plus-desktop"
       aria-label={t.quickCreate}
       className="fixed bottom-6 right-6 z-40 hidden h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-emerald-600 via-emerald-500 to-teal-400 text-white shadow-lg shadow-emerald-600/35 lg:flex"
     >
       <Plus className="h-7 w-7 stroke-[2.5]" />
     </button>
     <nav
+      data-tour="nav"
       className="site-bottom-nav fixed inset-x-0 bottom-0 z-40 w-full px-1.5 pt-2 shadow-2xl backdrop-blur-xl transition-colors lg:hidden"
       style={{ position: 'fixed', right: 0, bottom: 0, left: 0 }}
     >
@@ -36,6 +38,7 @@ export default function BottomNav({ onOpenMenu, onOpenCreate }: BottomNavProps) 
         <button
           type="button"
           onClick={onOpenMenu}
+          data-tour="menu"
           aria-label={t.menu}
           className="flex flex-col items-center justify-center rounded-2xl py-1 text-slate-500 transition hover:text-slate-900 active:scale-95 dark:text-zinc-500 dark:hover:text-white"
         >
@@ -46,6 +49,7 @@ export default function BottomNav({ onOpenMenu, onOpenCreate }: BottomNavProps) 
         {/* 2. Catalog — каталог живёт на /catalog (главная — отдельная landing) */}
         <Link
           href="/catalog"
+          data-tour="catalog"
           className={`flex flex-col items-center justify-center rounded-2xl py-1 transition active:scale-95 ${
             pathname === '/catalog'
               ? 'font-bold text-emerald-600 dark:text-emerald-400'
@@ -61,6 +65,7 @@ export default function BottomNav({ onOpenMenu, onOpenCreate }: BottomNavProps) 
           <button
             type="button"
             onClick={onOpenCreate}
+            data-tour="plus"
             aria-label={t.quickCreate}
             title={t.quickCreate}
             className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-emerald-600 via-emerald-500 to-teal-400 text-white shadow-lg shadow-emerald-600/35 transition-all hover:scale-105 active:scale-95"
@@ -72,6 +77,7 @@ export default function BottomNav({ onOpenMenu, onOpenCreate }: BottomNavProps) 
         {/* 4. Map */}
         <Link
           href="/map"
+          data-tour="map"
           className={`flex flex-col items-center justify-center rounded-2xl py-1 transition active:scale-95 ${
             pathname === '/map'
               ? 'font-bold text-emerald-600 dark:text-emerald-400'

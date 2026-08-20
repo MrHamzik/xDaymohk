@@ -15,7 +15,7 @@ import { useI18n } from '@/lib/i18n';
 import { createTask, updateTask, fetchTaskFilters } from '@/lib/tasks/client';
 import { getUserCoords } from '@/lib/geo';
 import { useAuth } from '@/components/AuthProvider';
-import PhoneVerifyPanel from '@/components/PhoneVerifyPanel';
+import { SettingRow, Toggle } from '@/components/settings/SettingsPrimitives';
 import PayoutPeekSheet from '@/components/settings/PayoutPeekSheet';
 import { useProfiles } from '@/components/ProfilesProvider';
 import Link from 'next/link';
@@ -89,6 +89,11 @@ export default function CreateTaskModal({
   const [minAccountDays, setMinAccountDays] = useState('0');
   const [minTasksDone, setMinTasksDone] = useState('0');
   const [allowNewcomers, setAllowNewcomers] = useState(true);
+  // Видимость контактов по ЭТОМУ заданию. Сами номера лежат в профиле и
+  // сюда не копируются — здесь только «показывать или нет».
+  const [showPhone, setShowPhone] = useState(false);
+  const [showWhatsapp, setShowWhatsapp] = useState(false);
+  const [showTelegram, setShowTelegram] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
   const [payoutOpen, setPayoutOpen] = useState(false);
@@ -164,6 +169,9 @@ export default function CreateTaskModal({
       setMinAccountDays(String(editTask.minAccountDays ?? 0));
       setMinTasksDone(String(editTask.minTasksDone ?? 0));
       setAllowNewcomers(editTask.allowNewcomers !== false);
+      setShowPhone(editTask.showPhone === true);
+      setShowWhatsapp(editTask.showWhatsapp === true);
+      setShowTelegram(editTask.showTelegram === true);
       if (isPaymentMethod(editTask.paymentMethod)) {
         setPaymentMethod(editTask.paymentMethod as PaymentMethod);
       }
@@ -290,6 +298,14 @@ export default function CreateTaskModal({
 
   if (!isOpen) return null;
 
+  // Контакты берём из анкеты автора: в форме задания их не вводят.
+  // Телефон живёт в аккаунте, WhatsApp и Telegram — в анкете.
+  const myProfile = account ? profiles.find((profile) => profile.ownerId === account.id) : undefined;
+  const myPhone = account?.phone ?? '';
+  const myWhatsapp = myProfile?.whatsapp ?? '';
+  const myTelegram = myProfile?.telegram ?? '';
+  const hasAnyContact = Boolean(myPhone || myWhatsapp || myTelegram);
+
   const rewardValue = Number(reward) || 0;
   const budgetValue = Number(purchaseBudget) || 0;
   // «Покупки» — единственная категория, где нужен бюджет на товар.
@@ -330,6 +346,11 @@ export default function CreateTaskModal({
         minAccountDays: Number(minAccountDays) || 0,
         minTasksDone: Number(minTasksDone) || 0,
         allowNewcomers,
+        // Контакты не передаём — только разрешение их показать.
+        // Номера сервер возьмёт из профиля автора.
+        showPhone,
+        showWhatsapp,
+        showTelegram,
       };
 
       if (editTask) {
@@ -456,16 +477,42 @@ export default function CreateTaskModal({
             </div>
           )}
 
-          {isPaid && !isEditing && (
-            <div className="smk-sheet-section space-y-2 px-4 py-4">
-              <h3 className="smk-sheet-label">{t.phoneGeneral}</h3>
-              <PhoneVerifyPanel
-                onVerified={() => {
-                  setError('');
-                }}
-              />
-            </div>
-          )}
+          {/* Контакты по заданию.
+              Раньше здесь стоял «Общий номер»: телефон вводился заново
+              на каждое задание и разъезжался с профилем. Теперь номера
+              живут только в профиле, а тут выбирается их видимость. */}
+          <div className="smk-sheet-section space-y-2 px-4 py-4">
+            <h3 className="smk-sheet-label">{t.taskContactsTitle}</h3>
+            <p className="smk-text-label leading-relaxed text-slate-500 dark:text-zinc-500">
+              {t.taskContactsHint}
+            </p>
+
+            {hasAnyContact ? (
+              <div className="space-y-1.5 pt-1">
+                {/* Тумблер показываем только для заполненного контакта:
+                    предлагать «показать телефон», которого нет, — обман. */}
+                {Boolean(myPhone) && (
+                  <SettingRow title={t.taskShowPhone}>
+                    <Toggle checked={showPhone} onChange={setShowPhone} label={t.taskShowPhone} />
+                  </SettingRow>
+                )}
+                {Boolean(myWhatsapp) && (
+                  <SettingRow title={t.taskShowWhatsapp}>
+                    <Toggle checked={showWhatsapp} onChange={setShowWhatsapp} label={t.taskShowWhatsapp} />
+                  </SettingRow>
+                )}
+                {Boolean(myTelegram) && (
+                  <SettingRow title={t.taskShowTelegram}>
+                    <Toggle checked={showTelegram} onChange={setShowTelegram} label={t.taskShowTelegram} />
+                  </SettingRow>
+                )}
+              </div>
+            ) : (
+              <p className="smk-text-label leading-relaxed text-amber-700 dark:text-amber-400">
+                {t.taskContactsEmpty}
+              </p>
+            )}
+          </div>
 
           {/* Тип задания */}
           <div className="px-4 pb-4 pt-4">

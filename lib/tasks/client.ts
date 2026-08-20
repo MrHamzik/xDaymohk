@@ -109,6 +109,14 @@ export interface CreateTaskInput {
   allowNewcomers: boolean;
   /** Как заказчик рассчитается: наличные, СБП, карта, ЮMoney. */
   paymentMethod: PaymentMethod;
+  /**
+   * Видимость контактов (обновление 56). Передаётся именно разрешение,
+   * а не номер: номера сервер берёт из анкеты автора, чтобы они не
+   * разъезжались с профилем и не подделывались с клиента.
+   */
+  showPhone: boolean;
+  showWhatsapp: boolean;
+  showTelegram: boolean;
 }
 
 export async function createTask(input: CreateTaskInput): Promise<string> {

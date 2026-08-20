@@ -27,6 +27,14 @@ export function mapTaskRow(row: Record<string, unknown>) {
     minAccountDays: Number(row.min_account_days ?? 0),
     minTasksDone: Number(row.min_tasks_done ?? 0),
     allowNewcomers: Boolean(row.allow_newcomers),
+    // Обновление 56: флаги показа и уже подставленные базой контакты.
+    // Вьюха отдаёт номер только когда показ разрешён и посетитель вошёл.
+    showPhone: Boolean(row.show_phone),
+    showWhatsapp: Boolean(row.show_whatsapp),
+    showTelegram: Boolean(row.show_telegram),
+    authorPhone: String(row.author_phone ?? ''),
+    authorWhatsapp: String(row.author_whatsapp ?? ''),
+    authorTelegram: String(row.author_telegram ?? ''),
     paymentMethod: row.payment_method ?? 'cash',
     disputeUntil: row.dispute_until ?? null,
     disputeReason: row.dispute_reason ?? null,

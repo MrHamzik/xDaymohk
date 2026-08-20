@@ -334,8 +334,22 @@ export default function OnboardingModal() {
   ];
 
   return (
-    <div className="fixed inset-0 z-[95] flex items-center justify-center bg-zinc-950/70 p-4 backdrop-blur-md" role="dialog" aria-modal="true" aria-labelledby="onb-title">
-      <div className="smk-sheet smk-sign relative w-full max-w-md overflow-hidden rounded-3xl shadow-2xl">
+    // Во время гида фон НЕ затемняем и НЕ размываем: подсветка показывает
+    // настоящую кнопку на экране, а под размытием её было бы не разглядеть.
+    // Затемнение в этом случае рисует сам прожектор — вокруг выреза.
+    // Снизу оставляем место, чтобы окно гида не легло на нижнюю панель,
+    // про которую оно же и рассказывает.
+    <div
+      className={`fixed inset-0 z-[95] flex justify-center p-4 ${
+        step === 'tour'
+          ? 'pointer-events-none items-start overflow-y-auto pb-28 pt-6'
+          : 'items-center bg-zinc-950/70 backdrop-blur-md'
+      }`}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="onb-title"
+    >
+      <div className="smk-sheet smk-sign pointer-events-auto relative w-full max-w-md overflow-hidden rounded-3xl shadow-2xl">
         {step === 'welcome' && (
           <div className="relative px-6 pb-6 pt-12">
             <div className="mb-5 text-center">
