@@ -53,6 +53,15 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
   /** Открыто ли сейчас меню плюса — на шаге «Задания» прячет карточку. */
   const [plusOpen, setPlusOpen] = useState(false);
   /**
+   * Задание шага началось.
+   *
+   * Раньше на шагах «Каталог», «Меню» и «Задания» карточка пряталась
+   * сразу, и человек видел голую подсказку «нажмите и пролистайте», не
+   * прочитав, зачем это делать. Теперь порядок обратный: сначала
+   * карточка шага, и только после «Дальше» — само задание.
+   */
+  const [tasking, setTasking] = useState(false);
+  /**
    * Открыт ли поверх страницы выезд меню или меню плюса.
    *
    * Важно для подсветки: её слой-ловушка лежит выше этих окон (иначе он
@@ -149,7 +158,7 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
       items: [t.tour4a, t.tour4b, t.tour4c],
       marks: ['widgets'],
       // Тот же редактор, что и в настройках: одна реализация, не копия.
-      panel: <QuickWidgetsEditor />,
+      panel: <QuickWidgetsEditor demo />,
       awaits: null,
       hint: '',
       skippable: true,
@@ -192,7 +201,7 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
     },
     {
       title: t.tour6Title,
-      items: [t.tour6a, t.tour6b, t.tour6c, t.tour6d],
+      items: [t.tour6a],
       marks: ['plus', 'plus-desktop'],
       panel: null,
       awaits: 'plus' as const,
@@ -227,20 +236,17 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
   /**
    * Когда карточки не видно.
    *
-   * Шаги «Каталог» и «Меню» прячут её сразу: человек сам нажимает
-   * кнопку и листает, а карточка закрывала бы ровно то, что нужно
-   * увидеть. Возвращается она после прокрутки.
-   *
-   * Шаг «Задания» — наоборот: сначала читают список из четырёх пунктов,
-   * и карточка уходит только на то время, пока открыто меню плюса.
-   * Закрыли крестиком — карточка вернулась.
+   * Сначала человек читает карточку шага. Нажал «Дальше» — карточка
+   * уходит, и он выполняет задание на настоящем интерфейсе. Как только
+   * задание выполнено (done), шаг сам перелистывается вперёд.
    */
-  const waiting = step.awaits === 'plus' ? plusOpen : Boolean(step.awaits) && !done;
+  const waiting = Boolean(step.awaits) && tasking && !done;
 
   useEffect(() => {
     setDone(false);
     setPlusOpen(false);
     setOverlayOpen(false);
+    setTasking(false);
   }, [index]);
 
   useEffect(() => { onCardVisible?.(!waiting); }, [waiting, onCardVisible]);
@@ -251,24 +257,52 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
    * страницы напрямую — «Каталог» это обычная ссылка, событий она не шлёт.
    */
   useEffect(() => {
-    if (step.awaits !== 'catalog-scroll' || done) return;
+    if (step.awaits !== 'catalog-scroll' || !tasking || done) return;
+
+    // Сколько нужно пролистать, чтобы шаг засчитался.
+    //
+    // Раньше хватало 120px — это меньше одной карточки: человек чуть
+    // качнул страницу, и гид уже возвращался, хотя списка он не увидел.
+    // Теперь просим либо полтора экрана, либо докрутить до конца
+    // страницы (если карточек мало и крутить особо нечего).
+    const NEEDED = Math.round(window.innerHeight * 1.5);
+    let timer = 0;
+
     const onScroll = () => {
-      if (window.scrollY > 120) setDone(true);
+      if (timer) return;
+      const scrolled = window.scrollY;
+      const atBottom =
+        window.innerHeight + scrolled >= document.body.scrollHeight - 80;
+      if (scrolled < NEEDED && !atBottom) return;
+
+      // Пауза перед возвращением карточки: человек только что доскроллил
+      // и ещё смотрит на список. Выпрыгивать ему в лицо сразу — грубо.
+      timer = window.setTimeout(() => setDone(true), 2000);
     };
+
     window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, [step.awaits, done]);
+    onScroll(); // страница может быть короткой и уже «в конце»
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [step.awaits, tasking, done]);
 
   // Меню и плюс сообщают о себе сами — они модальные, страница под ними
   // не двигается, поймать прокрутку окна там нечем.
   const onTourEvent = useCallback((event: TourEvent) => {
     if (event === 'menu-open' || event === 'plus-open') setOverlayOpen(true);
     if (event === 'menu-close' || event === 'plus-close') setOverlayOpen(false);
-    if (step.awaits === 'menu-scroll' && event === 'menu-scroll') setDone(true);
+    if (!tasking) return;
+    if (step.awaits === 'menu-scroll' && event === 'menu-scroll') {
+      // Та же пауза, что и в каталоге: даём досмотреть список.
+      window.setTimeout(() => setDone(true), 2000);
+    }
     if (step.awaits !== 'plus') return;
     if (event === 'plus-open') setPlusOpen(true);
-    if (event === 'plus-close') setPlusOpen(false);
-  }, [step.awaits]);
+    // Закрыли меню плюса крестиком — задание выполнено.
+    if (event === 'plus-close') { setPlusOpen(false); setDone(true); }
+  }, [step.awaits, tasking]);
   useTourEvents(onTourEvent);
 
   const finish = () => {
@@ -280,9 +314,31 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
   };
 
   const goNext = () => {
+    // На шаге с заданием «Дальше» не листает вперёд, а запускает само
+    // задание: карточка уходит, человек работает с интерфейсом.
+    if (step.awaits && !tasking) {
+      setTasking(true);
+      return;
+    }
     if (last) finish();
     else setIndex((current) => current + 1);
   };
+
+  /** «Пропустить шаг» листает вперёд всегда, минуя задание. */
+  const skipStep = () => {
+    if (last) finish();
+    else setIndex((current) => current + 1);
+  };
+
+  // Задание выполнено — переходим к следующему шагу сами. Возвращать
+  // карточку того же шага незачем: человек уже сделал, что просили.
+  useEffect(() => {
+    if (!done || !tasking) return;
+    const timer = window.setTimeout(() => {
+      setIndex((current) => Math.min(current + 1, steps.length - 1));
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [done, tasking, steps.length]);
 
   return (
     <div className={waiting ? 'contents' : 'relative px-6 pb-6 pt-10'}>
@@ -303,7 +359,10 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
       {waiting ? (
         // Портал в body: подложку модального окна на это время скрывают
         // (display:none), а вместе с ней исчезла бы и подсказка.
-        typeof document !== 'undefined' && createPortal(
+        // Пока открыто меню плюса или выезд меню, подсказку прячем (п.41):
+        // человек уже сделал то, о чём она просила, и висеть поверх
+        // открытого окна ей незачем.
+        typeof document !== 'undefined' && !overlayOpen && createPortal(
           <div className="pointer-events-none fixed inset-x-0 bottom-24 z-[96] flex justify-center px-4">
             <p className="smk-sheet pointer-events-auto max-w-sm rounded-2xl px-4 py-3 text-center text-sm font-bold text-slate-800 shadow-2xl dark:text-zinc-100">
               {step.hint}
@@ -376,7 +435,7 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
           {step.skippable && (
             <button
               type="button"
-              onClick={goNext}
+              onClick={skipStep}
               className="mt-2 w-full py-2 text-center text-sm font-bold text-slate-500 dark:text-zinc-400"
             >
               {t.tourSkip}

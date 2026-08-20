@@ -45,7 +45,12 @@ const ICONS: Record<QuickWidgetId, typeof Clock> = {
 /**
  * Четыре слота как шторка телефона: удержал значок и перетащил в слот.
  */
-export default function QuickWidgetsEditor() {
+/**
+ * demo — режим показа внутри гида: панель четырёх значков видна, но
+ * нажать её нельзя. Перетаскивание значков в слоты при этом работает,
+ * ради него шаг и существует.
+ */
+export default function QuickWidgetsEditor({ demo = false }: { demo?: boolean }) {
   const { t } = useI18n();
   const { settings, update } = useSettings();
   const [dragId, setDragId] = useState<QuickWidgetId | null>(null);
@@ -70,7 +75,12 @@ export default function QuickWidgetsEditor() {
         </p>
       </div>
 
-      <SettingsControlsBar />
+      {/* Во время гида панель показываем как образец, но нажимать её
+          нельзя (п.39): иначе у человека прямо посреди обучения
+          открывались кибла, статус или тема, и он терял нить. */}
+      <div className={demo ? 'pointer-events-none select-none' : undefined} aria-hidden={demo}>
+        <SettingsControlsBar />
+      </div>
 
       <div className="grid grid-cols-4 gap-1.5">
         {settings.quickWidgets.slice(0, 4).map((id, index) => {

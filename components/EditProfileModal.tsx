@@ -372,15 +372,33 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
               setWorkplaceCoords={setWorkplaceCoords}
             />
 
-            <div>
-              <label htmlFor="profile-bio" className="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-400">{t.bioLabel}</label>
-              <textarea id="profile-bio" rows={3} maxLength={MAX_BIO_LENGTH} value={bio} onChange={(event) => setBio(event.target.value)} placeholder={t.bioPlaceholder} className="w-full resize-y break-words [overflow-wrap:anywhere] smk-field px-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:text-white" />
-              <p className="mt-0.5 text-right smk-text-label text-slate-400">{bio.length}/{MAX_BIO_LENGTH}</p>
-            </div>
+            {/* Контакты идут сразу после адреса и до рассказа о себе (п.43):
+                сначала «где», потом «как связаться», и только затем текст.
+                Порядок внутри: Телефон → WhatsApp → Telegram. */}
+            <section className="space-y-2.5">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-400">
+                {t.contactsHeading}
+              </h3>
 
-            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
               <div>
-                <div className="mb-1 flex items-center justify-between gap-2">
+                {/* Заголовок был «Телефон / телефон» — одно и то же слово
+                    дважды. Теперь просто «Телефон». */}
+                <label htmlFor="profile-phone" className="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-400">
+                  {t.phoneHeading}
+                </label>
+                <input
+                  id="profile-phone"
+                  value={account?.phone ? formatPhone(account.phone) : ''}
+                  placeholder={t.phoneNotSet}
+                  readOnly
+                  className="smk-field w-full px-3 py-2.5 text-xs text-slate-500 dark:text-zinc-400"
+                />
+                <p className="mt-1 smk-text-label text-slate-500 dark:text-zinc-500">{t.phoneFromAccount}</p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                <div>
+                  <div className="mb-1 flex items-center justify-between gap-2">
                   <label htmlFor="profile-whatsapp" className="block text-xs font-semibold text-slate-700 dark:text-zinc-400">WhatsApp</label>
                   <label className="flex cursor-pointer items-center gap-1 smk-text-label text-emerald-700 dark:text-emerald-400"><input type="checkbox" checked={sameAsPhoneWhatsapp} onChange={(event) => { setSameAsPhoneWhatsapp(event.target.checked); if (event.target.checked && account) setWhatsappDigits(extractPhoneDigits(account.phone)); }} className="h-3 w-3 rounded text-emerald-600 focus:ring-emerald-500" />{t.useCommonNumber}</label>
                 </div>
@@ -393,6 +411,15 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
             </div>
 
             <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-600 dark:text-zinc-400"><input type="checkbox" checked={hidePhone} onChange={(event) => setHidePhone(event.target.checked)} className="h-3.5 w-3.5 rounded text-emerald-600 focus:ring-emerald-500" />{t.hidePhoneLabel}</label>
+
+            </section>
+
+            <div>
+              <label htmlFor="profile-bio" className="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-400">{t.bioLabel}</label>
+              <textarea id="profile-bio" rows={3} maxLength={MAX_BIO_LENGTH} value={bio} onChange={(event) => setBio(event.target.value)} placeholder={t.bioPlaceholder} className="w-full resize-y break-words [overflow-wrap:anywhere] smk-field px-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:text-white" />
+              <p className="mt-0.5 text-right smk-text-label text-slate-400">{bio.length}/{MAX_BIO_LENGTH}</p>
+            </div>
+
 
             <div className="smk-note smk-note-warn p-2.5">
               {t.emptyContactsWarning}

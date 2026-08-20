@@ -39,7 +39,7 @@ import {
  * нечитаемого состояния, поэтому они не должны попадаться случайно.
  */
 /** Разделы страницы настроек. 'all' — прежний вид целиком. */
-type SettingsSection = 'all' | 'tasks' | 'widgets' | 'notifications' | 'payout' | 'advanced';
+type SettingsSection = 'all' | 'widgets' | 'notifications' | 'payout' | 'advanced';
 
 export default function SettingsPage() {
   const { t, language } = useI18n();
@@ -59,8 +59,8 @@ export default function SettingsPage() {
   const [section, setSection] = useState<SettingsSection>('all');
   // Какой из больших блоков расширенного режима раскрыт. Один за раз:
   // иначе страница снова превращается в бесконечный свиток.
-  const [openBlock, setOpenBlock] = useState<'themes' | 'effects' | 'fonts' | null>(null);
-  const toggleBlock = (name: 'themes' | 'effects' | 'fonts') =>
+  const [openBlock, setOpenBlock] = useState<'extra' | 'themes' | 'effects' | 'fonts' | null>(null);
+  const toggleBlock = (name: 'extra' | 'themes' | 'effects' | 'fonts') =>
     setOpenBlock((current) => (current === name ? null : name));
   const shows = (name: Exclude<SettingsSection, 'all'>) =>
     section === 'all' || section === name;
@@ -168,7 +168,6 @@ export default function SettingsPage() {
             // стоит в начале ряда, а не в конце.
             options={[
               { value: 'all' as const, label: t.settingsSectionAll },
-              { value: 'tasks' as const, label: t.settingsSectionTasks },
               { value: 'widgets' as const, label: t.settingsWidgets },
               { value: 'notifications' as const, label: t.settingsSectionNotifications },
               { value: 'payout' as const, label: t.settingsSectionPayout },
@@ -181,71 +180,6 @@ export default function SettingsPage() {
           />
 
           <div className="smk-lux space-y-5 p-4">
-            {/* ── Задания ───────────────────────────────────────── */}
-            {shows('tasks') && (
-            <section>
-              <SectionTitle title={t.settingsTasksSection} />
-              <div className="space-y-1.5">
-                <SettingRow title={t.settingsAutoActive} hint={t.settingsAutoActiveHint}>
-                  <Toggle
-                    checked={settings.autoActiveOnOpen}
-                    onChange={(next) => update({ autoActiveOnOpen: next })}
-                    label={t.settingsAutoActive}
-                  />
-                </SettingRow>
-                <SettingRow title={t.settingsAutoApprove} hint={t.settingsAutoApproveHint}>
-                  <Toggle
-                    checked={settings.autoApproveExecutor}
-                    onChange={(next) => update({ autoApproveExecutor: next })}
-                    label={t.settingsAutoApprove}
-                  />
-                </SettingRow>
-                <SettingRow title={t.settingsHideHints} hint={t.settingsHideHintsHint}>
-                  <Toggle
-                    checked={settings.hideHints}
-                    onChange={(next) => update({ hideHints: next })}
-                    label={t.settingsHideHints}
-                  />
-                </SettingRow>
-                <SettingRow title={t.settingsCompact} hint={t.settingsCompactHint}>
-                  <Toggle
-                    checked={settings.compactLists}
-                    onChange={(next) => update({ compactLists: next })}
-                    label={t.settingsCompact}
-                  />
-                </SettingRow>
-                <SettingRow title={t.settingsConfirmDanger} hint={t.settingsConfirmDangerHint}>
-                  <Toggle
-                    checked={settings.confirmDanger}
-                    onChange={(next) => update({ confirmDanger: next })}
-                    label={t.settingsConfirmDanger}
-                  />
-                </SettingRow>
-                <SettingRow title={t.settingsQuietHours} hint={t.settingsQuietHoursHint}>
-                  <Toggle
-                    checked={settings.quietHours}
-                    onChange={(next) => update({ quietHours: next })}
-                    label={t.settingsQuietHours}
-                  />
-                </SettingRow>
-                <SettingRow title={t.settingsVibrate} hint={t.settingsVibrateHint}>
-                  <Toggle
-                    checked={settings.vibrate}
-                    onChange={(next) => update({ vibrate: next })}
-                    label={t.settingsVibrate}
-                  />
-                </SettingRow>
-                <SettingRow title={t.hidePrayer} hint={t.hidePrayerHint}>
-                  <Toggle
-                    checked={settings.hidePrayer}
-                    onChange={(next) => update({ hidePrayer: next })}
-                    label={t.hidePrayer}
-                  />
-                </SettingRow>
-              </div>
-            </section>
-            )}
-
             {shows('widgets') && (
             <section>
               <SectionTitle title={t.settingsWidgets} hint={t.settingsWidgetsHint} />
@@ -375,6 +309,76 @@ export default function SettingsPage() {
                   {/* Три больших блока — сворачиваемые: вместе они дают
                       несколько экранов прокрутки, и до шрифтов
                       приходилось листать всю палитру. */}
+                  {/* Бывший раздел «Задания» (п.48): переехал в
+                      расширенные настройки под именем «Дополнительное».
+                      Это тонкая подстройка поведения, а не то, что
+                      человек трогает в первый день. */}
+                  <CollapsibleSection
+                    title={t.settingsExtraSection}
+                    hint={t.settingsExtraSectionHint}
+                    isOpen={openBlock === 'extra'}
+                    onToggle={() => toggleBlock('extra')}
+                  >
+                  <div className="space-y-1.5">
+                    <SettingRow title={t.settingsAutoActive} hint={t.settingsAutoActiveHint}>
+                      <Toggle
+                        checked={settings.autoActiveOnOpen}
+                        onChange={(next) => update({ autoActiveOnOpen: next })}
+                        label={t.settingsAutoActive}
+                      />
+                    </SettingRow>
+                    <SettingRow title={t.settingsAutoApprove} hint={t.settingsAutoApproveHint}>
+                      <Toggle
+                        checked={settings.autoApproveExecutor}
+                        onChange={(next) => update({ autoApproveExecutor: next })}
+                        label={t.settingsAutoApprove}
+                      />
+                    </SettingRow>
+                    <SettingRow title={t.settingsHideHints} hint={t.settingsHideHintsHint}>
+                      <Toggle
+                        checked={settings.hideHints}
+                        onChange={(next) => update({ hideHints: next })}
+                        label={t.settingsHideHints}
+                      />
+                    </SettingRow>
+                    <SettingRow title={t.settingsCompact} hint={t.settingsCompactHint}>
+                      <Toggle
+                        checked={settings.compactLists}
+                        onChange={(next) => update({ compactLists: next })}
+                        label={t.settingsCompact}
+                      />
+                    </SettingRow>
+                    <SettingRow title={t.settingsConfirmDanger} hint={t.settingsConfirmDangerHint}>
+                      <Toggle
+                        checked={settings.confirmDanger}
+                        onChange={(next) => update({ confirmDanger: next })}
+                        label={t.settingsConfirmDanger}
+                      />
+                    </SettingRow>
+                    <SettingRow title={t.settingsQuietHours} hint={t.settingsQuietHoursHint}>
+                      <Toggle
+                        checked={settings.quietHours}
+                        onChange={(next) => update({ quietHours: next })}
+                        label={t.settingsQuietHours}
+                      />
+                    </SettingRow>
+                    <SettingRow title={t.settingsVibrate} hint={t.settingsVibrateHint}>
+                      <Toggle
+                        checked={settings.vibrate}
+                        onChange={(next) => update({ vibrate: next })}
+                        label={t.settingsVibrate}
+                      />
+                    </SettingRow>
+                    <SettingRow title={t.hidePrayer} hint={t.hidePrayerHint}>
+                      <Toggle
+                        checked={settings.hidePrayer}
+                        onChange={(next) => update({ hidePrayer: next })}
+                        label={t.hidePrayer}
+                      />
+                    </SettingRow>
+                  </div>
+                  </CollapsibleSection>
+
                   <CollapsibleSection
                     title={t.settingsThemes}
                     hint={t.settingsThemesHint}

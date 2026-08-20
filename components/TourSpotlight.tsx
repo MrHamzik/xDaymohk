@@ -90,11 +90,24 @@ export default function TourSpotlight({
         return;
       }
       const rect = target.getBoundingClientRect();
+
+      // Отступ прижимаем к границам экрана.
+      //
+      // Нижняя панель занимает всю ширину и стоит вплотную к низу.
+      // Прибавляя PAD со всех сторон, мы уводили вырез за края экрана:
+      // рамка обрезалась, и маска заметно не совпадала с самой панелью.
+      // Теперь вырез не вылезает за видимую область — по краям он
+      // ложится ровно на границу элемента.
+      const top = Math.max(rect.top - PAD, 0);
+      const left = Math.max(rect.left - PAD, 0);
+      const right = Math.min(rect.right + PAD, window.innerWidth);
+      const bottom = Math.min(rect.bottom + PAD, window.innerHeight);
+
       setBox({
-        top: rect.top - PAD,
-        left: rect.left - PAD,
-        width: rect.width + PAD * 2,
-        height: rect.height + PAD * 2,
+        top,
+        left,
+        width: Math.max(right - left, 0),
+        height: Math.max(bottom - top, 0),
       });
     };
 
@@ -152,8 +165,33 @@ export default function TourSpotlight({
     </div>
   ) : null;
 
+  // Размытие фона (п.35): четыре полосы ВОКРУГ выреза. Повесить
+  // backdrop-filter на слой с дыркой нельзя — размылась бы и сама
+  // подсвеченная кнопка. Полосы не перехватывают события: за нажатия
+  // отвечает blocker выше.
+  const blur = box ? (
+    <div className="pointer-events-none fixed inset-0 z-[92]" aria-hidden>
+      <div className="smk-tour-blur absolute inset-x-0 top-0" style={{ height: Math.max(box.top, 0) }} />
+      <div className="smk-tour-blur absolute inset-x-0 bottom-0" style={{ top: box.top + box.height }} />
+      <div className="smk-tour-blur absolute left-0" style={{ top: box.top, height: box.height, width: Math.max(box.left, 0) }} />
+      <div className="smk-tour-blur absolute right-0" style={{ top: box.top, height: box.height, left: box.left + box.width }} />
+    </div>
+  ) : (
+    // Шаг без подсветки: размываем экран целиком.
+    <div className="smk-tour-blur pointer-events-none fixed inset-0 z-[92]" aria-hidden />
+  );
+
   if (!box) {
-    return blocker ? createPortal(blocker, document.body) : null;
+    return createPortal(
+      <>
+        {blur}
+        {/* Шаг без подсветки всё равно должен затемнять фон, иначе
+            карточка висит на светлом интерфейсе и читается плохо. */}
+        <div className="pointer-events-none fixed inset-0 z-[94] bg-zinc-950/70" aria-hidden />
+        {blocker}
+      </>,
+      document.body,
+    );
   }
 
   // Портал в body: внутри окна гида подсветка обрезалась бы рамками
@@ -162,6 +200,7 @@ export default function TourSpotlight({
   // остаётся поверх него и читается.
   return createPortal(
     <>
+      {blur}
       {blocker}
       <div className="smk-tour-spotlight pointer-events-none fixed inset-0 z-[94]" aria-hidden>
         {/* Затемнение сделано огромной тенью вокруг выреза: так «дырка»
