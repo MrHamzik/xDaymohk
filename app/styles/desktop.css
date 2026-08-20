@@ -1,0 +1,246 @@
+/* =============================================================================
+   ПК: рейка меню и полотно на всю длину (п. 16)
+   -----------------------------------------------------------------------------
+   Слева узкая колонна иконок; при наведении раскрывается подписи.
+   Активный пункт — светлая «вкладка», как на референсе «боковое меню».
+   Контент занимает всё оставшееся место: .smk-shell без max-width.
+   ========================================================================== */
+:root {
+  --smk-rail: 4.75rem;
+  --smk-rail-open: 16.75rem;
+}
+
+.smk-shell {
+  display: flex;
+  width: 100%;
+  max-width: none;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 1.25rem;
+  padding: 4.5rem 0.9rem 5rem;
+}
+@media (min-width: 640px) {
+  .smk-shell { padding-bottom: 2rem; }
+}
+@media (min-width: 1024px) {
+  .smk-shell { padding-top: 6rem; padding-inline: 1.25rem 1.5rem; }
+}
+
+.smk-shell-main {
+  flex: 1;
+  min-width: 0;
+  max-width: none;
+}
+
+.smk-rail-slot {
+  display: none;
+  width: var(--smk-rail);
+  flex-shrink: 0;
+  transition: width 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.smk-rail-slot--open { width: var(--smk-rail-open); }
+@media (min-width: 1024px) {
+  .smk-rail-slot { display: block; }
+}
+
+.smk-rail-dock {
+  position: fixed;
+  top: 5.75rem;
+  z-index: 40;
+  height: calc(100vh - 7.25rem);
+  width: var(--smk-rail);
+  transition: width 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.smk-rail-dock.smk-rail--open {
+  width: var(--smk-rail-open);
+}
+
+.smk-rail-toggle {
+  position: absolute;
+  top: 1.15rem;
+  right: -0.7rem;
+  z-index: 3;
+  display: flex;
+  height: 1.55rem;
+  width: 1.55rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  color: var(--color-emerald-700);
+  background: var(--smk-card-a);
+  box-shadow: 0 4px 12px -6px rgb(var(--smk-shadow-rgb) / 0.45);
+}
+
+.smk-rail-panel {
+  height: 100%;
+  overflow: hidden;
+  border-radius: 1.55rem;
+  background: var(
+    --smk-rail-gradient,
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-emerald-600) 22%, var(--smk-panel)) 0%,
+      var(--smk-panel) 38%,
+      var(--smk-panel) 100%
+    )
+  );
+}
+
+.smk-rail-label {
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  transform: translateX(-4px);
+  transition:
+    max-width 0.22s ease,
+    opacity 0.18s ease,
+    transform 0.22s ease;
+}
+.smk-rail-dock.smk-rail--open .smk-rail-label {
+  max-width: 12rem;
+  opacity: 1;
+  transform: none;
+}
+
+.smk-rail-item {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  border-radius: 999px;
+  padding: 0.55rem 0.7rem;
+  font-size: var(--smk-fs-label);
+  font-weight: 700;
+  color: var(--foreground);
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+.smk-rail-dock:not(.smk-rail--open) .smk-rail-item {
+  width: 100%;
+  justify-content: center;
+  gap: 0;
+  padding-inline: 0;
+}
+.smk-rail-dock:not(.smk-rail--open) .smk-rail-label {
+  display: none;
+}
+.smk-rail-dock.smk-rail--open .smk-rail-item {
+  justify-content: flex-start;
+}
+
+.smk-rail-item:hover {
+  background: color-mix(in srgb, var(--smk-card-a) 55%, transparent);
+}
+
+.smk-rail-item--on {
+  background: var(--smk-card-a);
+  color: var(--foreground);
+  box-shadow: 0 8px 22px -16px rgb(var(--smk-shadow-rgb) / calc(0.55 * var(--fx-shadow)));
+}
+
+.smk-rail-item--danger { color: var(--smk-note-danger); }
+.smk-rail-item--on.smk-rail-item--danger {
+  background: var(--smk-note-danger-bg);
+  color: var(--smk-note-danger);
+}
+
+.smk-rail-ico {
+  flex: none;
+  height: 1.1rem;
+  width: 1.1rem;
+  color: var(--color-emerald-600);
+}
+.smk-rail-item--on .smk-rail-ico { color: var(--color-emerald-700); }
+.smk-rail-item--danger .smk-rail-ico { color: var(--smk-note-danger); }
+
+.smk-rail-dock:not(.smk-rail--open) .smk-rail-extra {
+  display: none;
+}
+
+.smk-rail-dock .smk-widgets.smk-panel {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+.smk-rail-dock:not(.smk-rail--open) .smk-widgets.smk-panel {
+  justify-content: center;
+  padding-inline: 0.35rem;
+}
+.smk-rail-dock .smk-prayer {
+  display: block;
+}
+
+.smk-rail-dock:not(.smk-rail--open) .smk-profile-meta,
+.smk-rail-dock:not(.smk-rail--open) .smk-profile-chip {
+  display: none;
+}
+
+.smk-rail-profile {
+  background: transparent;
+}
+
+.smk-snake-line {
+  stroke-dasharray: 10 14;
+  animation: smk-snake 1.6s linear infinite;
+  transition: opacity 0.4s ease;
+}
+@keyframes smk-snake {
+  to { stroke-dashoffset: -48; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .smk-snake-line { animation: none; }
+}
+
+/* --- Подпись пункта в меню «+» ------------------------------------------------
+   Текст лежит поверх затемнённой подложки модалки, а не на полотне
+   страницы. Голым текстом он читался плохо: на светлых темах тёмные
+   буквы тонули в blur-фоне, на тёмных — сливались с ним.
+
+   Поэтому подпись получает собственную плашку: фон панели темы,
+   тонкая золотая рамка (тот же язык, что у «змейки» и ромба-стыка) и
+   штатная тень полей --smk-field-shadow. Цвет текста наследуется от
+   темы через --foreground, поэтому правило работает во всех палитрах
+   без отдельных переопределений.
+
+   text-align: inherit — подпись стоит то слева, то справа от иконки
+   (flex-row / flex-row-reverse в CreateActionModal), выравнивание
+   задаёт родитель, а не эта плашка. */
+.smk-snake-label {
+  display: inline-block;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(var(--smk-gold-rgb) / 0.32);
+  background: var(--smk-panel);
+  color: var(--foreground);
+  padding: 0.4rem 0.7rem;
+  box-shadow: var(--smk-field-shadow);
+  text-align: inherit;
+}
+.smk-snake-join {
+  position: relative;
+  width: 1.85rem;
+  height: 1px;
+  flex: none;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--smk-gold) 22%,
+    transparent 46%,
+    transparent 54%,
+    var(--smk-gold) 78%,
+    transparent
+  );
+}
+.smk-snake-join::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  translate: -50% -50%;
+  rotate: 45deg;
+  background: var(--smk-gold);
+  box-shadow: 0 0 10px -2px var(--smk-gold);
+}

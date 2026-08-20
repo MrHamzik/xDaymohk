@@ -108,7 +108,7 @@ Bucket **`profile-media`** (public). Аватары: `avatars/<userId>.webp`
 
 ---
 
-## 🤝 Аренца Темщик и ГIончалла
+## 🤝 Темщик и Помощь
 
 Единый движок заданий на два раздела, различаются флагом `is_paid`.
 
@@ -183,7 +183,25 @@ Bucket **`profile-media`** (public). Аватары: `avatars/<userId>.webp`
 - SSRF-защита `/api/route` (whitelist OSRM), валидация координат;
 - Белый список языков в переводе;
 - Security-заголовки (X-Content-Type-Options, X-Frame-Options и др.);
+- **CSP** (`next.config.mjs`) — пока в режиме `Report-Only`;
+- **HSTS** (`max-age` 2 года, `includeSubDomains`, без `preload`);
+- Тесты критичных путей: админ-права, вебхук пожертвований, rate-limit;
 - Sentry (опционально).
+
+### Как включить CSP боевым режимом
+
+Сейчас заголовок отдаётся как `Content-Security-Policy-Report-Only`:
+браузер только пишет нарушения в консоль, но ничего не блокирует. Порядок:
+
+1. Открыть сайт, пройти по разделам — особенно по карте, профилю с
+   аватаром и странице с видео;
+2. Посмотреть в консоли сообщения `Content Security Policy`;
+3. Недостающие домены дописать в `cspDirectives` в `next.config.mjs`;
+4. Когда консоль чистая — переименовать ключ заголовка в
+   `Content-Security-Policy`.
+
+Спешить с шагом 4 не нужно: в Report-Only политика уже даёт видимость,
+но ничего не ломает.
 
 ---
 
@@ -194,7 +212,19 @@ npm run dev          # dev-сервер
 npm run build        # продакшн-сборка
 npm run typecheck    # проверка типов (tsc --noEmit)
 npm run lint         # ESLint
+npm run stylelint    # проверка CSS (ловит битый синтаксис)
+npm run test         # тесты (vitest)
+npm run verify       # всё сразу: типы, стили, линт, тесты, сборка
 ```
+
+Перед пушем достаточно одной команды — `npm run verify`.
+
+### Проверка перед коммитом
+
+`husky` + `lint-staged` гоняют `stylelint` по CSS и `eslint` по TS на
+каждом `git commit`. Хук ловит именно то, на чём проект однажды слёг, —
+оборванное правило в CSS. Обойти можно через `--no-verify`, но тогда
+сломанный файл уедет в репозиторий.
 
 ---
 

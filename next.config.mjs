@@ -47,7 +47,9 @@ const isDev = process.env.NODE_ENV !== 'production';
 const cspDirectives = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''}`,
-  "style-src 'self' 'unsafe-inline'",
+  // fonts.googleapis.com — таблица стилей шрифтов, fonts.gstatic.com —
+  // сами файлы шрифтов: подключаются через @import в globals.css.
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   [
     'img-src',
     "'self'",
@@ -63,7 +65,7 @@ const cspDirectives = [
     'https://lh6.googleusercontent.com',
     SUPABASE_ORIGIN,
   ].filter(Boolean).join(' '),
-  "font-src 'self' data:",
+  "font-src 'self' data: https://fonts.gstatic.com",
   [
     'connect-src',
     "'self'",

@@ -1,0 +1,463 @@
+/* =============================================================================
+   ЭФФЕКТЫ ОФОРМЛЕНИЯ
+   -----------------------------------------------------------------------------
+   Каждый эффект управляется множителем 0…1 из настроек (lib/settings/
+   apply-theme.ts → applyEffects). Значения по умолчанию заданы здесь,
+   чтобы страница выглядела правильно до загрузки настроек.
+
+   Почему множители, а не классы: эффектов шесть, комбинаций 2^6.
+   Множитель позволяет ещё и промежуточные значения — «тени послабее».
+   ========================================================================== */
+:root {
+  --fx-shadow: 1;
+  --fx-glow: 1;
+  --fx-gradient: 1;
+  --fx-pattern: 1;
+  --fx-blur: 18px;
+  --fx-motion: 1;
+}
+
+/* --- Тени --------------------------------------------------------------------
+   Мягкая многослойная тень: близкий контактный слой даёт «прижатость» к
+   фону, дальний — объём. Один слой выглядит наклейкой. */
+.smk-lux {
+  box-shadow:
+    0 1px 2px -1px rgb(var(--smk-shadow-rgb) / calc(0.10 * var(--fx-shadow))),
+    0 8px 24px -12px rgb(var(--smk-shadow-rgb) / calc(0.22 * var(--fx-shadow))),
+    0 24px 48px -28px rgb(var(--smk-shadow-rgb) / calc(0.28 * var(--fx-shadow)));
+}
+.smk-lux:hover {
+  box-shadow:
+    0 1px 2px -1px rgb(var(--smk-shadow-rgb) / calc(0.12 * var(--fx-shadow))),
+    0 12px 32px -14px rgb(var(--smk-shadow-rgb) / calc(0.30 * var(--fx-shadow))),
+    0 32px 64px -32px rgb(var(--smk-shadow-rgb) / calc(0.34 * var(--fx-shadow)));
+}
+
+/* --- Свечение (блум) ---------------------------------------------------------
+   Только у смысловых точек: статус работы и активные акценты. Свечение
+   «на всём» превращается в мыло. */
+.smk-status-dot--active,
+.smk-status-dot--break {
+  box-shadow: 0 0 calc(10px * var(--fx-glow)) calc(-2px * var(--fx-glow))
+    currentColor;
+}
+.smk-close-orb {
+  box-shadow: 0 0 calc(28px * var(--fx-glow)) calc(-8px * var(--fx-glow))
+    var(--color-emerald-600);
+}
+
+/* --- Градиенты ---------------------------------------------------------------
+   Полотно карточки: почти незаметный переход сверху вниз. Плоская
+   заливка на большой площади выглядит мёртвой, но градиент обязан
+   оставаться на грани различимости. */
+.smk-lux {
+  background-image: linear-gradient(
+    170deg,
+    color-mix(in srgb, var(--smk-card-a) 100%, transparent) 0%,
+    color-mix(
+      in srgb,
+      var(--smk-card-b) calc(100% * var(--fx-gradient)),
+      var(--smk-card-a)
+    ) 100%
+  );
+}
+
+/* --- Узоры и текстуры --------------------------------------------------------
+   Диагональные лучи на карточках и ромбы разделителей. */
+.smk-rays::before {
+  opacity: var(--fx-pattern);
+}
+.smk-orn::after,
+.smk-sheet-section::before {
+  opacity: var(--fx-pattern);
+}
+
+/* --- Размытие ----------------------------------------------------------------
+   Шапка, нижняя навигация, модалки. На слабых устройствах это самый
+   дорогой эффект — потому и вынесен в настройки. */
+.site-header,
+.site-bottom-nav,
+.smk-close-orb {
+  backdrop-filter: blur(var(--fx-blur)) saturate(1.15);
+  -webkit-backdrop-filter: blur(var(--fx-blur)) saturate(1.15);
+}
+
+/* --- Анимации ----------------------------------------------------------------
+   Длительность умножается на множитель: при 50 % всё вдвое быстрее,
+   при 0 % класс fx-no-motion останавливает даже бесконечные анимации. */
+.smk-enter {
+  animation-duration: calc(0.42s * var(--fx-motion));
+}
+.smk-lux {
+  transition-duration: calc(0.28s * var(--fx-motion));
+}
+html.fx-no-motion *,
+html.fx-no-motion *::before,
+html.fx-no-motion *::after {
+  animation-duration: 0.001s !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001s !important;
+}
+
+/* Уважаем системную настройку: тому, кто просил меньше движения,
+   анимации не нужны независимо от наших ползунков. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001s !important;
+  }
+}
+
+/* --- Каркас приложения --------------------------------------------------------
+   Шапка и нижняя навигация читают слот «Шапка и меню», а не цвет
+   карточки. Раньше они красились классами bg-white / dark:bg-zinc-950,
+   и правка «Карточек» перекрашивала оболочку целиком — вместе с линией
+   под шапкой. */
+.site-header,
+.site-bottom-nav {
+  background-color: color-mix(in srgb, var(--smk-surface) 95%, transparent);
+  border-color: var(--smk-divider);
+}
+.site-header { border-bottom: 1px solid var(--smk-divider); }
+
+/* --- Группа полей формы -------------------------------------------------------
+   Раньше поля лежали в контейнере .smk-field и сами были .smk-field —
+   фон в фоне одного цвета, из-за чего блок читался как одно пятно, а
+   отдельные поля терялись.
+
+   Теперь группа — прозрачная рамка с орнаментальными разделителями
+   между полями, а фон и тень несёт каждое поле отдельно. Так у поля
+   появляется собственная глубина, а границы между ними видны. */
+.smk-group {
+  background: transparent;
+  padding: 0;
+}
+.smk-group > * + * {
+  margin-top: 0.875rem;
+  padding-top: 0.875rem;
+  position: relative;
+}
+/* Орнамент между полями: линия с разрывом и ромбом по центру — тот же
+   мотив, что у разделителей секций. */
+.smk-group > * + *::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--smk-divider) 14%,
+    var(--smk-divider) 45%,
+    transparent 48%,
+    transparent 52%,
+    var(--smk-divider) 55%,
+    var(--smk-divider) 86%,
+    transparent
+  );
+  opacity: var(--fx-pattern);
+}
+
+/* Поля внутри формы: та же ПРИПОДНЯТАЯ глубина, что у блоков данных.
+   Раньше здесь стояла inset-тень — поле выглядело «вдавленным», а
+   соседний блок телефона с обычной тенью — приподнятым. В одной форме
+   рядом оказывались две противоположные метафоры глубины, и это
+   бросалось в глаза («ФИО, пол, дата рождения словно вдавлены»).
+   Оставляем один язык на всю форму: поле лежит НА полотне. */
+.smk-field input,
+.smk-field select,
+.smk-field textarea,
+input.smk-field,
+select.smk-field,
+textarea.smk-field {
+  box-shadow: var(--smk-field-shadow);
+  transition: box-shadow 0.18s ease, background-color 0.18s ease;
+}
+input.smk-field:focus,
+select.smk-field:focus,
+textarea.smk-field:focus {
+  /* Та же тень + золотое кольцо: при фокусе блок не должен «прыгать»
+     по глубине, меняется только подсветка. */
+  box-shadow:
+    var(--smk-field-shadow),
+    0 0 0 3px rgb(var(--smk-gold-rgb) / calc(0.16 * var(--fx-glow)));
+}
+
+/* Блоки с данными (аватар+имя+телефон, описание, контакты) получают ту
+   же глубину, что и поля ввода: один источник тени на всё семейство. */
+.smk-field {
+  box-shadow: var(--smk-field-shadow);
+  background-image: linear-gradient(
+    168deg,
+    color-mix(in srgb, var(--smk-light-rgb-color, transparent) 0%, transparent) 0%,
+    color-mix(in srgb, var(--smk-card-a) calc(14% * var(--fx-gradient)), transparent) 100%
+  );
+}
+
+/* --- Подсказки, предупреждения, примечания ------------------------------------
+   Блоки текста, которые объясняют правило или предостерегают: «Деньги
+   идут напрямую исполнителю», «Если не подтвердить за 3 ч…», «Работа не
+   принята». Раньше каждый такой блок красился утилитами Tailwind
+   (bg-sky-50 / bg-amber-50 / bg-rose-50 / text-amber-800) мимо палитры:
+   в тёмных темах они оставались светлыми пятнами с нечитаемым тёмным
+   текстом, а в карточке задания подряд шли четыре разных по яркости
+   плашки — она рябила.
+
+   Устройство: у каждого типа СВОЯ пара «текст + фон». Фон выводится
+   из цвета текста того же типа (на тёмных темах вдвое темнее него, на
+   светлых — светлее), поэтому блок целиком окрашен смыслом:
+   предупреждение тёплое, опасность красная, подтверждение зелёное.
+   Плюс вертикальная засечка слева — тем же приёмом, что подписи
+   .smk-sheet-label.
+
+   Контраст текста к фону не ниже 4.5 (WCAG AA для мелкого текста) —
+   он обеспечивается в lib/settings/derive.ts на этапе вывода палитры. */
+.smk-note {
+  position: relative;
+  border-radius: 0.75rem;
+  background: var(--smk-note-info-bg);
+  color: var(--smk-note-info);
+  padding-left: 0.875rem;
+  /* Единый комфортный размер для всех подсказок.
+     Раньше в разметке соседствовали 10px, 11px и text-xs — блоки
+     одного смысла выглядели разнокалиберными. Спокойное начертание
+     без жирного и курсива: цвет уже несёт смысл, а текст должен
+     читаться, а не кричать.
+     !important нужен против утилит Tailwind (font-semibold,
+     text-[11px]) — у них та же специфичность, и без него порядок
+     правил в бандле решал бы, кто победит. */
+  font-size: var(--smk-fs-label) !important;
+  line-height: 1.55;
+  font-weight: 400 !important;
+  font-style: normal !important;
+  letter-spacing: normal;
+  text-transform: none !important;
+  box-shadow:
+    0 1px 2px -1px rgb(var(--smk-shadow-rgb) / calc(0.10 * var(--fx-shadow))),
+    0 4px 12px -8px rgb(var(--smk-shadow-rgb) / calc(0.16 * var(--fx-shadow)));
+  background-image: linear-gradient(
+    168deg,
+    transparent 0%,
+    color-mix(in srgb, var(--smk-card-a) calc(16% * var(--fx-gradient)), transparent) 100%
+  );
+}
+
+/* Засечка слева — цветом типа подсказки. Не border: рамок в проекте нет,
+   а засечка «прирастает» к блоку и не образует контур. */
+.smk-note::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.5rem;
+  bottom: 0.5rem;
+  width: 3px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.75;
+}
+
+/* Заголовки и вложенные элементы подсказки живут по тем же правилам:
+   без них <h3 className="font-bold uppercase"> внутри блока снова
+   давал бы жирный верхний регистр. */
+.smk-note h3,
+.smk-note h4,
+.smk-note p,
+.smk-note span,
+.smk-note strong,
+.smk-note em {
+  font-size: inherit;
+  font-weight: inherit;
+  font-style: normal;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+/* Заголовок внутри подсказки наследует её цвет, поэтому отдельного
+   класса под него не нужно. */
+.smk-note-info {
+  color: var(--smk-note-info);
+  background: var(--smk-note-info-bg);
+}
+.smk-note-warn {
+  color: var(--smk-note-warn);
+  background: var(--smk-note-warn-bg);
+}
+.smk-note-danger {
+  color: var(--smk-note-danger);
+  background: var(--smk-note-danger-bg);
+}
+.smk-note-success {
+  color: var(--smk-note-success);
+  background: var(--smk-note-success-bg);
+}
+
+/* --- Метка-бейдж на цветах подсказок -------------------------------------
+   «В разработке», «В планах» и подобные короткие статусы. Смысл тот
+   же, что у подсказок, поэтому и цвета те же — берутся модификаторами
+   .smk-note-warn / .smk-note-info, которые задают пару «текст + фон».
+
+   Отдельный класс, а не .smk-note: у бейджа нет засечки и тени, он
+   компактный и стоит в углу карточки. Раньше эти метки красились
+   утилитами bg-amber-50 / bg-indigo-100 мимо палитры и в тёмных темах
+   оставались светлыми пятнами.
+
+   Начертание спокойное, как у подсказок: цвет уже несёт смысл. */
+.smk-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 999px;
+  padding: 0.125rem 0.5rem;
+  font-size: var(--smk-fs-label) !important;
+  line-height: 1.4;
+  font-weight: 400 !important;
+  font-style: normal !important;
+  letter-spacing: normal !important;
+  text-transform: none !important;
+  white-space: nowrap;
+}
+
+/* Кнопка действия ВНУТРИ подсказки.
+   Обычный .smk-act красит текст своим цветом (--smk-icon) — в красном
+   блоке спора он выглядел чужеродной серой надписью. Здесь кнопка
+   наследует цвет самой подсказки и лишь подсвечивается подложкой. */
+.smk-note .smk-act {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  color: inherit;
+  background-color: color-mix(in srgb, currentColor 10%, transparent);
+}
+.smk-note .smk-act:hover:not(:disabled) {
+  color: inherit;
+  background-color: color-mix(in srgb, currentColor 18%, transparent);
+}
+
+/* Ссылка внутри подсказки: тот же цвет, подчёркивание оставляем —
+   это единственный признак кликабельности внутри плашки. */
+.smk-note a {
+  color: inherit;
+  /* Подчёркивание — единственный признак кликабельности внутри
+     плашки; жирный убран вместе с остальными начертаниями. */
+  text-decoration: underline;
+}
+
+/* --- Компас «Кибла» ------------------------------------------------------------
+   Корпус прибора: полотно карточки плюс латунное кольцо золотом акцента.
+
+   Раньше здесь стояли литералы #0b2c41 (фон) и #2c4b61 (обод) в
+   dark:-вариантах: на светлых темах компас оставался бледно-серым, а на
+   цветных — синим пятном посреди чужой палитры. Теперь всё из
+   переменных, поэтому прибор выглядит частью любой темы.
+
+   Кольцо собрано слоями box-shadow, а не border: так их можно наложить
+   несколько (тонкий золотой кант, тёмная фаска, внешний ореол) и
+   получить объём латуни без единой картинки. */
+.smk-qibla {
+  background:
+    radial-gradient(
+      circle at 50% 32%,
+      color-mix(in srgb, var(--smk-gold) calc(7% * var(--fx-gradient)), transparent),
+      transparent 62%
+    ),
+    var(--smk-card-a);
+  box-shadow:
+    /* внутренняя фаска */
+    inset 0 0 0 1px color-mix(in srgb, var(--smk-gold) 45%, transparent),
+    inset 0 2px 14px -6px rgb(var(--smk-shadow-rgb) / calc(0.45 * var(--fx-shadow))),
+    /* латунный кант */
+    0 0 0 3px color-mix(in srgb, var(--smk-gold) 70%, transparent),
+    0 0 0 5px var(--smk-card-a),
+    0 0 0 6px color-mix(in srgb, var(--smk-gold) 30%, transparent),
+    /* свечение и посадочная тень */
+    0 0 22px -6px color-mix(in srgb, var(--smk-gold) calc(60% * var(--fx-glow)), transparent),
+    0 18px 45px -18px rgb(var(--smk-shadow-rgb) / calc(0.55 * var(--fx-shadow)));
+}
+
+/* Силуэт загрузки: мягкая пульсация подложки вместо спиннера.
+   Цвета из палитры, чтобы скелетон не выпадал из темы. */
+.smk-skel-bar {
+  background: color-mix(in srgb, var(--smk-muted) 16%, var(--smk-card-inset));
+  animation: smk-skel 1.4s ease-in-out infinite;
+}
+@keyframes smk-skel {
+  0%, 100% { opacity: 0.52; }
+  50% { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .smk-skel-bar { animation: none; opacity: 0.7; }
+}
+
+/* --- Фирменный знак и вход -------------------------------------------------
+   Вайнахский ромб — не картинка, а CSS. Знак на входе всегда виден:
+   это опознавательный знак, а не декор. Фон и водяные знаки гаснут
+   вместе с --fx-pattern. Рамок нет. */
+.smk-emblem {
+  position: relative;
+  width: 4rem;
+  height: 4rem;
+  margin-inline: auto;
+}
+.smk-emblem::before {
+  content: '';
+  position: absolute;
+  inset: 1.1rem;
+  rotate: 45deg;
+  background: linear-gradient(140deg, var(--smk-gold), var(--smk-gold-deep));
+  box-shadow: 0 0 18px -4px var(--smk-gold);
+}
+.smk-emblem::after {
+  content: '';
+  position: absolute;
+  inset: 1.4rem;
+  rotate: 45deg;
+  background: var(--smk-card-a);
+  box-shadow:
+    1.35rem 0 0 -0.55rem var(--smk-gold),
+    -1.35rem 0 0 -0.55rem var(--smk-gold),
+    0 1.35rem 0 -0.55rem var(--smk-gold),
+    0 -1.35rem 0 -0.55rem var(--smk-gold);
+}
+
+.smk-sign {
+  position: relative;
+  isolation: isolate;
+}
+.smk-sign::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  opacity: calc(0.55 * var(--fx-pattern));
+  background-image:
+    linear-gradient(74deg, transparent 48.6%, rgb(var(--smk-gold-rgb) / 0.18) 48.8%, transparent 49.1%),
+    linear-gradient(112deg, transparent 61.4%, rgb(var(--smk-gold-rgb) / 0.10) 61.6%, transparent 61.9%);
+}
+.smk-sign > * {
+  position: relative;
+  z-index: 1;
+}
+
+.smk-btn-google {
+  position: relative;
+  display: inline-flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.75rem;
+  background: var(--smk-field);
+  color: var(--foreground);
+  font-weight: 700;
+  box-shadow: var(--smk-field-shadow);
+  padding: 0.65rem 1rem;
+  transition: filter 0.18s ease, transform 0.18s ease;
+}
+.smk-btn-google:hover { filter: brightness(1.04); }
+.smk-btn-google:active { transform: scale(0.98); }
+.smk-btn-google:disabled { opacity: 0.5; }

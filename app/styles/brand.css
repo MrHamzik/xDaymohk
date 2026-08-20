@@ -1,0 +1,1424 @@
+/* ===========================================================================
+   ФИРМЕННЫЙ СТИЛЬ «ДАЙМОХК» — по референсам из connection-channel/
+   ---------------------------------------------------------------------------
+   Две разные палитры, а не одна на обе темы:
+
+   СВЕТЛАЯ — яркое янтарное золото (референс «макет и иконки»): тёплая
+   окантовка, золотые лучи, золотая кнопка. На белом это читается как
+   премиальность.
+
+   ТЁМНАЯ — нейтральная сталь на гамме приложения: золото на тёмном давало
+   грязный «жёлтый» оттенок, поэтому здесь окантовка и лучи серые, на тон
+   темнее фона карточки.
+
+   ВАЖНО: прямые hex/rgb в правилах ниже не используются — только ссылки
+   на переменные, объявленные в :root. Так тему можно перекрасить в одном
+   месте, не вычищая литералы по всему файлу.
+   =========================================================================== */
+
+:root {
+  /* --- Золото (светлая тема) ---------------------------------------------
+     Светлая латунь, не охра: #e7b653 / #e5a539. Тёмные «грязные» тона
+     на белом читались как пятно. --smk-gold-rgb нужен отдельно, чтобы
+     задавать прозрачность через rgb(var(--smk-gold-rgb) / a). */
+  --smk-gold: #e7b653;
+  --smk-gold-soft: #ffedc4;
+  --smk-gold-deep: #e5a539;
+  --smk-gold-rgb: 231 182 83;
+
+  /* --- Шкала шрифтов -----------------------------------------------------
+     Четыре роли вместо россыпи text-[8px]…text-[17px]. rem, чтобы
+     ползунок масштаба в настройках двигал и их. */
+  --smk-fs-label: 0.75rem;
+  --smk-fs-body: 0.8125rem;
+  --smk-fs-title: 0.9375rem;
+  --smk-fs-display: 1.0625rem;
+
+  /* --- Поверхности СВЕТЛОЙ темы -------------------------------------------
+     Здесь именно светлые значения. Раньше в этом блоке лежали тёмные
+     (#1c1c20 и т.п.) с подписью «тёмная тема» — но :root действует
+     ВСЕГДА, а html.dark их переопределял не полностью. Правила, не
+     обёрнутые в html.dark (.smk-sheet-row, .smk-card-foot, стекло),
+     читали тёмные значения прямо в светлой теме — она и выглядела
+     сломанной. Тёмные варианты теперь живут в блоке html.dark ниже. */
+  --smk-card-a: #ffffff;        /* полотно карточки */
+  --smk-card-b: #ffffff;        /* низ градиента    */
+  --smk-card-line: #f5f5f5;     /* обводка: контур карточек и полей */
+  --smk-divider: #ebebeb;       /* разделители: линии внутри блоков */
+  --smk-card-inset: #eaeaea;    /* подложки строк   */
+  --smk-field: #fcfcfc;         /* поля заполнения: почти белые, но не белые —
+                                   иначе поле сливается с фоном страницы */
+  --smk-muted: #57667c;         /* второстепенный текст */
+  --smk-muted-bright: #465369;  /* акцентный текст  */
+  --smk-steel-a: #3f3f46;       /* сталь: кольцо, кнопка (тёмная тема) */
+  --smk-steel-b: #27272a;
+  --smk-steel-c: #52525b;
+
+  --smk-panel: #f5f5f5;         /* панели и подвал карточек */
+  --smk-icon: #465369;          /* иконки строк     */
+  --smk-surface: #ffffff;
+  --smk-surface-soft: rgb(248 250 252 / 0.9);
+  --smk-hairline: rgb(15 23 42 / 0.06);
+  --smk-hairline-strong: rgb(15 23 42 / 0.12);
+  --smk-arrow-color: rgb(203 213 225);
+  --smk-arrow-color-dark: rgb(71 85 105);
+
+  /* Базовые каналы для полупрозрачных бликов и теней. Держим числами,
+     чтобы одну и ту же величину можно было переиспользовать с любой
+     альфой через rgb(var(--smk-*-rgb) / a). */
+  --smk-light-rgb: 255 255 255;
+  --smk-shadow-rgb: 0 0 0;
+
+  /* --- Единая тень полей и блоков данных ---------------------------------
+     Одна переменная на всё, что читается как «поле»: input, select,
+     textarea и блоки-«углубления» (адрес, описание, контакты).
+
+     Раньше тень задавалась в двух разных правилах .smk-field, и они
+     разъезжались: часть полей получала мягкий ореол по кругу, часть —
+     падающую вниз. Отсюда ощущение «эффекты применены не ко всем».
+
+     Стандарт: мягкая тень, падающая ВНИЗ. Первый слой — контактный
+     (1px, плотный, очерчивает низ), второй — рассеянный ореол под
+     блоком. Оба смещены по Y и не имеют горизонтального разлёта,
+     поэтому свет читается как верхний — так же, как у карточек. */
+  --smk-field-shadow:
+    0 1px 2px -1px rgb(var(--smk-shadow-rgb) / calc(0.10 * var(--fx-shadow))),
+    0 4px 12px -8px rgb(var(--smk-shadow-rgb) / calc(0.18 * var(--fx-shadow)));
+
+  /* --- Цвета рабочего статуса (кольцо аватара) ---------------------------
+     Только base и -deep: варианты -dark и -glow остались от прежней
+     версии колец и ни одним селектором не читались. Свечение теперь
+     строится из base через color-mix. */
+  --smk-status-auto: #059669;
+  --smk-status-auto-deep: #04724f;
+  --smk-status-active: #34d399;
+  --smk-status-active-deep: #059669;
+  --smk-status-break: #fbbf24;
+  --smk-status-break-deep: #d97706;
+  --smk-status-flexible: #38bdf8;
+  --smk-status-flexible-deep: #0284c7;
+  --smk-status-offline: #d4d4d8;
+  --smk-status-offline-deep: #a1a1aa;
+
+  /* --- Подсказки и предупреждения (светлая тема) -------------------------
+     Один фон на все четыре типа, различает их цвет текста и засечка
+     слева. Контраст текста к фону не ниже 4.5 — блоки набраны 11 px,
+     а это по WCAG AA «мелкий текст». */
+  --smk-note-info: #1e5771;
+  --smk-note-info-bg: #bfe6f7;
+  --smk-note-warn: #71521e;
+  --smk-note-warn-bg: #f7e2bf;
+  --smk-note-danger: #711e2c;
+  --smk-note-danger-bg: #f7bfc9;
+  --smk-note-success: #1e7155;
+  --smk-note-success-bg: #bff7e4;
+}
+
+.smk-text-label { font-size: var(--smk-fs-label); }
+.smk-text-body { font-size: var(--smk-fs-body); }
+.smk-text-title { font-size: var(--smk-fs-title); }
+.smk-text-display { font-size: var(--smk-fs-display); }
+
+/* --- Полотно карточки ------------------------------------------------------ */
+.smk-lux {
+  position: relative;
+  isolation: isolate;
+  border-radius: calc(1.25rem * var(--smk-radius-scale, 1));
+  border: 1px solid rgb(var(--smk-gold-rgb) / 0.11);
+  background: var(--smk-surface);
+  transition:
+    box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.28s ease;
+}
+html.dark .smk-lux {
+  /* Обводка того же синего, что и карточка, только темнее */
+  border-color: var(--smk-card-line);
+  background: linear-gradient(168deg, var(--smk-card-a) 0%, var(--smk-card-b) 100%);
+  box-shadow:
+    0 1px 0 0 rgb(var(--smk-light-rgb) / 0.05) inset,
+    0 18px 40px -24px rgb(var(--smk-shadow-rgb) / 0.85);
+}
+/* Ховер меняет ТОЛЬКО свечение и обводку.
+   translateY здесь был причиной «подёргивания»: сдвиг всей карточки
+   заставлял браузер переверстывать текст внутри, и строки возраста,
+   пола и описания дрожали на каждом нажатии. Свечение и цвет рамки
+   композитятся на GPU и layout не трогают. */
+@media (hover: hover) {
+  .smk-lux:hover {
+    border-color: rgb(var(--smk-gold-rgb) / 0.45);
+    box-shadow:
+      0 0 0 1px rgb(var(--smk-gold-rgb) / 0.10),
+      0 10px 30px -18px rgb(var(--smk-gold-rgb) / 0.45);
+  }
+  html.dark .smk-lux:hover {
+    border-color: rgb(var(--smk-light-rgb) / 0.18);
+    box-shadow:
+      0 1px 0 0 rgb(var(--smk-light-rgb) / 0.06) inset,
+      0 0 0 1px rgb(var(--smk-gold-rgb) / 0.14),
+      0 18px 44px -22px rgb(var(--smk-shadow-rgb) / 0.9),
+      0 0 26px -14px rgb(var(--smk-gold-rgb) / 0.5);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .smk-lux { transition: none; }
+}
+
+/* --- Диагональные лучи ------------------------------------------------------
+   ТОЛЬКО для карточек: узор — приём карточной вёрстки, на сплошных
+   панелях (настройки, формы) он превращается в грязь. Поэтому лучи
+   вынесены в отдельный класс .smk-rays, а не висят на каждом .smk-lux.
+   В светлой теме золотые, в тёмной — холодные стальные. */
+.smk-rays::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: inherit;
+  overflow: hidden;
+  background-image:
+    linear-gradient(74deg,  transparent 48.6%, rgb(var(--smk-gold-rgb) / 0.16) 48.8%, transparent 49.1%),
+    linear-gradient(112deg, transparent 61.4%, rgb(var(--smk-gold-rgb) / 0.10) 61.6%, transparent 61.9%),
+    linear-gradient(58deg,  transparent 79.4%, rgb(var(--smk-gold-rgb) / 0.07) 79.6%, transparent 79.9%);
+}
+/* В тёмных темах штрихи заметнее, чем в светлых: белая линия на тёмном
+   фоне «звенит» сильнее золотой на белом. Снижаем непрозрачность на
+   55 % от прежних значений (0.10 → 0.045, 0.06 → 0.027, 0.04 → 0.018) —
+   узор остаётся, но перестаёт спорить с содержимым карточки. */
+html.dark .smk-rays::before {
+  background-image:
+    linear-gradient(74deg,  transparent 48.6%, rgb(var(--smk-light-rgb) / 0.045) 48.8%, transparent 49.1%),
+    linear-gradient(112deg, transparent 61.4%, rgb(var(--smk-light-rgb) / 0.027) 61.6%, transparent 61.9%),
+    linear-gradient(58deg,  transparent 79.4%, rgb(var(--smk-light-rgb) / 0.018) 79.6%, transparent 79.9%);
+}
+
+/* Водяной знак: крест из ромбов в углу карточки.
+   Лучи — фон, это — печать. Густота только через --fx-pattern. */
+.smk-rays::after {
+  content: '';
+  position: absolute;
+  right: 22px;
+  bottom: 34px;
+  width: 8px;
+  height: 8px;
+  rotate: 45deg;
+  background: var(--smk-gold);
+  opacity: calc(0.22 * var(--fx-pattern));
+  pointer-events: none;
+  z-index: 0;
+  box-shadow:
+    13px 0 0 0 var(--smk-gold),
+    -13px 0 0 0 var(--smk-gold),
+    0 13px 0 0 var(--smk-gold),
+    0 -13px 0 0 var(--smk-gold);
+}
+
+/* --- Имя: без засечек, крупно ----------------------------------------------- */
+.smk-title {
+  /* Читаем ту же переменную, что и body: раньше здесь было жёстко
+     прописано 'Manrope', и выбор шрифта в настройках не доходил до
+     имён на карточках — менялся весь интерфейс, кроме них. */
+  font-family: var(--smk-font-family, 'Manrope', 'Inter', system-ui, sans-serif);
+  font-weight: 800;
+  letter-spacing: -0.015em;
+}
+
+/* --- Аватар в кольце -------------------------------------------------------- */
+.smk-ring {
+  position: relative;
+  border-radius: 9999px;
+  padding: 2px;
+  background: linear-gradient(140deg, var(--smk-gold-soft), var(--smk-gold-deep));
+}
+html.dark .smk-ring {
+  background: linear-gradient(140deg, var(--smk-steel-a), var(--smk-steel-b));
+  box-shadow: 0 0 12px -4px rgb(var(--smk-shadow-rgb) / 0.8);
+}
+
+/* Рабочий статус специалиста — цвет кольца вокруг аватара.
+   Зелёное — работает, жёлтое — перерыв, голубое — произвольный график,
+   серое — не работает. Так статус не занимает отдельную строку. */
+.smk-ring-active   { background: linear-gradient(140deg, var(--smk-status-active), var(--smk-status-active-deep)); }
+.smk-ring-break    { background: linear-gradient(140deg, var(--smk-status-break), var(--smk-status-break-deep)); }
+.smk-ring-flexible { background: linear-gradient(140deg, var(--smk-status-flexible), var(--smk-status-flexible-deep)); }
+.smk-ring-offline  { background: linear-gradient(140deg, var(--smk-status-offline), var(--smk-status-offline-deep)); }
+
+/* Неоновая обводка со свечением.
+   Раньше свечение включалось только в тёмных темах и было еле заметным
+   (16px, смещение −5). Теперь горит на всех темах: тонкое плотное
+   кольцо вплотную к аватару плюс мягкий ореол вокруг. Оба слоя берут
+   цвет статуса, поэтому «работает» светится зелёным, «перерыв» —
+   жёлтым, и статус читается боковым зрением.
+
+   Множитель --fx-glow позволяет приглушить или выключить свечение в
+   настройках эффектов — на слабом телефоне десяток светящихся колец
+   в списке заметно грузит отрисовку. */
+.smk-ring-active,
+.smk-ring-break,
+.smk-ring-flexible {
+  box-shadow:
+    0 0 0 1px rgb(var(--smk-light-rgb) / calc(0.5 * var(--fx-glow))) inset,
+    0 0 6px -1px var(--smk-ring-glow),
+    0 0 16px -2px var(--smk-ring-glow);
+}
+.smk-ring-active   { --smk-ring-glow: color-mix(in srgb, var(--smk-status-active) calc(85% * var(--fx-glow)), transparent); }
+.smk-ring-break    { --smk-ring-glow: color-mix(in srgb, var(--smk-status-break) calc(85% * var(--fx-glow)), transparent); }
+.smk-ring-flexible { --smk-ring-glow: color-mix(in srgb, var(--smk-status-flexible) calc(85% * var(--fx-glow)), transparent); }
+
+/* «Не работает» не светится намеренно: это отсутствие активности, и
+   подсвечивать его — значит привлекать внимание к тому, чего нет. */
+.smk-ring-offline { box-shadow: none; }
+
+/* --- Роли и смысловые цвета -------------------------------------------------
+   Значения по умолчанию совпадают с палитрой Tailwind, которой бейджи
+   пользовались раньше; пользовательская тема подменяет их на :root.
+   Объявлены здесь, чтобы var() не падал в тему без этих ключей. */
+:root {
+  /* Статусы объявлены выше — здесь только роли и карта, чтобы не
+     держать два конкурирующих набора одних и тех же ключей.
+     --smk-danger / --smk-hero-from / --smk-hero-to / --smk-map-house
+     удалены: их никто не читал (опасное действие рисуется утилитами
+     rose-*, градиент шапки — через --smk-hero-gradient). */
+  --smk-role-specialist: #10b981;
+  --smk-role-admin: #ef4444;
+  --smk-role-verified: #3b82f6;
+  --smk-map-cluster: #059669;
+}
+
+/* Бейдж роли: заливка выводится из одного цвета прозрачностью, поэтому
+   тема меняет один ключ, а не три оттенка. */
+.smk-role {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 0.5rem;
+  /* Было 0.125rem/0.375rem — бейджи выглядели сплющенными: текст
+     упирался в края. Воздуха по вертикали нужно больше, чем кажется:
+     заглавные буквы кириллицы выше латиницы. */
+  padding: 0.25rem 0.5rem;
+  font-size: var(--smk-fs-label);
+  font-weight: 700;
+  line-height: 1.35;
+  white-space: nowrap;
+  /* Заливка плотная: на 14 % бейджи были почти невидимы, особенно на
+     светлом фоне. Смешиваем не с прозрачностью, а с фоном карточки —
+     цвет остаётся насыщенным и не «просвечивает» текст под собой. */
+  color: color-mix(in srgb, var(--smk-role-color) 82%, var(--smk-role-ink));
+  background: color-mix(in srgb, var(--smk-role-color) 26%, var(--smk-role-bg));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--smk-role-color) 55%, transparent);
+}
+/* Подмешиваемая основа зависит от темы: на светлой уводим к белому,
+   на тёмной — к цвету подложки карточки. */
+:root { --smk-role-bg: #ffffff; --smk-role-ink: #0f172a; }
+html.dark { --smk-role-bg: var(--smk-card-inset, #1f1f23); --smk-role-ink: #ffffff; }
+html.dark .smk-role {
+  color: color-mix(in srgb, var(--smk-role-color) 78%, #ffffff);
+  background: color-mix(in srgb, var(--smk-role-color) 22%, var(--smk-role-bg));
+}
+.smk-role--specialist { --smk-role-color: var(--smk-role-specialist); }
+.smk-role--admin      { --smk-role-color: var(--smk-role-admin); }
+.smk-role--verified   { --smk-role-color: var(--smk-role-verified); }
+.smk-role--pending    { --smk-role-color: var(--smk-muted, #94a3b8); }
+
+/* --- Поверхности под управлением темы ---------------------------------------
+   Класс .smk-themed ставится на <html>, когда выбрана тема, отличная от
+   базовой пары светлая/тёмная.
+
+   Зачем отдельное правило, а не подмена --color-white: Tailwind отдаёт
+   из этой переменной И bg-white, И text-white (386 упоминаний). Подменив
+   её цветом карточки, мы одновременно перекрашивали белый ТЕКСТ — в
+   «Космосе», «Закате» и «Чёрном» он становился почти чёрным и пропадал.
+
+   Поэтому красим только фон: селектор бьёт по .bg-white, а .text-white
+   остаётся настоящим белым. */
+html.smk-themed .bg-white {
+  background-color: var(--smk-card-a);
+}
+
+/* --- Внутренности модальных окон --------------------------------------------
+   Раньше подписи «Когда», «Мест занято», «Записались» красились
+   классом text-slate-400, а он не входит в текстовые слоты темы —
+   поэтому внутри открытой карточки оформление «пропадало».
+   Эти три класса собирают повторяющиеся элементы модалок в одном
+   месте и читают переменные темы. */
+.smk-sheet-label {
+  font-size: var(--smk-fs-label);
+  font-weight: 700;
+  line-height: 1.3;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--smk-muted, #94a3b8);
+}
+/* Разделитель секций внутри листа.
+   Раньше это была прямая линия во всю ширину — на длинной карточке
+   получалась «линованная тетрадь». Теперь орнамент: линия расходится
+   от центра и затухает к краям, а в середине стоит ромб — тот же
+   мотив, что у .smk-orn в карточках. Рисуем псевдоэлементами, лишних
+   узлов в разметке не появляется. */
+.smk-sheet-section {
+  position: relative;
+  border-top: 1px solid transparent;
+  background-image: linear-gradient(
+    to right,
+    transparent,
+    var(--smk-divider) 12%,
+    var(--smk-divider) 45%,
+    transparent 48%,
+    transparent 52%,
+    var(--smk-divider) 55%,
+    var(--smk-divider) 88%,
+    transparent
+  );
+  background-size: 100% 1px;
+  background-repeat: no-repeat;
+  background-position: top center;
+}
+/* Ромб по центру: просвет внутри делает его элементом орнамента, а не
+   кляксой. Фон берём у карточки, чтобы ромб «прорезал» линию. */
+.smk-sheet-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  translate: -50% -50%;
+  rotate: 45deg;
+  background: var(--smk-divider);
+  box-shadow: inset 0 0 0 1px var(--smk-card-a);
+  pointer-events: none;
+}
+/* Первая секция в листе идёт сразу под шапкой — там разделитель лишний. */
+.smk-sheet-head + .smk-sheet-section,
+.smk-sheet-section:first-child {
+  background-image: none;
+}
+.smk-sheet-head + .smk-sheet-section::before,
+.smk-sheet-section:first-child::before {
+  display: none;
+}
+/* Подвал листа: орнамент рисуется линией сверху, ромб там мешает
+   кнопкам — оставляем только полосу. */
+.smk-sheet-foot.smk-sheet-section::before {
+  display: none;
+}
+/* Строка «подпись — значение» внутри карточки задания. */
+.smk-sheet-row {
+  border-radius: 0.75rem;
+  background: var(--smk-card-inset, #f8fafc);
+}
+
+/* Подвал карточки — та же поверхность, что панели бокового меню. */
+/* Подпись в строке данных карточки: «Стаж:», «Возраст:».
+   Раньше писалась классом text-slate-400 — ступень 400 тема выводит из
+   ФОНА страницы, поэтому подпись выпадала из палитры и выглядела
+   чужеродной рядом со значением. Теперь читает слот «Второстепенный
+   текст», как все остальные подписи в интерфейсе. */
+.smk-row-label {
+  color: var(--smk-muted);
+  font-weight: 600;
+}
+
+.smk-card-foot {
+  background: var(--smk-panel, #f1f3f6);
+  border-top: 1px solid var(--smk-divider, rgb(15 23 42 / 0.06));
+}
+
+/* --- Полотно модального окна ------------------------------------------------
+   Окна открываются снизу на телефоне и по центру на широком экране.
+   Три вещи, которых не хватало:
+     1) «ручка» сверху — подсказывает, что лист тянется/закрывается;
+     2) липкая шапка, чтобы заголовок и крестик не уезжали при прокрутке;
+     3) отступ снизу под системную панель жестов (safe-area). */
+.smk-sheet {
+  background: var(--smk-card-a, #ffffff);
+}
+.smk-sheet-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--smk-card-a, #ffffff);
+}
+.smk-sheet-head::before {
+  content: '';
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  width: 2.25rem;
+  height: 4px;
+  border-radius: 9999px;
+  transform: translateX(-50%);
+  background: var(--smk-hairline-strong, rgb(15 23 42 / 0.12));
+}
+@media (min-width: 640px) {
+  /* На широком экране лист не тянут — «ручка» там лишняя. */
+  .smk-sheet-head::before { display: none; }
+}
+.smk-sheet-foot {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: var(--smk-card-a, #ffffff);
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+/* --- Разделители и пунктирные рамки ------------------------------------------
+   .smk-hr — тонкая линия между блоками (боковое меню, фильтры, списки
+   в модалках). Раньше такие линии писали dark:border-zinc-800, а это
+   почти чёрный: в тёмной теме они выглядели провалом, а не штрихом.
+   Берём --smk-divider: это линия внутри блока, а не его контур.
+
+   .smk-dashed — пустое состояние («Пока нет отзывов», «Выберите точку
+   анкеты»). В светлой теме это была штриховая рамка, в тёмной — грязная
+   сплошная линия. Теперь пунктир в обеих темах и цвет из палитры. */
+.smk-hr {
+  border-color: var(--smk-divider, rgb(15 23 42 / 0.12));
+}
+.smk-dashed {
+  position: relative;
+  border: 1px dashed var(--smk-hairline-strong, rgb(15 23 42 / 0.12));
+  border-radius: 1rem;
+  background: transparent;
+  /* Место под орнамент сверху: без него ромб наезжал на текст. */
+  padding-top: 2.25rem;
+}
+
+/* Вайнахский ромб в пустом состоянии.
+   Раньше «Заданий нет» было просто серой надписью в рамке — выглядело
+   как ошибка загрузки, а не как «здесь пока пусто». Тот же мотив, что
+   в разделителях .smk-orn: ромб с золотыми усиками по бокам.
+
+   Рисуем псевдоэлементами, без картинок: масштабируется, красится
+   темой и подчиняется --fx-pattern из настроек эффектов. */
+.smk-dashed::before {
+  content: '';
+  position: absolute;
+  top: 0.9rem;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  transform: translateX(-50%) rotate(45deg);
+  background: var(--smk-gold);
+  opacity: calc(0.85 * var(--fx-pattern));
+  box-shadow: 0 0 10px -2px var(--smk-gold);
+}
+.smk-dashed::after {
+  content: '';
+  position: absolute;
+  top: calc(0.9rem + 3.5px);
+  left: 50%;
+  width: 88px;
+  height: 1px;
+  transform: translateX(-50%);
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--smk-gold) 22%,
+    transparent 42%,
+    transparent 58%,
+    var(--smk-gold) 78%,
+    transparent
+  );
+  opacity: calc(0.5 * var(--fx-pattern));
+}
+
+/* --- Плотные всплывающие слои -----------------------------------------------
+   Меню шапки, компактная модалка режима работы, центр уведомлений.
+   Базовый фон �ма работы, центр уведомлений.
+   Базовый фон нужен ВСЕГДА, а не только в стеклянной теме: раньше
+   правило жило внутри html.smk-glass, и в обычных темах модалка
+   оставалась без фона — сквозь неё просвечивала страница. */
+.smk-solid {
+  background-color: var(--smk-card-a, #ffffff);
+  border: 1px solid var(--smk-hairline-strong, rgb(15 23 42 / 0.12));
+}
+
+/* --- Орнаментальные разделители ----------------------------------------------
+   Вместо простой линии — вайнахский мотив: ромб в центре и «усы»,
+   затухающие к краям. Ромб рисуется через ::after, полосы — градиентом
+   на самом элементе, поэтому лишних узлов в разметке не появляется.
+
+   Цвет берётся из --smk-divider (слот «Разделители»), а не из обводки:
+   контур карточки должен быть еле заметен, а линия внутри блока обязана
+   читаться — одно значение на две задачи всегда проигрывало одной. */
+.smk-orn {
+  position: relative;
+  height: 1px;
+  border: 0;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--smk-divider) 14%,
+    var(--smk-divider) 42%,
+    transparent 47%,
+    transparent 53%,
+    var(--smk-divider) 58%,
+    var(--smk-divider) 86%,
+    transparent
+  );
+}
+.smk-orn::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  translate: -50% -50%;
+  rotate: 45deg;
+  background: var(--smk-divider);
+  /* Внутренний просвет: сплошной ромб выглядит кляксой, а рамка в
+     один пиксель читается как элемент орнамента. */
+  box-shadow: inset 0 0 0 1px var(--smk-card-a);
+}
+
+/* Разделитель строк ВНУТРИ блока: только тонкая линия без ромба —
+   ромбы через каждые две строки превращаются в рябь. */
+.smk-orn-soft {
+  position: relative;
+  height: 1px;
+  border: 0;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--smk-divider) 10%,
+    var(--smk-divider) 90%,
+    transparent
+  );
+}
+
+/* Строка данных без подложки: иконка, подпись, значение.
+   Разделители между строками рисует родитель через .smk-rows. */
+.smk-rows > * + * {
+  border-top: 1px solid var(--smk-divider);
+}
+
+/* --- Акцент у заголовка секции ------------------------------------------------
+   Короткая золотая засечка слева от подписи. Мелкая деталь, но именно
+   она отличает «список полей» от оформленного блока: глаз цепляется за
+   начало строки. Рисуем псевдоэлементом, разметку не трогаем. */
+.smk-sheet-label {
+  position: relative;
+  padding-left: 0.625rem;
+}
+.smk-sheet-label::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 3px;
+  height: 0.7em;
+  translate: 0 -50%;
+  border-radius: 9999px;
+  background: linear-gradient(
+    to bottom,
+    var(--smk-gold),
+    var(--smk-gold-deep)
+  );
+}
+/* Внутри форм и строк «подпись — значение» засечка лишняя: там подпись
+   стоит в одном ряду со значением, и вертикальная черта ломает строку. */
+.smk-sheet-row .smk-sheet-label,
+.smk-sheet-label--plain {
+  padding-left: 0;
+}
+.smk-sheet-row .smk-sheet-label::before,
+.smk-sheet-label--plain::before {
+  display: none;
+}
+
+/* --- Панели бокового меню ----------------------------------------------------
+   Мини-профиль, виджет времени намаза и панель четырёх иконок — это
+   один тип поверхности, поэтому у них общий класс и общий слот темы.
+   Раньше каждая панель красилась по-своему (bg-slate-50/90,
+   dark:bg-zinc-950, dark:bg-zinc-900) и они не совпадали между собой.
+
+   Прозрачности здесь нет намеренно: полупрозрачный фон подмешивал
+   цвет полотна, и панели «плыли» — на разных страницах получался
+   разный оттенок. */
+.smk-panel {
+  /* Без рамки: панель и так отделена собственным фоном, а её линия
+     была единственной ненастраиваемой обводкой в интерфейсе. */
+  background-color: var(--smk-panel, #f1f5f9);
+  border-radius: 0.75rem;
+}
+/* Тёмное значение объявляем в html.dark, а не в :root: обе переменные
+   в одном блоке конфликтовали — последняя перебивала первую. */
+html.dark {
+  /* Тёмные поверхности: зеркало светлого блока из :root. */
+  --smk-card-a: #1c1c20;        /* верх полотна   */
+  --smk-card-b: #161619;        /* низ полотна    */
+  --smk-card-line: #25252a;     /* обводка: контур карточек и полей */
+  --smk-divider: #3a3a3e;       /* разделители: линии внутри блоков */
+  --smk-card-inset: #35353d;    /* подложки строк */
+  --smk-field: #2e2e35;         /* поля заполнения */
+  --smk-panel: #25252a;         /* панели и подвал карточек */
+  --smk-muted: #96969e;         /* второстепенный текст */
+  --smk-muted-bright: #c4c4cc;
+  --smk-icon: #b3b3b9;
+  --smk-surface: #1c1c20;
+  --smk-hairline: rgb(255 255 255 / 0.08);
+  --smk-hairline-strong: rgb(255 255 255 / 0.16);
+
+  /* Подсказки: тёмное зеркало блока из :root. */
+  --smk-note-info: #86c3df;
+  --smk-note-info-bg: #0b425b;
+  --smk-note-warn: #dfbe86;
+  --smk-note-warn-bg: #5b3d0b;
+  --smk-note-danger: #df8695;
+  --smk-note-danger-bg: #5b0b19;
+  --smk-note-success: #86dfc1;
+  --smk-note-success-bg: #0b5b40;
+}
+
+/* --- Стеклянный режим ---------------------------------------------------------
+   Включается классом .smk-glass на <html> (тема с glass: true).
+   Прозрачность выводится из тех же цветов темы через color-mix, а не
+   задаётся отдельными значениями с альфой: палитра остаётся
+   единственным источником, и правка «Карточки» тянет за собой стекло.
+
+   backdrop-filter применяется только там, где под элементом реально
+   что-то есть. Вешать его на всё подряд нельзя: каждый такой слой —
+   отдельная композиция на GPU, на слабом телефоне список из тридцати
+   карточек начинает заметно тормозить. */
+html.smk-glass .smk-lux {
+  background: color-mix(in srgb, var(--smk-card-a) 62%, transparent);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border-color: color-mix(in srgb, var(--smk-card-line) 45%, transparent);
+  box-shadow:
+    0 1px 0 0 rgb(255 255 255 / 0.55) inset,
+    0 10px 30px -18px rgb(15 23 42 / 0.35);
+}
+html.smk-glass .smk-field {
+  background: color-mix(in srgb, var(--smk-card-inset) 55%, transparent);
+}
+/* Подложки строк внутри стекла делаем ещё легче, иначе карточка
+   выглядит как матовый пластик, а не как стекло. */
+html.smk-glass .smk-price,
+html.smk-glass .smk-price-teal {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* --- Прозрачность для ВСЕХ фоновых поверхностей -----------------------------
+   Одних карточек мало: панели, модальные окна, шапка и боковое меню
+   рисуются утилитами bg-white / dark:bg-zinc-*, и рядом со стеклянной
+   карточкой они выглядели плотными заплатками.
+
+   Красим по классам Tailwind, а не по каждому компоненту: разметку
+   переписывать не нужно, а при выключении темы правила просто
+   перестают действовать. Прозрачность считаем от цвета темы через
+   color-mix, поэтому источник по-прежнему один — палитра.
+
+   !important здесь оправдан: утилиты Tailwind имеют ту же
+   специфичность, и без него порядок в бандле решал бы, кто победит. */
+html.smk-glass .bg-white,
+html.smk-glass .bg-slate-50,
+html.smk-glass .bg-slate-100,
+html.smk-glass .bg-zinc-50,
+html.smk-glass .bg-zinc-100 {
+  /* ТОЛЬКО прозрачность, без backdrop-filter.
+     Элемент с backdrop-filter становится containing block для
+     position: fixed потомков — шапка внутри такой обёртки переставала
+     быть привязанной к окну и уезжала вместе со страницей.
+     Размытие оставляем конкретным поверхностям ниже: они либо сами
+     fixed, либо не содержат фиксированных потомков. */
+  background-color: color-mix(in srgb, var(--smk-card-a) 60%, transparent) !important;
+}
+html.smk-glass .bg-slate-50\/70,
+html.smk-glass .bg-slate-50\/60,
+html.smk-glass .bg-slate-50\/50,
+html.smk-glass .bg-slate-50\/40 {
+  background-color: color-mix(in srgb, var(--smk-card-inset) 45%, transparent) !important;
+}
+
+/* Шапка и нижняя панель — сильнее размытие: под ними проезжает
+   контент, и слабый blur давал «грязь» вместо стекла.
+   Обе сами позиционированы fixed, поэтому containing block для них
+   значения не имеет — размывать безопасно. */
+html.smk-glass .site-bottom-nav,
+html.smk-glass .site-header {
+  background-color: color-mix(in srgb, var(--smk-card-a) 68%, transparent) !important;
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+}
+
+/* Боковое меню: только прозрачность. Внутри него sticky-элементы, а
+   backdrop-filter ломает их привязку так же, как и fixed. */
+html.smk-glass aside > div {
+  background-color: color-mix(in srgb, var(--smk-card-a) 68%, transparent) !important;
+}
+
+/* Модальные окна: фон под ними и так затемнён подложкой, поэтому
+   стекло держим плотнее — иначе текст формы читается плохо. */
+/* Выпадающие меню шапки (выбор темы, режим работы) и центр уведомлений
+   тоже держим непрозрачными: это плотные списки текста, сквозь которые
+   просвечивал контент страницы. Помечаются классом .smk-solid. */
+html.smk-glass .smk-solid {
+  background-color: var(--smk-card-a) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Модальные окна НЕПРОЗРАЧНЫ даже в стеклянной теме: в них читают и
+   заполняют формы, а сквозной фон мешает — текст ложится поверх
+   случайного контента. Стекло остаётся у подложки вокруг окна. */
+html.smk-glass [role="dialog"] > div {
+  background-color: var(--smk-card-a) !important;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* Узор-лучи на стекле превращается в грязь: убираем. */
+html.smk-glass .smk-rays::before,
+html.smk-glass .smk-rays::after { display: none; }
+
+/* Доступность: у кого выключена прозрачность в системе — получают
+   плотные поверхности без размытия. */
+@media (prefers-reduced-transparency: reduce) {
+  html.smk-glass .smk-lux,
+  html.smk-glass .smk-field,
+  html.smk-glass .bg-white,
+  html.smk-glass .bg-slate-50,
+  html.smk-glass .bg-slate-100,
+  html.smk-glass .site-bottom-nav,
+  html.smk-glass .site-header,
+  html.smk-glass aside > div,
+  html.smk-glass [role="dialog"] > div {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background-color: var(--smk-card-a) !important;
+  }
+}
+
+/* --- Точка рабочего статуса в строке данных ---------------------------------
+   Пульсирует только у «живых» статусов: мигающий выходной читался бы
+   как ошибка, а не как информация. Анимируем box-shadow и opacity —
+   они не вызывают перевёрстку, в отличие от width/height. */
+.smk-status-dot {
+  position: relative;
+  display: inline-block;
+  height: 0.5rem;
+  width: 0.5rem;
+  flex: none;
+  border-radius: 9999px;
+  background: var(--smk-status-offline);
+}
+.smk-status-dot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: inherit;
+  opacity: 0;
+}
+.smk-status-dot--active   { background: var(--smk-status-active); }
+.smk-status-dot--break    { background: var(--smk-status-break); }
+.smk-status-dot--flexible { background: var(--smk-status-flexible); }
+.smk-status-dot--offline  { background: var(--smk-status-offline); }
+
+.smk-status-dot--active::after,
+.smk-status-dot--break::after {
+  animation: smk-ping 1.9s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+.smk-status-dot--active { box-shadow: 0 0 8px -1px var(--smk-status-active); }
+.smk-status-dot--break  { box-shadow: 0 0 8px -1px var(--smk-status-break); }
+.smk-status-dot--flexible { box-shadow: 0 0 8px -2px var(--smk-status-flexible); }
+
+@keyframes smk-ping {
+  0%   { transform: scale(1);   opacity: 0.65; }
+  70%  { transform: scale(2.4); opacity: 0; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .smk-status-dot::after { animation: none; }
+}
+
+/* --- Мягкое свечение аватара по статусу -------------------------------------
+   Кольцо уже цветное; ореол добавляет глубины, но только у активных —
+   иначе «не работает» светился бы наравне с «работает». */
+.smk-ring-active   { box-shadow: 0 0 14px -6px var(--smk-status-active); }
+.smk-ring-break    { box-shadow: 0 0 14px -6px var(--smk-status-break); }
+.smk-ring-flexible { box-shadow: 0 0 14px -6px var(--smk-status-flexible); }
+
+/* --- Появление карточек в ленте ---------------------------------------------
+   Короткое, без сдвига по вертикали: длинные «выезды» на списке из
+   30 карточек выглядят как тормоза. */
+@keyframes smk-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.smk-enter {
+  animation: smk-fade-in 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .smk-enter { animation: none; }
+}
+
+/* --- Пробегающий блик по акценту --------------------------------------------
+   Используется на золотой кнопке: даёт «дорогое» ощущение без
+   постоянной анимации — блик идёт только при наведении. */
+.smk-shine {
+  position: relative;
+  overflow: hidden;
+}
+.smk-shine::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    transparent 20%,
+    rgb(var(--smk-light-rgb) / 0.35) 45%,
+    transparent 70%
+  );
+  transform: translateX(-120%);
+}
+@media (hover: hover) {
+  .smk-shine:hover::after {
+    animation: smk-sweep 0.7s ease-out;
+  }
+}
+@keyframes smk-sweep {
+  to { transform: translateX(120%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .smk-shine::after { animation: none !important; }
+}
+
+/* Вертикальный разделитель внутри строки данных (возраст · пол) */
+.smk-sep {
+  display: inline-block;
+  align-self: stretch;
+  width: 1px;
+  min-height: 1rem;
+  background: var(--smk-divider);
+}
+.smk-ring > * {
+  border-radius: 9999px;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* --- Разделитель ------------------------------------------------------------ */
+.smk-rule {
+  height: 1px;
+  border: 0;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgb(var(--smk-gold-rgb) / 0.38) 12%,
+    rgb(var(--smk-gold-rgb) / 0.38) 88%,
+    transparent
+  );
+}
+html.dark .smk-rule {
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgb(var(--smk-light-rgb) / 0.14) 12%,
+    rgb(var(--smk-light-rgb) / 0.14) 88%,
+    transparent
+  );
+}
+
+/* --- Поля заполнения и блоки-«углубления» -------------------------------------
+   Один класс на всё, что читается как «место для данных»: строки
+   настроек, адрес в карточке задания, сведения о человеке в анкете.
+
+   Раньше здесь были два разных источника (--smk-surface-soft в светлой
+   теме и --smk-card-inset в тёмной), а блоки в карточках красились
+   классами bg-slate-50/70 и dark:bg-zinc-800 — мимо палитры вовсе.
+   Теперь общий слот «Поля заполнения», настраиваемый в редакторе тем;
+   ветвление по теме не нужно — палитра задаёт значение для каждой. */
+.smk-field {
+  border-radius: 0.75rem;
+  background: var(--smk-field);
+}
+
+/* --- Подложка строки данных ---------------------------------------------------
+   Блок, который ПОКАЗЫВАЕТ данные, а не принимает их: адрес в карточке
+   задания, строка документа, плитка настройки.
+
+   Отдельный класс от .smk-field, потому что слоты разные по смыслу:
+   «Поля заполнения» — это место, куда пишут, и на светлых темах оно
+   почти белое (237/240). Блок адреса с тем же фоном сливался с белой
+   карточкой — ровно то, на что было замечание «для адреса внутри
+   карточки заданий фон неправильный».
+
+   Здесь берётся «Подложка строк» (--smk-card-inset): она заметнее
+   поля и даёт нужную ступень полотно → блок. Тень та же, что у полей,
+   чтобы глубина в интерфейсе читалась одинаково. */
+.smk-inset {
+  border-radius: 0.75rem;
+  background: var(--smk-card-inset);
+  box-shadow: var(--smk-field-shadow);
+}
+
+/* Тонкая линия между строками внутри одной группы. */
+.smk-field-split > * + * {
+  border-top: 1px solid var(--smk-divider);
+}
+
+/* --- Иконка строки данных --------------------------------------------------- */
+.smk-ico {
+  /* Собственный слот темы: в светлой теме иконки раньше брали золото,
+     в тёмной — «яркий приглушённый». Настроить их отдельно было
+     нельзя, теперь обе темы читают один --smk-icon. */
+  color: var(--smk-icon, var(--smk-gold));
+  flex: none;
+}
+
+/* На светлой латуни белая надпись даёт контраст ~1.9. Чернила тёмные.
+   В тёмной теме кнопка стальная — там текст белый. */
+.smk-btn-gold {
+  background: linear-gradient(100deg, var(--smk-gold-deep), var(--smk-gold));
+  color: #ffffff;
+  font-weight: 700;
+  border-radius: calc(0.75rem * var(--smk-radius-scale, 1));
+  box-shadow: 0 6px 16px -8px rgb(var(--smk-gold-rgb) / 0.55);
+  transition: filter 0.18s ease, transform 0.18s ease;
+}
+html.dark .smk-btn-gold {
+  background: linear-gradient(100deg, var(--smk-steel-a), var(--smk-steel-c));
+  color: #ffffff;
+  box-shadow: 0 6px 16px -8px rgb(var(--smk-shadow-rgb) / 0.8);
+}
+.smk-btn-gold:hover { filter: brightness(1.08); }
+.smk-btn-gold:active { transform: scale(0.98); }
+
+/* --- Звезда рейтинга и акцент стрелки ---------------------------------------
+   Звезда золотая в обеих темах — так она и на синем референсе. А вот
+   служебные элементы (стрелка, ховер) в тёмной теме уходят в сталь,
+   иначе на синем полотне появляется случайный жёлтый. */
+/* Звезда рейтинга: обводка ЯРЧЕ заливки, а не темнее.
+   Раньше stroke брал --smk-gold-deep (тёмный оттенок акцента), и контур
+   получался темнее тела звезды — она выглядела «обведённой карандашом».
+   Светлый контур по краю читается как блик и держит форму на любом
+   фоне. --smk-gold-soft светлее акцента во всех девяти темах. */
+.smk-star {
+  /* Контур светлее тела: подмешиваем белый к акценту, а не берём
+     готовый accentSoft. Причина — тема «Чёрный», где акцент это уже
+     чистый #ffffff: там accentSoft (#e5e5e5) оказывается ТЕМНЕЕ
+     заливки, и звезда снова выглядит обведённой карандашом.
+     color-mix с белым не может уйти вниз по яркости ни в одной теме. */
+  color: color-mix(in srgb, var(--smk-gold) 45%, #ffffff);
+  fill: var(--smk-gold);
+}
+/* Без color-mix берём светлый оттенок акцента — он подходит везде,
+   кроме «Чёрной», а она в старых браузерах и так редкость. */
+@supports not (color: color-mix(in srgb, red 50%, blue)) {
+  .smk-star { color: var(--smk-gold-soft); }
+}
+/* Светлая латунь как текст на карточке даёт ~1.9. Подмешиваем основной
+   текст: золотой оттенок остаётся, контраст проходит AA. */
+.smk-rating-value { color: color-mix(in srgb, var(--smk-gold) 35%, var(--foreground)); }
+html.dark .smk-rating-value { color: var(--smk-muted-bright); }
+
+.smk-arrow { color: var(--smk-arrow-color); transition: color 0.2s ease, transform 0.2s ease; }
+html.dark .smk-arrow { color: var(--smk-arrow-color-dark); }
+.group:hover .smk-arrow { color: var(--smk-gold); transform: translateX(2px); }
+html.dark .group:hover .smk-arrow { color: var(--smk-muted-bright); }
+
+/* --- Сегментированный переключатель ------------------------------------------
+   «Отзывы / Вопросы / Оценки» внутри анкеты. Раньше это были три
+   кнопки с нижним подчёркиванием — линия подчёркивания сливалась с
+   разделителями секций, и блок читался как случайный набор надписей.
+   Сегменты — стандартный для мобильных интерфейсов приём (iOS segmented
+   control): активный сегмент выделен подложкой, остальные плоские. */
+.smk-seg {
+  position: relative;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 0.75rem;
+  background: var(--smk-card-inset, #f8fafc);
+}
+.smk-seg-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  padding: 0.45rem 0.25rem;
+  border-radius: 0.55rem;
+  font-size: var(--smk-fs-label);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--smk-muted, #94a3b8);
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+.smk-seg-btn--on {
+  background: var(--smk-card-a, #ffffff);
+  color: var(--smk-muted-bright, #0f172a);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+}
+/* Счётчик рядом с названием вкладки: та же строка, но тише основного
+   текста — цифра не должна спорить со словом. */
+.smk-seg-num {
+  font-size: var(--smk-fs-label);
+  font-weight: 700;
+  opacity: 0.65;
+}
+.smk-seg-btn--on .smk-seg-num {
+  color: var(--smk-gold-deep, #ffcd6d);
+  opacity: 1;
+}
+
+/* --- Шкала распределения оценок ---------------------------------------------
+   Полоска «5 ★ ▓▓▓▓░ 12». Раньше дорожка красилась bg-slate-100 /
+   dark:bg-zinc-800 — то есть мимо палитры темы; в тёмных темах она
+   проваливалась в чёрный. Берём подложку строк и золото акцента. */
+.smk-bar {
+  height: 5px;
+  overflow: hidden;
+  border-radius: 9999px;
+  background: var(--smk-card-inset, #f1f5f9);
+}
+.smk-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(to right, var(--smk-gold-deep), var(--smk-gold));
+}
+
+/* --- Мета-строка и кнопки действий в карточках --------------------------------
+   Дата отзыва и кнопки «карандаш / корзина» писались классом
+   text-slate-400. Ступени 50…400 темы выводит из ФОНА страницы
+   (applyRamp), поэтому в тёмных темах slate-400 оказывался почти
+   цветом полотна: дата гасла, карандаш пропадал. К палитре они при
+   этом не были привязаны вовсе — hover жёстко держал emerald.
+
+   Оба класса читают слоты темы: подпись — «Второстепенный текст»,
+   действие — «Иконки», подсветка — «Главный цвет» и «Опасное
+   действие». */
+.smk-meta {
+  color: var(--smk-muted);
+  font-variant-numeric: tabular-nums;
+}
+.smk-act {
+  position: relative;
+  color: var(--smk-icon);
+  border-radius: 9999px;
+  transition: color 0.16s ease, background-color 0.16s ease;
+}
+/* Зона нажатия 44×44, иконка визуально прежняя. Псевдоэлемент не
+   рисуется — только расширяет hit-testing, чтобы палец попадал в
+   «карандаш» и «корзину» рядом. */
+.smk-act::after,
+.smk-hit::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
+}
+.smk-hit {
+  position: relative;
+}
+.smk-act:hover:not(:disabled) {
+  color: var(--color-emerald-600);
+  background-color: color-mix(in srgb, var(--color-emerald-600) 12%, transparent);
+}
+.smk-act:disabled {
+  opacity: 0.4;
+}
+/* Удаление — то же поведение, но в «опасном» цвете темы. */
+.smk-act--danger,
+.smk-act--danger:hover:not(:disabled) {
+  color: rgb(var(--smk-danger-rgb));
+}
+.smk-act--danger:hover:not(:disabled) {
+  background-color: rgb(var(--smk-danger-rgb) / 0.12);
+}
+
+/* --- Плитки режима работы -----------------------------------------------------
+   Кнопка статуса в панели четырёх иконок и ряд режимов в её модалке.
+   Раньше фон писался классами bg-emerald-600 / bg-amber-500 /
+   bg-zinc-600 — то есть мимо палитры: пользователь менял слот
+   «Статус «Работает»» в редакторе тем, а плитка оставалась зелёной.
+   Теперь читаем те же переменные, что и точка статуса на карточке
+   анкеты, — цвет один во всех местах, где он означает одно и то же. */
+/* «Автоматический» — отдельный слот: режим по расписанию не то же
+   самое, что «работаю сейчас», и цвет у него свой, под тему. */
+.smk-status-bg--auto {
+  background: var(--smk-status-auto);
+}
+.smk-status-bg--auto:hover {
+  background: var(--smk-status-auto-deep);
+}
+.smk-status-bg--active {
+  background: var(--smk-status-active);
+}
+.smk-status-bg--active:hover {
+  background: var(--smk-status-active-deep);
+}
+.smk-status-bg--break {
+  background: var(--smk-status-break);
+}
+.smk-status-bg--break:hover {
+  background: var(--smk-status-break-deep);
+}
+.smk-status-bg--offline {
+  background: var(--smk-status-offline);
+}
+.smk-status-bg--offline:hover {
+  background: var(--smk-status-offline-deep);
+}
+
+/* --- Страницы для чтения ------------------------------------------------------
+   «Руководство», «Нохчалла», «Сира Пророка», «Правовое соглашение».
+   Это длинные тексты, а не интерфейс: здесь работают правила типографики,
+   а не плотная вёрстка карточек.
+
+   Ключевые решения:
+   1. Выравнивание по ширине (justify) с переносами — иначе правый край
+      рвётся, и на узком экране появляются «дыры» между словами.
+   2. Красная строка у абзацев, ИДУЩИХ ПОДРЯД. У первого абзаца после
+      заголовка отступа нет — так набирают книги: отступ отделяет абзац
+      от предыдущего, а не от заголовка.
+   3. Ширина строки ограничена: больше ~75 символов глаз теряет начало
+      следующей строки. */
+.smk-read {
+  font-size: 0.9375rem;
+  line-height: 1.75;
+
+  /* --- Цвет текста для длинного чтения -----------------------------
+     Берём слот «Основной текст» темы (--foreground), а не
+     --smk-muted-bright: последний хранит цвет ИКОНОК и для текста
+     слишком блёклый (5.8 против 8.2 в «Природе»).
+
+     Но чистые #000/#fff для чтения не годятся: на большом объёме
+     текста максимальный контраст утомляет глаз — это давняя норма
+     книжной типографики, её же придерживаются Medium и Notion.
+     Поэтому подмешиваем 12 % фона карточки: «Тёмная» с её #ffffff
+     смягчается до ~#dbdbdb, «Светлая» с #0f172a — до ~#2e3546.
+
+     Темы, где текст изначально мягкий («Природа» #305545 = 8.2,
+     «Янтарь» #58442d = 9.1), после подмеса остаются в комфортном
+     диапазоне и не проваливаются ниже нормы. */
+  color: color-mix(in srgb, var(--foreground) 88%, var(--smk-card-a));
+}
+
+/* Старые браузеры без color-mix получают неразбавленный цвет: лучше
+   чуть более резкий текст, чем нечитаемый. */
+@supports not (color: color-mix(in srgb, red 50%, blue)) {
+  .smk-read { color: var(--foreground); }
+}
+.smk-read-p {
+  margin-top: 0.35rem;
+  text-align: justify;
+  text-justify: inter-word;
+  hyphens: auto;
+  overflow-wrap: break-word;
+}
+/* Красная строка — только между соседними абзацами. */
+.smk-read-p + .smk-read-p {
+  text-indent: 1.5em;
+}
+
+.smk-read-h1,
+.smk-read-h2,
+.smk-read-h3 {
+  /* --foreground, а не выдуманный --smk-text: слот «Основной текст»
+     темы попадает именно в него (apply-theme.ts). Переменной
+     --smk-text не существует ни в CSS, ни в JS, поэтому здесь всегда
+     срабатывал запасной #0f172a — в тёмных темах это давало тёмный
+     заголовок на тёмном фоне с контрастом 1.04.
+
+     Заголовки берут цвет БЕЗ смягчения, в отличие от основного текста:
+     они короткие, и полный контраст здесь держит структуру страницы. */
+  color: var(--foreground);
+  font-weight: 800;
+  line-height: 1.3;
+  scroll-margin-top: 5rem;
+}
+.smk-read-h1 {
+  margin: 1.75rem 0 0.75rem;
+  font-size: 1.25rem;
+  letter-spacing: -0.01em;
+}
+/* Золотая засечка у крупного заголовка — та же деталь, что у подписей
+   секций в карточках: страница остаётся частью одного оформления. */
+.smk-read-h1::before {
+  content: '';
+  display: block;
+  width: 2.25rem;
+  height: 3px;
+  margin-bottom: 0.6rem;
+  border-radius: 9999px;
+  background: linear-gradient(to right, var(--smk-gold), var(--smk-gold-deep));
+}
+.smk-read-h2 {
+  margin: 1.35rem 0 0.5rem;
+  font-size: 1.0625rem;
+}
+.smk-read-h3 {
+  margin: 1.1rem 0 0.4rem;
+  font-size: 0.9375rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--smk-muted);
+}
+
+.smk-read-list {
+  margin: 0.6rem 0;
+  padding-left: 1.35rem;
+  list-style: disc;
+}
+.smk-read-list--num { list-style: decimal; }
+.smk-read-list li { margin-top: 0.3rem; padding-left: 0.25rem; }
+.smk-read-list li::marker { color: var(--smk-gold-deep); font-weight: 700; }
+
+/* Цитата — «важное место». Полоса слева золотом, без рамки по контуру:
+   рамки в этом проекте не используются. */
+.smk-read-quote {
+  position: relative;
+  margin: 1rem 0;
+  padding: 0.75rem 0.9rem 0.75rem 1.1rem;
+  border-radius: 0.75rem;
+  background: var(--smk-card-inset);
+  font-style: italic;
+  text-align: justify;
+}
+.smk-read-quote::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.75rem;
+  bottom: 0.75rem;
+  width: 3px;
+  border-radius: 9999px;
+  background: linear-gradient(to bottom, var(--smk-gold), var(--smk-gold-deep));
+}
+
+/* Выделение цветом внутри текста. Не жёлтый маркер: подложка выводится
+   из акцента темы, поэтому работает и на тёмных темах. */
+.smk-mark {
+  background: color-mix(in srgb, var(--smk-gold) 22%, transparent);
+  color: inherit;
+  padding: 0 0.2em;
+  border-radius: 0.25rem;
+  font-weight: 600;
+}
+
+/* Таблица: горизонтальная прокрутка на телефоне вместо сжатия колонок
+   в нечитаемую кашу. */
+.smk-read-table-wrap {
+  margin: 1rem 0;
+  overflow-x: auto;
+  border-radius: 0.75rem;
+}
+.smk-read-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+  text-align: left;
+}
+.smk-read-table th {
+  padding: 0.55rem 0.7rem;
+  background: var(--smk-card-inset);
+  font-weight: 700;
+  color: var(--foreground);
+  white-space: nowrap;
+}
+
+.smk-read-table td {
+  padding: 0.55rem 0.7rem;
+  border-top: 1px solid var(--smk-divider);
+  vertical-align: top;
+}
+
+/* Номер главы в оглавлении страницы-чтения. */
+.smk-read-num {
+  display: flex;
+  height: 1.75rem;
+  width: 1.75rem;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.6rem;
+  background: var(--smk-card-inset);
+  font-size: var(--smk-fs-label);
+  font-weight: 800;
+  color: var(--smk-gold-deep);
+}
+
+
+/* --- Кнопка закрытия в меню «+» ----------------------------------------------
+   Плоская круглая «×» в центре веера действий.
+
+   Раньше была стеклянной: белая полупрозрачная подложка, размытие и
+   золотое кольцо. Два минуса — не реагировала на тему (белое на белом
+   в светлых) и выбивалась из плоского стиля остального интерфейса.
+
+   Теперь это сплошная заливка главным цветом темы (--color-emerald-600
+   подменяется палитрой), без размытия и колец. Значок белый: главный
+   цвет во всех темах достаточно тёмный. */
+.smk-close-orb {
+  color: #ffffff;
+  background: var(--color-emerald-600);
+}
+.smk-close-orb:hover {
+  background: var(--color-emerald-700);
+}
+
+/* --- Поля даты и времени -----------------------------------------------------
+   input[type=datetime-local] рисует иконку календаря средствами
+   браузера, и она НЕ наследует цвет текста: в тёмных темах остаётся
+   почти чёрной на тёмном поле — выглядит как «иконка не работает».
+
+   color-scheme переключает всю внутреннюю отрисовку поля (иконку,
+   выпадающий календарь, разделители) на тёмный вариант. Это
+   стандартный способ, а не подкрашивание фильтром: filter: invert
+   ломает цвета в светлой теме и не влияет на сам календарь.
+
+   Дополнительно расширяем зону клика по иконке: по умолчанию она около
+   16px, попасть пальцем трудно. */
+input[type='date'],
+input[type='time'],
+input[type='datetime-local'] {
+  color-scheme: light;
+}
+html.dark input[type='date'],
+html.dark input[type='time'],
+html.dark input[type='datetime-local'] {
+  color-scheme: dark;
+}
+input[type='date']::-webkit-calendar-picker-indicator,
+input[type='time']::-webkit-calendar-picker-indicator,
+input[type='datetime-local']::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  padding: 0.35rem;
+  margin-right: -0.2rem;
+  border-radius: 0.4rem;
+  opacity: 0.65;
+  transition: opacity 0.15s ease, background-color 0.15s ease;
+}
+input[type='date']::-webkit-calendar-picker-indicator:hover,
+input[type='time']::-webkit-calendar-picker-indicator:hover,
+input[type='datetime-local']::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+  background-color: rgb(var(--smk-gold-rgb) / 0.16);
+}
+
+/* --- Выделение текста ---------------------------------------------------------
+   Раньше стояло selection:bg-emerald-500 selection:text-white на <body>.
+   Tailwind выдаёт text-white из переменной --color-white, а тема её
+   подменяет — в итоге выделенный текст красился в #432020 и был
+   нечитаем. Пишем правило напрямую из палитры. */
+::selection {
+  background-color: color-mix(in srgb, var(--color-emerald-600) 85%, transparent);
+  color: #ffffff;
+}
+
+/* Выключенный тумблер: раньше bg-slate-300 / dark:bg-zinc-700 — мимо
+   палитры, поэтому в цветных темах он оставался серым. Берём подложку
+   строк, она уже отличается от карточки в каждой теме. */
+.smk-toggle-off {
+  background-color: var(--smk-card-inset);
+}

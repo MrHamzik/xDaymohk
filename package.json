@@ -9,7 +9,10 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "stylelint": "stylelint \"app/**/*.css\"",
-    "prepare": "husky"
+    "prepare": "husky",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "verify": "npm run typecheck && npm run stylelint && npm run lint && npm run test && npm run build"
   },
   "dependencies": {
     "@sentry/nextjs": "^10.70.0",
@@ -33,6 +36,7 @@
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.8",
+    "@vitejs/plugin-react": "^6.1.0",
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.3.0",
     "husky": "^9.1.7",
@@ -42,7 +46,9 @@
     "stylelint-config-standard": "^40.0.0",
     "tailwindcss": "^4.0.3",
     "typescript": "^5.7.3",
-    "typescript-eslint": "^8.67.0"
+    "typescript-eslint": "^8.67.0",
+    "vite-tsconfig-paths": "^6.1.1",
+    "vitest": "^4.1.11"
   },
   "lint-staged": {
     "*.css": "stylelint",
