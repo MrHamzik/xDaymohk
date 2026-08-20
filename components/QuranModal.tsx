@@ -1,10 +1,10 @@
 'use client';
 
 import { createPortal } from 'react-dom';
-import { useEffect, useState } from 'react';
-import { BookOpen, Search, X } from 'lucide-react';
-import { QURAN_SURAHS, QuranSurahSummary } from '@/lib/islamic';
+import { useEffect } from 'react';
+import { BookOpen, X } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
+import QuranSurahList from '@/components/QuranSurahList';
 
 interface QuranModalProps {
   isOpen: boolean;
@@ -13,7 +13,6 @@ interface QuranModalProps {
 
 export default function QuranModal({ isOpen, onClose }: QuranModalProps) {
   const { language } = useI18n();
-  const [query, setQuery] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -24,16 +23,19 @@ export default function QuranModal({ isOpen, onClose }: QuranModalProps) {
     }
   }, [isOpen]);
 
+  // Escape закрывает окно: модал перекрывает страницу целиком, и без
+  // клавиатурного выхода он недоступен тем, кто не пользуется мышью.
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
-
-  const filteredSurahs = QURAN_SURAHS.filter((s) => (
-    s.nameTranslit.toLowerCase().includes(query.toLowerCase())
-    || s.nameCe.toLowerCase().includes(query.toLowerCase())
-    || s.nameRu.toLowerCase().includes(query.toLowerCase())
-    || String(s.number).includes(query)
-  ));
-
-  if (typeof document === "undefined") return null;
+  if (typeof document === 'undefined') return null;
 
   return createPortal(
     <div className="fixed inset-0 z-[85] flex items-center justify-center bg-zinc-950/70 p-4 backdrop-blur-md"
@@ -59,56 +61,14 @@ export default function QuranModal({ isOpen, onClose }: QuranModalProps) {
           <button
             type="button"
             onClick={onClose}
-            aria-label="Закрыть"
+            aria-label={language === 'ce' ? 'ДIакъовла' : 'Закрыть'}
             className="smk-hit flex h-8 w-8 items-center justify-center rounded-full bg-black/20 text-white transition hover:bg-black/40"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        {/* Search */}
-        <div className="border-b border-slate-100 bg-slate-50 p-3 dark:border-zinc-800 dark:bg-zinc-800/60">
-          <div className="relative">
-            <Search className="smk-ico pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={language === 'ce' ? 'Сурат лаха (масала: Йа Син, Фатихьа)...' : 'Поиск суры (например: Аль-Фатиха, Йа Син)...'}
-              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-white"
-            />
-          </div>
-        </div>
-
-        {/* Surahs list */}
-        <div className="flex-1 space-y-2 overflow-y-auto p-4 sm:p-5 no-scrollbar">
-          {filteredSurahs.map((surah) => (
-            <div
-              key={surah.number}
-              className="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5 shadow-sm transition hover:border-emerald-200 hover:bg-white dark:border-zinc-800 dark:bg-zinc-800/40 dark:hover:bg-zinc-800"
-            >
-              <div className="flex items-center gap-3">
-                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-600 text-xs font-black text-white shadow-sm">
-                  {surah.number}
-                </span>
-                <div className="min-w-0">
-                  <h3 className="truncate text-sm font-bold text-slate-900 dark:text-white">
-                    {surah.nameTranslit}
-                  </h3>
-                  <p className="truncate text-xs text-emerald-700 dark:text-emerald-400">
-                    {language === 'ce' ? surah.nameCe : surah.nameRu}
-                  </p>
-                  <p className="smk-text-label text-slate-400">
-                    {surah.versesCount} {language === 'ce' ? 'аят' : 'аятов'} · {surah.place}
-                  </p>
-                </div>
-              </div>
-
-              <div className="text-right font-serif text-lg font-bold text-slate-800 dark:text-white">
-                {surah.nameArabic}
-              </div>
-            </div>
-          ))}
-        </div>
+        <QuranSurahList className="min-h-0 flex-1" />
       </div>
     </div>
   , document.body);

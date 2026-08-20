@@ -11,20 +11,16 @@
   },
   "dependencies": {
     "@sentry/nextjs": "^10.70.0",
-    "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.48.1",
     "@types/leaflet": "^1.9.22",
     "@upstash/redis": "^1.38.2",
-    "clsx": "^2.1.1",
     "leaflet": "^1.9.4",
     "leaflet.markercluster": "^1.5.3",
     "lucide-react": "^0.475.0",
     "next": "15.1.11",
-    "pg-mem": "^3.0.14",
     "qrcode": "^1.5.4",
     "react": "19.0.0",
-    "react-dom": "19.0.0",
-    "tailwind-merge": "^3.0.1"
+    "react-dom": "19.0.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.6",

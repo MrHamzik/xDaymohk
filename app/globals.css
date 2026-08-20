@@ -2705,8 +2705,28 @@ textarea.smk-field:focus {
   .smk-snake-line { animation: none; }
 }
 
+/* --- Подпись пункта в меню «+» ------------------------------------------------
+   Текст лежит поверх затемнённой подложки модалки, а не на полотне
+   страницы. Голым текстом он читался плохо: на светлых темах тёмные
+   буквы тонули в blur-фоне, на тёмных — сливались с ним.
 
-eld-shadow);
+   Поэтому подпись получает собственную плашку: фон панели темы,
+   тонкая золотая рамка (тот же язык, что у «змейки» и ромба-стыка) и
+   штатная тень полей --smk-field-shadow. Цвет текста наследуется от
+   темы через --foreground, поэтому правило работает во всех палитрах
+   без отдельных переопределений.
+
+   text-align: inherit — подпись стоит то слева, то справа от иконки
+   (flex-row / flex-row-reverse в CreateActionModal), выравнивание
+   задаёт родитель, а не эта плашка. */
+.smk-snake-label {
+  display: inline-block;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(var(--smk-gold-rgb) / 0.32);
+  background: var(--smk-panel);
+  color: var(--foreground);
+  padding: 0.4rem 0.7rem;
+  box-shadow: var(--smk-field-shadow);
   text-align: inherit;
 }
 .smk-snake-join {
@@ -2736,8 +2756,3 @@ eld-shadow);
   background: var(--smk-gold);
   box-shadow: 0 0 10px -2px var(--smk-gold);
 }
-@media (prefers-reduced-motion: reduce) {
-  .smk-snake-line { animation: none; }
-}
-
-
