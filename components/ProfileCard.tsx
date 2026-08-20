@@ -239,7 +239,7 @@ export default function ProfileCard({
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/cards/scene-foot.jpg" alt="" className="smk-cat-land-scene" />
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/cards/orn-strip.png" alt="" className="smk-cat-strip" />
+        <img src="/cards/orn-strip.webp" alt="" className="smk-cat-strip" />
         <div className="smk-cat-actions">
           <div className="min-w-0">
             {profile.certificates.length > 0 ? (
