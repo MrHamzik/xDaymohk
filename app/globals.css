@@ -2505,6 +2505,170 @@ textarea.smk-field:focus {
 .smk-btn-google:disabled { opacity: 0.5; }
 
 /* =============================================================================
+   ПК: рейка меню и полотно на всю длину (п. 16)
+   -----------------------------------------------------------------------------
+   Слева узкая колонна иконок; при наведении раскрывается подписи.
+   Активный пункт — светлая «вкладка», как на референсе «боковое меню».
+   Контент занимает всё оставшееся место: .smk-shell без max-width.
+   ========================================================================== */
+:root {
+  --smk-rail: 4.75rem;
+  --smk-rail-open: 16.75rem;
+}
+
+.smk-shell {
+  display: flex;
+  width: 100%;
+  max-width: none;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 1.25rem;
+  padding: 4.5rem 0.9rem 5rem;
+}
+@media (min-width: 640px) {
+  .smk-shell { padding-bottom: 2rem; }
+}
+@media (min-width: 1024px) {
+  .smk-shell { padding-top: 6rem; padding-inline: 1.25rem 1.5rem; }
+}
+
+.smk-shell-main {
+  flex: 1;
+  min-width: 0;
+  max-width: none;
+}
+
+.smk-rail-slot {
+  display: none;
+  width: var(--smk-rail);
+  flex-shrink: 0;
+}
+@media (min-width: 1024px) {
+  .smk-rail-slot { display: block; }
+}
+
+.smk-rail-dock {
+  position: fixed;
+  top: 5.75rem;
+  z-index: 40;
+  height: calc(100vh - 7.25rem);
+  width: var(--smk-rail);
+  transition: width 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.smk-rail-dock:hover,
+.smk-rail-dock:focus-within,
+.smk-rail-dock.smk-rail--open {
+  width: var(--smk-rail-open);
+}
+
+.smk-rail-panel {
+  height: 100%;
+  overflow: hidden;
+  border-radius: 1.55rem;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-emerald-600) 22%, var(--smk-panel)) 0%,
+      var(--smk-panel) 38%,
+      var(--smk-panel) 100%
+    );
+}
+
+.smk-rail-label {
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  transform: translateX(-4px);
+  transition:
+    max-width 0.22s ease,
+    opacity 0.18s ease,
+    transform 0.22s ease;
+}
+.smk-rail-dock:hover .smk-rail-label,
+.smk-rail-dock:focus-within .smk-rail-label,
+.smk-rail-dock.smk-rail--open .smk-rail-label {
+  max-width: 12rem;
+  opacity: 1;
+  transform: none;
+}
+
+.smk-rail-item {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  border-radius: 999px;
+  padding: 0.55rem 0.7rem;
+  font-size: var(--smk-fs-label);
+  font-weight: 700;
+  color: var(--foreground);
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+.smk-rail-dock:hover .smk-rail-item,
+.smk-rail-dock:focus-within .smk-rail-item,
+.smk-rail-dock.smk-rail--open .smk-rail-item {
+  justify-content: flex-start;
+}
+
+.smk-rail-item:hover {
+  background: color-mix(in srgb, var(--smk-card-a) 55%, transparent);
+}
+
+.smk-rail-item--on {
+  background: var(--smk-card-a);
+  color: var(--foreground);
+  box-shadow: 0 8px 22px -16px rgb(var(--smk-shadow-rgb) / calc(0.55 * var(--fx-shadow)));
+}
+.smk-rail-dock:hover .smk-rail-item--on,
+.smk-rail-dock:focus-within .smk-rail-item--on,
+.smk-rail-dock.smk-rail--open .smk-rail-item--on {
+  border-radius: 999px 0 0 999px;
+  margin-right: -0.85rem;
+  padding-right: 1.15rem;
+}
+
+.smk-rail-item--danger { color: var(--smk-note-danger); }
+.smk-rail-item--on.smk-rail-item--danger {
+  background: var(--smk-note-danger-bg);
+  color: var(--smk-note-danger);
+}
+
+.smk-rail-ico {
+  flex: none;
+  height: 1.1rem;
+  width: 1.1rem;
+  color: var(--color-emerald-600);
+}
+.smk-rail-item--on .smk-rail-ico { color: var(--color-emerald-700); }
+.smk-rail-item--danger .smk-rail-ico { color: var(--smk-note-danger); }
+
+.smk-rail-dock:not(:hover):not(:focus-within):not(.smk-rail--open) .smk-rail-extra {
+  display: none;
+}
+
+.smk-rail-dock .smk-panel {
+  flex-direction: column;
+  background: color-mix(in srgb, var(--smk-card-a) 42%, transparent);
+}
+.smk-rail-dock:hover .smk-panel,
+.smk-rail-dock:focus-within .smk-panel,
+.smk-rail-dock.smk-rail--open .smk-panel {
+  flex-direction: row;
+}
+
+.smk-rail-dock:not(:hover):not(:focus-within):not(.smk-rail--open) .smk-profile-meta,
+.smk-rail-dock:not(:hover):not(:focus-within):not(.smk-rail--open) .smk-profile-chip {
+  display: none;
+}
+.smk-rail-dock:not(:hover):not(:focus-within):not(.smk-rail--open) .smk-panel {
+  justify-content: center;
+  padding-inline: 0.35rem;
+}
+
+/* =============================================================================
    Фирменная карточка анкеты (п. 7)
    -----------------------------------------------------------------------------
    Макет как на шаблоне «карточка специалиста»: пейзаж в шапке, вайнахский

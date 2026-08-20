@@ -358,11 +358,11 @@ export default function VayghullakhPage() {
     <div className="flex min-h-[100dvh] min-w-0 flex-col overflow-x-hidden bg-slate-50 bg-radial-gradient transition-colors dark:bg-zinc-950">
       <Navbar />
 
-      <div className="mx-auto flex w-full max-w-6xl items-start justify-start gap-6 px-3.5 pb-20 pt-18 sm:pb-8 lg:pt-24">
+      <div className="smk-shell">
         <AppSidebar isAdmin={isCurrentUserAdmin} />
 
         <main
-          className="min-w-0 max-w-3xl flex-1"
+          className="smk-shell-main"
           onTouchStart={pull.onTouchStart}
           onTouchEnd={pull.onTouchEnd}
         >

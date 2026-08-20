@@ -89,7 +89,7 @@ export default function AdminPage() {
   return (
     <div className="flex min-h-[100dvh] min-w-0 flex-col overflow-x-hidden bg-slate-50 bg-radial-gradient transition-colors dark:bg-zinc-950">
       <Navbar />
-      <main className="mx-auto min-w-0 w-full max-w-6xl flex-1 px-3.5 pb-20 pt-18 sm:pb-8">
+      <main className="smk-shell-main mx-auto w-full flex-1 px-3.5 pb-20 pt-18 sm:pb-8">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Link href="/" aria-label={L('Вернуться в каталог', 'Каталоге юхаверза')} className="flex h-9 w-9 shrink-0 items-center justify-center smk-field text-slate-700 transition hover:bg-slate-50  dark:text-zinc-400"><ArrowLeft className="h-4 w-4" /></Link>

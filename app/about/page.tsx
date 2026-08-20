@@ -45,11 +45,11 @@ export default function AboutPage() {
     <div className="flex min-h-[100dvh] min-w-0 flex-col overflow-x-hidden bg-slate-50 bg-radial-gradient transition-colors dark:bg-zinc-950">
       <Navbar />
 
-            <div className="mx-auto flex w-full max-w-6xl items-start justify-start gap-6 px-3.5 pb-20 pt-18 sm:pb-8 lg:pt-24">
+            <div className="smk-shell">
         <AppSidebar isAdmin={isCurrentUserAdmin} />
         
         {/* Main Content Area */}
-        <main className="flex-1 min-w-0 max-w-3xl space-y-4">
+        <main className="smk-shell-main space-y-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <Link

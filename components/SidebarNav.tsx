@@ -40,6 +40,8 @@ import { LOCKED_MENU_IDS, widgetLabel } from '@/lib/settings/widgets';
 interface SidebarNavProps {
   onClose?: () => void;
   isAdmin?: boolean;
+  /** ПК-рейка: иконки, подписи при наведении. В выезде на телефоне выкл. */
+  rail?: boolean;
 }
 
 type MenuAction = 'qibla' | 'hijri' | 'blacklist' | 'invite';
@@ -120,7 +122,13 @@ function rowClass(active: boolean, danger?: boolean) {
   return 'text-slate-800 hover:bg-slate-100 dark:text-zinc-300 dark:hover:bg-zinc-800';
 }
 
-export default function SidebarNav({ onClose, isAdmin = false }: SidebarNavProps) {
+function railItemClass(active: boolean, danger?: boolean) {
+  const on = active ? 'smk-rail-item--on' : '';
+  const bad = danger ? 'smk-rail-item--danger' : '';
+  return `smk-rail-item ${on} ${bad}`.trim();
+}
+
+export default function SidebarNav({ onClose, isAdmin = false, rail = false }: SidebarNavProps) {
   const pathname = usePathname();
   const { language, t } = useI18n();
   const { settings, update } = useSettings();
@@ -161,11 +169,20 @@ export default function SidebarNav({ onClose, isAdmin = false }: SidebarNavProps
     const label = widgetLabel(item.id, t);
     const active = Boolean(item.href && pathname === item.href);
     const Icon = item.icon;
-    const iconCls = item.danger
-      ? 'h-4 w-4 shrink-0 text-red-600 dark:text-red-400'
-      : 'h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400';
+    const iconCls = rail
+      ? 'smk-rail-ico'
+      : item.danger
+        ? 'h-4 w-4 shrink-0 text-red-600 dark:text-red-400'
+        : 'h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400';
 
-    const body = (
+    const body = rail ? (
+      <>
+        <Icon className={iconCls} />
+        <span className="smk-rail-label truncate">{label}</span>
+        {item.chip === 'dev' && <span className="smk-rail-label smk-chip smk-note-warn">{t.inDevelopment}</span>}
+        {item.chip === 'plan' && <span className="smk-rail-label smk-chip smk-note-info">{t.inPlans}</span>}
+      </>
+    ) : (
       <>
         <div className="flex min-w-0 items-center gap-2.5">
           <Icon className={iconCls} />
@@ -180,7 +197,10 @@ export default function SidebarNav({ onClose, isAdmin = false }: SidebarNavProps
       <Link
         href={item.href}
         onClick={onClose}
-        className={`flex min-w-0 flex-1 items-center justify-between rounded-xl px-3 py-2 text-xs font-bold transition ${rowClass(active, item.danger)}`}
+        title={rail ? label : undefined}
+        className={rail
+          ? railItemClass(active, item.danger)
+          : `flex min-w-0 flex-1 items-center justify-between rounded-xl px-3 py-2 text-xs font-bold transition ${rowClass(active, item.danger)}`}
       >
         {body}
       </Link>
@@ -188,7 +208,10 @@ export default function SidebarNav({ onClose, isAdmin = false }: SidebarNavProps
       <button
         type="button"
         onClick={() => item.action && runAction(item.action)}
-        className={`flex min-w-0 flex-1 items-center justify-between rounded-xl px-3 py-2 text-left text-xs font-bold transition ${rowClass(false, item.danger)}`}
+        title={rail ? label : undefined}
+        className={rail
+          ? railItemClass(false, item.danger)
+          : `flex min-w-0 flex-1 items-center justify-between rounded-xl px-3 py-2 text-left text-xs font-bold transition ${rowClass(false, item.danger)}`}
       >
         {body}
       </button>
@@ -218,10 +241,12 @@ export default function SidebarNav({ onClose, isAdmin = false }: SidebarNavProps
 
   return (
     <>
-      <div className="flex h-full w-full flex-col overflow-hidden p-3.5">
+      <div className={`flex h-full w-full flex-col overflow-hidden ${rail ? 'px-1.5 py-2.5' : 'p-3.5'}`}>
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-0.5 no-scrollbar">
           <SettingsControlsBar />
-          <PrayerTimesBar />
+          <div className={rail ? 'smk-rail-extra' : undefined}>
+            <PrayerTimesBar />
+          </div>
 
           {editing && (
             <p className="smk-note smk-note-info px-3 py-2">{t.menuEditMode}</p>
@@ -235,9 +260,9 @@ export default function SidebarNav({ onClose, isAdmin = false }: SidebarNavProps
             return (
               <div
                 key={section.id}
-                className={`space-y-0.5 ${section.id === 'nav' ? '' : 'smk-hr border-t border-slate-100 pt-2'}`}
+                className={`space-y-0.5 ${section.id === 'nav' || rail ? '' : 'smk-hr border-t border-slate-100 pt-2'}`}
               >
-                <span className="block px-2 py-1 smk-text-label font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-200">
+                <span className={`${rail ? 'smk-rail-extra' : ''} block px-2 py-1 smk-text-label font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-200`}>
                   {language === 'ce' ? section.titleCe : section.titleRu}
                 </span>
                 <div className="flex flex-col space-y-0.5">{nodes}</div>

@@ -35,11 +35,11 @@ export default function HomePage() {
     <div className="flex min-h-[100dvh] min-w-0 flex-col overflow-x-hidden bg-slate-50 bg-radial-gradient transition-colors dark:bg-zinc-950">
       <Navbar />
 
-      <div className="mx-auto flex w-full max-w-6xl items-start justify-start gap-6 px-3.5 pb-20 pt-18 sm:pb-8 lg:pt-24">
+      <div className="smk-shell">
         <AppSidebar isAdmin={Boolean(account?.isAdmin)} />
 
         {/* Контент */}
-        <main className="min-w-0 flex-1">
+        <main className="smk-shell-main">
           <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 sm:p-8">
             <div className="mb-6 text-center">
               <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg">

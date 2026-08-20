@@ -232,12 +232,12 @@ export default function Home() {
     <div className="flex min-h-[100dvh] min-w-0 flex-col overflow-x-hidden bg-slate-50 bg-radial-gradient transition-colors dark:bg-zinc-950">
       <Navbar />
 
-            <div className="mx-auto flex w-full max-w-6xl items-start justify-start gap-6 px-3.5 pb-20 pt-18 sm:pb-8 lg:pt-24">
+            <div className="smk-shell">
         <AppSidebar isAdmin={isCurrentUserAdmin} />
 
         {/* Main Content Area */}
         <main
-          className="flex-1 min-w-0 max-w-3xl"
+          className="smk-shell-main"
           onTouchStart={pull.onTouchStart}
           onTouchEnd={pull.onTouchEnd}
         >
@@ -309,7 +309,7 @@ export default function Home() {
         </div>
 
         {filteredProfiles.length > 0 ? (
-          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
             {pagedProfiles.map((profile) => (
               <ProfileCard
                 key={profile.id}

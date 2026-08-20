@@ -231,14 +231,14 @@ export default function MapPage() {
   return (
     <div className="flex min-h-[100dvh] min-w-0 flex-col overflow-x-hidden bg-slate-50 bg-radial-gradient transition-colors dark:bg-zinc-950">
       <Navbar />
-            <div className="mx-auto flex w-full max-w-6xl items-start justify-start gap-6 px-3.5 pb-20 pt-18 sm:pb-8 lg:pt-24">
+            <div className="smk-shell">
         <AppSidebar isAdmin={isCurrentUserAdmin} />
         
         {/* Main Content Area */}
         {/* Без max-w-3xl: на этой странице главный элемент — карта, и
             ограничивать её 48rem посреди широкого экрана незачем.
             Остальные страницы ширину сохраняют — правка только здесь. */}
-        <main className="min-w-0 flex-1">
+        <main className="smk-shell-main">
         <div className="mb-5 flex items-center gap-3">
           <Link
             href="/catalog"

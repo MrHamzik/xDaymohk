@@ -28,7 +28,7 @@ export default function BottomNav({ onOpenMenu, onOpenCreate }: BottomNavProps) 
       <Plus className="h-7 w-7 stroke-[2.5]" />
     </button>
     <nav
-      className="site-bottom-nav fixed inset-x-0 bottom-0 z-40 hidden w-full bg-white/95 px-2 py-2.5 shadow-2xl backdrop-blur-xl transition-colors dark:bg-zinc-950/95 sm:hidden"
+      className="site-bottom-nav fixed inset-x-0 bottom-0 z-40 flex w-full bg-white/95 px-2 py-2.5 shadow-2xl backdrop-blur-xl transition-colors dark:bg-zinc-950/95 lg:hidden"
       style={{ position: 'fixed', right: 0, bottom: 0, left: 0 }}
     >
       <div className="mx-auto grid max-w-md grid-cols-5 items-center gap-1 text-center">

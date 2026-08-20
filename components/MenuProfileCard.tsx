@@ -48,7 +48,7 @@ export default function MenuProfileCard() {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <Avatar src={account?.avatarUrl || '/icon.png'} className="h-full w-full object-cover rounded-full" />
       </div>
-      <div className="min-w-0 flex-1">
+      <div className="smk-profile-meta min-w-0 flex-1">
         <h3 className="truncate text-xs font-bold text-slate-900 dark:text-white">
           {account?.fullName || 'Даймохк'}
         </h3>
@@ -56,7 +56,7 @@ export default function MenuProfileCard() {
           {account?.email || (language === 'ce' ? 'Нохчийн Республика' : 'Чеченская Республика')}
         </p>
       </div>
-      <div className="flex shrink-0 items-center">
+      <div className="smk-profile-chip flex shrink-0 items-center">
         {account ? (
           <span className={`rounded-md px-1.5 py-0.5 smk-text-label font-bold ${isLocked ? 'bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-300' : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'}`}>
             Профиль

@@ -8,10 +8,10 @@ export default function Navbar() {
 
   return (
     <header
-      className="site-header fixed inset-x-0 top-0 lg:left-[290px] z-50 shadow-sm backdrop-blur-md transition-colors"
+      className="site-header fixed inset-x-0 top-0 z-50 shadow-sm backdrop-blur-md transition-colors lg:left-[var(--smk-rail)]"
       /* replaced with tailwind classes */
     >
-      <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-4">
+      <div className="flex h-14 w-full items-center justify-between px-4">
         {/* Brand / Logo only with transparent background */}
         <Link href="/" className="flex items-center gap-2.5" aria-label="Даймохк — на главную">
           <div
