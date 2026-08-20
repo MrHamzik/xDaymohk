@@ -391,6 +391,44 @@ textarea.smk-field:focus {
   .smk-skel-bar { animation: none; opacity: 0.7; }
 }
 
+/* --- Перетаскивание виджетов быстрого доступа -------------------------------
+   Слот при захвате становился просто белым: непонятно, взялся ли значок
+   и куда его несут. Здесь три состояния, и каждое видно без цвета —
+   на случай дальтонизма и тусклого экрана.
+
+   1. Взятый значок в палитре — приглушён и чуть уменьшен: видно, что
+      именно «оторвано» от списка. */
+.smk-quick-dragging {
+  opacity: 0.45;
+  transform: scale(0.96);
+}
+
+/* 2. Все четыре слота, пока значок в руке, — пунктир: показывает, что
+      это цели, куда можно опустить. */
+.smk-quick-armed {
+  outline: 2px dashed color-mix(in srgb, var(--color-emerald-500) 45%, transparent);
+  outline-offset: -2px;
+}
+
+/* 3. Слот под курсором — сплошная рамка, свечение и пульс. Свечение
+      цветом акцента темы, а не хардкодом, чтобы не выпадать из палитры. */
+.smk-quick-hot {
+  outline: 2px solid var(--color-emerald-500);
+  outline-offset: -2px;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-emerald-500) 22%, transparent);
+  animation: smk-quick-pulse 0.9s ease-in-out infinite;
+}
+@keyframes smk-quick-pulse {
+  0%, 100% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-emerald-500) 22%, transparent); }
+  50% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--color-emerald-500) 34%, transparent); }
+}
+
+/* Пульсация — украшение; рамка и свечение остаются, они несут смысл. */
+@media (prefers-reduced-motion: reduce) {
+  .smk-quick-hot { animation: none; }
+  .smk-quick-dragging { transform: none; }
+}
+
 /* --- Фирменный знак и вход -------------------------------------------------
    Вайнахский ромб — не картинка, а CSS. Знак на входе всегда виден:
    это опознавательный знак, а не декор. Фон и водяные знаки гаснут

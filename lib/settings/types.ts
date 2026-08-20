@@ -387,6 +387,13 @@ export interface UserSettings {
   hiddenMenu: string[];
   /** Обязательный гид после первого входа уже пройден. */
   tourDone: boolean;
+  /**
+   * Приветственное уведомление уже отправлено.
+   *
+   * Хранится на сервере, а не в localStorage: иначе письмо приходило
+   * заново с каждого нового устройства и после чистки кэша.
+   */
+  welcomeSent: boolean;
   /** Подписка Pro: none | bronze | silver | gold | platinum. */
   proTier: 'none' | 'bronze' | 'silver' | 'gold' | 'platinum';
   /** 'light' | 'dark' | 'space' | 'sunset' | 'custom:<id>' */

@@ -15,6 +15,32 @@ import type { UserSettings } from '@/lib/settings/types';
 
 const SETTINGS_STORAGE_KEY = 'daymohk-settings';
 
+/**
+ * Привилегии Pro у гостя.
+ *
+ * Настройки лежат в localStorage, чтобы тема применилась в первом кадре
+ * и страница не моргала. Но там же оставался proTier: человек оформлял
+ * подписку, выходил из аккаунта — и платные темы продолжали работать,
+ * потому что локальная копия никем не сбрасывалась. То же самое
+ * получал любой гость на общем компьютере после ушедшего владельца.
+ *
+ * Подписка привязана к аккаунту, поэтому без сессии её нет по
+ * определению. Гостю возвращаем 'none' и снимаем платное оформление:
+ * тема откатывается к светлой или тёмной, свои палитры не применяются.
+ *
+ * Функция применяется в ОДНОМ месте — при постановке состояния, — чтобы
+ * ни один путь (localStorage, ответ сервера, update) не мог её обойти.
+ */
+function applyAccess(settings: UserSettings, isGuest: boolean): UserSettings {
+  if (!isGuest || settings.proTier === 'none') return settings;
+  return {
+    ...settings,
+    proTier: 'none',
+    // Платная палитра гостю недоступна: возвращаем базовую пару.
+    themeId: settings.themeId === 'dark' ? 'dark' : 'light',
+  };
+}
+
 interface SettingsContextValue {
   settings: UserSettings;
   /** Частичное обновление: сохраняется в localStorage и в Supabase. */
@@ -58,12 +84,17 @@ function writeLocal(settings: UserSettings): void {
  * запрос на каждое движение.
  */
 export default function SettingsProvider({ children }: { children: React.ReactNode }) {
-  const { account } = useAuth();
+  const { account, isLoading: isAuthLoading } = useAuth();
   // Выбор «светлая/тёмная» живёт в ThemeProvider; применяем его здесь.
   const { isDarkMode } = useTheme();
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
   const [isLoading, setIsLoading] = useState(true);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  // Гость — только когда авторизация ТОЧНО отработала. Пока isAuthLoading
+  // истинно, account ещё null, и без этой проверки подписка мигала бы:
+  // на первых кадрах сбрасывалась в none, а после ответа возвращалась.
+  const isGuest = !isAuthLoading && !account;
 
   // 1. Локальная копия — до сети.
   //
@@ -76,6 +107,21 @@ export default function SettingsProvider({ children }: { children: React.ReactNo
     setSettings((current) => (current === DEFAULT_SETTINGS ? stored : current));
     setIsLoading(false);
   }, []);
+
+  // 1b. Гость не наследует подписку от прошлого сеанса.
+  //
+  // Срабатывает и при выходе из аккаунта, и при загрузке страницы с
+  // чужой локальной копией. Пишем в localStorage сразу же — иначе
+  // следующая перезагрузка снова подняла бы платный proTier с диска.
+  useEffect(() => {
+    if (!isGuest) return;
+    setSettings((current) => {
+      const guarded = applyAccess(current, true);
+      if (guarded === current) return current;
+      writeLocal(guarded);
+      return guarded;
+    });
+  }, [isGuest]);
 
   // 2. Серверная версия перекрывает локальную при входе.
   useEffect(() => {
@@ -120,7 +166,9 @@ export default function SettingsProvider({ children }: { children: React.ReactNo
   // не те оттенки, что видел пользователь.
   // Вне расширенного режима доступны только светлая и тёмная: если
   // выбрана «Космос», а тумблер выключили — возвращаемся к паре.
-  const extraThemes = settings.proTier !== 'none';
+  // Второй рубеж: даже если платный proTier каким-то путём просочился
+  // в состояние, у гостя платные темы не применяются.
+  const extraThemes = !isGuest && settings.proTier !== 'none';
   const activeThemeId = extraThemes || settings.themeId === 'light' || settings.themeId === 'dark'
     ? ((settings.advancedMode || extraThemes) ? settings.themeId : (settings.themeId === 'dark' ? 'dark' : 'light'))
     : (settings.themeId === 'dark' ? 'dark' : 'light');
@@ -209,13 +257,19 @@ export default function SettingsProvider({ children }: { children: React.ReactNo
 
   const update = useCallback((patch: Partial<UserSettings>) => {
     hasLocalEdit.current = true;
-    setSettings((current) => forceOwnerPlatinum(normalizeSettings({ ...current, ...patch }), account?.email));
-  }, [account?.email]);
+    setSettings((current) => applyAccess(
+      forceOwnerPlatinum(normalizeSettings({ ...current, ...patch }), account?.email),
+      isGuest,
+    ));
+  }, [account?.email, isGuest]);
 
   const reset = useCallback(() => {
     hasLocalEdit.current = true;
-    setSettings(forceOwnerPlatinum({ ...DEFAULT_SETTINGS }, account?.email));
-  }, [account?.email]);
+    setSettings(applyAccess(
+      forceOwnerPlatinum({ ...DEFAULT_SETTINGS }, account?.email),
+      isGuest,
+    ));
+  }, [account?.email, isGuest]);
 
   // Сохраняем после фиксации состояния, а не во время его вычисления.
   useEffect(() => {

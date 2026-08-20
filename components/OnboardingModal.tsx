@@ -38,7 +38,7 @@ function isValidFullName(name: string): boolean {
 export default function OnboardingModal() {
   const { account, isLoading, updateAccount, signInWithGoogle, signOut } = useAuth();
   const { language, setLanguage, t } = useI18n();
-  const { settings } = useSettings();
+  const { settings, update: updateSettings } = useSettings();
   const [step, setStep] = useState<'welcome' | 'guide' | 'consent' | 'tour' | 'profile'>('welcome');
   const [open, setOpen] = useState(false);
   const [firstName, setFirstName] = useState('');
@@ -65,8 +65,14 @@ export default function OnboardingModal() {
 
   // --- Функции (объявлены ДО хуков, чтобы не было ReferenceError) ---
 
-  const sendWelcomeNotification = async () => {
-    if (!isSupabaseConfigured || !supabase || !account) return;
+  /**
+   * Возвращает true, только если приветствие действительно ушло.
+   * По этому ответу выставляется постоянный флаг welcomeSent, поэтому
+   * молча «проглотить» ошибку здесь нельзя: иначе человек лишится
+   * приветствия навсегда из-за одного упавшего запроса.
+   */
+  const sendWelcomeNotification = async (): Promise<boolean> => {
+    if (!isSupabaseConfigured || !supabase || !account) return false;
     try {
       const session = await supabase.auth.getSession();
       const token = session.data.session?.access_token;
@@ -96,7 +102,7 @@ export default function OnboardingModal() {
         }
       } catch {}
 
-      await fetch('/api/notifications', {
+      const sent = await fetch('/api/notifications', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -112,16 +118,34 @@ export default function OnboardingModal() {
           sender,
         }),
       });
-    } catch {}
+      return sent.ok;
+    } catch {
+      return false;
+    }
   };
 
   const finishOnboarding = async () => {
-    // Отправляем письмо ТОЛЬКО один раз (независимо от того, сколько раз
-    // вызывается finishOnboarding — useEffect, submit, кнопка гостя).
+    // Приветствие отправляется РОВНО один раз за аккаунт.
+    //
+    // Три рубежа, и каждый закрывает свой случай:
+    //  1. sentRef — повторные вызовы finishOnboarding в этой же сессии
+    //     (useEffect, submit, кнопка гостя срабатывают вперемешку);
+    //  2. settings.welcomeSent — флаг на сервере. Раньше признак жил в
+    //     localStorage, поэтому письмо приходило заново с каждого нового
+    //     устройства, из инкогнито и после чистки кэша;
+    //  3. ONBOARDED_KEY — по-прежнему локальный, он про показ модалки,
+    //     а не про письмо.
     try { window.localStorage.setItem(ONBOARDED_KEY, '1'); } catch {}
-    if (!sentRef.current) {
+    if (!sentRef.current && !settings.welcomeSent) {
       sentRef.current = true;
-      await sendWelcomeNotification();
+      const sent = await sendWelcomeNotification();
+      if (sent) {
+        updateSettings({ welcomeSent: true });
+      } else {
+        // Отправка не удалась — снимаем блокировку, чтобы следующая
+        // попытка (другой заход) всё-таки доставила письмо.
+        sentRef.current = false;
+      }
     }
     setOpen(false);
   };

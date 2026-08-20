@@ -89,9 +89,9 @@ export default function QuickWidgetsEditor() {
                 const dropped = (event.dataTransfer.getData('text/plain') || dragId) as QuickWidgetId;
                 if (QUICK_WIDGET_IDS.includes(dropped)) place(index, dropped);
               }}
-              className={`flex flex-col items-center gap-1 rounded-xl px-1 py-2 ${
-                hot ? 'bg-emerald-600 text-white' : 'smk-field text-slate-700 dark:text-zinc-200'
-              }`}
+              className={`flex flex-col items-center gap-1 rounded-xl px-1 py-2 transition-shadow ${
+                hot ? 'bg-emerald-600 text-white smk-quick-hot' : 'smk-field text-slate-700 dark:text-zinc-200'
+              } ${dragId && !hot ? 'smk-quick-armed' : ''}`}
             >
               <Icon className="h-4 w-4" />
               <span className="w-full truncate text-center smk-text-label font-bold">
@@ -127,9 +127,9 @@ export default function QuickWidgetsEditor() {
                 const slot = empty >= 0 ? empty : 0;
                 place(slot, id);
               }}
-              className={`flex cursor-grab items-center gap-1.5 rounded-xl px-2 py-2 text-left active:cursor-grabbing ${
+              className={`flex cursor-grab items-center gap-1.5 rounded-xl px-2 py-2 text-left transition active:cursor-grabbing ${
                 used ? 'smk-field text-emerald-700 dark:text-emerald-300' : 'smk-field text-slate-700 dark:text-zinc-200'
-              }`}
+              } ${dragId === id ? 'smk-quick-dragging' : ''}`}
             >
               <Icon className="h-3.5 w-3.5 shrink-0" />
               <span className="truncate smk-text-label font-bold">{widgetLabel(id, t)}</span>
