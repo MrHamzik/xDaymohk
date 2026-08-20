@@ -13,6 +13,7 @@ import {
   DEFAULT_EFFECTS,
   EFFECT_KEYS,
 } from '@/lib/settings/types';
+import { MENU_ID_SET, QUICK_WIDGET_ID_SET } from '@/lib/settings/widgets';
 import {
   deriveCardInset, deriveDivider, deriveField, deriveNotes, derivePanel,
 } from '@/lib/settings/derive';
@@ -815,16 +816,15 @@ function normalizeFontScale(raw: unknown): number {
   return Math.min(150, Math.max(50, Math.round(value / 5) * 5));
 }
 
-const WIDGET_IDS = new Set([
-  'status', 'lang', 'notify', 'theme', 'light',
-  'home', 'catalog', 'map', 'qibla', 'quran', 'sira', 'profile',
-  'gullaq', 'go', 'vaynakh', 'taxi', 'vpn', 'djanna',
-]);
-
-function normalizeStringList(raw: unknown, fallback: string[], max = 24): string[] {
+function normalizeStringList(
+  raw: unknown,
+  fallback: string[],
+  allowed: Set<string>,
+  max = 24,
+): string[] {
   if (!Array.isArray(raw)) return fallback;
   const next = raw
-    .filter((item): item is string => typeof item === 'string' && WIDGET_IDS.has(item));
+    .filter((item): item is string => typeof item === 'string' && allowed.has(item));
   return next.slice(0, max);
 }
 
@@ -857,11 +857,11 @@ export function normalizeSettings(raw: unknown): UserSettings {
     lightMode: input.lightMode === true,
     radiusScale: normalizeRadius(input.radiusScale),
     quickWidgets: (() => {
-      const list = normalizeStringList(input.quickWidgets, DEFAULT_QUICK_WIDGETS, 4);
+      const list = normalizeStringList(input.quickWidgets, DEFAULT_QUICK_WIDGETS, QUICK_WIDGET_ID_SET, 4);
       while (list.length < 4) list.push(DEFAULT_QUICK_WIDGETS[list.length] ?? 'status');
       return list.slice(0, 4);
     })(),
-    hiddenMenu: normalizeStringList(input.hiddenMenu, [], 24).filter((id) => id !== 'settings'),
+    hiddenMenu: normalizeStringList(input.hiddenMenu, [], MENU_ID_SET, 24).filter((id) => id !== 'settings'),
     themeId: themeExists ? themeId : 'light',
     customThemes,
     fontScale: normalizeFontScale(input.fontScale),

@@ -3,8 +3,10 @@
 import Avatar from '@/components/Avatar';
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { Heart, Lock, MapPin, MessageSquare, Phone, Send, Share2, ShieldBan, Star, X } from 'lucide-react';
+import { Flag, Heart, Lock, MapPin, MessageSquare, Phone, Send, Share2, ShieldBan, Star, X } from 'lucide-react';
 import { shareLink, siteOrigin } from '@/lib/share';
+import { displayName } from '@/lib/profile-name';
+import ReportDialog from '@/components/ReportDialog';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
 import { useProfiles } from '@/components/ProfilesProvider';
@@ -54,10 +56,12 @@ export default function ProfileModal({
   isAdminStatus = false,
   showPending = false,
   isViewerBlocked = false,
+  canReport,
+  onReport,
 }: ProfileModalProps) {
   const { account } = useAuth();
   const { t } = useI18n();
-  const { profiles: allProfiles, isProfileAdmin } = useProfiles();
+  const { profiles: allProfiles, isProfileAdmin, addComplaint } = useProfiles();
   const [selectedCert, setSelectedCert] = useState<Certificate | null>(null);
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [isBlockConfirmOpen, setIsBlockConfirmOpen] = useState(false);
@@ -75,6 +79,7 @@ export default function ProfileModal({
   const [questionCount, setQuestionCount] = useState(0);
   const { block: blockUser } = useBlacklist();
   const [fav, setFav] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const swipe = useSheetSwipe(onClose);
 
   useEffect(() => {
@@ -108,6 +113,9 @@ export default function ProfileModal({
   const canBlockOwner = Boolean(
     account && ownerId && ownerId !== account.id && !isAdminStatus && !account.isBlocked,
   );
+  const showReport = canReport ?? Boolean(
+    account && !isOwnProfile && !isAdminStatus && !account.isBlocked,
+  );
 
   const openUserCard = (userId?: string) => {
     if (!userId) return;
@@ -136,94 +144,107 @@ export default function ProfileModal({
       {notice && <Notice message={notice} type={noticeKind} onClose={() => setNotice('')} />}
       <div className="smk-sheet flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-3xl shadow-2xl transition-colors sm:max-w-2xl sm:rounded-3xl">
         <div
-          className="smk-sheet-head relative shrink-0 px-4 pb-3.5 pt-4 text-slate-900 dark:text-white"
+          className="smk-sheet-head shrink-0 px-4 pb-3.5 pt-3 text-slate-900 dark:text-white"
           onTouchStart={swipe.onTouchStart}
           onTouchEnd={swipe.onTouchEnd}
         >
-          <div className="absolute right-3.5 top-3.5 flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => {
-                void shareLink(
-                  profile.fullName,
-                  profile.professionTitle || profile.fullName,
-                  `${siteOrigin()}/catalog?profile=${encodeURIComponent(profile.id)}`,
-                );
-              }}
-              aria-label={t.shareAction}
-              className="smk-act flex h-7 w-7 items-center justify-center"
-            >
-              <Share2 className="h-4 w-4" />
-            </button>
-            {account && (
+          <div className="flex items-center justify-between gap-2">
+            <WorkingStatusBadge profile={profile} />
+            <div className="flex items-center gap-1.5">
               <button
                 type="button"
-                onClick={async () => {
-                  if (!supabase) return;
-                  const session = await supabase.auth.getSession();
-                  const token = session.data.session?.access_token;
-                  if (!token) return;
-                  const next = !fav;
-                  setFav(next);
-                  const res = await fetch(
-                    next ? '/api/favorites' : `/api/favorites?profileId=${encodeURIComponent(profile.id)}`,
-                    {
-                      method: next ? 'POST' : 'DELETE',
-                      headers: {
-                        Authorization: `Bearer ${token}`,
-                        ...(next ? { 'Content-Type': 'application/json' } : {}),
-                      },
-                      body: next ? JSON.stringify({ profileId: profile.id }) : undefined,
-                    },
+                onClick={() => {
+                  void shareLink(
+                    displayName(profile),
+                    profile.professionTitle || displayName(profile),
+                    `${siteOrigin()}/catalog?profile=${encodeURIComponent(profile.id)}`,
                   );
-                  if (!res.ok) setFav(!next);
                 }}
-                aria-label={fav ? t.favOff : t.favAdd}
+                aria-label={t.shareAction}
                 className="smk-act flex h-7 w-7 items-center justify-center"
               >
-                <Heart className={`h-4 w-4 ${fav ? 'fill-rose-500 text-rose-500' : ''}`} />
+                <Share2 className="h-4 w-4" />
               </button>
-            )}
-            {canBlockOwner && (
+              {account && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!supabase) return;
+                    const session = await supabase.auth.getSession();
+                    const token = session.data.session?.access_token;
+                    if (!token) return;
+                    const next = !fav;
+                    setFav(next);
+                    const res = await fetch(
+                      next ? '/api/favorites' : `/api/favorites?profileId=${encodeURIComponent(profile.id)}`,
+                      {
+                        method: next ? 'POST' : 'DELETE',
+                        headers: {
+                          Authorization: `Bearer ${token}`,
+                          ...(next ? { 'Content-Type': 'application/json' } : {}),
+                        },
+                        body: next ? JSON.stringify({ profileId: profile.id }) : undefined,
+                      },
+                    );
+                    if (!res.ok) setFav(!next);
+                  }}
+                  aria-label={fav ? t.favOff : t.favAdd}
+                  className="smk-act flex h-7 w-7 items-center justify-center"
+                >
+                  <Heart className={`h-4 w-4 ${fav ? 'fill-rose-500 text-rose-500' : ''}`} />
+                </button>
+              )}
+              {showReport && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onReport) onReport();
+                    else setReportOpen(true);
+                  }}
+                  aria-label={t.cardReportAria}
+                  title={t.cardReport}
+                  className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--smk-gold)] text-white transition hover:brightness-110"
+                >
+                  <Flag className="h-3.5 w-3.5" />
+                </button>
+              )}
+              {canBlockOwner && (
+                <button
+                  onClick={() => setIsBlockConfirmOpen(true)}
+                  disabled={blockBusy}
+                  aria-label={t.profileBlockUser}
+                  title={t.profileBlockUser}
+                  className="smk-act smk-act--danger flex h-7 w-7 items-center justify-center"
+                >
+                  <ShieldBan className="h-4 w-4" />
+                </button>
+              )}
               <button
-                onClick={() => setIsBlockConfirmOpen(true)}
-                disabled={blockBusy}
-                aria-label={t.profileBlockUser}
-                title={t.profileBlockUser}
-                className="smk-act smk-act--danger flex h-7 w-7 items-center justify-center"
+                onClick={onClose}
+                aria-label={t.profileCloseSheet}
+                className="smk-hit flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400"
               >
-                <ShieldBan className="h-4 w-4" />
+                <X className="h-4 w-4" />
               </button>
-            )}
-            <button
-              onClick={onClose}
-              aria-label={t.profileCloseSheet}
-              className="smk-hit flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400"
-            >
-              <X className="h-4 w-4" />
-            </button>
+            </div>
           </div>
 
-          <div className="flex items-center gap-3.5 pr-8">
-            <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-slate-200/80 bg-slate-100 shadow-sm dark:border-zinc-800/60 dark:bg-zinc-800 sm:h-16 sm:w-16">
+          <div className="mt-3 grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3.5">
+            <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-slate-100 shadow-sm dark:bg-zinc-800 sm:h-24 sm:w-24">
               <Image
                 src={cacheBustAvatarUrl(profile.avatarUrl)}
-                alt={profile.fullName}
+                alt={displayName(profile)}
                 fill
-                sizes="(max-width: 768px) 64px, 64px"
+                sizes="96px"
                 className="object-cover"
               />
             </div>
             <div className="min-w-0">
-              <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                <h2 className="text-base font-bold text-slate-900 dark:text-white sm:text-lg">{profile.fullName}</h2>
-                <WorkingStatusBadge profile={profile} />
-              </div>
-              <div className="mt-1">
-                <ProfileBadges profile={profile} adminStatus={isAdminStatus} showPending={showPending} />
-              </div>
+              <h2 className="smk-text-display font-bold leading-tight text-slate-900 dark:text-white">
+                {displayName(profile)}
+              </h2>
               {profile.isSpecialist && profile.professionTitle && (
-                <p className="mt-1 text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                <p className="mt-1 truncate text-xs font-bold text-emerald-700 dark:text-emerald-400">
                   {profile.professionTitle}
                 </p>
               )}
@@ -237,6 +258,10 @@ export default function ProfileModal({
                 </div>
               )}
             </div>
+          </div>
+
+          <div className="mt-3">
+            <ProfileBadges profile={profile} adminStatus={isAdminStatus} showPending={showPending} />
           </div>
         </div>
 
@@ -569,6 +594,13 @@ export default function ProfileModal({
         </div>
       )}
       </div>
+
+      <ReportDialog
+        profile={profile}
+        isOpen={reportOpen}
+        onClose={() => setReportOpen(false)}
+        onSubmit={(reason) => addComplaint(profile.id, reason)}
+      />
 
       <ConfirmDialog
         isOpen={isBlockConfirmOpen}

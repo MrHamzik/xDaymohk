@@ -14,7 +14,7 @@ import { type MapLayerMode, type MapObjectMode } from '@/components/InteractiveM
 import AccountModal from '@/components/AccountModal';
 import EditProfileModal from '@/components/EditProfileModal';
 import Navbar from '@/components/Navbar';
-import SidebarNav from '@/components/SidebarNav';
+import AppSidebar from '@/components/AppSidebar';
 import BottomNav from '@/components/BottomNav';
 import ProfileModal from '@/components/ProfileModal';
 import ReportDialog from '@/components/ReportDialog';
@@ -232,12 +232,7 @@ export default function MapPage() {
     <div className="flex min-h-[100dvh] min-w-0 flex-col overflow-x-hidden bg-slate-50 bg-radial-gradient transition-colors dark:bg-zinc-950">
       <Navbar />
             <div className="mx-auto flex w-full max-w-6xl items-start justify-start gap-6 px-3.5 pb-20 pt-18 sm:pb-8 lg:pt-24">
-        {/* Detached Sidebar for Desktop */}
-        <aside className="sticky top-24 z-40 hidden w-[290px] shrink-0 flex-col lg:flex h-[calc(100vh-8rem)]">
-          <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-950 no-scrollbar">
-            <SidebarNav isAdmin={isCurrentUserAdmin} />
-          </div>
-        </aside>
+        <AppSidebar isAdmin={isCurrentUserAdmin} />
         
         {/* Main Content Area */}
         {/* Без max-w-3xl: на этой странице главный элемент — карта, и
@@ -448,7 +443,7 @@ export default function MapPage() {
           </section>
 
           {selectedProfile && (
-            <section className="flex min-w-0 flex-col justify-between rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-zinc-700 dark:bg-zinc-950" aria-labelledby="profile-location-title">
+            <section id="map-selected-profile" className="flex min-w-0 flex-col justify-between rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-zinc-700 dark:bg-zinc-950" aria-labelledby="profile-location-title">
               <div>
                 <div className="mb-4 flex items-start gap-3">
                   <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 dark:border-zinc-700 dark:bg-zinc-800">

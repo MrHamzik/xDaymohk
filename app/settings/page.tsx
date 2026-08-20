@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, RotateCcw, Settings as SettingsIcon, Volume2 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
-import SidebarNav from '@/components/SidebarNav';
 import BottomNav from '@/components/BottomNav';
 import MobileMenuDrawer from '@/components/MobileMenuDrawer';
 import CreateActionModal from '@/components/CreateActionModal';
@@ -13,6 +12,8 @@ import MapSegmentedControl from '@/components/MapSegmentedControl';
 import ThemeEditor from '@/components/settings/ThemeEditor';
 import EffectsEditor from '@/components/settings/EffectsEditor';
 import PayoutSettings from '@/components/settings/PayoutSettings';
+import QuickWidgetsEditor from '@/components/settings/QuickWidgetsEditor';
+import AppSidebar from '@/components/AppSidebar';
 import {
   CollapsibleSection, SectionTitle, SettingRow, Toggle, WarningBox,
 } from '@/components/settings/SettingsPrimitives';
@@ -127,11 +128,7 @@ export default function SettingsPage() {
       <Navbar />
 
       <div className="mx-auto flex w-full max-w-6xl items-start justify-start gap-6 px-3.5 pb-20 pt-18 sm:pb-8 lg:pt-24">
-        <aside className="sticky top-24 z-40 hidden h-[calc(100vh-8rem)] w-[290px] shrink-0 flex-col lg:flex">
-          <div className="no-scrollbar flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-950">
-            <SidebarNav isAdmin={isCurrentUserAdmin} />
-          </div>
-        </aside>
+        <AppSidebar isAdmin={isCurrentUserAdmin} />
 
         <main className="min-w-0 max-w-3xl flex-1">
           <div className="mb-4 flex items-center gap-3">

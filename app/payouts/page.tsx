@@ -12,7 +12,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Wallet } from 'lucide-react';
 import Navbar from '@/components/Navbar';
-import SidebarNav from '@/components/SidebarNav';
+import AppSidebar from '@/components/AppSidebar';
 import BottomNav from '@/components/BottomNav';
 import MobileMenuDrawer from '@/components/MobileMenuDrawer';
 import CreateActionModal from '@/components/CreateActionModal';
@@ -34,11 +34,7 @@ export default function PayoutsPage() {
       <Navbar />
 
       <div className="mx-auto flex w-full max-w-6xl items-start justify-start gap-6 px-3.5 pb-20 pt-18 sm:pb-8 lg:pt-24">
-        <aside className="sticky top-24 z-40 hidden h-[calc(100vh-8rem)] w-[290px] shrink-0 flex-col lg:flex">
-          <div className="no-scrollbar flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-3xl smk-sheet shadow-sm">
-            <SidebarNav isAdmin={isCurrentUserAdmin} />
-          </div>
-        </aside>
+        <AppSidebar isAdmin={isCurrentUserAdmin} />
 
         <main className="min-w-0 max-w-3xl flex-1">
           <div className="mb-4 flex items-center gap-3">

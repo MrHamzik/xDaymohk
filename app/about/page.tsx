@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, BookOpen, Bot, Briefcase, CarFront, Globe2, HandHeart, Heart, MapPin, ShieldCheck, UserPlus, Users } from 'lucide-react';
 import Navbar from '@/components/Navbar';
-import SidebarNav from '@/components/SidebarNav';
+import AppSidebar from '@/components/AppSidebar';
 import BottomNav from '@/components/BottomNav';
 import EditProfileModal from '@/components/EditProfileModal';
 import AccountModal from '@/components/AccountModal';
@@ -46,12 +46,7 @@ export default function AboutPage() {
       <Navbar />
 
             <div className="mx-auto flex w-full max-w-6xl items-start justify-start gap-6 px-3.5 pb-20 pt-18 sm:pb-8 lg:pt-24">
-        {/* Detached Sidebar for Desktop */}
-        <aside className="sticky top-24 z-40 hidden w-[290px] shrink-0 flex-col lg:flex h-[calc(100vh-8rem)]">
-          <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-950 no-scrollbar">
-            <SidebarNav isAdmin={isCurrentUserAdmin} />
-          </div>
-        </aside>
+        <AppSidebar isAdmin={isCurrentUserAdmin} />
         
         {/* Main Content Area */}
         <main className="flex-1 min-w-0 max-w-3xl space-y-4">
