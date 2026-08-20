@@ -18,7 +18,7 @@ import {
   countActiveTasks,
   notifyTaskEvent,
   buildMeetingLine,
-  touchExecutorActivity,
+  activateExecutorOnAction,
   isExecutorActive,
   makeId,
   type ExecutorProfile,
@@ -770,7 +770,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
           ? 'Хьан тIедилларна дехар'
           : task.kind === 'urgent' ? 'ТIедиллар схьаэцна' : 'ТIедилларна керла дIаязвар',
       });
-      await touchExecutorActivity(admin, userId);
+      // Взял задание — значит работаешь: статус включается сам (п.33).
+      await activateExecutorOnAction(admin, userId);
 
       return NextResponse.json({ success: true, pending: needsApproval });
     }

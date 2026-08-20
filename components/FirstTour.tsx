@@ -9,7 +9,26 @@ import { useI18n } from '@/lib/i18n';
 import { setTourActive, useTourEvents, type TourEvent } from '@/lib/tour';
 import TourSpotlight from '@/components/TourSpotlight';
 import QuickWidgetsEditor from '@/components/settings/QuickWidgetsEditor';
+import ThemePickerButton from '@/components/settings/ThemePickerButton';
 import { SettingRow, Toggle } from '@/components/settings/SettingsPrimitives';
+import { prefFor } from '@/lib/settings/defaults';
+import {
+  DEFAULT_GROUP_SOUND, playSound, type SoundId,
+} from '@/lib/notification-sounds';
+import type { NotificationGroup, NotificationPref } from '@/lib/settings/types';
+
+/** Названия групп уведомлений — те же, что в настройках. */
+function notifyLabel(group: NotificationGroup, t: ReturnType<typeof useI18n>['t']): string {
+  if (group === 'tasks') return t.settingsGroupTasks;
+  if (group === 'activity') return t.settingsGroupActivity;
+  return t.settingsGroupSystem;
+}
+
+function notifyHint(group: NotificationGroup, t: ReturnType<typeof useI18n>['t']): string {
+  if (group === 'tasks') return t.settingsGroupTasksDesc;
+  if (group === 'activity') return t.settingsGroupActivityDesc;
+  return t.settingsGroupSystemDesc;
+}
 
 interface FirstTourProps {
   onDone: () => void;
@@ -44,6 +63,16 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
   const { t, language, setLanguage } = useI18n();
   const { account } = useAuth();
   const { settings, update } = useSettings();
+
+  /** Правка настроек уведомлений — та же логика, что на странице настроек. */
+  const setNotifyPref = (group: NotificationGroup, patch: Partial<NotificationPref>) => {
+    update({
+      notificationPrefs: {
+        ...settings.notificationPrefs,
+        [group]: { ...prefFor(settings, group), ...patch },
+      },
+    });
+  };
   const [index, setIndex] = useState(0);
   /**
    * Шаг-задание выполнен? Пока false — карточка спрятана и человек
@@ -193,6 +222,84 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
           <SettingRow title={t.hidePrayer} hint={t.hidePrayerHint}>
             <Toggle checked={settings.hidePrayer} onChange={(next) => update({ hidePrayer: next })} label={t.hidePrayer} />
           </SettingRow>
+        </div>
+      ),
+      awaits: null,
+      hint: '',
+      skippable: true,
+    },
+    {
+      // Уведомления и звук (п.47): без этого шага человек либо не знал,
+      // что звук вообще настраивается, либо шёл искать его в настройках
+      // телефона. Показываем главные три группы — остальные лежат в
+      // настройках и устроены точно так же.
+      title: t.tourNotifyTitle,
+      items: [t.tourNotifya, t.tourNotifyb],
+      marks: [],
+      panel: (
+        <div className="space-y-1.5">
+          {(['tasks', 'activity', 'system'] as const).map((group) => {
+            const pref = prefFor(settings, group);
+            const soundId = (pref.soundId ?? DEFAULT_GROUP_SOUND[group] ?? 'chime') as SoundId;
+            return (
+              <SettingRow key={group} title={notifyLabel(group, t)} hint={notifyHint(group, t)}>
+                <div className="flex items-center gap-2">
+                  <Toggle
+                    checked={pref.show}
+                    onChange={(next) => setNotifyPref(group, { show: next })}
+                    label={`${notifyLabel(group, t)}: ${t.settingsColShow}`}
+                  />
+                  <Toggle
+                    checked={pref.sound}
+                    onChange={(next) => {
+                      setNotifyPref(group, { sound: next });
+                      // Включил звук — сразу слышно какой. Иначе выбор
+                      // вслепую: названия мелодий ничего не говорят.
+                      if (next) playSound(soundId);
+                    }}
+                    label={`${notifyLabel(group, t)}: ${t.settingsColSound}`}
+                  />
+                </div>
+              </SettingRow>
+            );
+          })}
+        </div>
+      ),
+      awaits: null,
+      hint: '',
+      skippable: true,
+    },
+    {
+      // Оформление (п.46): тема, светлый режим, скругление углов.
+      // Ползунок скругления показываем прямо здесь — это самая заметная
+      // настройка внешнего вида, и она применяется ко всему сразу.
+      title: t.tourLookTitle,
+      items: [t.tourLooka, t.tourLookb],
+      marks: [],
+      panel: (
+        <div className="space-y-3">
+          <SettingRow title={t.settingsThemes} hint={t.settingsThemesHint}>
+            <ThemePickerButton />
+          </SettingRow>
+          <div className="smk-field space-y-2 px-3 py-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-800 dark:text-zinc-200">{t.settingsRadius}</span>
+              <span className="text-xs font-extrabold text-emerald-700 dark:text-emerald-400">
+                {(settings.radiusScale / 100).toFixed(2)}×
+              </span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={200}
+              step={5}
+              value={settings.radiusScale}
+              onChange={(event) => update({ radiusScale: Number(event.target.value) })}
+              aria-label={t.settingsRadius}
+              className="w-full accent-emerald-600"
+            />
+            <p className="smk-text-label text-slate-500 dark:text-zinc-500">{t.settingsRadiusHint}</p>
+          </div>
         </div>
       ),
       awaits: null,

@@ -272,6 +272,40 @@ export async function touchExecutorActivity(admin: SupabaseClient, userId: strin
   }
 }
 
+/**
+ * Включает «Активен» и заводит 30-минутное окно (п.33).
+ *
+ * Вызывается, когда человек ОТКЛИКНУЛСЯ на задание или ЗАПИСАЛСЯ на
+ * него. Логика простая: раз ты берёшь работу — ты работаешь, и другие
+ * должны видеть тебя в списке активных. Раньше здесь стояла только
+ * touchExecutorActivity, а она продлевает УЖЕ включённый статус и
+ * ничего не делает с выключенным — человек брал задание и всё равно
+ * числился неактивным, пока не вспомнит про тумблер.
+ *
+ * Выключение остаётся ровно таким же, как у ручного тумблера: либо
+ * человек гасит его сам, либо окно истекает через
+ * EXECUTOR_ACTIVE_MINUTES без действий в разделе. Фоновых задач не
+ * нужно — протухший статус не проходит фильтр при чтении.
+ */
+export async function activateExecutorOnAction(
+  admin: SupabaseClient,
+  userId: string,
+): Promise<void> {
+  try {
+    const activeUntil = new Date(Date.now() + EXECUTOR_ACTIVE_MINUTES * 60_000).toISOString();
+    await admin
+      .from('executor_status')
+      .upsert(
+        { user_id: userId, is_active: true, active_until: activeUntil },
+        { onConflict: 'user_id' },
+      );
+  } catch (e) {
+    // Не критично: статус — вспомогательная вещь, из-за неё нельзя
+    // ронять сам отклик на задание.
+    log.warn('activateExecutorOnAction failed:', String(e));
+  }
+}
+
 /** Активен ли исполнитель прямо сейчас (с учётом протухания). */
 export function isExecutorActive(row: { is_active?: boolean; active_until?: string | null } | null): boolean {
   if (!row?.is_active) return false;
