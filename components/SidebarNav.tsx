@@ -189,11 +189,17 @@ export default function SidebarNav({ onClose, isAdmin = false, rail = false }: S
     const label = widgetLabel(item.id, t);
     const active = Boolean(item.href && pathname === item.href);
     const Icon = item.icon;
+    // Зелёным горит только значок выбранного раздела (п.23/30).
+    // Раньше зелёными были все сразу, и на «Главной» казалось, что
+    // подсвечено полменю. У активной строки фон уже зелёный, поэтому
+    // её значок делаем белым — иначе он тонет в подложке.
     const iconCls = rail
       ? 'smk-rail-ico'
-      : item.danger
-        ? 'h-4 w-4 shrink-0 text-red-600 dark:text-red-400'
-        : 'h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400';
+      : active
+        ? 'h-4 w-4 shrink-0 text-white'
+        : item.danger
+          ? 'h-4 w-4 shrink-0 text-red-600 dark:text-red-400'
+          : 'h-4 w-4 shrink-0 text-slate-400 dark:text-zinc-500';
 
     const body = rail ? (
       <>

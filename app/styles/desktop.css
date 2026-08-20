@@ -71,9 +71,16 @@
   box-shadow: 0 4px 12px -6px rgb(var(--smk-shadow-rgb) / 0.45);
 }
 
+/* Объём панели (п.49).
+   Раньше это был просто прямоугольник с градиентом — он лежал на
+   странице плоской наклейкой, без края и без тени. Добавлены: рамка
+   (панель отделяется от полотна), внешняя тень (панель приподнята над
+   контентом) и внутренний блик сверху — тот же приём, что у карточек
+   .smk-lux, поэтому колонка перестала выпадать из общего оформления. */
 .smk-rail-panel {
   height: 100%;
   overflow: hidden;
+  border: 1px solid var(--smk-divider);
   border-radius: 1.55rem;
   background: var(
     --smk-rail-gradient,
@@ -84,6 +91,10 @@
       var(--smk-panel) 100%
     )
   );
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 6%),
+    0 2px 10px -6px rgb(var(--smk-shadow-rgb) / calc(0.35 * var(--fx-shadow))),
+    0 18px 40px -28px rgb(var(--smk-shadow-rgb) / calc(0.55 * var(--fx-shadow)));
 }
 
 .smk-rail-label {
@@ -134,11 +145,15 @@
   background: color-mix(in srgb, var(--smk-card-a) 55%, transparent);
 }
 
+/* Выбранный пункт — как в мобильном меню (п.24/31): сплошная зелёная
+   плашка с белым текстом. На ПК он был еле заметной светлой вкладкой
+   цвета карточки, из-за чего два меню выглядели разными приложениями. */
 .smk-rail-item--on {
-  background: var(--smk-card-a);
-  color: var(--foreground);
-  box-shadow: 0 8px 22px -16px rgb(var(--smk-shadow-rgb) / calc(0.55 * var(--fx-shadow)));
+  background: var(--color-emerald-600);
+  color: #fff;
+  box-shadow: 0 8px 22px -14px rgb(var(--smk-shadow-rgb) / calc(0.65 * var(--fx-shadow)));
 }
+.smk-rail-item--on .smk-rail-ico { color: #fff; }
 
 .smk-rail-item--danger { color: var(--smk-note-danger); }
 .smk-rail-item--on.smk-rail-item--danger {
@@ -146,13 +161,17 @@
   color: var(--smk-note-danger);
 }
 
+/* Цвет значка = признак выбранного раздела (п.23/30).
+   Раньше ВСЕ значки были зелёными (emerald-600), а активный —
+   emerald-700. Разница почти неразличима, поэтому на «Главной»
+   казалось, что подсвечено сразу несколько разделов. Теперь зелёный
+   остался только у выбранного пункта, остальные — спокойные. */
 .smk-rail-ico {
   flex: none;
   height: 1.1rem;
   width: 1.1rem;
-  color: var(--color-emerald-600);
+  color: var(--smk-icon);
 }
-.smk-rail-item--on .smk-rail-ico { color: var(--color-emerald-700); }
 .smk-rail-item--danger .smk-rail-ico { color: var(--smk-note-danger); }
 
 .smk-rail-dock:not(.smk-rail--open) .smk-rail-extra {
