@@ -18,9 +18,11 @@ import Link from 'next/link';
 import { ArrowLeft, BookOpen, Check, Globe2, LogIn } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { useSettings } from '@/components/SettingsProvider';
+import { useProfiles } from '@/components/ProfilesProvider';
 import FirstTour from '@/components/FirstTour';
 import { useI18n } from '@/lib/i18n';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { extractPhoneDigits } from '@/lib/phone';
 
 const ONBOARDED_KEY = 'daymohk-onboarded-v1';
 // Флаг «сейчас происходит вход через Google». Хранится в sessionStorage,
@@ -39,6 +41,7 @@ export default function OnboardingModal() {
   const { account, isLoading, updateAccount, signInWithGoogle, signOut } = useAuth();
   const { language, setLanguage, t } = useI18n();
   const { settings, update: updateSettings } = useSettings();
+  const { profiles, updateProfile } = useProfiles();
   const [step, setStep] = useState<'welcome' | 'guide' | 'consent' | 'tour' | 'profile'>('welcome');
   const [open, setOpen] = useState(false);
   const [firstName, setFirstName] = useState('');
@@ -298,12 +301,6 @@ export default function OnboardingModal() {
     setSaving(true);
     setError('');
     try {
-      // Доп. поля (телеграм/ватсап/био/галочки) — в localStorage пока.
-      try {
-        window.localStorage.setItem('daymohk-extra-profile', JSON.stringify({
-          telegram, whatsapp, whatsappUsePhone, hidePhone, bio,
-        }));
-      } catch {}
       await updateAccount({
         fullName: full,
         gender: gender ? (gender as 'male' | 'female') : undefined,
@@ -312,6 +309,79 @@ export default function OnboardingModal() {
         settlement: settlement.trim() || undefined,
         avatarUrl: avatarUrl || undefined,
       });
+
+      // Личная анкета.
+      //
+      // Раньше здесь всё заканчивалось на updateAccount: он пишет только
+      // АККАУНТ (user_profiles), а анкета (profiles) оставалась такой,
+      // какой её создал триггер при регистрации — «Житель Даймохк.
+      // Личная анкета», без телефона, без контактов, без «о себе».
+      // Введённые WhatsApp, Telegram и биография складывались в
+      // localStorage под ключ daymohk-extra-profile, который НИКТО
+      // никогда не читал: данные просто пропадали, а в каталоге
+      // человека не было видно.
+      //
+      // Анкету создаёт база (триггер on_auth_user_created или RPC
+      // ensure_personal_profile), поэтому здесь мы её не создаём, а
+      // дозаполняем — иначе получили бы дубликат.
+      const personalId = account ? `personal-${account.id}` : '';
+      let personal = profiles.find((item) => item.id === personalId)
+        ?? profiles.find((item) => item.ownerId === account?.id && item.isPersonal);
+
+      // Анкета могла ещё не доехать до клиента: пользователь
+      // зарегистрировался секунду назад, а список анкет подгружается
+      // асинхронно. Идемпотентный RPC вернёт уже созданную триггером
+      // строку, а если её почему-то нет — создаст. Дубликата не будет:
+      // и триггер, и функция пишут один и тот же id personal-<uuid>.
+      if (!personal && supabase) {
+        try {
+          const session = await supabase.auth.getSession();
+          const token = session.data.session?.access_token;
+          if (token) {
+            const res = await fetch('/api/account/ensure-personal-profile', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+              },
+            });
+            if (res.ok) {
+              const data = await res.json().catch(() => null);
+              if (data?.profile) personal = data.profile;
+            }
+          }
+        } catch {
+          // Молча: анкету дозаполнить не удалось, но аккаунт уже
+          // сохранён — регистрацию из-за этого обрывать нельзя.
+        }
+      }
+
+      if (personal) {
+        const digits = extractPhoneDigits(phone);
+        // «Использовать общий номер» — значит WhatsApp совпадает с
+        // телефоном. Формат тот же, что в EditProfileModal: 7XXXXXXXXXX.
+        const whatsappDigits = extractPhoneDigits(whatsapp);
+        const finalWhatsapp = whatsappUsePhone
+          ? (digits ? `7${digits}` : undefined)
+          : (whatsappDigits ? `7${whatsappDigits}` : undefined);
+
+        updateProfile(personal.id, {
+          fullName: full,
+          avatarUrl: avatarUrl || personal.avatarUrl,
+          phone: phone || personal.phone,
+          hidePhone,
+          sameAsPhoneWhatsapp: whatsappUsePhone,
+          whatsapp: finalWhatsapp,
+          telegram: telegram.trim()
+            ? `@${telegram.trim().replace(/^@/, '')}`
+            : undefined,
+          bio: bio.trim() || personal.bio,
+          settlement: settlement.trim() || personal.settlement,
+          gender: gender ? (gender as 'male' | 'female') : personal.gender,
+          birthDate: birthDate || personal.birthDate,
+        });
+      }
+
       await finishOnboarding();
     } catch (err) {
       setError(err instanceof Error ? err.message : (ce ? 'Хьайн профиль ца лаьцна' : 'Не удалось сохранить профиль'));
