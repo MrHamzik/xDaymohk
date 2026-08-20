@@ -1,6 +1,7 @@
 'use client';
 
 import Avatar from '@/components/Avatar';
+import { humanErrorMessage } from '@/lib/errors';
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { Flag, Heart, Lock, MapPin, MessageSquare, Phone, Send, Share2, ShieldBan, Star, X } from 'lucide-react';
@@ -61,7 +62,7 @@ export default function ProfileModal({
   onReport,
 }: ProfileModalProps) {
   const { account } = useAuth();
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const { profiles: allProfiles, isProfileAdmin, addComplaint } = useProfiles();
   const [selectedCert, setSelectedCert] = useState<Certificate | null>(null);
   const [isMapOpen, setIsMapOpen] = useState(false);
@@ -134,7 +135,7 @@ export default function ProfileModal({
       onClose();
     } catch (error) {
       setNoticeKind('error');
-      setNotice(error instanceof Error ? error.message : t.profileBlockFailed);
+      setNotice(humanErrorMessage(error, language === 'ce' ? 'ce' : 'ru', 'Блокировка пользователя'));
     } finally {
       setBlockBusy(false);
     }

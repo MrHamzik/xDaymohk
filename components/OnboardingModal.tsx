@@ -14,6 +14,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
+import { humanErrorMessage } from '@/lib/errors';
 import Link from 'next/link';
 import { ArrowLeft, BookOpen, Check, Globe2, LogIn } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
@@ -387,7 +388,8 @@ export default function OnboardingModal() {
 
       await finishOnboarding();
     } catch (err) {
-      setError(err instanceof Error ? err.message : (ce ? 'Хьайн профиль ца лаьцна' : 'Не удалось сохранить профиль'));
+      // Наружу — понятная фраза, подробности уходят в консоль (п.26).
+      setError(humanErrorMessage(err, ce ? 'ce' : 'ru', 'Сохранение анкеты при регистрации'));
     } finally {
       setSaving(false);
     }
