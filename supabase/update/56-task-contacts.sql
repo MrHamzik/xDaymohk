@@ -51,6 +51,20 @@ update public.tasks
 -- клиенту нельзя доверять решение «показывать или нет». Условия те же,
 -- что во вьюхе профилей (обновление 47): анонимному посетителю контакты
 -- не отдаются вообще, иначе номера уедут сборщикам.
+--
+-- ВНИМАНИЕ: контакты лежат в ДВУХ РАЗНЫХ таблицах.
+--
+--   public.user_profiles — аккаунт. Здесь только phone.
+--   public.profiles      — анкета. Здесь whatsapp и telegram.
+--
+-- Поэтому WhatsApp и Telegram нельзя брать из алиаса u (user_profiles):
+-- таких колонок там нет. Их берём из анкеты автора отдельным подзапросом.
+--
+-- Анкет у человека может быть несколько (личная и специалиста), причём
+-- owner_id не уникален. Берём ту же, что и функция выдачи анкет в
+-- schema.sql: `order by is_personal desc, created_at desc` — личная
+-- приоритетнее, среди равных свежая. limit 1 обязателен, иначе
+-- подзапрос упадёт на втором ряду.
 
 drop view if exists public.v_tasks_feed;
 create view public.v_tasks_feed
@@ -74,14 +88,16 @@ select
     when t.show_phone then coalesce(u.phone, '')
     else ''
   end as author_phone,
+  -- WhatsApp и Telegram живут в анкете (public.profiles), а не в
+  -- аккаунте: в user_profiles таких колонок нет.
   case
     when auth.uid() is null then ''
-    when t.show_whatsapp then coalesce(u.whatsapp, '')
+    when t.show_whatsapp then coalesce(ap.whatsapp, '')
     else ''
   end as author_whatsapp,
   case
     when auth.uid() is null then ''
-    when t.show_telegram then coalesce(u.telegram, '')
+    when t.show_telegram then coalesce(ap.telegram, '')
     else ''
   end as author_telegram,
   u.full_name             as author_name,
@@ -94,6 +110,16 @@ select
     where p.task_id = t.id and p.status in ('joined', 'attended', 'done')) as taken_slots
 from public.tasks t
 join public.user_profiles u on u.id = t.author_id
+-- Анкета автора: только ради whatsapp/telegram. LEFT JOIN — анкеты
+-- может не быть вовсе (человек зарегистрировался и сразу создал
+-- задание), и такое задание обязано остаться в ленте.
+left join lateral (
+  select p.whatsapp, p.telegram
+    from public.profiles p
+   where p.owner_id = t.author_id
+   order by p.is_personal desc, p.created_at desc
+   limit 1
+) ap on true
 where not t.is_archived;
 
 grant select on public.v_tasks_feed to anon, authenticated;
