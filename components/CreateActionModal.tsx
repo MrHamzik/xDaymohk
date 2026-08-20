@@ -102,6 +102,7 @@ export default function CreateActionModal({
       label: t.createProfileOption,
       icon: UserPlus,
       tone: 'bg-emerald-600 text-white',
+      chip: undefined as 'dev' | 'plan' | undefined,
       run: () => { onClose(); onOpenCreateProfile(); },
     },
     {
@@ -126,25 +127,39 @@ export default function CreateActionModal({
         else router.push('/goncholla?create=1');
       },
     },
+    // Три пункта ниже — незаконченные разделы.
+    //
+    // Раньше они молча закрывали меню: onOpenTaxi и onOpenDjanna не
+    // передавала ни одна страница, а у «Чистой линии» обработчик был
+    // пустой. Человек нажимал и не понимал, сломалось у него что-то или
+    // так задумано. Теперь у них честная пометка, как в боковом меню, и
+    // переход на страницу-заглушку, которая объясняет, чего ждать.
     {
       id: 'taxi',
       label: t.taxiTitle,
       icon: CarFront,
       tone: 'bg-amber-500 text-white',
-      run: () => { onClose(); onOpenTaxi?.(); },
+      chip: 'dev' as const,
+      run: () => {
+        onClose();
+        if (onOpenTaxi) onOpenTaxi();
+        else router.push('/taxi');
+      },
     },
     {
       id: 'vpn',
       label: t.vpnTitle,
       icon: Globe2,
       tone: 'bg-teal-600 text-white',
-      run: () => { onClose(); },
+      chip: 'dev' as const,
+      run: () => { onClose(); router.push('/vpn'); },
     },
     {
       id: 'djanna',
       label: t.djannaAssistantOption,
       icon: Bot,
       tone: 'bg-indigo-600 text-white',
+      chip: 'plan' as const,
       run: () => { onClose(); onOpenDjanna?.(); },
     },
   ], [t, onClose, onOpenCreateProfile, onOpenGullaq, onOpenGo, onOpenTaxi, onOpenDjanna, router]);
@@ -230,8 +245,12 @@ export default function CreateActionModal({
             }}
           >
             <span className={`flex items-center gap-2 ${item.iconOnRight ? 'flex-row' : 'flex-row-reverse'}`}>
-              <span className="smk-snake-label max-w-[min(12.5rem,calc(50vw-3.2rem))] smk-text-body font-extrabold leading-snug">
-                {item.label}
+              <span className={`flex max-w-[min(12.5rem,calc(50vw-3.2rem))] flex-col gap-0.5 ${item.iconOnRight ? 'items-end' : 'items-start'}`}>
+                <span className="smk-snake-label smk-text-body font-extrabold leading-snug">
+                  {item.label}
+                </span>
+                {item.chip === 'dev' && <span className="smk-chip smk-note-warn">{t.inDevelopment}</span>}
+                {item.chip === 'plan' && <span className="smk-chip smk-note-info">{t.inPlans}</span>}
               </span>
               <span className="smk-snake-join" aria-hidden />
               <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl shadow-lg ${item.tone}`}>
