@@ -362,6 +362,42 @@ html.dark .bg-radial-gradient {
   transform: scale(0.5);
 }
 
+/* --- Раскладка нижней панели (п.18) -------------------------------------------
+   Класс висел в разметке, но правил под него не существовало: пять
+   колонок делили ширину вплотную, и значки с подписями слипались —
+   на узких телефонах «Каталог» и «Главная» соприкасались буквами.
+
+   column-gap разводит колонки, max-width не даёт им расползтись на
+   планшете, а запрет переноса убирает вторую строку подписи, из-за
+   которой панель прыгала по высоте. */
+.site-bottom-nav-grid {
+  max-width: 30rem;
+  column-gap: 0.375rem;
+  padding-inline: 0.25rem;
+}
+
+/* Подпись не переносится и не наезжает на соседнюю: если места мало,
+   она сжимается в многоточие, а не лезет вбок. */
+.site-bottom-nav-grid > * {
+  min-width: 0;
+}
+.site-bottom-nav-grid span {
+  display: block;
+  overflow: hidden;
+  width: 100%;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Совсем узкие экраны (от 320px): зазор чуть меньше, иначе на пять
+   колонок его суммарно уходит больше, чем на сами значки. */
+@media (max-width: 22.5rem) {
+  .site-bottom-nav-grid {
+    column-gap: 0.125rem;
+    padding-inline: 0;
+  }
+}
+
 /* Bottom bar buttons should have no border/outline */
 .site-bottom-nav button,
 .site-bottom-nav a {
