@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Bot, Briefcase, CarFront, Globe2, HandHeart, UserPlus, X } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
-import { emitTourEvent, useTourActive } from '@/lib/tour';
+import { emitTourEvent, useTourActive, useTourCommands, type TourCommand } from '@/lib/tour';
 
 interface CreateActionModalProps {
   isOpen: boolean;
@@ -14,6 +14,11 @@ interface CreateActionModalProps {
   onOpenGullaq?: () => void;
   onOpenGo?: () => void;
   onOpenDjanna?: () => void;
+  /**
+   * Открыть это же меню по команде гида (п.8). Состоянием владеет
+   * страница, поэтому открыть себя изнутри компонент не может.
+   */
+  onOpenPlus?: () => void;
 }
 
 /**
@@ -29,6 +34,7 @@ export default function CreateActionModal({
   onOpenGullaq,
   onOpenGo,
   onOpenDjanna,
+  onOpenPlus,
 }: CreateActionModalProps) {
   const { t } = useI18n();
   const router = useRouter();
@@ -95,6 +101,22 @@ export default function CreateActionModal({
       window.visualViewport?.removeEventListener('resize', place);
     };
   }, [isOpen, onClose, isPresent]);
+
+  /**
+   * Гид открывает и закрывает меню сам (п.8).
+   *
+   * На шаге про «+» кнопка «Дальше» обязана делать ровно то же, что и
+   * нажатие на «+»: убрать окно гида и показать список. Раньше «Дальше»
+   * лишь прятала карточку, и человеку приходилось искать кнопку под
+   * размытием.
+   *
+   * onOpenPlus передаёт страница — состояние меню живёт там.
+   */
+  const onCommand = useCallback((command: TourCommand) => {
+    if (command === 'plus-open') onOpenPlus?.();
+    if (command === 'plus-close') onClose();
+  }, [onOpenPlus, onClose]);
+  useTourCommands(onCommand);
 
   const actions = useMemo(() => [
     {

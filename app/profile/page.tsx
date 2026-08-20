@@ -478,6 +478,7 @@ export default function ProfilePage() {
       />
       <CreateActionModal
         isOpen={isCreateSheetOpen}
+        onOpenPlus={() => setIsCreateSheetOpen(true)}
         onClose={() => setIsCreateSheetOpen(false)}
         onOpenCreateProfile={() => {
           setEditingProfile(null);

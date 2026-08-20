@@ -1,12 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { useSettings } from '@/components/SettingsProvider';
 import { useI18n } from '@/lib/i18n';
-import { setTourActive, useTourEvents, type TourEvent } from '@/lib/tour';
+import { sendTourCommand, setTourActive, useTourEvents, type TourEvent } from '@/lib/tour';
 import TourSpotlight from '@/components/TourSpotlight';
 import QuickWidgetsEditor from '@/components/settings/QuickWidgetsEditor';
 import ThemePickerButton from '@/components/settings/ThemePickerButton';
@@ -15,19 +15,41 @@ import { prefFor } from '@/lib/settings/defaults';
 import {
   DEFAULT_GROUP_SOUND, playSound, type SoundId,
 } from '@/lib/notification-sounds';
-import type { NotificationGroup, NotificationPref } from '@/lib/settings/types';
+import {
+  LOCKED_NOTIFICATION_GROUPS, NOTIFICATION_GROUPS,
+  type NotificationGroup, type NotificationPref,
+} from '@/lib/settings/types';
 
-/** Названия групп уведомлений — те же, что в настройках. */
+/**
+ * Названия и пояснения групп уведомлений — те же, что в настройках.
+ *
+ * Раньше здесь было три ветки if, а всё непонятное сваливалось в
+ * «Системные»: гид показывал только часть групп, и добавление шестой
+ * молча подписало бы её чужим именем. Теперь список полный и заданный
+ * одной таблицей.
+ */
 function notifyLabel(group: NotificationGroup, t: ReturnType<typeof useI18n>['t']): string {
-  if (group === 'tasks') return t.settingsGroupTasks;
-  if (group === 'activity') return t.settingsGroupActivity;
-  return t.settingsGroupSystem;
+  const labels: Record<NotificationGroup, string> = {
+    system: t.settingsGroupSystem,
+    profile: t.settingsGroupProfile,
+    activity: t.settingsGroupActivity,
+    tasks: t.settingsGroupTasks,
+    complaint: t.settingsGroupComplaint,
+    taxi: t.settingsGroupTaxi,
+  };
+  return labels[group];
 }
 
 function notifyHint(group: NotificationGroup, t: ReturnType<typeof useI18n>['t']): string {
-  if (group === 'tasks') return t.settingsGroupTasksDesc;
-  if (group === 'activity') return t.settingsGroupActivityDesc;
-  return t.settingsGroupSystemDesc;
+  const hints: Record<NotificationGroup, string> = {
+    system: t.settingsGroupSystemDesc,
+    profile: t.settingsGroupProfileDesc,
+    activity: t.settingsGroupActivityDesc,
+    tasks: t.settingsGroupTasksDesc,
+    complaint: t.settingsGroupComplaintDesc,
+    taxi: t.settingsGroupTaxiDesc,
+  };
+  return hints[group];
 }
 
 interface FirstTourProps {
@@ -120,6 +142,18 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
    * panel — живые переключатели внутри шага.
    * skippable — показывать ли «Пропустить шаг».
    */
+  /**
+   * Каталог открыт — экран нужно освободить (п.2/3).
+   *
+   * Пока человек не нажал «Каталог», подсветка показывает, куда жать.
+   * Как только каталог открылся, затемнение, размытие и подсказка
+   * обязаны исчезнуть: иначе список, который просят пролистать, видно
+   * через мутное стекло.
+   */
+  const [catalogOpen, setCatalogOpen] = useState(false);
+  /** Корень карточки шага — нужен для сброса прокрутки (п.5). */
+  const cardRef = useRef<HTMLDivElement | null>(null);
+
   const steps = [
     {
       title: t.tour1Title,
@@ -183,6 +217,9 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
       skippable: true,
     },
     {
+      // Шаг «Виджет»: если человек оставил боковое меню открытым на
+      // прошлом шаге, оно закрывается само (п.4) — иначе карточка
+      // висит за выездом, и непонятно, о каком виджете речь.
       title: t.tour4Title,
       items: [t.tour4a, t.tour4b, t.tour4c],
       marks: ['widgets'],
@@ -194,7 +231,7 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
     },
     {
       title: t.tour5Title,
-      items: [t.tour5a, t.tour5b, t.tour5c],
+      items: [t.tour5a],
       marks: [],
       panel: (
         <div className="space-y-1.5">
@@ -234,19 +271,24 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
       // телефона. Показываем главные три группы — остальные лежат в
       // настройках и устроены точно так же.
       title: t.tourNotifyTitle,
-      items: [t.tourNotifya, t.tourNotifyb],
+      items: [t.tourNotifya],
       marks: [],
       panel: (
         <div className="space-y-1.5">
-          {(['tasks', 'activity', 'system'] as const).map((group) => {
+          {NOTIFICATION_GROUPS.map((group) => {
+            // Системные отключить нельзя: ими приходят блокировки и
+            // важные сообщения. Показываем, но переключатель «показывать»
+            // заблокирован — ровно как на странице настроек.
+            const locked = LOCKED_NOTIFICATION_GROUPS.includes(group);
             const pref = prefFor(settings, group);
             const soundId = (pref.soundId ?? DEFAULT_GROUP_SOUND[group] ?? 'chime') as SoundId;
             return (
               <SettingRow key={group} title={notifyLabel(group, t)} hint={notifyHint(group, t)}>
                 <div className="flex items-center gap-2">
                   <Toggle
-                    checked={pref.show}
-                    onChange={(next) => setNotifyPref(group, { show: next })}
+                    checked={locked ? true : pref.show}
+                    disabled={locked}
+                    onChange={(next) => { if (!locked) setNotifyPref(group, { show: next }); }}
                     label={`${notifyLabel(group, t)}: ${t.settingsColShow}`}
                   />
                   <Toggle
@@ -349,22 +391,90 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
    */
   const waiting = Boolean(step.awaits) && tasking && !done;
 
+  /**
+   * Экран полностью отдан человеку.
+   *
+   * Затемнение, размытие и подсказка исчезают, когда он уже сделал то,
+   * о чём просили: открыл каталог или раскрыл меню. Держать поверх
+   * открытого списка мутное стекло и надпись «нажмите и пролистайте» —
+   * ровно та жалоба, с которой начинались пункты 2 и 3.
+   */
+  const screenFree = waiting && (overlayOpen || catalogOpen);
+
   useEffect(() => {
     setDone(false);
     setPlusOpen(false);
     setOverlayOpen(false);
     setTasking(false);
+    setCatalogOpen(false);
   }, [index]);
+
+  /**
+   * Прокрутка карточки шага в начало (п.5).
+   *
+   * Длинные шаги (уведомления, оформление) прокручиваются внутри окна.
+   * Без сброса человек, пролистав шаг до конца и нажав «Дальше», видел
+   * следующий шаг с середины — приходилось самому листать вверх.
+   *
+   * Прокручиваем и внешнее окно (его задаёт OnboardingModal), и
+   * внутреннюю панель с переключателями.
+   */
+  useEffect(() => {
+    if (waiting) return;
+    const scroller = cardRef.current?.closest('.overflow-y-auto');
+    if (scroller instanceof HTMLElement) scroller.scrollTop = 0;
+    cardRef.current?.querySelectorAll('.overflow-y-auto').forEach((node) => {
+      if (node instanceof HTMLElement) node.scrollTop = 0;
+    });
+  }, [index, waiting]);
 
   useEffect(() => { onCardVisible?.(!waiting); }, [waiting, onCardVisible]);
 
   /**
-   * Шаг про каталог ждёт не нажатия, а прокрутки: человек должен
-   * увидеть, что под первым экраном есть ещё карточки. Ловим прокрутку
-   * страницы напрямую — «Каталог» это обычная ссылка, событий она не шлёт.
+   * Шаг про виджет требует чистого экрана (п.4).
+   *
+   * Предыдущий шаг просит открыть меню и пролистать его. Человек часто
+   * оставляет выезд открытым — и следующий шаг оказывается за ним.
+   * Закрываем меню сами: это единственный шаг, где интерфейс обязан
+   * прийти в исходное состояние.
+   */
+  const closesMenu = step.marks.includes('widgets');
+  useEffect(() => {
+    // Зависимость — только номер шага. По самому массиву marks зависеть
+    // нельзя: он пересоздаётся на каждый рендер, эффект срабатывал бы
+    // непрерывно и захлопывал меню каждый раз, как человек его открыл.
+    if (closesMenu) sendTourCommand('menu-close');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index]);
+
+  /**
+   * Переход в каталог (п.2/3).
+   *
+   * «Каталог» — обычная ссылка, события она не шлёт, поэтому смотрим на
+   * адрес страницы. Как только он сменился на /catalog, задание по сути
+   * началось: экран нужно освободить немедленно.
    */
   useEffect(() => {
+    if (step.awaits !== 'catalog-scroll' || !tasking || catalogOpen) return;
+    const check = () => {
+      if (window.location.pathname.startsWith('/catalog')) setCatalogOpen(true);
+    };
+    check();
+    // pushState в Next.js не поднимает popstate — опрашиваем адрес.
+    const timer = window.setInterval(check, 150);
+    window.addEventListener('popstate', check);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('popstate', check);
+    };
+  }, [step.awaits, tasking, catalogOpen]);
+
+  useEffect(() => {
     if (step.awaits !== 'catalog-scroll' || !tasking || done) return;
+    // Прокрутку считаем ТОЛЬКО в самом каталоге. Иначе главная, если она
+    // короткая, сразу оказывается «пролистанной до конца», и шаг
+    // проскакивал бы, ни разу не открыв каталог.
+    if (!catalogOpen) return;
 
     // Сколько нужно пролистать, чтобы шаг засчитался.
     //
@@ -393,7 +503,7 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
       window.removeEventListener('scroll', onScroll);
       if (timer) window.clearTimeout(timer);
     };
-  }, [step.awaits, tasking, done]);
+  }, [step.awaits, tasking, done, catalogOpen]);
 
   // Меню и плюс сообщают о себе сами — они модальные, страница под ними
   // не двигается, поймать прокрутку окна там нечем.
@@ -425,6 +535,11 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
     // задание: карточка уходит, человек работает с интерфейсом.
     if (step.awaits && !tasking) {
       setTasking(true);
+      // Шаг про «+» (п.8): «Дальше» и сама кнопка «+» должны делать одно
+      // и то же — убрать окно гида и открыть меню. Раньше «Дальше»
+      // только пряталo карточку, и человек искал, куда жать, глядя на
+      // подсказку сквозь размытие.
+      if (step.awaits === 'plus') sendTourCommand('plus-open');
       return;
     }
     if (last) finish();
@@ -448,7 +563,7 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
   }, [done, tasking, steps.length]);
 
   return (
-    <div className={waiting ? 'contents' : 'relative px-6 pb-6 pt-10'}>
+    <div ref={cardRef} className={waiting ? 'contents' : 'relative px-6 pb-6 pt-10'}>
       {/* Подсветка живёт в портале на body, поэтому окно гида её не
           обрезает. Пустой список меток — шаг без подсветки.
 
@@ -456,10 +571,14 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
           рабочей, а всё вокруг заблокировано: нажать «Каталог» и
           пролистать нужно по-настоящему, но уйти в сторону нельзя.
           На остальных шагах интерфейс заблокирован целиком. */}
-      <TourSpotlight
-        marks={overlayOpen ? [] : step.marks}
-        interactive={overlayOpen || Boolean(step.awaits)}
-      />
+      {/* Экран освобождён (п.2/3): каталог открыт или поверх страницы
+          висит меню — гид молча ждёт и ничем не мешает смотреть. */}
+      {!screenFree && (
+        <TourSpotlight
+          marks={overlayOpen ? [] : step.marks}
+          interactive={overlayOpen || Boolean(step.awaits)}
+        />
+      )}
 
       {/* Шаг-задание: карточки нет, внизу только строка-подсказка. Иначе
           она закрывала бы ровно тот список, который просят пролистать. */}
@@ -469,7 +588,7 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
         // Пока открыто меню плюса или выезд меню, подсказку прячем (п.41):
         // человек уже сделал то, о чём она просила, и висеть поверх
         // открытого окна ей незачем.
-        typeof document !== 'undefined' && !overlayOpen && createPortal(
+        typeof document !== 'undefined' && !screenFree && createPortal(
           <div className="pointer-events-none fixed inset-x-0 bottom-24 z-[96] flex justify-center px-4">
             <p className="smk-sheet pointer-events-auto max-w-sm rounded-2xl px-4 py-3 text-center text-sm font-bold text-slate-800 shadow-2xl dark:text-zinc-100">
               {step.hint}

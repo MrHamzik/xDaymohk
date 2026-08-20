@@ -64,6 +64,7 @@ export default function ProPage() {
       />
       <CreateActionModal
         isOpen={isCreateSheetOpen}
+        onOpenPlus={() => setIsCreateSheetOpen(true)}
         onClose={() => setIsCreateSheetOpen(false)}
         onOpenCreateProfile={() => router.push('/catalog')}
       />

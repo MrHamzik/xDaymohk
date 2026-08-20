@@ -292,8 +292,20 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: 'Отзыв не найден' }, { status: 404 });
   }
 
-  // Step 3: authorise — only the author edits their own review.
-  if (String(review.author_id ?? '') !== userData.user.id) {
+  // Step 3: authorise the edit.
+  //
+  // Обычное правило: править отзыв может только его автор. Владельцу
+  // анкеты правка не даётся НИКОГДА — он переписал бы себе единицу на
+  // пятёрку, и рейтинг перестал бы что-либо значить.
+  //
+  // Исключение — отзыв, автор которого удалил аккаунт (author_id стал
+  // пустым). Исправить в нём опечатку или убрать грубость больше
+  // некому, поэтому такие записи доверены администратору.
+  const authorId = String(review.author_id ?? '');
+  const isReviewAuthor = authorId !== '' && authorId === userData.user.id;
+  const isOrphanReview = authorId === '';
+  const canEdit = isReviewAuthor || (isOrphanReview && isAdminEmail(userData.user.email));
+  if (!canEdit) {
     return NextResponse.json({ error: 'Изменять отзыв может только его автор' }, { status: 403 });
   }
 
@@ -333,7 +345,11 @@ export async function PATCH(request: Request) {
     review: {
       id: reviewId,
       profileId: review.profile_id,
-      authorId: userData.user.id,
+      // Автора возвращаем ИЗ ЗАПИСИ, а не из сессии. Иначе после
+      // правки осиротевшего отзыва администратором интерфейс показал
+      // бы отзыв как написанный админом — и дал бы ему кнопку «править»
+      // уже на общих основаниях.
+      authorId: liveReview?.author_id ?? undefined,
       author: liveReview?.author ?? 'Житель Даймохк',
       authorAvatarUrl: liveReview?.author_avatar_url ?? undefined,
       rating,
@@ -433,11 +449,24 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: profileError.message }, { status: 500 });
   }
 
+  // Автор мог удалить аккаунт: тогда reviews.author_id обнулён
+  // (on delete set null), и отзыв висит от «Удалённого пользователя».
+  // Сравнение с пустой строкой не даст случайного совпадения — у
+  // userData.user.id всегда непустой uuid.
   const isAuthor = String(review.author_id ?? '') === userData.user.id;
   const isOwner = Boolean(profile && String(profile.owner_id ?? '') === userData.user.id);
   const isAdmin = isAdminEmail(userData.user.email);
-  if (!profile || (!isAuthor && !isOwner && !isAdmin)) {
-    return NextResponse.json({ error: 'Удалять отзыв может только его автор, владелец анкеты или админ' }, { status: 403 });
+
+  // Анкеты может уже не быть: строку удалили, а отзыв остался (сбой
+  // каскада, ручная правка в базе). Раньше такой отзыв не мог удалить
+  // никто — проверка `!profile` отклоняла даже администратора, и мусор
+  // оставался в базе навсегда. Теперь при отсутствующей анкете решение
+  // принимается по автору и роли админа.
+  if (!isAuthor && !isOwner && !isAdmin) {
+    return NextResponse.json(
+      { error: 'Удалять отзыв может только его автор, владелец анкеты или админ' },
+      { status: 403 },
+    );
   }
 
   // Step 4: delete the review. The trg_reviews_after_delete trigger

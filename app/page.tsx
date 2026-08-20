@@ -36,6 +36,7 @@ export default function HomePage() {
       <BottomNav onOpenMenu={() => setIsMenuOpen(true)} onOpenCreate={() => setIsCreateOpen(true)} isAdmin={Boolean(account?.isAdmin)} />
       <CreateActionModal
         isOpen={isCreateOpen}
+        onOpenPlus={() => setIsCreateOpen(true)}
         onClose={() => setIsCreateOpen(false)}
         onOpenCreateProfile={() => router.push('/catalog')}
       />

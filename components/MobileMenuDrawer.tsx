@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import SidebarNav from '@/components/SidebarNav';
-import { emitTourEvent } from '@/lib/tour';
+import { emitTourEvent, useTourCommands, type TourCommand } from '@/lib/tour';
 
 interface MobileMenuDrawerProps {
   isOpen: boolean;
@@ -39,6 +39,17 @@ export default function MobileMenuDrawer({ isOpen, onClose, isAdmin = false }: M
   useEffect(() => {
     onClose();
   }, [pathname]);
+
+  /**
+   * Гид просит закрыть меню (п.4).
+   *
+   * На шаге про виджет открытый выезд перекрывает карточку. Закрывать
+   * его самому человеку — лишнее действие посреди обучения.
+   */
+  const onCommand = useCallback((command: TourCommand) => {
+    if (command === 'menu-close') onClose();
+  }, [onClose]);
+  useTourCommands(onCommand);
 
   if (!isOpen) return null;
 

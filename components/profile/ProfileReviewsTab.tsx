@@ -72,14 +72,40 @@ export default function ProfileReviewsTab({
   );
   const canReview = Boolean(account && !account.isBlocked && onReview && !isOwnProfile && !alreadyReviewed);
 
+  /**
+   * Отзыв «осиротел»: его автор удалил аккаунт.
+   *
+   * В базе author_id обнуляется (on delete set null), и отзыв
+   * показывается от «Удалённого пользователя». Такие записи нельзя
+   * оставлять несменяемыми: человека уже нет, а его оценка продолжает
+   * влиять на балл анкеты.
+   */
+  const isOrphan = (authorId?: string) => !authorId;
+
   const canDeleteBy = (authorId?: string) =>
     Boolean(
       account &&
       !account.isBlocked &&
       (account.id === authorId || account.id === profile.ownerId || account.isAdmin),
     );
+
+  /**
+   * Править отзыв вправе только его автор.
+   *
+   * Единственное исключение — отзыв удалённого пользователя, и только
+   * для администратора: там уже некому исправить опечатку или убрать
+   * грубость, а удалять запись целиком не всегда правильно.
+   *
+   * Владельцу анкеты правка НЕ даётся сознательно, даже у осиротевших
+   * отзывов: он переписал бы себе единицу на пятёрку, и рейтинг
+   * перестал бы что-либо значить.
+   */
   const canEditBy = (authorId?: string) =>
-    Boolean(account && !account.isBlocked && account.id === authorId);
+    Boolean(
+      account &&
+      !account.isBlocked &&
+      (account.id === authorId || (isOrphan(authorId) && account.isAdmin)),
+    );
 
   const handleDeleteReview = async (reviewId: string) => {
     if (!account || busyId) return;
@@ -105,7 +131,7 @@ export default function ProfileReviewsTab({
   };
 
   const startEditReview = (review: Review) => {
-    if (!account || account.id !== review.authorId) return;
+    if (!canEditBy(review.authorId)) return;
     setEditingReviewId(review.id);
     setEditReviewText(review.text);
     setEditReviewRating(review.rating);

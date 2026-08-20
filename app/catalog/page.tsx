@@ -435,6 +435,7 @@ export default function Home() {
       />
       <CreateActionModal
         isOpen={isCreateSheetOpen}
+        onOpenPlus={() => setIsCreateSheetOpen(true)}
         onClose={() => setIsCreateSheetOpen(false)}
         onOpenCreateProfile={openAddProfile}
       />

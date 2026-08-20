@@ -629,6 +629,7 @@ export default function TemshikPage() {
           нужного раздела сразу открывает форму, не уводя со страницы. */}
       <CreateActionModal
         isOpen={isCreateSheetOpen}
+        onOpenPlus={() => setIsCreateSheetOpen(true)}
         onClose={() => setIsCreateSheetOpen(false)}
         onOpenCreateProfile={() => router.push('/catalog')}
         onOpenGullaq={() => { setEditingTask(null); setSeedTask(null); setIsCreateOpen(true); }}

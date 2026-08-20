@@ -396,6 +396,7 @@ export default function GonchollaPage() {
           нужного раздела сразу открывает форму, не уводя со страницы. */}
       <CreateActionModal
         isOpen={isCreateSheetOpen}
+        onOpenPlus={() => setIsCreateSheetOpen(true)}
         onClose={() => setIsCreateSheetOpen(false)}
         onOpenCreateProfile={() => router.push('/catalog')}
         onOpenGo={() => { setEditingTask(null); setSeedTask(null); setIsCreateOpen(true); }}

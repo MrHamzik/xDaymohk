@@ -23,9 +23,25 @@ export type TourEvent =
   | 'plus-open'
   | 'plus-close';
 
+/**
+ * Команды в обратную сторону: гид просит интерфейс что-то сделать.
+ *
+ * События выше идут снизу вверх («человек открыл меню»), а команды —
+ * сверху вниз («закрой меню», «открой меню плюса»). Без них гид умел
+ * только ждать: на шаге про виджет поверх карточки оставалось открытым
+ * боковое меню, а шаг про «+» заставлял нажимать кнопку дважды.
+ *
+ *   'menu-close' — закрыть выезд бокового меню, если открыт;
+ *   'plus-open'  — открыть меню плюса;
+ *   'plus-close' — закрыть меню плюса.
+ */
+export type TourCommand = 'menu-close' | 'plus-open' | 'plus-close';
+
 type Listener = (event: TourEvent) => void;
+type CommandListener = (command: TourCommand) => void;
 
 const listeners = new Set<Listener>();
+const commandListeners = new Set<CommandListener>();
 const activeListeners = new Set<() => void>();
 
 let active = false;
@@ -68,5 +84,29 @@ export function useTourEvents(handler: Listener) {
   useEffect(() => {
     listeners.add(handler);
     return () => { listeners.delete(handler); };
+  }, [handler]);
+}
+
+/**
+ * Гид отдаёт команду интерфейсу.
+ *
+ * Вне гида не делает ничего: страницы подписаны на команды всегда, но
+ * получать их должны только во время обучения.
+ */
+export function sendTourCommand(command: TourCommand) {
+  if (!active) return;
+  for (const listener of commandListeners) listener(command);
+}
+
+/**
+ * Подписка страницы на команды гида.
+ *
+ * Обработчик нужно оборачивать в useCallback — иначе подписка будет
+ * пересоздаваться на каждый рендер страницы.
+ */
+export function useTourCommands(handler: CommandListener) {
+  useEffect(() => {
+    commandListeners.add(handler);
+    return () => { commandListeners.delete(handler); };
   }, [handler]);
 }

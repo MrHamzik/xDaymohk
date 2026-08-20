@@ -24,6 +24,7 @@ import FirstTour from '@/components/FirstTour';
 import { useI18n } from '@/lib/i18n';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { extractPhoneDigits } from '@/lib/phone';
+import type { FontFamilyId } from '@/lib/settings/types';
 
 const ONBOARDED_KEY = 'daymohk-onboarded-v1';
 // Флаг «сейчас происходит вход через Google». Хранится в sessionStorage,
@@ -386,10 +387,9 @@ export default function OnboardingModal() {
         });
       }
 
-      // Настройка внешнего вида идёт ПОСЛЕ анкеты (п.28): сначала
-      // обязательное, потом приятное. Само окно закроется на шаге
-      // «Внешний вид» — там же вызывается finishOnboarding().
-      setStep('look');
+      // Анкета — последний шаг регистрации: «Внешний вид» показан
+      // раньше, сразу после гида. Здесь регистрация заканчивается.
+      void finishOnboarding();
     } catch (err) {
       // Наружу — понятная фраза, подробности уходят в консоль (п.26).
       setError(humanErrorMessage(err, ce ? 'ce' : 'ru', 'Сохранение анкеты при регистрации'));
@@ -548,7 +548,7 @@ export default function OnboardingModal() {
         )}
 
         {step === 'tour' && (
-          <FirstTour onDone={() => setStep('profile')} onCardVisible={setTourCardVisible} />
+          <FirstTour onDone={() => setStep('look')} onCardVisible={setTourCardVisible} />
         )}
 
         {step === 'profile' && (
@@ -710,26 +710,47 @@ export default function OnboardingModal() {
                 />
               </div>
 
-              {/* Скругление углов: применяется ко всему интерфейсу. */}
+              {/* Начертание шрифта (п.9).
+                  Раньше здесь стояло скругление углов — настройка
+                  декоративная, её замечают не все. Шрифт важнее: от него
+                  зависит, насколько легко читать, а список тот же, что в
+                  настройках, — общий источник FONT_FAMILIES. */}
               <div className="rounded-xl border border-slate-200 bg-white px-3 py-3 dark:border-zinc-700 dark:bg-zinc-900">
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="smk-text-label font-bold text-slate-600 dark:text-zinc-300">
-                    {ce ? 'МаьIигийн гуо' : 'Скругление углов'}
-                  </span>
-                  <span className="smk-text-label font-extrabold text-emerald-700 dark:text-emerald-400">
-                    {(settings.radiusScale / 100).toFixed(2)}×
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min={0}
-                  max={200}
-                  step={5}
-                  value={settings.radiusScale}
-                  onChange={(event) => updateSettings({ radiusScale: Number(event.target.value) })}
-                  aria-label={ce ? 'МаьIигийн гуо' : 'Скругление углов'}
-                  className="w-full accent-emerald-600"
-                />
+                <label
+                  htmlFor="onb-font"
+                  className="mb-1.5 block smk-text-label font-bold text-slate-600 dark:text-zinc-300"
+                >
+                  {ce ? 'Йозанан тайпа' : 'Начертание'}
+                </label>
+                <select
+                  id="onb-font"
+                  value={settings.fontFamily}
+                  onChange={(event) => updateSettings({ fontFamily: event.target.value as FontFamilyId })}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                >
+                  <optgroup label={ce ? 'Мекхаш йоцуш' : 'Без засечек'}>
+                    <option value="manrope">Manrope</option>
+                    <option value="inter">Inter</option>
+                    <option value="rubik">Rubik</option>
+                    <option value="montserrat">Montserrat</option>
+                    <option value="jost">Jost</option>
+                    <option value="onest">Onest</option>
+                  </optgroup>
+                  <optgroup label={ce ? 'Мекхашца' : 'С засечками'}>
+                    <option value="pt-serif">PT Serif</option>
+                    <option value="literata">Literata</option>
+                    <option value="georgia">Georgia</option>
+                  </optgroup>
+                  <optgroup label={ce ? 'Моноширинни а, системин а' : 'Моноширинный и системный'}>
+                    <option value="roboto-mono">Roboto Mono</option>
+                    <option value="system">{ce ? 'Системин' : 'Системный'}</option>
+                  </optgroup>
+                </select>
+                <p className="mt-1.5 smk-text-label text-slate-500 dark:text-zinc-500">
+                  {ce
+                    ? 'Дерриг программехь элпаш цIеххьана хийцало.'
+                    : 'Буквы во всём приложении сменятся сразу.'}
+                </p>
               </div>
 
               {/* Эффекты одним переключателем: на слабом телефоне тени и
@@ -764,11 +785,11 @@ export default function OnboardingModal() {
 
             <button
               type="button"
-              onClick={() => void finishOnboarding()}
+              onClick={() => setStep('profile')}
               className="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-700"
             >
               <Check className="h-3.5 w-3.5" />
-              {ce ? 'Чуйаккха' : 'Готово'}
+              {ce ? 'Дlаваха' : 'Дальше'}
             </button>
           </div>
         )}

@@ -154,7 +154,8 @@ export default function AdminPage() {
 
       <BottomNav onOpenMenu={() => setIsMenuDrawerOpen(true)} onOpenCreate={() => setIsCreateSheetOpen(true)} isAdmin={isCurrentUserAdmin} />
       <MobileMenuDrawer isOpen={isMenuDrawerOpen} onClose={() => setIsMenuDrawerOpen(false)} isAdmin={isCurrentUserAdmin} />
-      <CreateActionModal isOpen={isCreateSheetOpen} onClose={() => setIsCreateSheetOpen(false)} onOpenCreateProfile={() => {}} />
+      <CreateActionModal isOpen={isCreateSheetOpen}
+        onOpenPlus={() => setIsCreateSheetOpen(true)} onClose={() => setIsCreateSheetOpen(false)} onOpenCreateProfile={() => {}} />
     </div>
   );
 }
