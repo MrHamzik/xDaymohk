@@ -81,7 +81,11 @@ create table if not exists public.user_profiles (
   is_blocked      boolean not null default false,
   status_override text,
   gender          text check (gender in ('male', 'female')),
-  birth_date      date,
+  -- text, а не date: в живой базе колонка хранится строкой 'YYYY-MM-DD'
+  -- (подтверждено дампом supabase/DB.md). Фронтенд пишет и читает именно
+  -- строку. Объявление держим по факту, иначе развёрнутая с нуля база
+  -- разошлась бы с продакшеном.
+  birth_date      text,
   birth_year      integer,
   settlement      text default 'Даймохк',
   created_at      timestamptz not null default now(),
@@ -129,8 +133,13 @@ create table if not exists public.profiles (
   break_end                text,
   is_flexible_schedule     boolean not null default false,
   gender                   text check (gender in ('male', 'female')),
-  birth_date               date,
+  -- text по той же причине, что и в profiles выше: так в живой базе.
+  birth_date               text,
   settlement               text default 'Даймохк',
+  -- timestamptz, а не date: каталог сортируется по этой колонке, и без
+  -- времени анкеты одного дня меняли порядок между запросами (дубли и
+  -- пропуски при листании). В живой базе колонка была date —
+  -- исправлено обновлением update/58.
   created_at               timestamptz not null default now(),
   updated_at               timestamptz not null default now()
 );

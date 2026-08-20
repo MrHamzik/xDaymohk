@@ -17,7 +17,13 @@ export async function loadProfilesFromSupabase(): Promise<Profile[] | null> {
   const { data: profileRows, error } = await supabase
     .from('v_profiles')
     .select('*')
-    .order('created_at', { ascending: false });
+    // Второй ключ сортировки обязателен. created_at у анкет одного дня
+    // совпадает (в базе колонка была date, см. update/58), а при равных
+    // значениях Postgres не гарантирует стабильный порядок: страницы
+    // каталога начинали показывать одни анкеты дважды, а другие
+    // пропускать. id уникален, поэтому порядок становится однозначным.
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: false });
 
   if (error || !profileRows) {
     console.warn('Supabase profiles are unavailable:', error?.message);
