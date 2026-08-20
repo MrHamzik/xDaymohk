@@ -245,12 +245,11 @@ export default function CreateActionModal({
             }}
           >
             <span className={`flex items-center gap-2 ${item.iconOnRight ? 'flex-row' : 'flex-row-reverse'}`}>
-              <span className={`flex max-w-[min(12.5rem,calc(50vw-3.2rem))] flex-col gap-0.5 ${item.iconOnRight ? 'items-end' : 'items-start'}`}>
-                <span className="smk-snake-label smk-text-body font-extrabold leading-snug">
-                  {item.label}
-                </span>
-                {item.chip === 'dev' && <span className="smk-chip smk-note-warn">{t.inDevelopment}</span>}
-                {item.chip === 'plan' && <span className="smk-chip smk-note-info">{t.inPlans}</span>}
+              {/* Пометок «в разработке» здесь нет намеренно: пункт и так
+                  ведёт на страницу, которая всё объясняет, а в компактном
+                  меню плюса подпись из двух строк ломала ряд. */}
+              <span className="smk-snake-label max-w-[min(12.5rem,calc(50vw-3.2rem))] smk-text-body font-extrabold leading-snug">
+                {item.label}
               </span>
               <span className="smk-snake-join" aria-hidden />
               <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl shadow-lg ${item.tone}`}>

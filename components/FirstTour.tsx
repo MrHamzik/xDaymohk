@@ -334,14 +334,6 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
             ))}
           </ol>
 
-          {/* Подсказка только там, где есть что подсвечивать: иначе она
-              отправила бы человека искать несуществующую рамку. */}
-          {step.marks.length > 0 && (
-            <p className="mt-3 smk-text-label leading-relaxed text-slate-500 dark:text-zinc-500">
-              {t.tourHighlight}
-            </p>
-          )}
-
           {step.panel && (
             <div className="mt-4 max-h-[42vh] overflow-y-auto rounded-2xl bg-slate-50 p-3 dark:bg-zinc-900/60">
               {step.panel}

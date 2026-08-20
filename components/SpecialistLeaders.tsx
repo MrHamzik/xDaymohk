@@ -123,7 +123,7 @@ export default function SpecialistLeaders({ onOpen }: SpecialistLeadersProps) {
               key={slot.key}
               type="button"
               onClick={() => onOpen(person.id)}
-              className="smk-lux smk-rays flex items-center gap-3 px-3 py-2.5 text-left transition hover:brightness-95 dark:hover:brightness-110"
+              className="smk-lux smk-rays smk-press flex items-center gap-3 px-3 py-2.5 text-left"
             >
               <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-xl bg-slate-100 dark:bg-zinc-800">
                 <Image

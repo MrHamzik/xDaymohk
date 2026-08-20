@@ -94,16 +94,25 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (!account || !supabase) return;
     let cancelled = false;
-    void (async () => {
-      const session = await supabase.auth.getSession();
-      const token = session.data.session?.access_token;
-      if (!token) return;
-      const res = await fetch('/api/favorites', { headers: { Authorization: `Bearer ${token}` } });
-      const data = await res.json().catch(() => null);
-      if (!cancelled && Array.isArray(data?.ids)) setFavIds(data.ids);
-    })();
+
+    // Загрузка списка — только для вошедшего. А вот подписка на событие
+    // регистрируется ВСЕГДА (см. ниже): раньше весь эффект начинался с
+    // `if (!account) return`, и при первом рендере, пока аккаунт ещё не
+    // подтянулся, слушатель не успевал появиться. Сердечко в карточке
+    // переключалось, запрос уходил, а список в каталоге узнавал об этом
+    // только после перезагрузки страницы.
+    if (account && supabase) {
+      void (async () => {
+        const session = await supabase.auth.getSession();
+        const token = session.data.session?.access_token;
+        if (!token) return;
+        const res = await fetch('/api/favorites', { headers: { Authorization: `Bearer ${token}` } });
+        const data = await res.json().catch(() => null);
+        if (!cancelled && Array.isArray(data?.ids)) setFavIds(data.ids);
+      })();
+    }
+
     const onFav = (event: Event) => {
       const detail = (event as CustomEvent<{ id?: string; on?: boolean }>).detail;
       if (!detail?.id) return;

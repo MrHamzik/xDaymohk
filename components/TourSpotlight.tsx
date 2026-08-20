@@ -62,9 +62,16 @@ export default function TourSpotlight({
   useEffect(() => {
     if (interactive) return;
     const root = document.documentElement;
-    const previous = root.style.overflow;
+    // Восстанавливаем ПУСТУЮ строку, а не снятое значение.
+    //
+    // Раньше сохранялось root.style.overflow на момент запуска эффекта.
+    // Но interactive переключается на каждом шаге: эффект перезапускался,
+    // считывал уже выставленный 'hidden' и потом «восстанавливал» именно
+    // его. Прокрутка страницы оставалась заблокированной навсегда — при
+    // старте гида после авторизации это выглядело как белый застывший
+    // экран, на котором ничего не происходит.
     root.style.overflow = 'hidden';
-    return () => { root.style.overflow = previous; };
+    return () => { root.style.overflow = ''; };
   }, [interactive]);
 
   useEffect(() => {

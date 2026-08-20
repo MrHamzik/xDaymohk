@@ -21,10 +21,12 @@
    Мягкая многослойная тень: близкий контактный слой даёт «прижатость» к
    фону, дальний — объём. Один слой выглядит наклейкой. */
 .smk-lux {
+  /* Значения подобраны вручную (заказчик, п.13): тень заметно ближе к
+     карточке, без дальнего «парящего» слоя. */
   box-shadow:
-    0 1px 2px -1px rgb(var(--smk-shadow-rgb) / calc(0.10 * var(--fx-shadow))),
-    0 8px 24px -12px rgb(var(--smk-shadow-rgb) / calc(0.22 * var(--fx-shadow))),
-    0 24px 48px -28px rgb(var(--smk-shadow-rgb) / calc(0.28 * var(--fx-shadow)));
+    0 1px 8px -4px rgb(var(--smk-shadow-rgb) / calc(0.10 * var(--fx-shadow))),
+    0 0 16px -8px rgb(var(--smk-shadow-rgb) / calc(0.22 * var(--fx-shadow))),
+    0 0 24px -12px rgb(var(--smk-shadow-rgb) / calc(0.28 * var(--fx-shadow)));
 }
 .smk-lux:hover {
   box-shadow:
@@ -561,4 +563,25 @@ textarea.smk-field:focus {
 /* Пульсация — украшение. Рамка и вырез несут смысл, их оставляем. */
 @media (prefers-reduced-motion: reduce) {
   .smk-tour-hole { animation: none; }
+}
+
+/* --- Нажимаемая карточка ------------------------------------------------------
+   При наведении — только подсветка рамкой и тенью, БЕЗ затемнения:
+   brightness-95 гасил всю карточку вместе с фотографией, и она выглядела
+   потухшей, а не выделенной. Увеличение оставлено на удержание (:active),
+   как просил заказчик, — пара процентов, чтобы отклик читался пальцем. */
+.smk-press {
+  transition:
+    box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.28s ease,
+    transform 0.12s ease;
+}
+.smk-press:hover {
+  border-color: rgb(var(--smk-gold-rgb) / 0.4);
+}
+.smk-press:active {
+  transform: scale(1.02);
+}
+@media (prefers-reduced-motion: reduce) {
+  .smk-press:active { transform: none; }
 }

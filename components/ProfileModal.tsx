@@ -151,10 +151,13 @@ export default function ProfileModal({
           onTouchEnd={swipe.onTouchEnd}
         >
           <div className="flex items-center gap-2">
-            <div className="min-w-0">
+            {/* flex-1 держит место, даже когда статуса нет.
+                WorkingStatusBadge возвращает null у неспециалистов, и
+                без распорки блок схлопывался — иконки съезжали влево. */}
+            <div className="min-w-0 flex-1">
               <WorkingStatusBadge profile={profile} />
             </div>
-            <div className="ml-auto flex shrink-0 items-center gap-1.5">
+            <div className="flex shrink-0 items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => {
