@@ -110,7 +110,7 @@ export default function ProfileCard({
         <img src="/cards/orn-corner.webp" alt="" className="smk-cat-orn" />
         <div className="smk-cat-medal">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/cards/frame-medal.png" alt="" className="smk-cat-frame" />
+          <img src="/cards/frame-medal.webp" alt="" className="smk-cat-frame" />
           <div
             className={`smk-ring ${statusRing.className}`}
             title={statusRing.label ?? undefined}
