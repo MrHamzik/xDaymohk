@@ -765,6 +765,76 @@ create trigger trg_profiles_after_delete
 -- ---------------------------------------------------------------------------
 
 -- Личная анкета (id = personal-<auth.uid()>), идемпотентно
+-- Единственное место, где описано, что такое «личная анкета».
+--
+-- Раньше этот список из 13 колонок был скопирован в четыре места:
+-- ensure_personal_profile(), триггер handle_new_auth_user(), бэкфилл в
+-- конце файла и обновление update/17. Копии разъехались — триггер не
+-- заполнял пол и дату рождения. Теперь список существует один раз.
+--
+-- Функция внутренняя: принимает user_id аргументом, поэтому наружу не
+-- выдаётся (см. revoke ниже). Клиенты вызывают ensure_personal_profile(),
+-- которая берёт auth.uid() сама и подделать владельца не позволяет.
+create or replace function public.create_personal_profile(
+  p_user_id    uuid,
+  p_full_name  text,
+  p_avatar_url text default '',
+  p_phone      text default ''
+)
+returns public.profiles
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_personal_id text := 'personal-' || p_user_id::text;
+  v_row         public.profiles;
+  v_gender      text;
+  v_birth_date  text;
+begin
+  -- Пол и дату рождения берём из анкеты аккаунта: человек ввёл их при
+  -- регистрации, и просить их второй раз незачем.
+  select u.gender, u.birth_date
+    into v_gender, v_birth_date
+    from public.user_profiles u
+   where u.id = p_user_id;
+
+  insert into public.profiles (
+    id, owner_id, full_name, avatar_url, is_specialist, is_personal,
+    bio, workplace_address, workplace_coords, phone, hide_phone,
+    same_as_phone_whatsapp, settlement, gender, birth_date
+  ) values (
+    v_personal_id,
+    p_user_id,
+    coalesce(nullif(trim(p_full_name), ''), 'Житель Даймохк'),
+    coalesce(p_avatar_url, ''),
+    false,
+    true,
+    'Житель Даймохк. Личная анкета.',
+    'Даймохк',
+    '{"lat":43.288024,"lng":45.298989}'::jsonb,
+    coalesce(p_phone, ''),
+    true,
+    false,
+    'Даймохк',
+    v_gender,
+    v_birth_date
+  )
+  on conflict (id) do nothing
+  returning * into v_row;
+
+  if v_row.id is null then
+    select * into v_row from public.profiles where id = v_personal_id;
+  end if;
+
+  return v_row;
+end;
+$$;
+
+revoke all on function public.create_personal_profile(uuid, text, text, text) from public;
+revoke all on function public.create_personal_profile(uuid, text, text, text) from anon;
+revoke all on function public.create_personal_profile(uuid, text, text, text) from authenticated;
+
 create or replace function public.ensure_personal_profile(
   p_full_name text,
   p_avatar_url text default '',
@@ -776,10 +846,11 @@ security definer
 set search_path = public
 as $$
 declare
-  v_user_id uuid := auth.uid();
-  v_existing public.profiles;
+  v_user_id     uuid := auth.uid();
+  v_existing    public.profiles;
   v_personal_id text;
-  v_row public.profiles;
+  v_gender      text;
+  v_birth_date  text;
 begin
   if v_user_id is null then
     raise exception 'Not authenticated';
@@ -790,32 +861,25 @@ begin
   select * into v_existing
     from public.profiles
    where id = v_personal_id;
+
   if found then
+    -- Анкета уже есть: дозаполняем пол и дату, если их не было. Так
+    -- лечатся анкеты, созданные старой версией триггера.
+    if v_existing.gender is null or v_existing.birth_date is null then
+      select u.gender, u.birth_date into v_gender, v_birth_date
+        from public.user_profiles u where u.id = v_user_id;
+      update public.profiles
+         set gender     = coalesce(v_existing.gender, v_gender),
+             birth_date = coalesce(v_existing.birth_date, v_birth_date)
+       where id = v_personal_id
+      returning * into v_existing;
+    end if;
     return v_existing;
   end if;
 
-  insert into public.profiles (
-    id, owner_id, full_name, avatar_url, is_specialist, is_personal,
-    bio, workplace_address, workplace_coords, phone, hide_phone,
-    same_as_phone_whatsapp, settlement
-  ) values (
-    v_personal_id,
-    v_user_id,
-    coalesce(nullif(trim(p_full_name), ''), 'Житель Даймохк'),
-    coalesce(p_avatar_url, ''),
-    false,
-    true,
-    'Житель Даймохк. Личная анкета.',
-    'Даймохк',
-    '{"lat":43.288024,"lng":45.298989}'::jsonb,
-    coalesce(p_phone, ''),
-    true,
-    false,
-    'Даймохк'
-  )
-  returning * into v_row;
-
-  return v_row;
+  return public.create_personal_profile(
+    v_user_id, p_full_name, p_avatar_url, p_phone
+  );
 end;
 $$;
 
@@ -848,7 +912,6 @@ declare
   v_full_name text;
   v_avatar_url text;
   v_phone text;
-  v_personal_id text;
   v_is_admin boolean;
 begin
   v_full_name := coalesce(
@@ -858,7 +921,6 @@ begin
   );
   v_avatar_url := coalesce(new.raw_user_meta_data->>'avatar_url', '');
   v_phone := coalesce(new.phone, '');
-  v_personal_id := 'personal-' || new.id::text;
   v_is_admin := lower(coalesce(new.email, '')) in (
     'mr.hamzik1026@gmail.com',
     'nabis95@gmail.com'
@@ -868,26 +930,11 @@ begin
   values (new.id, new.email, v_full_name, v_avatar_url, v_phone, v_is_admin)
   on conflict (id) do nothing;
 
-  insert into public.profiles (
-    id, owner_id, full_name, avatar_url, is_specialist, is_personal,
-    bio, workplace_address, workplace_coords, phone, hide_phone,
-    same_as_phone_whatsapp, settlement
-  ) values (
-    v_personal_id,
-    new.id,
-    v_full_name,
-    v_avatar_url,
-    false,
-    true,
-    'Житель Даймохк. Личная анкета.',
-    'Даймохк',
-    '{"lat":43.288024,"lng":45.298989}'::jsonb,
-    v_phone,
-    true,
-    false,
-    'Даймохк'
-  )
-  on conflict (id) do nothing;
+  -- Порядок важен: user_profiles заполняется первой, и функция ниже
+  -- сразу подхватывает из неё пол и дату рождения.
+  perform public.create_personal_profile(
+    new.id, v_full_name, v_avatar_url, v_phone
+  );
 
   return new;
 end;
@@ -910,27 +957,32 @@ select
 from auth.users au
 on conflict (id) do nothing;
 
-insert into public.profiles (
-  id, owner_id, full_name, avatar_url, is_specialist, is_personal,
-  bio, workplace_address, workplace_coords, phone, hide_phone,
-  same_as_phone_whatsapp, settlement
-)
-select
-  'personal-' || au.id::text,
-  au.id,
-  coalesce(au.raw_user_meta_data->>'full_name', au.raw_user_meta_data->>'name', 'Житель Даймохк'),
-  coalesce(au.raw_user_meta_data->>'avatar_url', ''),
-  false,
-  true,
-  'Житель Даймохк. Личная анкета.',
-  'Даймохк',
-  '{"lat":43.288024,"lng":45.298989}'::jsonb,
-  coalesce(au.phone, ''),
-  true,
-  false,
-  'Даймохк'
-from auth.users au
-on conflict (id) do nothing;
+-- Личные анкеты для тех, у кого их ещё нет. Список колонок здесь не
+-- повторяем: create_personal_profile() — единственное место, где он
+-- описан. Она же подтянет пол и дату рождения из user_profiles,
+-- заполненной строчкой выше.
+do $$
+declare
+  r record;
+begin
+  for r in
+    select
+      au.id,
+      coalesce(au.raw_user_meta_data->>'full_name', au.raw_user_meta_data->>'name', '') as full_name,
+      coalesce(au.raw_user_meta_data->>'avatar_url', '') as avatar_url,
+      coalesce(au.phone, '') as phone
+    from auth.users au
+    where not exists (
+      select 1 from public.profiles p
+       where p.id = 'personal-' || au.id::text
+    )
+  loop
+    perform public.create_personal_profile(
+      r.id, r.full_name, r.avatar_url, r.phone
+    );
+  end loop;
+end;
+$$;
 
 
 -- ---------------------------------------------------------------------------
