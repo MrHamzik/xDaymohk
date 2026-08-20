@@ -6,6 +6,7 @@ import { ArrowLeft, ChevronRight, List, type LucideIcon } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import Prose from '@/components/reading/Prose';
 import type { Article, ArticleSection } from '@/lib/articles';
+import { saveReadingProgress } from '@/lib/reading-progress';
 import EmptyState from '@/components/ui/EmptyState';
 import { ListSkeleton } from '@/components/ui/FeedSkeleton';
 
@@ -42,10 +43,32 @@ export default function ReadingPage({
     let cancelled = false;
     fetch(`/api/articles?section=${section}`, { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : { articles: [] }))
-      .then((d) => { if (!cancelled) setArticles(Array.isArray(d.articles) ? d.articles : []); })
+      .then((d) => {
+        if (cancelled) return;
+        const list: Article[] = Array.isArray(d.articles) ? d.articles : [];
+        setArticles(list);
+        try {
+          const wanted = new URLSearchParams(window.location.search).get('chapter');
+          if (wanted && list.some((item) => item.id === wanted)) setActiveId(wanted);
+        } catch { /* private */ }
+      })
       .catch(() => { if (!cancelled) setArticles([]); });
     return () => { cancelled = true; };
   }, [section]);
+
+  useEffect(() => {
+    if (!articles || !activeId) return;
+    const index = articles.findIndex((item) => item.id === activeId);
+    if (index < 0) return;
+    const article = articles[index];
+    saveReadingProgress({
+      section,
+      articleId: article.id,
+      titleRu: article.titleRu,
+      titleCe: article.titleCe,
+      index,
+    });
+  }, [articles, activeId, section]);
 
   // Открытая глава. Пока ничего не выбрано — показываем оглавление:
   // у длинного текста это правильная точка входа, а не первая глава.

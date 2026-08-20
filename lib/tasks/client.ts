@@ -42,6 +42,7 @@ export interface TaskListFilters {
   status?: string;
   limit?: number;
   offset?: number;
+  sort?: 'reward';
 }
 
 export async function fetchTasks(filters: TaskListFilters = {}): Promise<Task[]> {
@@ -53,6 +54,7 @@ export async function fetchTasks(filters: TaskListFilters = {}): Promise<Task[]>
   if (filters.status) params.set('status', filters.status);
   if (filters.limit) params.set('limit', String(filters.limit));
   if (filters.offset) params.set('offset', String(filters.offset));
+  if (filters.sort) params.set('sort', filters.sort);
 
   const response = await fetch(`/api/tasks?${params.toString()}`, { cache: 'no-store' });
   const data = await parse<{ tasks: Task[] }>(response);

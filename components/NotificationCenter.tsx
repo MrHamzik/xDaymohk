@@ -1,7 +1,7 @@
 'use client';
 
 import { createPortal } from 'react-dom';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { Bell, Briefcase, CarFront, CheckCheck, LifeBuoy, MessageSquare, ShieldAlert, Settings2, Trash2, X } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { useI18n } from '@/lib/i18n';
@@ -20,7 +20,12 @@ function formatDate(value: string) {
   }).format(date);
 }
 
-export default function NotificationCenter() {
+interface NotificationCenterProps {
+  /** Свой вызов вместо колокольчика (карточка на главной). */
+  trigger?: (api: { open: () => void; unreadCount: number }) => ReactNode;
+}
+
+export default function NotificationCenter({ trigger }: NotificationCenterProps) {
   const { account } = useAuth();
   const { language } = useI18n();
   const { notifications, unreadCount, markRead, markAllRead, deleteNotification } = useNotifications();
@@ -66,6 +71,7 @@ export default function NotificationCenter() {
 
   return (
     <div className="relative" ref={containerRef}>
+      {trigger ? trigger({ open: () => setIsOpen(true), unreadCount }) : (
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
@@ -85,6 +91,7 @@ export default function NotificationCenter() {
           </span>
         )}
       </button>
+      )}
 
       {/* Fullscreen Notification Window */}
       {isOpen && typeof document !== 'undefined' && createPortal(

@@ -60,6 +60,7 @@ export async function GET(request: Request) {
   // Пагинация обязательна: без потолка лента однажды положит и клиент, и БД.
   const pageLimit = Math.min(Math.max(Number(url.searchParams.get('limit')) || 50, 1), 100);
   const offset = Math.max(Number(url.searchParams.get('offset')) || 0, 0);
+  const sort = url.searchParams.get('sort');
 
   const client = createClient(supabaseUrl, anonKey, {
     auth: { autoRefreshToken: false, persistSession: false },
@@ -69,9 +70,13 @@ export async function GET(request: Request) {
   // здесь дублировать не нужно.
   let query = client
     .from('v_tasks_feed')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .range(offset, offset + pageLimit - 1);
+    .select('*');
+  if (sort === 'reward') {
+    query = query.order('reward', { ascending: false }).order('created_at', { ascending: false });
+  } else {
+    query = query.order('created_at', { ascending: false });
+  }
+  query = query.range(offset, offset + pageLimit - 1);
 
   if (paid === '1') query = query.eq('is_paid', true);
   if (paid === '0') query = query.eq('is_paid', false);
