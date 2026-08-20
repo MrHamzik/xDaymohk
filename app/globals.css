@@ -2503,3 +2503,232 @@ textarea.smk-field:focus {
 .smk-btn-google:hover { filter: brightness(1.04); }
 .smk-btn-google:active { transform: scale(0.98); }
 .smk-btn-google:disabled { opacity: 0.5; }
+
+/* =============================================================================
+   Фирменная карточка анкеты (п. 7)
+   -----------------------------------------------------------------------------
+   Макет как на шаблоне «карточка специалиста»: пейзаж в шапке, вайнахский
+   орнамент в углу, белое полотно со строками, волна и пейзаж снизу.
+   Рисунок живёт в background-size: cover и в контейнерных единицах —
+   тянется за шириной и высотой карточки, а не режется фиксированным кропом.
+
+   Оттенок пейзажа и орнамента зависит от сферы (--smk-cat-tint).
+   ========================================================================== */
+.smk-cat {
+  --smk-cat-tint: #c4a46a;
+  --smk-cat-hue: 0deg;
+  container-type: inline-size;
+  container-name: smk-cat;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.smk-cat--doctor      { --smk-cat-tint: #2f8f7b; --smk-cat-hue: 140deg; }
+.smk-cat--builder     { --smk-cat-tint: #c47a3a; --smk-cat-hue: -18deg; }
+.smk-cat--teacher     { --smk-cat-tint: #4d6fb3; --smk-cat-hue: 210deg; }
+.smk-cat--mechanic    { --smk-cat-tint: #5b6b7a; --smk-cat-hue: 200deg; }
+.smk-cat--service     { --smk-cat-tint: #b56b7a; --smk-cat-hue: -40deg; }
+.smk-cat--trade       { --smk-cat-tint: #c9a227; --smk-cat-hue: 28deg; }
+.smk-cat--agriculture { --smk-cat-tint: #6a8a3a; --smk-cat-hue: 70deg; }
+.smk-cat--other       { --smk-cat-tint: #c4a46a; --smk-cat-hue: 8deg; }
+.smk-cat--resident    { --smk-cat-tint: #b08958; --smk-cat-hue: 0deg; }
+
+.smk-cat-banner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: clamp(0.55rem, 3.2cqw, 0.9rem);
+  height: clamp(5.1rem, 34cqw, 7.4rem);
+  padding: 0.7rem 0.85rem 0.65rem;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.smk-cat-banner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background-image: url('/cards/scene-top.jpg');
+  background-size: cover;
+  background-position: center 42%;
+  filter: hue-rotate(var(--smk-cat-hue));
+  transform: scale(1.04);
+}
+
+.smk-cat-banner::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      100deg,
+      color-mix(in srgb, #fff6e4 88%, var(--smk-cat-tint)) 0%,
+      color-mix(in srgb, #fff6e4 58%, transparent) 36%,
+      transparent 64%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--smk-cat-tint) 18%, transparent),
+      transparent 70%
+    );
+}
+
+html.dark .smk-cat-banner::after {
+  background:
+    linear-gradient(
+      100deg,
+      color-mix(in srgb, var(--smk-card-a) 86%, var(--smk-cat-tint)) 0%,
+      color-mix(in srgb, var(--smk-card-a) 42%, transparent) 40%,
+      transparent 68%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--smk-cat-tint) 28%, transparent),
+      transparent 72%
+    );
+}
+
+/* Угол-орнамент: четверть круга, cover — не сжимается в полоску. */
+.smk-cat-orn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: clamp(4.6rem, 42cqw, 8.4rem);
+  height: 118%;
+  pointer-events: none;
+  background-image: url('/cards/orn-corner.jpg');
+  background-size: cover;
+  background-position: center;
+  clip-path: ellipse(92% 118% at 100% 0%);
+  filter: hue-rotate(var(--smk-cat-hue));
+  box-shadow: inset 6px 0 0 -4px var(--smk-gold);
+}
+
+.smk-cat-orn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    120% 140% at 100% 0%,
+    transparent 54%,
+    color-mix(in srgb, var(--smk-gold) 78%, transparent) 56%,
+    transparent 58%
+  );
+}
+
+.smk-cat-medal {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  width: clamp(3.15rem, 16cqw, 4.15rem);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+}
+
+/* Солнце-медальон вокруг аватара, как на шаблоне. */
+.smk-cat-medal::before {
+  content: '';
+  position: absolute;
+  inset: -18%;
+  background:
+    repeating-conic-gradient(
+      from 7deg,
+      var(--smk-gold) 0 10deg,
+      transparent 10deg 30deg
+    );
+  border-radius: 50%;
+  opacity: 0.92;
+  filter: drop-shadow(0 1px 0 var(--smk-gold-deep));
+}
+
+.smk-cat-medal .smk-ring {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+}
+
+.smk-cat-head {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  flex: 1;
+  padding-right: clamp(2.4rem, 22cqw, 4.6rem);
+}
+
+.smk-cat-head .smk-title {
+  text-shadow: 0 1px 0 rgb(255 255 255 / 0.45);
+}
+
+html.dark .smk-cat-head .smk-title {
+  text-shadow: 0 1px 8px rgb(0 0 0 / 0.45);
+}
+
+.smk-cat-body {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  margin-bottom: -1.35rem;
+  padding: 0.55rem 0.9rem 1.7rem;
+  background: var(--smk-card-a);
+  border-bottom-right-radius: 42% 2.4rem;
+}
+
+.smk-cat-land {
+  position: relative;
+  z-index: 1;
+  min-height: clamp(3.4rem, 24cqw, 5.1rem);
+  margin-top: auto;
+  overflow: hidden;
+}
+
+.smk-cat-land::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url('/cards/scene-foot.jpg');
+  background-size: cover;
+  background-position: center 58%;
+  filter: hue-rotate(var(--smk-cat-hue));
+}
+
+.smk-cat-land::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: clamp(42%, 58cqw, 64%);
+  height: clamp(1.15rem, 9cqw, 1.7rem);
+  background-image: url('/cards/orn-strip.jpg');
+  background-size: cover;
+  background-position: center;
+  clip-path: polygon(0 0, 86% 0, 100% 100%, 0 100%);
+  filter: hue-rotate(var(--smk-cat-hue));
+  box-shadow: 0 -1px 0 color-mix(in srgb, var(--smk-gold) 70%, transparent);
+}
+
+.smk-cat-actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: inherit;
+  padding: 1.35rem 0.85rem 0.55rem;
+}
+
+.smk-cat-actions .smk-cat-docs {
+  color: #fff8e8;
+  text-shadow: 0 1px 4px rgb(0 0 0 / 0.45);
+}
+
+html.dark .smk-cat-actions .smk-cat-docs {
+  color: #fff4d8;
+}
