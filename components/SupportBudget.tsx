@@ -10,7 +10,6 @@ const DEFAULT_USD_RUB_RATE = 90;
 const MONTHLY_VERCEL_USD = 20;
 const MONTHLY_SUPABASE_USD = 20;
 const MONTHLY_UPSTASH_USD = 10;
-const MONTHLY_SENTRY_USD = 26;
 const MONTHLY_SERVER_RUB = 1140;
 const MONTHLY_DOMAIN_RUB = 25;
 const MONTHLY_WHOIS_RUB = 21;
@@ -119,7 +118,6 @@ export default function SupportBudget() {
   const totalRub = MONTHLY_VERCEL_USD * usdRate
     + MONTHLY_SUPABASE_USD * usdRate
     + MONTHLY_UPSTASH_USD * usdRate
-    + MONTHLY_SENTRY_USD * usdRate
     + MONTHLY_SERVER_RUB
     + MONTHLY_DOMAIN_RUB
     + MONTHLY_WHOIS_RUB
@@ -180,11 +178,6 @@ export default function SupportBudget() {
           name="Upstash"
           hint="Быстрая память сервера: очередь писем и защита от спама, чтобы сайт не падал от наплыва."
           value={<>10 $ <span className="font-normal text-slate-500 dark:text-zinc-500">(~ {formatRubles(MONTHLY_UPSTASH_USD * usdRate)})</span></>}
-        />
-        <BudgetRow
-          name="Sentry"
-          hint="Журнал поломок. Показывает, где сайт упал, чтобы починить до жалоб."
-          value={<>26 $ <span className="font-normal text-slate-500 dark:text-zinc-500">(~ {formatRubles(MONTHLY_SENTRY_USD * usdRate)})</span></>}
         />
         <BudgetRow
           name="Выделенный сервер"
