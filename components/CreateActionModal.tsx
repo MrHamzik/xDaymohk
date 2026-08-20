@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Bot, Briefcase, CarFront, Globe2, HandHeart, UserPlus, X } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
+import { emitTourEvent, useTourActive } from '@/lib/tour';
 
 interface CreateActionModalProps {
   isOpen: boolean;
@@ -31,14 +32,33 @@ export default function CreateActionModal({
 }: CreateActionModalProps) {
   const { t } = useI18n();
   const router = useRouter();
+  // Во время гида меню плюса открывается и закрывается по-настоящему,
+  // но пункты не срабатывают: человек изучает список, а не создаёт
+  // анкету на середине обучения.
+  const tourActive = useTourActive();
   const [isMounted, setIsMounted] = useState(false);
+  // Узел остаётся в дереве, пока идёт анимация закрытия. Раньше стояло
+  // `if (!isOpen) return null` — меню исчезало мгновенно: открытие было
+  // плавным, а закрытие рубилось насухо.
+  const [isPresent, setIsPresent] = useState(false);
   const [anchor, setAnchor] = useState({ x: 0, y: 0, midX: 0, desktop: false });
+
+  // Длительность обратной анимации. Совпадает с transition ниже.
+  const CLOSE_MS = 260;
 
   useEffect(() => {
     if (!isOpen) {
       setIsMounted(false);
-      return;
+      if (!isPresent) return;
+      // Гид на шаге «Задания» ждёт именно закрытия крестиком.
+      emitTourEvent('plus-close');
+      // Снимаем узел только после того, как иконки уехали и фон
+      // разморозился, иначе прощальный кадр не успеет отрисоваться.
+      const timer = window.setTimeout(() => setIsPresent(false), CLOSE_MS);
+      return () => window.clearTimeout(timer);
     }
+    setIsPresent(true);
+    emitTourEvent('plus-open');
     document.body.style.overflow = 'hidden';
     const place = () => {
       const desktop = window.innerWidth >= 1024;
@@ -74,7 +94,7 @@ export default function CreateActionModal({
       window.removeEventListener('resize', place);
       window.visualViewport?.removeEventListener('resize', place);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, isPresent]);
 
   const actions = useMemo(() => [
     {
@@ -141,7 +161,7 @@ export default function CreateActionModal({
     });
   }, [actions]);
 
-  if (!isOpen) return null;
+  if (!isOpen && !isPresent) return null;
 
   const last = laid[laid.length - 1];
   const topY = last ? anchor.y + last.y : anchor.y - 80;
@@ -151,8 +171,8 @@ export default function CreateActionModal({
 
   return (
     <div
-      className={`fixed inset-0 z-[90] bg-zinc-950/55 backdrop-blur-md transition-opacity duration-300 ${
-        isMounted ? 'opacity-100' : 'opacity-0'
+      className={`fixed inset-0 z-[90] bg-zinc-950/55 transition-all duration-[260ms] ease-out ${
+        isMounted ? 'opacity-100 backdrop-blur-md' : 'opacity-0 backdrop-blur-0'
       }`}
       role="dialog"
       aria-modal="true"
@@ -191,6 +211,8 @@ export default function CreateActionModal({
             type="button"
             onClick={(event) => {
               event.stopPropagation();
+              // Во время гида пункты показываются, но никуда не ведут.
+              if (tourActive) return;
               item.run();
             }}
             aria-label={item.label}
@@ -200,7 +222,11 @@ export default function CreateActionModal({
               top,
               transform: isMounted ? 'translate(-50%, -50%) scale(1)' : 'translate(-50%, -50%) scale(0.72)',
               opacity: isMounted ? 1 : 0,
-              transition: `transform 0.4s cubic-bezier(0.16, 1, 0.3, 1) ${index * 45}ms, opacity 0.3s ease ${index * 45}ms`,
+              // При закрытии лесенка разворачивается: дальние иконки
+              // уходят первыми, ближние последними.
+              transition: isMounted
+                ? `transform 0.4s cubic-bezier(0.16, 1, 0.3, 1) ${index * 45}ms, opacity 0.3s ease ${index * 45}ms`
+                : `transform 0.24s cubic-bezier(0.4, 0, 1, 1) ${(laid.length - 1 - index) * 30}ms, opacity 0.2s ease ${(laid.length - 1 - index) * 30}ms`,
             }}
           >
             <span className={`flex items-center gap-2 ${item.iconOnRight ? 'flex-row' : 'flex-row-reverse'}`}>
@@ -227,7 +253,13 @@ export default function CreateActionModal({
         style={{
           left: anchor.x,
           top: anchor.y,
-          transform: 'translate(-50%, -50%)',
+          // Крестик гаснет вместе с остальным меню, а не пропадает
+          // раньше него.
+          transform: isMounted
+            ? 'translate(-50%, -50%) rotate(0deg) scale(1)'
+            : 'translate(-50%, -50%) rotate(-90deg) scale(0.6)',
+          opacity: isMounted ? 1 : 0,
+          transition: 'transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease',
         }}
       >
         <X className="h-7 w-7 stroke-[2.5]" />

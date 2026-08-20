@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import SidebarNav from '@/components/SidebarNav';
+import { emitTourEvent } from '@/lib/tour';
 
 interface MobileMenuDrawerProps {
   isOpen: boolean;
@@ -19,7 +20,11 @@ export default function MobileMenuDrawer({ isOpen, onClose, isAdmin = false }: M
   const pathname = usePathname();
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      emitTourEvent('menu-close');
+      return;
+    }
+    emitTourEvent('menu-open');
     document.body.style.overflow = 'hidden';
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose();

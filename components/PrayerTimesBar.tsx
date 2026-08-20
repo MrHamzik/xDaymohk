@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Calendar, Timer } from 'lucide-react';
+import { Calendar, Sunrise, Timer } from 'lucide-react';
 import { getCurrentDayPrayerTimes, DEFAULT_LAT, DEFAULT_LNG } from '@/lib/islamic';
 import { getUserCoords } from '@/lib/geo';
 import { useI18n } from '@/lib/i18n';
@@ -56,13 +56,16 @@ export default function PrayerTimesBar() {
     : `${minsRemaining} мин`;
 
   const nextPrayerName = language === 'ce' ? data.nextPrayer.item.nameCe : data.nextPrayer.item.nameRu;
+  // Восход — не намаз, поэтому в общей строке ему не место.
+  const sunrise = data.items.find((item) => item.id === 'sunrise');
+  const prayersOnly = data.items.filter((item) => item.id !== 'sunrise');
   if (settings.hidePrayer) return null;
 
   return (
     <>
       <div className="smk-panel smk-prayer space-y-1.5 p-2 shadow-sm">
         {/* Countdown Header: Strictly "До [Название]" */}
-        <div className="flex items-center justify-between gap-1.5 border-b border-slate-100 pb-1.5 dark:border-zinc-800/60 text-xs">
+        <div className="flex items-center justify-between gap-1.5 text-xs">
           <div className="flex items-center gap-1.5 font-extrabold text-emerald-700 dark:text-emerald-400">
             <Timer className="h-3.5 w-3.5 animate-pulse text-emerald-600 dark:text-emerald-400" />
             <span>
@@ -87,9 +90,14 @@ export default function PrayerTimesBar() {
           </div>
         </div>
 
-        {/* Horizontal All-in-One Row (Фаджр, Восход, Зухр, Аср, Магриб, Иша strictly in one line) */}
-        <div className="grid grid-cols-6 gap-1 smk-text-label sm:smk-text-label font-semibold text-center">
-          {data.items.map((prayer) => {
+        {/* Разделитель под «До намаза / счётчик / календарь». */}
+        <hr className="smk-orn my-1" />
+
+        {/* Пять намазов в ряд. Восход вынесен вниз отдельной строкой:
+            это не намаз, а граница времени Фаджра, и в общем ряду он
+            читался как шестая молитва. */}
+        <div className="grid grid-cols-5 gap-1 smk-text-label sm:smk-text-label font-semibold text-center">
+          {prayersOnly.map((prayer) => {
             const isActive = prayer.id === data.activePrayer?.id;
             const name = language === 'ce' ? prayer.nameCe : prayer.nameRu;
             return (
@@ -107,6 +115,19 @@ export default function PrayerTimesBar() {
             );
           })}
         </div>
+
+        {sunrise && (
+          <>
+            {/* Тот же орнаментальный разделитель, что и над строкой
+                намазов: восход отделён сверху и снизу одинаково. */}
+            <hr className="smk-orn my-1" />
+            <div className="flex items-center justify-center gap-1.5 smk-text-label font-semibold text-slate-600 dark:text-zinc-400">
+              <Sunrise className="h-3.5 w-3.5 text-amber-500 dark:text-amber-400" />
+              <span>{language === 'ce' ? sunrise.nameCe : sunrise.nameRu}</span>
+              <span className="font-mono font-bold">{sunrise.time}</span>
+            </div>
+          </>
+        )}
       </div>
 
       <PrayerTimesModal

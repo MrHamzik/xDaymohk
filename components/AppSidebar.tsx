@@ -38,7 +38,12 @@ export default function AppSidebar({ isAdmin = false }: { isAdmin?: boolean }) {
   };
 
   return (
-    <aside className={`smk-rail-slot ${open ? 'smk-rail-slot--open' : ''}`} aria-label="Боковое меню">
+    <aside
+      className={`smk-rail-slot ${open ? 'smk-rail-slot--open' : ''}`}
+      aria-label="Боковое меню"
+      // Метка для гида: на ПК роль кнопки «Меню» играет эта колонка.
+      data-tour="rail-menu"
+    >
       <div className={`smk-rail-dock ${open ? 'smk-rail--open' : ''}`}>
         <button
           type="button"

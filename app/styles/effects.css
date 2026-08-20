@@ -403,11 +403,33 @@ textarea.smk-field:focus {
   transform: scale(0.96);
 }
 
-/* 2. Все четыре слота, пока значок в руке, — пунктир: показывает, что
-      это цели, куда можно опустить. */
+/* 2. Все четыре слота, пока значок в руке, — бегущий светящийся пунктир:
+      неподвижная рамка читалась как обычная обводка поля, движение же
+      сразу говорит «сюда можно опустить».
+
+      Штрихи рисуются фоном, а не outline: outline пунктиром двигать
+      нельзя, а background-position анимируется и крутится по кругу.
+      Четыре повторяющихся градиента — по одному на сторону. */
 .smk-quick-armed {
-  outline: 2px dashed color-mix(in srgb, var(--color-emerald-500) 45%, transparent);
-  outline-offset: -2px;
+  position: relative;
+  border-radius: 0.75rem;
+  background-image:
+    repeating-linear-gradient(90deg, var(--color-emerald-400) 0 8px, transparent 8px 16px),
+    repeating-linear-gradient(90deg, var(--color-emerald-400) 0 8px, transparent 8px 16px),
+    repeating-linear-gradient(0deg, var(--color-emerald-400) 0 8px, transparent 8px 16px),
+    repeating-linear-gradient(0deg, var(--color-emerald-400) 0 8px, transparent 8px 16px);
+  background-size: 100% 2px, 100% 2px, 2px 100%, 2px 100%;
+  background-position: 0 0, 0 100%, 0 0, 100% 0;
+  background-repeat: no-repeat;
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--color-emerald-400) 70%, transparent));
+  animation: smk-quick-march 0.6s linear infinite;
+}
+
+/* Штрихи бегут по периметру: верх вправо, низ влево, бока навстречу. */
+@keyframes smk-quick-march {
+  to {
+    background-position: 16px 0, -16px 100%, 0 -16px, 100% 16px;
+  }
 }
 
 /* 3. Слот под курсором — сплошная рамка, свечение и пульс. Свечение
@@ -427,6 +449,8 @@ textarea.smk-field:focus {
 @media (prefers-reduced-motion: reduce) {
   .smk-quick-hot { animation: none; }
   .smk-quick-dragging { transform: none; }
+  /* Штрихи остаются видимыми, просто перестают бежать. */
+  .smk-quick-armed { animation: none; }
 }
 
 /* --- Фирменный знак и вход -------------------------------------------------
@@ -504,9 +528,17 @@ textarea.smk-field:focus {
    Вырез вокруг настоящей кнопки: гид показывает пальцем, а не описывает
    словами. Затемнение — одна огромная тень вокруг окна, поэтому «дырка»
    цельная, без щелей на дробных пикселях. */
+/* Затемнение 87%: было 72%, но подсвеченная кнопка недостаточно
+   выделялась на светлой теме.
+
+   Пульсирует ТОЛЬКО свечение. Раньше вместе с ним менялась толщина
+   рамки (2px → 3px), и на дробном devicePixelRatio браузер округлял
+   её по-разному от кадра к кадру — вырез заметно «дёргался». Радиус
+   размытия и прозрачность так не округляются, поэтому анимация
+   получается ровной на любом экране. */
 .smk-tour-hole {
   box-shadow:
-    0 0 0 9999px rgb(9 9 11 / 72%),
+    0 0 0 9999px rgb(9 9 11 / 87%),
     0 0 0 2px var(--color-emerald-400),
     0 0 22px 4px color-mix(in srgb, var(--color-emerald-400) 55%, transparent);
   animation: smk-tour-breathe 1.6s ease-in-out infinite;
@@ -514,15 +546,15 @@ textarea.smk-field:focus {
 @keyframes smk-tour-breathe {
   0%, 100% {
     box-shadow:
-      0 0 0 9999px rgb(9 9 11 / 72%),
+      0 0 0 9999px rgb(9 9 11 / 87%),
       0 0 0 2px var(--color-emerald-400),
       0 0 22px 4px color-mix(in srgb, var(--color-emerald-400) 55%, transparent);
   }
   50% {
     box-shadow:
-      0 0 0 9999px rgb(9 9 11 / 72%),
-      0 0 0 3px var(--color-emerald-300),
-      0 0 30px 8px color-mix(in srgb, var(--color-emerald-300) 75%, transparent);
+      0 0 0 9999px rgb(9 9 11 / 87%),
+      0 0 0 2px var(--color-emerald-300),
+      0 0 34px 10px color-mix(in srgb, var(--color-emerald-300) 80%, transparent);
   }
 }
 

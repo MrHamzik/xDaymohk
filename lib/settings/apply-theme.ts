@@ -380,10 +380,11 @@ export function applyThemeColors(
     '--smk-hero-gradient',
     `linear-gradient(135deg, ${mix(colors.heroFrom, '#000000', HERO_SHADE)} 0%, ${mix(colors.heroTo, '#000000', HERO_SHADE)} 100%)`,
   );
-  set(
-    '--smk-rail-gradient',
-    `linear-gradient(180deg, ${mix(colors.ui, colors.panel, 0.42)} 0%, ${colors.panel} 40%, ${colors.panel} 100%)`,
-  );
+  // Боковое меню на ПК — ровная подложка панели, без цветного перехода
+  // сверху: на телефоне меню всегда было однотонным, и градиент делал
+  // две версии непохожими. Переменная всё ещё объявлена, поэтому
+  // сбрасывать её при смене темы (RESET_VARS) по-прежнему нужно.
+  set('--smk-rail-gradient', colors.panel);
 
   // ── Главная карточка каталога и карта ───────────────────────────
   set('--smk-map-cluster', colors.mapCluster);

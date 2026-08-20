@@ -39,6 +39,7 @@ import { useSettings } from '@/components/SettingsProvider';
 import { useI18n } from '@/lib/i18n';
 import { shareLink, siteOrigin } from '@/lib/share';
 import { LOCKED_MENU_IDS, widgetLabel } from '@/lib/settings/widgets';
+import { emitTourEvent } from '@/lib/tour';
 
 interface SidebarNavProps {
   onClose?: () => void;
@@ -95,12 +96,15 @@ const SECTIONS: MenuSection[] = [
     titleRu: 'Сервисы экосистемы',
     titleCe: 'Вай сервисаш',
     items: [
-      { id: 'taxi', href: '/', icon: CarFront, chip: 'dev' },
-      { id: 'vpn', href: '/', icon: Globe2, chip: 'dev' },
+      // href нет: раздел ещё не сделан. Раньше стояло href: '/', и на
+      // главной эти пункты подсвечивались как активные вместе с
+      // «Главная» — pathname совпадал.
+      { id: 'taxi', icon: CarFront, chip: 'dev' as const },
+      { id: 'vpn', icon: Globe2, chip: 'dev' as const },
       { id: 'vaynakh', href: '/vaynakh', icon: Landmark },
       { id: 'go', href: '/goncholla', icon: HandHeart },
       { id: 'gullaq', href: '/temshik', icon: Wrench },
-      { id: 'djanna', href: '/', icon: Bot, chip: 'plan' },
+      { id: 'djanna', icon: Bot, chip: 'plan' as const },
     ],
   },
   {
@@ -209,10 +213,15 @@ export default function SidebarNav({ onClose, isAdmin = false, rail = false }: S
       </>
     );
 
+    // Метка для гида. На ПК нижней панели нет, и «Каталог» с «Картой»
+    // он подсвечивает здесь — в боковой колонке.
+    const tourMark = item.id === 'catalog' || item.id === 'map' ? item.id : undefined;
+
     const inner = item.href ? (
       <Link
         href={item.href}
         onClick={onClose}
+        data-tour={tourMark}
         title={rail ? label : undefined}
         className={rail
           ? railItemClass(active, item.danger)
@@ -258,7 +267,14 @@ export default function SidebarNav({ onClose, isAdmin = false, rail = false }: S
   return (
     <>
       <div className={`flex h-full w-full flex-col overflow-hidden ${rail ? 'px-1.5 py-2.5' : 'p-3.5'}`}>
-        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-0.5 no-scrollbar">
+        <div
+          className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-0.5 no-scrollbar"
+          // Гид на шаге про меню ждёт, пока человек пролистает список:
+          // так он видит, что разделов больше, чем помещается на экран.
+          onScroll={(event) => {
+            if (event.currentTarget.scrollTop > 80) emitTourEvent('menu-scroll');
+          }}
+        >
           <div className={rail ? 'smk-rail-extra' : undefined}>
             <SettingsControlsBar />
             <div className="mt-3">

@@ -43,6 +43,9 @@ export default function OnboardingModal() {
   const { settings, update: updateSettings } = useSettings();
   const { profiles, updateProfile } = useProfiles();
   const [step, setStep] = useState<'welcome' | 'guide' | 'consent' | 'tour' | 'profile'>('welcome');
+  // Видна ли сейчас карточка гида. Гид сам её прячет на шагах, где
+  // человек нажимает настоящие кнопки.
+  const [tourCardVisible, setTourCardVisible] = useState(true);
   const [open, setOpen] = useState(false);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -403,23 +406,34 @@ export default function OnboardingModal() {
     { emoji: '🤖', title: t.djannaTitle, desc: ce ? 'Кхетам-ассистент нохчийн маттахь' : 'ИИ-ассистент на чеченском (в планах)' },
   ];
 
+  // Гид на шаге-задании прячет карточку: человек в это время работает
+  // с настоящим интерфейсом, и подложка модального окна ему мешает.
+  const tourCardHidden = step === 'tour' && !tourCardVisible;
+
   return (
     // Во время гида фон НЕ затемняем и НЕ размываем: подсветка показывает
     // настоящую кнопку на экране, а под размытием её было бы не разглядеть.
     // Затемнение в этом случае рисует сам прожектор — вокруг выреза.
-    // Снизу оставляем место, чтобы окно гида не легло на нижнюю панель,
-    // про которую оно же и рассказывает.
+    //
+    // Карточка гида по центру экрана (items-center), как и остальные шаги
+    // онбординга: прижатая к верху, она висела над пустотой и уезжала под
+    // обрез на низких экранах. Внутренняя прокрутка карточки ниже
+    // (max-h + overflow) держит длинные шаги в пределах экрана.
     <div
-      className={`fixed inset-0 z-[95] flex justify-center p-4 ${
+      className={`fixed inset-0 z-[95] flex items-center justify-center p-4 ${
         step === 'tour'
-          ? 'pointer-events-none items-start overflow-y-auto pb-28 pt-6'
-          : 'items-center bg-zinc-950/70 backdrop-blur-md'
+          ? 'pointer-events-none'
+          : 'bg-zinc-950/70 backdrop-blur-md'
       }`}
       role="dialog"
       aria-modal="true"
       aria-labelledby="onb-title"
     >
-      <div className="smk-sheet smk-sign pointer-events-auto relative w-full max-w-md overflow-hidden rounded-3xl shadow-2xl">
+      <div
+        className={`smk-sheet smk-sign pointer-events-auto relative w-full max-w-md overflow-hidden rounded-3xl shadow-2xl ${
+          step === 'tour' ? 'max-h-[calc(100dvh-8rem)] overflow-y-auto' : ''
+        } ${tourCardHidden ? 'hidden' : ''}`}
+      >
         {step === 'welcome' && (
           <div className="relative px-6 pb-6 pt-12">
             <div className="mb-5 text-center">
@@ -529,7 +543,7 @@ export default function OnboardingModal() {
         )}
 
         {step === 'tour' && (
-          <FirstTour onDone={() => setStep('profile')} />
+          <FirstTour onDone={() => setStep('profile')} onCardVisible={setTourCardVisible} />
         )}
 
         {step === 'profile' && (
