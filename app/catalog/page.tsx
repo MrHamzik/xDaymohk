@@ -24,6 +24,7 @@ import { filterProfiles } from '@/lib/profile-filters';
 import { useI18n } from '@/lib/i18n';
 import { AudienceFilter, Profile } from '@/lib/types';
 import EmptyState from '@/components/ui/EmptyState';
+import SpecialistLeaders from '@/components/SpecialistLeaders';
 import { usePullRefresh } from '@/lib/hooks/usePullRefresh';
 
 const PAGE_SIZE_DESKTOP = 30;
@@ -275,6 +276,8 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        <SpecialistLeaders onOpen={(id) => setActiveProfileId(id)} />
 
         <SearchFilter
           searchQuery={searchQuery}

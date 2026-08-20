@@ -11,13 +11,16 @@ import Navbar from '@/components/Navbar';
 import AppSidebar from '@/components/AppSidebar';
 import BottomNav from '@/components/BottomNav';
 import MobileMenuDrawer from '@/components/MobileMenuDrawer';
+import CreateActionModal from '@/components/CreateActionModal';
 import { useAuth } from '@/components/AuthProvider';
 import { useI18n } from '@/lib/i18n';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 export default function HomePage() {
   const { account } = useAuth();
   const { language } = useI18n();
+  const router = useRouter();
   const ce = language === 'ce';
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -76,6 +79,11 @@ export default function HomePage() {
 
       <MobileMenuDrawer isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} isAdmin={Boolean(account?.isAdmin)} />
       <BottomNav onOpenMenu={() => setIsMenuOpen(true)} onOpenCreate={() => setIsCreateOpen(true)} isAdmin={Boolean(account?.isAdmin)} />
+      <CreateActionModal
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        onOpenCreateProfile={() => router.push('/catalog')}
+      />
     </div>
   );
 }
