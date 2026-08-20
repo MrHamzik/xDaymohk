@@ -2,7 +2,7 @@
 
 import { useI18n } from '@/lib/i18n';
 import { useSettings } from '@/components/SettingsProvider';
-import { PRO_PRICES, hasPro, type ProTier } from '@/lib/settings/pro';
+import { PRO_PRICES, activeProTier, hasPro, type ProTier } from '@/lib/settings/pro';
 
 const TIERS: Array<{
   id: Exclude<ProTier, 'none'>;
@@ -24,14 +24,42 @@ export default function ProPlans() {
   const { t } = useI18n();
   const { settings } = useSettings();
 
+  // Действующий уровень, а не записанный: срок мог закончиться. Ровно
+  // так же считает база (функция effective_pro_tier), поэтому карточки
+  // показывают то же, что реально разрешено.
+  const active = activeProTier(settings);
+  const until = settings.proUntil ? new Date(settings.proUntil) : null;
+  const expired = settings.proTier !== 'none' && active === 'none';
+  // Неделя до конца — момент, когда о продлении стоит предупредить
+  // заранее, а не ставить перед фактом.
+  const soon = !expired && until !== null
+    && until.getTime() - Date.now() < 7 * 86_400_000;
+
   return (
     <section>
+      {settings.proTier !== 'none' && (
+        <p
+          className={`mb-2 smk-text-label font-bold ${
+            expired || soon
+              ? 'text-amber-700 dark:text-amber-400'
+              : 'text-slate-600 dark:text-zinc-300'
+          }`}
+        >
+          {expired
+            ? t.proExpired
+            : until === null
+              ? t.proUntilForever
+              : `${t.proUntilLabel} ${until.toLocaleDateString('ru-RU', {
+                  day: 'numeric', month: 'long', year: 'numeric',
+                })}${soon ? ` · ${t.proExpiresSoon}` : ''}`}
+        </p>
+      )}
       <p className="mb-2 smk-text-label leading-relaxed text-slate-500 dark:text-zinc-400">
         {t.proPayLater}
       </p>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {TIERS.map((tier) => {
-          const current = settings.proTier === tier.id;
+          const current = active === tier.id;
           const included = hasPro(settings, tier.id);
           return (
             <div key={tier.id} className="smk-field px-3 py-3">

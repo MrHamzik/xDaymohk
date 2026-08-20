@@ -70,6 +70,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   tourDone: false,
   welcomeSent: false,
   proTier: 'none',
+  proUntil: null,
   themeId: 'light',
   customThemes: [],
   fontScale: 100,
@@ -909,6 +910,12 @@ export function normalizeSettings(raw: unknown): UserSettings {
     tourDone: input.tourDone === true,
     welcomeSent: input.welcomeSent === true,
     proTier: normalizeProTier(input.proTier),
+    // Срок принимаем только как разбираемую дату: в поле может лежать
+    // мусор из старого клиента или ручной правки.
+    proUntil: typeof input.proUntil === 'string'
+      && Number.isFinite(Date.parse(input.proUntil))
+      ? input.proUntil
+      : null,
     themeId: themeExists ? themeId : 'light',
     customThemes,
     fontScale: normalizeFontScale(input.fontScale),
@@ -938,6 +945,7 @@ export function settingsFromDb(row: Record<string, unknown> | null): UserSetting
     tourDone: row.tour_done,
     welcomeSent: row.welcome_sent === true,
     proTier: row.pro_tier,
+    proUntil: row.pro_until,
     themeId: row.theme_id,
     customThemes: row.custom_themes,
     fontScale: row.font_scale,
@@ -965,6 +973,9 @@ export function settingsToDb(settings: UserSettings): Record<string, unknown> {
     hidden_menu: settings.hiddenMenu,
     tour_done: settings.tourDone,
     welcome_sent: settings.welcomeSent,
+    // pro_until сюда НЕ попадает намеренно: сроком подписки
+    // распоряжается сервер. Триггер guard_pro_tier всё равно отклонил
+    // бы правку, но лишний раз слать её незачем.
     pro_tier: settings.proTier,
     theme_id: settings.themeId,
     custom_themes: settings.customThemes,

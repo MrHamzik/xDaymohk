@@ -444,6 +444,19 @@ export interface UserSettings {
   welcomeSent: boolean;
   /** Подписка Pro: none | bronze | silver | gold | platinum. */
   proTier: 'none' | 'bronze' | 'silver' | 'gold' | 'platinum';
+  /**
+   * До какого момента оплачена подписка (ISO-строка).
+   *
+   * null — бессрочно: так у владельца проекта и при ручной выдаче
+   * администратором. Истёкший срок означает, что уровня фактически
+   * нет; спрашивать об этом нужно через activeProTier(), а не
+   * сравнивать даты в каждом месте отдельно.
+   *
+   * Поле только ДЛЯ ЧТЕНИЯ: им распоряжается сервер, клиент его не
+   * сохраняет (см. settingsToDb) — иначе подписку можно было бы
+   * продлить себе из консоли браузера.
+   */
+  proUntil: string | null;
   /** 'light' | 'dark' | 'space' | 'sunset' | 'custom:<id>' */
   themeId: string;
   customThemes: CustomTheme[];

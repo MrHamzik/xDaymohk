@@ -10,7 +10,7 @@ import {
   DEFAULT_SETTINGS, normalizeSettings, resolveTheme, settingsFromDb, settingsToDb,
 } from '@/lib/settings/defaults';
 import { applyEffects, applyRadiusScale, applyThemeColors, applyTypography } from '@/lib/settings/apply-theme';
-import { forceOwnerPlatinum } from '@/lib/settings/pro';
+import { activeProTier, forceOwnerPlatinum } from '@/lib/settings/pro';
 import type { UserSettings } from '@/lib/settings/types';
 
 const SETTINGS_STORAGE_KEY = 'daymohk-settings';
@@ -206,7 +206,13 @@ export default function SettingsProvider({ children }: { children: React.ReactNo
   // выбрана «Космос», а тумблер выключили — возвращаемся к паре.
   // Второй рубеж: даже если платный proTier каким-то путём просочился
   // в состояние, у гостя платные темы не применяются.
-  const extraThemes = !isGuest && settings.proTier !== 'none';
+  //
+  // Главный рубеж теперь на сервере (миграция 62): база сама откатывает
+  // платную тему тем, у кого нет действующей подписки. Здесь остаётся
+  // косметика — чтобы интерфейс не показывал платное лишнюю секунду.
+  // Срок учитывается через activeProTier: истёкшая подписка платных тем
+  // не даёт.
+  const extraThemes = !isGuest && activeProTier(settings) !== 'none';
   const activeThemeId = extraThemes || settings.themeId === 'light' || settings.themeId === 'dark'
     ? ((settings.advancedMode || extraThemes) ? settings.themeId : (settings.themeId === 'dark' ? 'dark' : 'light'))
     : (settings.themeId === 'dark' ? 'dark' : 'light');
