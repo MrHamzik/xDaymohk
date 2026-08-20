@@ -1437,3 +1437,46 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator:hover {
 .smk-toggle-off {
   background-color: var(--smk-card-inset);
 }
+
+
+/* =============================================================================
+   ГРАДИЕНТЫ ПОВЕРХНОСТЕЙ (п.21)
+   -----------------------------------------------------------------------------
+   Раньше переход был только у шапки каталога (--smk-hero-gradient), всё
+   остальное заливалось сплошным цветом. Теперь переходом можно покрыть
+   четыре крупные поверхности: фон страницы, карточки, панели и главные
+   кнопки — каждую отдельно.
+
+   Значение переменной считает apply-theme.ts. Там же решается, что
+   поверхность выключена: тогда в переменную кладётся СПЛОШНОЙ цвет, а
+   не пустая строка. Поэтому правило одно и всегда рабочее, а ветвлений
+   «включено/выключено» в CSS нет.
+
+   Правила висят на html.smk-grad-*, чтобы при выключенных градиентах
+   не перебивать существующие фоны: тема без переходов выглядит ровно
+   так, как выглядела раньше.
+   ========================================================================== */
+html.smk-grad-bg body {
+  background-image: var(--smk-grad-bg);
+  background-attachment: fixed;
+}
+
+/* Карточки: и обычные полотна, и «люксовые» с рамкой. */
+html.smk-grad-card .smk-lux,
+html.smk-grad-card .smk-card,
+html.smk-grad-card .smk-sheet {
+  background-image: var(--smk-grad-card);
+}
+
+/* Панели: шапка, нижнее меню, боковая колонка на ПК. */
+html.smk-grad-surface .site-header,
+html.smk-grad-surface .site-bottom-nav,
+html.smk-grad-surface .smk-rail-panel {
+  background-image: var(--smk-grad-surface);
+}
+
+/* Главные кнопки: только заливка, текст и тени не трогаем. */
+html.smk-grad-button .smk-btn-primary,
+html.smk-grad-button .smk-btn-gold {
+  background-image: var(--smk-grad-button);
+}

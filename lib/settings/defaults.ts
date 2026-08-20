@@ -4,6 +4,10 @@ import {
   MAX_CUSTOM_THEMES,
   NOTIFICATION_GROUPS,
   type CustomTheme,
+  type ThemeGradients,
+  type GradientAngle,
+  GRADIENT_ANGLES,
+  DEFAULT_GRADIENTS,
   type FontFamilyId,
   type NotificationGroup,
   type NotificationPref,
@@ -612,13 +616,17 @@ export const PRESET_THEME_IDS = Object.keys(PRESET_THEMES);
 export function resolveTheme(
   themeId: string,
   customThemes: CustomTheme[],
-): { name: string; isDark: boolean; glass?: boolean; colors: ThemeColors } {
+): {
+  name: string; isDark: boolean; glass?: boolean;
+  gradients?: ThemeGradients; colors: ThemeColors;
+} {
   if (themeId.startsWith('custom:')) {
     const id = themeId.slice('custom:'.length);
     const found = customThemes.find((theme) => theme.id === id);
     if (found) {
       return {
-        name: found.name, isDark: found.isDark, glass: found.glass, colors: found.colors,
+        name: found.name, isDark: found.isDark, glass: found.glass,
+        gradients: found.gradients, colors: found.colors,
       };
     }
     // Тему удалили, а ссылка осталась — не роняем интерфейс.
@@ -762,9 +770,41 @@ function normalizeCustomThemes(raw: unknown): CustomTheme[] {
           : `Моя тема ${index + 1}`,
         isDark,
         glass: entry.glass === true,
+        gradients: normalizeGradients(entry.gradients),
         colors,
       };
     });
+}
+
+/**
+ * Настройки градиентов из БД или localStorage (п.21).
+ *
+ * Возвращает undefined, если поля нет: у тем, созданных до появления
+ * градиентов, его и не будет, и переписывать их миграцией незачем —
+ * отсутствие поля означает «сплошная заливка, как раньше».
+ *
+ * Значения проверяются по закрытому списку: угол должен быть одним из
+ * разрешённых, сила — числом 0..100. Иначе испорченная запись
+ * подставила бы в CSS произвольную строку.
+ */
+function normalizeGradients(raw: unknown): ThemeGradients | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const input = raw as Record<string, unknown>;
+  const angle = GRADIENT_ANGLES.includes(input.angle as GradientAngle)
+    ? (input.angle as GradientAngle)
+    : DEFAULT_GRADIENTS.angle;
+  const rawStrength = Number(input.strength);
+  const strength = Number.isFinite(rawStrength)
+    ? Math.min(Math.max(Math.round(rawStrength), 0), 100)
+    : DEFAULT_GRADIENTS.strength;
+  return {
+    bg: input.bg === true,
+    card: input.card === true,
+    surface: input.surface === true,
+    button: input.button === true,
+    angle,
+    strength,
+  };
 }
 
 function normalizePrefs(raw: unknown): Partial<Record<NotificationGroup, NotificationPref>> {

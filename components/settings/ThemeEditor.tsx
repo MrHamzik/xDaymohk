@@ -9,8 +9,9 @@ import {
   derivePalette, derivePanel,
 } from '@/lib/settings/derive';
 import {
-  MAX_CUSTOM_THEMES, THEME_COLOR_GROUPS,
-  type CustomTheme, type ThemeColorGroup, type ThemeColors,
+  DEFAULT_GRADIENTS, MAX_CUSTOM_THEMES, THEME_COLOR_GROUPS,
+  type CustomTheme, type GradientAngle, type ThemeColorGroup, type ThemeColors,
+  type ThemeGradients,
 } from '@/lib/settings/types';
 import { useI18n } from '@/lib/i18n';
 import { HintMark } from '@/components/settings/SettingsPrimitives';
@@ -55,6 +56,37 @@ const MAIN_COLOR = {
   noteRu: 'Меняет всю тему сразу. Отдельные цвета можно поправить ниже — они не сбросятся, пока снова не выбран главный цвет.',
   noteCe: 'Дерриг тема цкъа хийцало. Кегийра беснаш лахахь нисдан мега — коьрта бос юха ца харжахь, уьш ца дожадо.',
 };
+
+/**
+ * Поверхности, которые можно покрыть градиентом (п.21).
+ * Порядок — от самой крупной к самой мелкой: так человек сначала
+ * видит эффект целиком, а потом уточняет детали.
+ */
+const GRADIENT_SURFACES: Array<{
+  key: 'bg' | 'card' | 'surface' | 'button';
+  labelKey: 'settingsGradBg' | 'settingsGradCard' | 'settingsGradSurface' | 'settingsGradButton';
+}> = [
+  { key: 'bg', labelKey: 'settingsGradBg' },
+  { key: 'card', labelKey: 'settingsGradCard' },
+  { key: 'surface', labelKey: 'settingsGradSurface' },
+  { key: 'button', labelKey: 'settingsGradButton' },
+];
+
+/** Направление перехода: угол + понятная человеку подпись. */
+const GRADIENT_ANGLE_LABELS: Array<{
+  angle: GradientAngle;
+  labelKey: 'settingsGradDown' | 'settingsGradDiag' | 'settingsGradRight' | 'settingsGradDiagUp';
+}> = [
+  { angle: 180, labelKey: 'settingsGradDown' },
+  { angle: 135, labelKey: 'settingsGradDiag' },
+  { angle: 90, labelKey: 'settingsGradRight' },
+  { angle: 45, labelKey: 'settingsGradDiagUp' },
+];
+
+/** Настройки градиента темы; у старых тем поля нет — берём значения по умолчанию. */
+function gradientsOf(theme: CustomTheme): ThemeGradients {
+  return theme.gradients ?? DEFAULT_GRADIENTS;
+}
 
 /** Подписи только для слотов, показанных в редакторе (cardAlt скрыт). */
 const COLOR_LABELS: Partial<Record<keyof ThemeColors, { ru: string; ce: string }>> = {
@@ -274,6 +306,95 @@ export default function ThemeEditor() {
               />
               {t.settingsThemeGlass}
             </label>
+          </div>
+
+          {/* Градиенты поверхностей (п.21).
+              Второй цвет не спрашиваем: он выводится из основного цвета
+              поверхности сдвигом светлоты. Иначе человеку пришлось бы
+              подбирать по паре согласованных цветов на каждую из четырёх
+              поверхностей — работа, которую программа делает сама. */}
+          <div className="smk-sheet-row space-y-2 p-2.5">
+            <div className="flex items-center gap-1.5">
+              <span className="min-w-0 flex-1 truncate smk-text-label font-bold uppercase tracking-wide text-slate-700 dark:text-zinc-300">
+                {t.settingsThemeGradients}
+              </span>
+              <HintMark text={t.settingsThemeGradientsHint} />
+            </div>
+
+            <div className="grid grid-cols-2 gap-1.5">
+              {GRADIENT_SURFACES.map((surface) => (
+                <label
+                  key={surface.key}
+                  className="flex cursor-pointer items-center gap-1.5 smk-text-label font-bold text-slate-600 dark:text-zinc-300"
+                >
+                  <input
+                    type="checkbox"
+                    checked={gradientsOf(editing)[surface.key] === true}
+                    onChange={(event) => patchTheme(editing.id, {
+                      gradients: { ...gradientsOf(editing), [surface.key]: event.target.checked },
+                    })}
+                    className="h-3.5 w-3.5 rounded accent-emerald-600"
+                  />
+                  {t[surface.labelKey]}
+                </label>
+              ))}
+            </div>
+
+            {/* Направление и сила нужны, только когда хоть одна
+                поверхность включена — иначе это мёртвые ручки. */}
+            {GRADIENT_SURFACES.some((surface) => gradientsOf(editing)[surface.key] === true) && (
+              <div className="space-y-2 pt-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="shrink-0 smk-text-label font-bold text-slate-600 dark:text-zinc-300">
+                    {t.settingsThemeGradientAngle}
+                  </span>
+                  <div className="flex min-w-0 flex-1 flex-wrap gap-1">
+                    {GRADIENT_ANGLE_LABELS.map((option) => {
+                      const active = gradientsOf(editing).angle === option.angle;
+                      return (
+                        <button
+                          key={option.angle}
+                          type="button"
+                          onClick={() => patchTheme(editing.id, {
+                            gradients: { ...gradientsOf(editing), angle: option.angle },
+                          })}
+                          className={`rounded-lg px-2 py-1 smk-text-label font-bold transition ${
+                            active
+                              ? 'bg-emerald-600 text-white'
+                              : 'smk-field text-slate-600 dark:text-zinc-300'
+                          }`}
+                        >
+                          {t[option.labelKey]}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="smk-text-label font-bold text-slate-600 dark:text-zinc-300">
+                      {t.settingsThemeGradientStrength}
+                    </span>
+                    <span className="smk-text-label font-extrabold text-emerald-700 dark:text-emerald-400">
+                      {gradientsOf(editing).strength}%
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={5}
+                    value={gradientsOf(editing).strength}
+                    onChange={(event) => patchTheme(editing.id, {
+                      gradients: { ...gradientsOf(editing), strength: Number(event.target.value) },
+                    })}
+                    aria-label={t.settingsThemeGradientStrength}
+                    className="w-full accent-emerald-600"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Главный цвет — вход в тему одним движением. Человек задаёт

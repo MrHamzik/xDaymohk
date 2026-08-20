@@ -1,5 +1,8 @@
 import type { EffectSettings } from '@/lib/settings/types';
-import { FONT_FAMILIES, type FontFamilyId, type ThemeColors } from '@/lib/settings/types';
+import {
+  DEFAULT_GRADIENTS, FONT_FAMILIES,
+  type FontFamilyId, type ThemeColors, type ThemeGradients,
+} from '@/lib/settings/types';
 
 /**
  * Применение темы и шрифта к документу.
@@ -164,12 +167,19 @@ const MANAGED_PROPERTIES = [
   '--border-green-dark',
   '--smk-hero-gradient',
   '--smk-rail-gradient',
+  // Градиенты поверхностей (п.21). Сбрасывать обязательно: иначе
+  // переход, включённый в одной теме, останется висеть в следующей.
+  '--smk-grad-bg',
+  '--smk-grad-card',
+  '--smk-grad-surface',
+  '--smk-grad-button',
 ];
 
 export function applyThemeColors(
   colors: ThemeColors,
   isDark: boolean,
   glass = false,
+  gradients?: ThemeGradients,
 ): void {
   if (typeof document === 'undefined') return;
   const root = document.documentElement;
@@ -388,6 +398,47 @@ export function applyThemeColors(
 
   // ── Главная карточка каталога и карта ───────────────────────────
   set('--smk-map-cluster', colors.mapCluster);
+
+  applyThemeGradients(colors, isDark, gradients, set);
+}
+
+/**
+ * Градиенты крупных поверхностей (п.21).
+ *
+ * Второй цвет не хранится в теме, а выводится из основного: сдвигаем
+ * светлоту на strength. Так пользователю не нужно подбирать по паре
+ * согласованных цветов на каждую поверхность — достаточно включить
+ * переход и задать силу.
+ *
+ * Направление сдвига зависит от основы темы: на тёмных уводим край
+ * вверх (к белому), на светлых — вниз (к чёрному). Одинаковая
+ * арифметика для обоих случаев давала бы либо грязь на светлых темах,
+ * либо неразличимый переход на тёмных.
+ *
+ * Выключенная поверхность получает СПЛОШНОЙ цвет тем же свойством, а
+ * не пустую строку: CSS-правило одно, и ему всегда есть что показать.
+ */
+function applyThemeGradients(
+  colors: ThemeColors,
+  isDark: boolean,
+  gradients: ThemeGradients | undefined,
+  set: (name: string, value: string) => void,
+): void {
+  const config = gradients ?? DEFAULT_GRADIENTS;
+  // Сила 0..100 → сдвиг светлоты не больше 45 %: дальше поверхность
+  // перестаёт быть собой и спорит с соседними.
+  const amount = Math.min(Math.max(config.strength, 0), 100) / 100 * 0.45;
+  const edge = isDark ? '#ffffff' : '#000000';
+  const angle = config.angle;
+
+  const paint = (name: string, base: string, on: boolean) => {
+    set(name, on ? `linear-gradient(${angle}deg, ${base} 0%, ${mix(base, edge, amount)} 100%)` : base);
+  };
+
+  paint('--smk-grad-bg', colors.bg, config.bg);
+  paint('--smk-grad-card', colors.card, config.card);
+  paint('--smk-grad-surface', colors.surface, config.surface);
+  paint('--smk-grad-button', colors.ui, config.button);
 }
 
 /**

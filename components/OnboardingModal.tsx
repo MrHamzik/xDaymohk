@@ -43,7 +43,7 @@ export default function OnboardingModal() {
   const { language, setLanguage, t } = useI18n();
   const { settings, update: updateSettings } = useSettings();
   const { profiles, updateProfile } = useProfiles();
-  const [step, setStep] = useState<'welcome' | 'guide' | 'consent' | 'tour' | 'profile'>('welcome');
+  const [step, setStep] = useState<'welcome' | 'guide' | 'consent' | 'tour' | 'profile' | 'look'>('welcome');
   // Видна ли сейчас карточка гида. Гид сам её прячет на шагах, где
   // человек нажимает настоящие кнопки.
   const [tourCardVisible, setTourCardVisible] = useState(true);
@@ -386,7 +386,10 @@ export default function OnboardingModal() {
         });
       }
 
-      await finishOnboarding();
+      // Настройка внешнего вида идёт ПОСЛЕ анкеты (п.28): сначала
+      // обязательное, потом приятное. Само окно закроется на шаге
+      // «Внешний вид» — там же вызывается finishOnboarding().
+      setStep('look');
     } catch (err) {
       // Наружу — понятная фраза, подробности уходят в консоль (п.26).
       setError(humanErrorMessage(err, ce ? 'ce' : 'ru', 'Сохранение анкеты при регистрации'));
@@ -640,6 +643,134 @@ export default function OnboardingModal() {
               </button>
             </div>
           </form>
+        )}
+
+        {/* Шаг «Внешний вид» (п.28).
+            Идёт последним: сначала обязательная анкета, потом приятное.
+            Здесь нет ничего, что нужно «сохранять» отдельно — настройки
+            применяются сразу, и человек видит результат на этом же окне. */}
+        {step === 'look' && (
+          <div className="relative px-6 pb-6 pt-10">
+            <h2 className="text-lg font-black text-slate-900 dark:text-white">
+              {ce ? 'Арахьара бос' : 'Внешний вид'}
+            </h2>
+            <p className="mb-4 mt-1 text-xs text-slate-500 dark:text-zinc-400">
+              {ce
+                ? 'Хаьржинарг цкъа а хийца мега нисдарехь. ХIинццехь хьожуш ду.'
+                : 'Всё это можно изменить в любой момент в настройках. Меняется сразу, на этом же окне.'}
+            </p>
+
+            <div className="max-h-[52vh] space-y-3 overflow-y-auto pr-1 no-scrollbar">
+              {/* Тема: светлая или тёмная. Остальные — в настройках,
+                  здесь нужен выбор без раздумий. */}
+              <div>
+                <p className="mb-1.5 smk-text-label font-bold text-slate-500 dark:text-zinc-400">
+                  {ce ? 'Тема' : 'Тема'}
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {([
+                    { id: 'light', ru: 'Светлая', ce: 'Къегина' },
+                    { id: 'dark', ru: 'Тёмная', ce: 'Iаьржа' },
+                  ] as const).map((option) => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => updateSettings({ themeId: option.id })}
+                      className={`rounded-xl px-3 py-2.5 text-xs font-bold transition ${
+                        settings.themeId === option.id
+                          ? 'bg-emerald-600 text-white shadow-sm'
+                          : 'border border-slate-200 bg-white text-slate-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300'
+                      }`}
+                    >
+                      {ce ? option.ce : option.ru}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Размер текста — первое, что нужно тем, кто плохо видит. */}
+              <div className="rounded-xl border border-slate-200 bg-white px-3 py-3 dark:border-zinc-700 dark:bg-zinc-900">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="smk-text-label font-bold text-slate-600 dark:text-zinc-300">
+                    {ce ? 'Йозанан барам' : 'Размер текста'}
+                  </span>
+                  <span className="smk-text-label font-extrabold text-emerald-700 dark:text-emerald-400">
+                    {settings.fontScale} %
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={50}
+                  max={150}
+                  step={5}
+                  value={settings.fontScale}
+                  onChange={(event) => updateSettings({ fontScale: Number(event.target.value) })}
+                  aria-label={ce ? 'Йозанан барам' : 'Размер текста'}
+                  className="w-full accent-emerald-600"
+                />
+              </div>
+
+              {/* Скругление углов: применяется ко всему интерфейсу. */}
+              <div className="rounded-xl border border-slate-200 bg-white px-3 py-3 dark:border-zinc-700 dark:bg-zinc-900">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="smk-text-label font-bold text-slate-600 dark:text-zinc-300">
+                    {ce ? 'МаьIигийн гуо' : 'Скругление углов'}
+                  </span>
+                  <span className="smk-text-label font-extrabold text-emerald-700 dark:text-emerald-400">
+                    {(settings.radiusScale / 100).toFixed(2)}×
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={200}
+                  step={5}
+                  value={settings.radiusScale}
+                  onChange={(event) => updateSettings({ radiusScale: Number(event.target.value) })}
+                  aria-label={ce ? 'МаьIигийн гуо' : 'Скругление углов'}
+                  className="w-full accent-emerald-600"
+                />
+              </div>
+
+              {/* Эффекты одним переключателем: на слабом телефоне тени и
+                  размытие заметно тормозят прокрутку. Тонкая настройка
+                  каждого эффекта осталась в разделе настроек. */}
+              <label className="flex cursor-pointer items-start gap-2 rounded-xl border border-slate-200 bg-white px-3 py-3 dark:border-zinc-700 dark:bg-zinc-900">
+                <input
+                  type="checkbox"
+                  checked={settings.effects.motion > 0}
+                  onChange={(event) => updateSettings({
+                    effects: {
+                      ...settings.effects,
+                      motion: event.target.checked ? 100 : 0,
+                      glow: event.target.checked ? 100 : 0,
+                      blur: event.target.checked ? 100 : 0,
+                    },
+                  })}
+                  className="mt-0.5 h-3.5 w-3.5 rounded accent-emerald-600"
+                />
+                <span>
+                  <span className="block smk-text-label font-bold text-slate-700 dark:text-zinc-200">
+                    {ce ? 'Хазна эффекташ' : 'Красивые эффекты'}
+                  </span>
+                  <span className="mt-0.5 block smk-text-label text-slate-500 dark:text-zinc-500">
+                    {ce
+                      ? 'Анимацеш, серло, минкъа. Телефон меллаша болх бахь — дlаяккха.'
+                      : 'Анимации, свечение, размытие. Если телефон работает медленно — выключите.'}
+                  </span>
+                </span>
+              </label>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => void finishOnboarding()}
+              className="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-700"
+            >
+              <Check className="h-3.5 w-3.5" />
+              {ce ? 'Чуйаккха' : 'Готово'}
+            </button>
+          </div>
         )}
       </div>
     </div>

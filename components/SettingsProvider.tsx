@@ -217,7 +217,22 @@ export default function SettingsProvider({ children }: { children: React.ReactNo
 
   useEffect(() => {
     if (isLoading || !resolved) return;
-    applyThemeColors(resolved.colors, resolved.isDark, resolved.glass === true);
+    applyThemeColors(
+      resolved.colors,
+      resolved.isDark,
+      resolved.glass === true,
+      resolved.gradients,
+    );
+
+    // Классы-выключатели градиентов (п.21). Правила в CSS висят на
+    // html.smk-grad-*, поэтому тема без переходов выглядит ровно так,
+    // как выглядела до появления этой настройки.
+    const root = document.documentElement;
+    const on = resolved.gradients;
+    root.classList.toggle('smk-grad-bg', on?.bg === true);
+    root.classList.toggle('smk-grad-card', on?.card === true);
+    root.classList.toggle('smk-grad-surface', on?.surface === true);
+    root.classList.toggle('smk-grad-button', on?.button === true);
     // resolved пересоздаётся каждый рендер — в зависимостях держим его
     // первоисточники, иначе эффект крутился бы бесконечно.
     // eslint-disable-next-line react-hooks/exhaustive-deps
