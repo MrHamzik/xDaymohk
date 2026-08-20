@@ -387,6 +387,8 @@ export interface UserSettings {
   hiddenMenu: string[];
   /** Обязательный гид после первого входа уже пройден. */
   tourDone: boolean;
+  /** Подписка Pro: none | bronze | silver | gold | platinum. */
+  proTier: 'none' | 'bronze' | 'silver' | 'gold' | 'platinum';
   /** 'light' | 'dark' | 'space' | 'sunset' | 'custom:<id>' */
   themeId: string;
   customThemes: CustomTheme[];

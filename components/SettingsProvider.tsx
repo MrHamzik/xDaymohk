@@ -119,8 +119,9 @@ export default function SettingsProvider({ children }: { children: React.ReactNo
   // не те оттенки, что видел пользователь.
   // Вне расширенного режима доступны только светлая и тёмная: если
   // выбрана «Космос», а тумблер выключили — возвращаемся к паре.
-  const activeThemeId = settings.advancedMode
-    ? settings.themeId
+  const extraThemes = settings.proTier !== 'none';
+  const activeThemeId = extraThemes || settings.themeId === 'light' || settings.themeId === 'dark'
+    ? ((settings.advancedMode || extraThemes) ? settings.themeId : (settings.themeId === 'dark' ? 'dark' : 'light'))
     : (settings.themeId === 'dark' ? 'dark' : 'light');
 
   const resolved = isLoading

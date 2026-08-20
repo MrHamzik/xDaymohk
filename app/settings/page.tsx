@@ -13,6 +13,7 @@ import ThemeEditor from '@/components/settings/ThemeEditor';
 import EffectsEditor from '@/components/settings/EffectsEditor';
 import PayoutSettings from '@/components/settings/PayoutSettings';
 import QuickWidgetsEditor from '@/components/settings/QuickWidgetsEditor';
+import ProPlans from '@/components/settings/ProPlans';
 import AppSidebar from '@/components/AppSidebar';
 import {
   CollapsibleSection, SectionTitle, SettingRow, Toggle, WarningBox,
@@ -26,6 +27,7 @@ import {
   type FontFamilyId, type NotificationGroup, type NotificationPref,
 } from '@/lib/settings/types';
 import { useI18n } from '@/lib/i18n';
+import { hasPro } from '@/lib/settings/pro';
 import {
   DEFAULT_GROUP_SOUND, playSound, SOUND_IDS, SOUND_LABELS, type SoundId,
 } from '@/lib/notification-sounds';
@@ -250,19 +252,13 @@ export default function SettingsPage() {
               <SectionTitle
                 title={t.settingsNotificationsSection}
                 hint={t.settingsNotificationsHint}
+                action={(
+                  <span className="flex shrink-0 items-end gap-3 smk-text-label font-bold leading-tight text-slate-400 dark:text-zinc-500">
+                    <span className="w-11 text-center">{t.settingsColShow}</span>
+                    <span className="w-11 text-center">{t.settingsColSound}</span>
+                  </span>
+                )}
               />
-
-              {/* Шапка колонок: без неё два тумблера в ряд неразличимы.
-                  Ширина и зазор совпадают со строками ниже — иначе
-                  подписи «Показывать» и «Звук» наезжали друг на друга. */}
-              {/* Подписи колонок прячем на узком экране: там тумблеры
-                  уходят под текст и шапка перестаёт над ними стоять —
-                  подписи «висели» над пустотой. Роль тумблера на
-                  телефоне понятна по aria-label и порядку. */}
-              <div className="mb-1 hidden items-center justify-end gap-4 pr-3 smk-text-label font-bold uppercase tracking-wide text-slate-400 dark:text-zinc-500 sm:flex">
-                <span className="w-14 text-center">{t.settingsColShow}</span>
-                <span className="w-14 text-center">{t.settingsColSound}</span>
-              </div>
 
               <div className="space-y-1.5">
                 {NOTIFICATION_GROUPS.map((group) => {
@@ -282,8 +278,8 @@ export default function SettingsPage() {
                           {groupLabels[group].description}
                         </p>
                       </div>
-                      <div className="flex shrink-0 items-start gap-4">
-                        <span className="flex w-14 flex-col items-center gap-1">
+                      <div className="flex shrink-0 items-center gap-3">
+                        <span className="flex w-11 justify-center">
                           <Toggle
                             checked={isLocked ? true : pref.show}
                             disabled={isLocked}
@@ -291,7 +287,7 @@ export default function SettingsPage() {
                             label={`${groupLabels[group].title}: ${t.settingsColShow}`}
                           />
                         </span>
-                        <span className="flex w-14 flex-col items-center gap-1">
+                        <span className="flex w-11 justify-center">
                           <Toggle
                             checked={pref.sound}
                             onChange={(next) => setPref(group, { sound: next })}
@@ -347,6 +343,13 @@ export default function SettingsPage() {
                  После уведомлений: это не ежедневная настройка, а то,
                  что заполняют один раз перед первым платным заданием. */}
             {shows('payout') && <PayoutSettings />}
+
+            {shows('advanced') && (
+            <section>
+              <SectionTitle title={t.proTitle} hint={t.proHint} />
+              <ProPlans />
+            </section>
+            )}
 
             {/* ── Расширенные ───────────────────────────────────── */}
             {shows('advanced') && (
@@ -405,10 +408,17 @@ export default function SettingsPage() {
                     />
                     <p className="smk-text-label text-slate-400 dark:text-zinc-500">{t.settingsRadiusHint}</p>
                   </div>
-                  <SettingRow title={t.lightMode} hint={t.lightModeHint}>
+                  <SettingRow
+                    title={t.lightMode}
+                    hint={hasPro(settings, 'silver') ? t.lightModeHint : t.proNeedSilver}
+                  >
                     <Toggle
                       checked={settings.lightMode}
-                      onChange={(next) => update({ lightMode: next })}
+                      disabled={!hasPro(settings, 'silver') && !settings.lightMode}
+                      onChange={(next) => {
+                        if (next && !hasPro(settings, 'silver')) return;
+                        update({ lightMode: next });
+                      }}
                       label={t.lightMode}
                     />
                   </SettingRow>

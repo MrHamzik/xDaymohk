@@ -14,6 +14,7 @@ import {
 } from '@/lib/settings/types';
 import { useI18n } from '@/lib/i18n';
 import { HintMark } from '@/components/settings/SettingsPrimitives';
+import { FREE_THEME_IDS, hasPro } from '@/lib/settings/pro';
 
 /**
  * Подписи слотов палитры, разложенные по трём группам.
@@ -132,10 +133,15 @@ export default function ThemeEditor() {
   const editing = settings.customThemes.find((theme) => theme.id === editingId) ?? null;
   const canAddMore = settings.customThemes.length < MAX_CUSTOM_THEMES;
 
-  const selectTheme = (themeId: string) => update({ themeId });
+  const extraOk = hasPro(settings, 'bronze');
+  const selectTheme = (themeId: string) => {
+    if (!extraOk && !FREE_THEME_IDS.has(themeId) && !themeId.startsWith('custom:')) return;
+    if (!extraOk && themeId.startsWith('custom:')) return;
+    update({ themeId });
+  };
 
   const createTheme = () => {
-    if (!canAddMore) return;
+    if (!canAddMore || !extraOk) return;
     // За основу берём текущую тему: правки идут от того, что человек
     // уже видит, а не от случайной палитры.
     const base = settings.themeId.startsWith('custom:')
@@ -183,15 +189,18 @@ export default function ThemeEditor() {
       {/* Заголовок рисует обёртка CollapsibleSection на странице
           настроек — здесь он дублировался бы вместе с линией. */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-        {Object.entries(PRESET_THEMES).map(([id, theme]) => (
+        {Object.entries(PRESET_THEMES).map(([id, theme]) => {
+          const locked = !extraOk && !FREE_THEME_IDS.has(id);
+          return (
           <ThemeCard
             key={id}
-            name={language === 'ce' ? theme.name : theme.name}
+            name={locked ? `${theme.name} · ${t.proBronze}` : theme.name}
             colors={theme.colors}
             isSelected={settings.themeId === id}
             onSelect={() => selectTheme(id)}
           />
-        ))}
+          );
+        })}
 
         {settings.customThemes.map((theme) => (
           <ThemeCard
@@ -205,7 +214,7 @@ export default function ThemeEditor() {
           />
         ))}
 
-        {canAddMore && (
+        {canAddMore && extraOk && (
           <button
             type="button"
             onClick={createTheme}

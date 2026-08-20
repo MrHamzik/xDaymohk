@@ -276,19 +276,6 @@ export async function POST(request: Request) {
     );
   }
 
-  // Платное задание — только с подтверждённым номером. Почту Google
-  // делают за минуту; SMS привязывает человека к российскому телефону.
-  // Безвозмездная помощь в «ГIончалла» этой проверки не требует.
-  if (isPaid && 'phone_verified_at' in profile && !profile.phone_verified_at) {
-    return NextResponse.json(
-      {
-        error: 'Сначала подтвердите телефон SMS-кодом. Безвозмездная помощь в «ГIончалла» открыта без этого.',
-        code: 'phone_required',
-      },
-      { status: 403 },
-    );
-  }
-
   const id = makeId('task');
   const { data: created, error: insertError } = await admin
     .from('tasks')

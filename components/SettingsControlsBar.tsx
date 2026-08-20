@@ -215,7 +215,7 @@ export default function SettingsControlsBar() {
       case 'notify':
         return <NotificationCenter />;
       case 'theme':
-        return settings.advancedMode ? <ThemePickerButton /> : (
+        return (settings.advancedMode || settings.proTier !== 'none') ? <ThemePickerButton /> : (
           <button
             type="button"
             onClick={() => {

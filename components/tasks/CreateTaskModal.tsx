@@ -458,10 +458,7 @@ export default function CreateTaskModal({
 
           {isPaid && !isEditing && (
             <div className="smk-sheet-section space-y-2 px-4 py-4">
-              <h3 className="smk-sheet-label">{t.phoneVerifyTitle}</h3>
-              <p className="smk-text-label leading-relaxed text-slate-600 dark:text-zinc-400">
-                {t.phoneVerifyWhy}
-              </p>
+              <h3 className="smk-sheet-label">{t.phoneGeneral}</h3>
               <PhoneVerifyPanel
                 onVerified={() => {
                   setError('');

@@ -89,17 +89,20 @@ export default function ThemePickerButton() {
     };
   })();
 
+  const extraOk = settings.proTier !== 'none';
   const options = [
-    ...Object.entries(PRESET_THEMES).map(([id, theme]) => ({
-      id,
-      name: theme.name,
-      colors: theme.colors,
-    })),
-    ...settings.customThemes.map((theme) => ({
+    ...Object.entries(PRESET_THEMES)
+      .filter(([id]) => extraOk || id === 'light' || id === 'dark')
+      .map(([id, theme]) => ({
+        id,
+        name: theme.name,
+        colors: theme.colors,
+      })),
+    ...(extraOk ? settings.customThemes.map((theme) => ({
       id: `custom:${theme.id}`,
       name: theme.name,
       colors: theme.colors,
-    })),
+    })) : []),
   ];
 
   return (

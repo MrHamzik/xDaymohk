@@ -14,6 +14,7 @@ import {
   EFFECT_KEYS,
 } from '@/lib/settings/types';
 import { MENU_ID_SET, QUICK_WIDGET_ID_SET } from '@/lib/settings/widgets';
+import { normalizeProTier } from '@/lib/settings/pro';
 import {
   deriveCardInset, deriveDivider, deriveField, deriveNotes, derivePanel,
 } from '@/lib/settings/derive';
@@ -63,6 +64,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   quickWidgets: [...DEFAULT_QUICK_WIDGETS],
   hiddenMenu: [],
   tourDone: false,
+  proTier: 'none',
   themeId: 'light',
   customThemes: [],
   fontScale: 100,
@@ -864,6 +866,7 @@ export function normalizeSettings(raw: unknown): UserSettings {
     })(),
     hiddenMenu: normalizeStringList(input.hiddenMenu, [], MENU_ID_SET, 24).filter((id) => id !== 'settings'),
     tourDone: input.tourDone === true,
+    proTier: normalizeProTier(input.proTier),
     themeId: themeExists ? themeId : 'light',
     customThemes,
     fontScale: normalizeFontScale(input.fontScale),
@@ -891,6 +894,7 @@ export function settingsFromDb(row: Record<string, unknown> | null): UserSetting
     quickWidgets: row.quick_widgets,
     hiddenMenu: row.hidden_menu,
     tourDone: row.tour_done,
+    proTier: row.pro_tier,
     themeId: row.theme_id,
     customThemes: row.custom_themes,
     fontScale: row.font_scale,
