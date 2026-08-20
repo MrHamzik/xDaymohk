@@ -53,20 +53,53 @@ interface SettingsContextValue {
 
 const SettingsContext = createContext<SettingsContextValue | undefined>(undefined);
 
+/**
+ * Ключ локальной копии — СВОЙ на каждый аккаунт.
+ *
+ * Раньше ключ был один общий ('daymohk-settings') и не чистился ни при
+ * выходе, ни при удалении аккаунта. Из-за этого настройки одного
+ * человека доставались следующему, кто вошёл в том же браузере, а
+ * главное — переживали удаление аккаунта: tourDone оставался true, и
+ * обязательный гид новой регистрации не показывался, форма профиля
+ * открывалась сразу.
+ *
+ * Гостю оставляем отдельный ключ: тема, выбранная до входа, должна
+ * пережить перезагрузку страницы.
+ */
+function storageKey(accountId?: string): string {
+  return accountId ? `${SETTINGS_STORAGE_KEY}-${accountId}` : `${SETTINGS_STORAGE_KEY}-guest`;
+}
+
+/**
+ * Разовая уборка ключа из прошлой схемы.
+ *
+ * Он общий для всех аккаунтов и больше не читается, но останется в
+ * браузерах навсегда — вместе с чужим tourDone и оплаченным proTier.
+ * Настройки от этого не теряются: источник истины на сервере, при
+ * входе они приезжают из user_settings.
+ */
+function dropLegacyCache(): void {
+  try {
+    window.localStorage.removeItem(SETTINGS_STORAGE_KEY);
+  } catch {
+    // приватный режим — не критично
+  }
+}
+
 /** Локальная копия: нужна, чтобы применить тему до ответа сервера. */
-function readLocal(): UserSettings {
+function readLocal(accountId?: string): UserSettings {
   if (typeof window === 'undefined') return { ...DEFAULT_SETTINGS };
   try {
-    const raw = window.localStorage.getItem(SETTINGS_STORAGE_KEY);
+    const raw = window.localStorage.getItem(storageKey(accountId));
     return raw ? normalizeSettings(JSON.parse(raw)) : { ...DEFAULT_SETTINGS };
   } catch {
     return { ...DEFAULT_SETTINGS };
   }
 }
 
-function writeLocal(settings: UserSettings): void {
+function writeLocal(settings: UserSettings, accountId?: string): void {
   try {
-    window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+    window.localStorage.setItem(storageKey(accountId), JSON.stringify(settings));
   } catch {
     // приватный режим или переполнение — не критично
   }
@@ -102,11 +135,16 @@ export default function SettingsProvider({ children }: { children: React.ReactNo
   // переключить до окончания загрузки. readLocal() возвращает то, что
   // было на диске на момент старта, и без слияния перезапись гасила
   // свежий выбор темы — она «отскакивала» обратно.
+  //
+  // Перечитываем при смене аккаунта: у каждого своя копия, и настройки
+  // предыдущего пользователя не должны оставаться на экране.
   useEffect(() => {
-    const stored = readLocal();
+    if (isAuthLoading) return;
+    dropLegacyCache();
+    const stored = readLocal(account?.id);
     setSettings((current) => (current === DEFAULT_SETTINGS ? stored : current));
     setIsLoading(false);
-  }, []);
+  }, [account?.id, isAuthLoading]);
 
   // 1b. Гость не наследует подписку от прошлого сеанса.
   //
@@ -118,7 +156,7 @@ export default function SettingsProvider({ children }: { children: React.ReactNo
     setSettings((current) => {
       const guarded = applyAccess(current, true);
       if (guarded === current) return current;
-      writeLocal(guarded);
+      writeLocal(guarded, undefined);
       return guarded;
     });
   }, [isGuest]);
@@ -137,7 +175,7 @@ export default function SettingsProvider({ children }: { children: React.ReactNo
       if (cancelled || error || !data) return;
       const remote = forceOwnerPlatinum(settingsFromDb(data as Record<string, unknown>), account.email);
       setSettings(remote);
-      writeLocal(remote);
+      writeLocal(remote, account.id);
     })();
 
     return () => { cancelled = true; };
@@ -220,7 +258,7 @@ export default function SettingsProvider({ children }: { children: React.ReactNo
   }, [settings.radiusScale]);
 
   const persist = useCallback((next: UserSettings) => {
-    writeLocal(next);
+    writeLocal(next, account?.id);
     if (!account || !isSupabaseConfigured || !supabase) return;
 
     if (saveTimer.current) clearTimeout(saveTimer.current);

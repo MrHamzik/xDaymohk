@@ -372,12 +372,20 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     // event triggered by the server-side deletion.
 
     window.dispatchEvent(new CustomEvent('daymohk-account-deleted', { detail: { ownerId: account.id } }));
+    const deletedId = account.id;
     setAccount(null);
     saveLocalAccount(null);
     // Сбрасываем локальные флаги, чтобы при повторной регистрации
     // онбординг (welcome-письмо) показался заново.
+    //
+    // Кэш настроек удаляем вместе с аккаунтом: в нём лежит tourDone, и
+    // без этой чистки обязательный гид новой регистрации не
+    // показывался — форма профиля открывалась сразу. Метку
+    // пройденного гида (daymohk-tour-<id>) убираем по той же причине.
     try {
       window.localStorage.removeItem('daymohk-onboarded-v1');
+      window.localStorage.removeItem(`daymohk-settings-${deletedId}`);
+      window.localStorage.removeItem(`daymohk-tour-${deletedId}`);
     } catch {}
   }, [account]);
 
