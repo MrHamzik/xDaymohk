@@ -108,10 +108,12 @@ export default function HomeFeed() {
   }, [account?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Блоки разделов показываются, только если раздел не скрыт в боковом
-  // меню (Режим редактирования) — п.1 ТЗ Этапа 2.
+  // меню (Режим редактирования) — п.1 ТЗ Этапа 2. А сам блок — только
+  // если по разделу ЕСТЬ сохранённое место чтения: не заходил в раздел
+  // или ничего не сохранял — показывать нечего (п.4 ТЗ).
   const hiddenMenu = new Set(settings.hiddenMenu);
-  const visibleReadLinks = READ_LINKS.filter(
-    (item) => !hiddenMenu.has(READING_MENU_IDS[item.section]),
+  const readLinksWithProgress = READ_LINKS.filter(
+    (item) => !hiddenMenu.has(READING_MENU_IDS[item.section]) && progress[item.section],
   );
 
   const firstName = (account?.fullName || '').trim().split(/\s+/)[0];
@@ -191,19 +193,18 @@ export default function HomeFeed() {
 
       <SpecialistLeaders onOpen={(id) => setActiveProfileId(id)} />
 
-      {/* п.1 ТЗ Этапа 2: все четыре блока скрыты — секция не
-          показывается вовсе. */}
-      {visibleReadLinks.length > 0 && (
+      {/* Нет ни одного раздела с прогрессом — секция не показывается. */}
+      {readLinksWithProgress.length > 0 && (
         <section>
           <h2 className="mb-2 smk-text-title font-extrabold text-slate-900 dark:text-white">
             {t.homeContinue}
           </h2>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {visibleReadLinks.map((item) => {
+            {readLinksWithProgress.map((item) => {
               const Icon = item.icon;
               const href = READING_HREFS[item.section];
-              // п.4: блок с сохранённым прогрессом ведёт прямо к главе —
-              // страница раздела прокрутит к сохранённой позиции.
+              // п.4: блок ведёт прямо к главе — страница раздела
+              // прокрутит к сохранённой позиции.
               const mark = progress[item.section];
               const linkHref = mark
                 ? `${href}?chapter=${encodeURIComponent(mark.chapterId)}`

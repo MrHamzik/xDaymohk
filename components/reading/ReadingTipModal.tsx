@@ -24,6 +24,9 @@ interface ReadingTipModalProps {
  * Внутри — объяснение кнопки «Сохранить» и чекбокс «Автосохранение»,
  * синхронизированный с одноимённой настройкой (п.9): выбор из окна и
  * тумблер в настройках — одно и то же значение.
+ *
+ * Компактная: маленькая карточка, плотные отступы — окно не должно
+ * выглядеть как отдельная страница.
  */
 export default function ReadingTipModal({ isOpen, autosaveDefault, onClose }: ReadingTipModalProps) {
   const { t } = useI18n();
@@ -50,30 +53,30 @@ export default function ReadingTipModal({ isOpen, autosaveDefault, onClose }: Re
       aria-modal="true"
       aria-labelledby="reading-tip-title"
     >
-      <div className="smk-sheet w-full max-w-sm rounded-3xl p-5 shadow-2xl">
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">
-            <Bookmark className="h-5 w-5" />
+      <div className="smk-sheet w-full max-w-xs rounded-2xl p-4 shadow-2xl">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">
+            <Bookmark className="h-4 w-4" />
           </div>
-          <h2 id="reading-tip-title" className="min-w-0 flex-1 text-base font-bold text-slate-900 dark:text-white">
+          <h2 id="reading-tip-title" className="min-w-0 text-sm font-bold text-slate-900 dark:text-white">
             {t.readTipTitle}
           </h2>
         </div>
 
-        <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-zinc-400">
+        <p className="mt-2 text-xs leading-relaxed text-slate-600 dark:text-zinc-400">
           {t.readTipText}
         </p>
 
         {/* Чекбокс автосохранения — то же значение, что в Настройках */}
-        <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 p-3 transition hover:bg-slate-50 dark:border-zinc-800 dark:hover:bg-zinc-800/60">
+        <label className="mt-3 flex cursor-pointer items-start gap-2.5 rounded-xl border border-slate-200 p-2.5 transition hover:bg-slate-50 dark:border-zinc-800 dark:hover:bg-zinc-800/60">
           <input
             type="checkbox"
             checked={autosave}
             onChange={(event) => setAutosave(event.target.checked)}
-            className="mt-0.5 h-4 w-4 accent-emerald-600"
+            className="mt-0.5 h-3.5 w-3.5 accent-emerald-600"
           />
           <span className="min-w-0 flex-1">
-            <span className="flex items-center gap-1.5 text-sm font-bold text-slate-900 dark:text-white">
+            <span className="flex items-center gap-1 text-xs font-bold text-slate-900 dark:text-white">
               {t.readTipAutosave}
               {/* «?» — дополнительное пояснение про поиск (п.8 ТЗ) */}
               <button
@@ -84,16 +87,16 @@ export default function ReadingTipModal({ isOpen, autosaveDefault, onClose }: Re
                 }}
                 aria-label={t.readTipAutosave}
                 aria-expanded={noteOpen}
-                className="inline-flex h-5 w-5 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-emerald-600 dark:hover:bg-zinc-800"
+                className="inline-flex h-4 w-4 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-emerald-600 dark:hover:bg-zinc-800"
               >
-                <CircleHelp className="h-3.5 w-3.5" />
+                <CircleHelp className="h-3 w-3" />
               </button>
             </span>
-            <span className="mt-1 block text-xs leading-snug text-slate-500 dark:text-zinc-500">
+            <span className="mt-0.5 block smk-text-label leading-snug text-slate-500 dark:text-zinc-500">
               {t.readTipAutosaveHint}
             </span>
             {noteOpen && (
-              <span className="mt-2 block rounded-xl bg-amber-50 px-2.5 py-2 text-xs leading-snug text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+              <span className="mt-1.5 block rounded-lg bg-amber-50 px-2 py-1.5 smk-text-label leading-snug text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
                 {t.readTipSearchNote}
               </span>
             )}
@@ -103,7 +106,7 @@ export default function ReadingTipModal({ isOpen, autosaveDefault, onClose }: Re
         <button
           type="button"
           onClick={() => onClose(autosave)}
-          className="mt-4 w-full rounded-xl bg-emerald-600 px-3 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-700"
+          className="mt-3 w-full rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-700"
         >
           {t.readTipOk}
         </button>
