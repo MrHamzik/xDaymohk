@@ -29,7 +29,9 @@ const root = process.cwd();
 
 /** Формы, где человек вводит контакты. */
 const FORMS = [
-  'components/OnboardingModal.tsx',
+  // Анкета регистрации — шаг гида (21.08.2026): форма переехала из
+  // OnboardingModal в TourProfileStep, дубликата больше нет.
+  'components/TourProfileStep.tsx',
   'components/EditProfileModal.tsx',
   'app/profile/page.tsx',
 ] as const;
@@ -68,8 +70,9 @@ describe('формы профиля не содержат подписей те�
 
   it.each(FORMS)('%s: подписи берутся из словаря', (file) => {
     const text = readFileSync(join(root, file), 'utf8');
-    // В каждой форме есть хотя бы поле общего телефона.
-    expect(text).toContain('t.phoneGeneral');
+    // В каждой форме есть подписи контактов: поля (телефон/WhatsApp)
+    // или галочки видимости (анкеты, ТЗ-2).
+    expect(/t\.phoneGeneral|t\.phoneWhatsappLabel|t\.tourHidePhone/.test(text)).toBe(true);
   });
 });
 

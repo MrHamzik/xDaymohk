@@ -106,8 +106,8 @@ export default function ProfileModal({
   const displayReviewCount = reviewStats.count;
   const isPersonal = Boolean(profile.isPersonal);
   const hasPhone = !isPersonal && !profile.hidePhone && Boolean(profile.phone && profile.phone.trim().length > 0);
-  const hasWhatsapp = !isPersonal && Boolean(profile.whatsapp && profile.whatsapp.trim().length > 0);
-  const hasTelegram = !isPersonal && Boolean(profile.telegram && profile.telegram.trim().length > 0);
+  const hasWhatsapp = !isPersonal && !profile.hideWhatsapp && Boolean(profile.whatsapp && profile.whatsapp.trim().length > 0);
+  const hasTelegram = !isPersonal && !profile.hideTelegram && Boolean(profile.telegram && profile.telegram.trim().length > 0);
   const hasAnyContact = !isPersonal && (hasPhone || hasWhatsapp || hasTelegram);
   const contactsLocked = !isPersonal && Boolean(profile.contactsLocked);
   const videoId = profile.videoUrl ? youtubeEmbedId(profile.videoUrl) : null;

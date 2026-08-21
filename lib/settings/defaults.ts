@@ -33,19 +33,18 @@ import {
  */
 
 /** Показываем и звучим по умолчанию: звук — только у важного. */
-export const DEFAULT_NOTIFICATION_PREF: NotificationPref = { show: true, sound: false };
-
-/** Звук по умолчанию включён там, где ждут быстрой реакции:
-    задание могут перехватить, а такси — уехать. */
-const SOUND_ON_BY_DEFAULT: NotificationGroup[] = ['tasks', 'taxi'];
+/**
+ * Звук уведомлений включён ПО УМОЛЧАНИЮ у всех групп (решение владельца
+ * от 21.08.2026): тишина «из коробки» читалась как «уведомления не
+ * работают». Выключенный вручную звук (sound: false) сохраняется —
+ * меняется только умолчание для тех, кто настройки не трогал.
+ */
+export const DEFAULT_NOTIFICATION_PREF: NotificationPref = { show: true, sound: true };
 
 export function defaultNotificationPrefs(): Record<NotificationGroup, NotificationPref> {
   const result = {} as Record<NotificationGroup, NotificationPref>;
   for (const group of NOTIFICATION_GROUPS) {
-    result[group] = {
-      show: true,
-      sound: SOUND_ON_BY_DEFAULT.includes(group),
-    };
+    result[group] = { show: true, sound: true };
   }
   return result;
 }
@@ -54,7 +53,9 @@ export const DEFAULT_QUICK_WIDGETS = ['status', 'lang', 'notify', 'theme'];
 
 export const DEFAULT_SETTINGS: UserSettings = {
   notificationPrefs: defaultNotificationPrefs(),
-  autoActiveOnOpen: false,
+  // Автоактивация «Темщика» включена по умолчанию (решение владельца):
+  // человек, открывший раздел, сразу виден в списке исполнителей.
+  autoActiveOnOpen: true,
   autoApproveExecutor: false,
   advancedMode: false,
   hideHints: false,
@@ -72,6 +73,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   // в шапке меню, и дублировать их строками для всех незачем. Кому
   // удобнее строкой — включает глазиком в лайт-режиме.
   hiddenMenu: ['notify', 'lang', 'status', 'theme'],
+  tourStep: 0,
   tourDone: false,
   welcomeSent: false,
   proTier: 'none',
@@ -90,11 +92,12 @@ export function prefFor(
 ): NotificationPref {
   const stored = settings.notificationPrefs?.[group];
   if (!stored) {
-    return { show: true, sound: SOUND_ON_BY_DEFAULT.includes(group) };
+    return { show: true, sound: true };
   }
   return {
     show: stored.show !== false,
-    sound: stored.sound === true,
+    // Умолчание — звук ЕСТЬ: выключенным считается только явное false.
+    sound: stored.sound !== false,
     soundId: stored.soundId,
   };
 }
@@ -827,7 +830,7 @@ function normalizePrefs(raw: unknown): Partial<Record<NotificationGroup, Notific
       : undefined;
     result[group] = {
       show: entry.show !== false,
-      sound: entry.sound === true,
+      sound: entry.sound !== false,
       ...(soundId ? { soundId } : {}),
     };
   }
@@ -884,6 +887,33 @@ function normalizeRadius(raw: unknown): number {
   return Math.min(200, Math.max(0, Math.round(value / 5) * 5));
 }
 
+/**
+ * Этап онбординга — это НОМЕР ШАГА гида (21.08.2026 гид стал единым:
+ * 12 шагов, анкета и финал — внутри него, отдельные модалки убраны).
+ *
+ *   0–11 — обычные шаги (язык, каталог, главная, меню, режим
+ *          редактирования, виджет, настройки, уведомления, внешний
+ *          вид, «+», реквизиты);
+ *   12   — «Ваш профиль» (заполнение анкеты);
+ *   13   — финальный шаг «Вот и всё» с кнопкой «Завершить».
+ *
+ * tourDone ставится ТОЛЬКО кнопкой «Завершить» — до неё любой заход
+ * открывает гид на сохранённом шаге.
+ *
+ * Границы — контракт с БД (check в миграции 66) и FirstTour, поэтому
+ * живут константами и проверяются тестом tours-progress.
+ */
+export const TOUR_STEPS_COUNT = 14;
+export const TOUR_STEP_PROFILE = 12;
+export const TOUR_STEP_FINAL = 13;
+export const TOUR_STEP_MAX = TOUR_STEP_FINAL;
+
+export function normalizeTourStep(raw: unknown): number {
+  const value = Number(raw);
+  if (!Number.isFinite(value)) return 0;
+  return Math.min(TOUR_STEP_MAX, Math.max(0, Math.trunc(value)));
+}
+
 /** Приводит произвольный объект к валидным настройкам. */
 export function normalizeSettings(raw: unknown): UserSettings {
   const input = (raw ?? {}) as Record<string, unknown>;
@@ -895,7 +925,8 @@ export function normalizeSettings(raw: unknown): UserSettings {
 
   return {
     notificationPrefs: normalizePrefs(input.notificationPrefs),
-    autoActiveOnOpen: input.autoActiveOnOpen === true,
+    // Умолчание — ВКЛЮЧЕНО: выключенным считается только явное false.
+    autoActiveOnOpen: input.autoActiveOnOpen !== false,
     autoApproveExecutor: input.autoApproveExecutor === true,
     advancedMode: input.advancedMode === true,
     hideHints: input.hideHints === true,
@@ -912,6 +943,10 @@ export function normalizeSettings(raw: unknown): UserSettings {
       return list.slice(0, 4);
     })(),
     hiddenMenu: normalizeStringList(input.hiddenMenu, [], MENU_ID_SET, 28).filter((id) => id !== 'settings'),
+    // Этап онбординга: 0–10 шаги гида, 11 «Внешний вид», 12 анкета.
+    // Зажимаем в диапазон: в поле может попасть мусор от старого клиента
+    // или ручной правки, а выход за границы ломает возобновление гида.
+    tourStep: normalizeTourStep(input.tourStep),
     tourDone: input.tourDone === true,
     welcomeSent: input.welcomeSent === true,
     proTier: normalizeProTier(input.proTier),
@@ -934,7 +969,7 @@ export function settingsFromDb(row: Record<string, unknown> | null): UserSetting
   if (!row) return { ...DEFAULT_SETTINGS };
   return normalizeSettings({
     notificationPrefs: row.notification_prefs,
-    autoActiveOnOpen: row.auto_active_on_open,
+    autoActiveOnOpen: row.auto_active_on_open !== false,
     autoApproveExecutor: row.auto_approve_executor,
     advancedMode: row.advanced_mode,
     hideHints: row.hide_hints,
@@ -947,6 +982,8 @@ export function settingsFromDb(row: Record<string, unknown> | null): UserSetting
     radiusScale: row.radius_scale,
     quickWidgets: row.quick_widgets,
     hiddenMenu: row.hidden_menu,
+    // Колонки может не быть у строк, созданных до миграции 65, — тогда 0.
+    tourStep: normalizeTourStep(row.tour_step ?? 0),
     tourDone: row.tour_done,
     welcomeSent: row.welcome_sent === true,
     proTier: row.pro_tier,
@@ -976,6 +1013,7 @@ export function settingsToDb(settings: UserSettings): Record<string, unknown> {
     radius_scale: settings.radiusScale,
     quick_widgets: settings.quickWidgets,
     hidden_menu: settings.hiddenMenu,
+    tour_step: settings.tourStep,
     tour_done: settings.tourDone,
     welcome_sent: settings.welcomeSent,
     // pro_until сюда НЕ попадает намеренно: сроком подписки

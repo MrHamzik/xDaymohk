@@ -426,9 +426,17 @@ export default function ThemeEditor() {
                     max={100}
                     step={5}
                     value={gradientsOf(editing).strength}
-                    onChange={(event) => patchTheme(editing.id, {
-                      gradients: { ...gradientsOf(editing), strength: Number(event.target.value) },
-                    })}
+                    onChange={(event) => {
+                      // Троттлинг тот же, что у цветовых пикеров: ползунок
+                      // шлёт onChange на каждый пиксель движения, и без
+                      // сжатия до кадра поток обновлений SettingsProvider
+                      // снова упирается в «Maximum update depth exceeded»
+                      // (последний нетроттлированный input в этом файле).
+                      const strength = Number(event.target.value);
+                      patchThemeLive(() => patchTheme(editing.id, {
+                        gradients: { ...gradientsOf(editing), strength },
+                      }));
+                    }}
                     aria-label={t.settingsThemeGradientStrength}
                     className="w-full accent-emerald-600"
                   />

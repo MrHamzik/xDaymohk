@@ -3,8 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/components/AuthProvider';
 import { useSettings } from '@/components/SettingsProvider';
 import { useI18n } from '@/lib/i18n';
 import { sendTourCommand, setTourActive, useTourEvents, type TourEvent } from '@/lib/tour';
@@ -12,7 +10,11 @@ import { useTourLock } from '@/lib/tour-lock';
 import TourSpotlight from '@/components/TourSpotlight';
 import QuickWidgetsEditor from '@/components/settings/QuickWidgetsEditor';
 import { HintMark, SettingRow, Toggle } from '@/components/settings/SettingsPrimitives';
-import { prefFor } from '@/lib/settings/defaults';
+import TourProfileStep from '@/components/TourProfileStep';
+import {
+  TOUR_STEPS_COUNT, TOUR_STEP_FINAL, prefFor,
+} from '@/lib/settings/defaults';
+import { FONT_FAMILIES, type FontFamilyId } from '@/lib/settings/types';
 import {
   DEFAULT_GROUP_SOUND, playSound, type SoundId,
 } from '@/lib/notification-sounds';
@@ -68,7 +70,12 @@ interface FirstTourProps {
  *
  * Для старшего, кто плохо разбирается в телефоне: крупные буквы,
  * не больше четырёх пунктов на шаг, любой шаг можно пропустить.
- * Показывается один раз — флаг в настройках и в localStorage.
+ *
+ * Прогресс живёт в НАСТРОЙКАХ (а с ними — в БД, user_settings.tour_step):
+ * закрыл браузер на пятом шаге — с пятого и продолжит, с любого
+ * устройства. Раньше номер шага лежал в sessionStorage и умирал вместе
+ * с вкладкой: перезаходивший пользователь начинал заново или не видел
+ * гида вовсе, хотя он обязателен.
  *
  * Три принципа, ради которых гид переписан:
  *
@@ -82,13 +89,10 @@ interface FirstTourProps {
  *    прямо в шаге стоят рабочие переключатели: не нужно запоминать
  *    дорогу в настройки и возвращаться туда потом.
  */
-/** Номер текущего шага гида — переживает перезагрузку вкладки. */
-const TOUR_STEP_KEY = 'daymohk-tour-step';
 
+/** TOUR_STEPS_COUNT и границы шагов — из lib/settings/defaults.ts. */
 export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
   const { t, language, setLanguage } = useI18n();
-  const { account } = useAuth();
-  const router = useRouter();
   const { settings, update } = useSettings();
 
   /** Правка настроек уведомлений — та же логика, что на странице настроек. */
@@ -101,30 +105,44 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
     });
   };
   /**
-   * Номер шага переживает перезагрузку страницы (п.17).
+   * Номер шага берётся из настроек (п.17).
    *
-   * Шаг с каталогом уводит человека на /catalog — это настоящий переход,
-   * а не модалка. Если в этот момент обновить страницу (или просто
-   * дождаться, пока браузер восстановит вкладку), гид начинался бы
-   * заново, а чаще просто исчезал до следующего входа.
+   * Источник — БД: гид обязан возобновляться с того же места после
+   * закрытия браузера и с другого устройства. Локальная копия настроек
+   * в localStorage применяется в первом кадре, серверная — догоняет.
    *
-   * Держим прогресс в sessionStorage: он живёт, пока открыта вкладка, и
-   * не тянется в следующие сеансы — законченный гид помечается
-   * настройкой tourDone, у неё своя долгая память.
+   * Пишем этап при каждой смене шага (эффект ниже): пока человек не
+   * дошёл до конца, tourDone остаётся false, и следующий заход начнёт
+   * ровно отсюда.
    */
   const [index, setIndex] = useState(() => {
-    if (typeof window === 'undefined') return 0;
-    try {
-      const saved = Number(window.sessionStorage.getItem(TOUR_STEP_KEY));
-      return Number.isInteger(saved) && saved >= 0 ? saved : 0;
-    } catch {
-      return 0;
-    }
+    const saved = Number(settings.tourStep);
+    return Number.isInteger(saved) && saved >= 0 && saved < TOUR_STEPS_COUNT ? saved : 0;
   });
-
+  // true на компьютере: задания гида про «меню» и «каталог» там живут
+  // иначе (рейка всегда открыта, лента бывает короче экрана).
+  const [isDesktop, setIsDesktop] = useState(false);
   useEffect(() => {
-    try { window.sessionStorage.setItem(TOUR_STEP_KEY, String(index)); } catch { /* private mode */ }
-  }, [index]);
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const apply = () => setIsDesktop(mq.matches);
+    apply();
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
+  }, []);
+
+  /**
+   * Сохранение этапа — только по факту ПЕРЕХОДА.
+   *
+   * persistedRef стартует с текущего шага: без него первый же рендер
+   * перезаписал бы серверное значение (например, 5) тем, с чего
+   * смонтировалась карточка (0), и прогресс молча откатывался.
+   */
+  const persistedRef = useRef(index);
+  useEffect(() => {
+    if (persistedRef.current === index) return;
+    persistedRef.current = index;
+    update({ tourStep: index });
+  }, [index, update]);
   /**
    * Шаг-задание выполнен? Пока false — карточка спрятана и человек
    * работает с настоящим интерфейсом. Сбрасывается при смене шага.
@@ -132,6 +150,14 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
   const [done, setDone] = useState(false);
   /** Открыто ли сейчас меню плюса — на шаге «Задания» прячет карточку. */
   const [plusOpen, setPlusOpen] = useState(false);
+  /**
+   * Фаза шага «Режим редактирования» (ТЗ, п.3.2):
+   *   'on'  — карточка с текстом «включите режим»; включение тумблера
+   *           прячет карточку и открывает редактирование (глазики);
+   *   'off' — после «Сохранить»: карточка вернулась с текстом «теперь
+   *           отключите режим», «Дальше» ведёт к следующему шагу.
+   */
+  const [editPhase, setEditPhase] = useState<'on' | 'off'>('on');
   /**
    * Задание шага началось.
    *
@@ -179,11 +205,9 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
    * обязаны исчезнуть: иначе список, который просят пролистать, видно
    * через мутное стекло.
    */
-  const [catalogOpen, setCatalogOpen] = useState(false);
+  const [pageOpen, setPageOpen] = useState(false);
   /** Корень карточки шага — нужен для сброса прокрутки (п.5). */
   const cardRef = useRef<HTMLDivElement | null>(null);
-  /** Уводил ли гид человека в каталог — тогда его надо вернуть (п.9). */
-  const visitedCatalogRef = useRef(false);
 
   /**
    * Шаг гида.
@@ -197,13 +221,15 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
     items: string[];
     marks: string[];
     panel: React.ReactNode;
-    awaits: 'catalog-scroll' | 'menu-scroll' | 'plus' | null;
+    awaits: 'catalog-scroll' | 'home-scroll' | 'menu-scroll' | 'edit-mode' | 'plus' | null;
     hint: string;
     skippable: boolean;
     /** Селекторы островков, остающихся рабочими. */
     allow?: string[];
     /** Разрешена ли прокрутка страницы и списков. */
     scroll?: boolean;
+    /** Шаг анкеты: своя кнопка, стандартное «Дальше» скрыто. */
+    profileStep?: boolean;
   }
 
   const steps: TourStep[] = [
@@ -270,17 +296,71 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
       scroll: true,
     },
     {
+      // Главная (п.1 от 21.08, ночной список): тот же формат, что и
+      // каталог — нажать «Главная» и пролистать ленту. Благодаря этому
+      // фоновое возвращение на главную после каталога больше не нужно:
+      // человек возвращается сам, как задание.
+      title: t.tourHomeTitle,
+      items: [t.tourHomea, t.tourHomeb, t.tourHomec],
+      marks: ['home'],
+      panel: null,
+      awaits: 'home-scroll' as const,
+      hint: t.tourWaitHome,
+      skippable: true,
+      allow: ['[data-tour="home"]'],
+      scroll: true,
+    },
+    {
       title: t.tour3Title,
       items: [t.tour3a, t.tour3b, t.tour3c],
       marks: ['menu', 'rail-menu'],
       panel: null,
       awaits: 'menu-scroll' as const,
-      hint: t.tourWaitMenu,
+      // На компьютере боковое меню открыто ВСЕГДА, и его список обычно
+      // помещается целиком — «пролистайте меню» там нечего выполнять.
+      // Задание смягчено: достаточно нажать на меню (см. эффект ниже).
+      hint: isDesktop ? t.tourWaitMenuPc : t.tourWaitMenu,
       skippable: true,
-      // Шаг 4 (п.18): работает ТОЛЬКО кнопка, открывающая меню, и
-      // прокрутка внутри него. Ни иконки разделов, ни крестик, ни
-      // шторки не нажимаются — человек просто смотрит список.
-      allow: ['[data-tour="menu"]', '[data-tour="rail-menu"]'],
+      // Кнопки самого меню НЕ работают (п.2 от 21.08, ночь): рейка
+      // подсвечена, остальное затемнено, клик по рейке выполняет
+      // задание, но ни один пункт не срабатывает. На телефоне работает
+      // только кнопка открытия меню и прокрутка внутри него.
+      allow: isDesktop ? [] : ['[data-tour="menu"]'],
+      scroll: true,
+    },
+    {
+      // «Режим редактирования» (ТЗ, п.3.2, 5-я позиция). Раньше назывался
+      // Лайт-режим и был платным — теперь доступен всем и обучен в гиде:
+      // включил → глазики → «Сохранить» → отключил → «Дальше».
+      title: t.tourEditTitle,
+      items: [editPhase === 'off' ? t.tourEditOff : t.tourEditOn],
+      marks: ['menu', 'rail-menu'],
+      panel: (
+        <SettingRow title={t.lightMode} hint={t.lightModeHint}>
+          <Toggle
+            checked={settings.lightMode}
+            onChange={(next) => {
+              update({ lightMode: next });
+              // Включение тумблера начинает правку. Пауза 400 мс
+              // НАРОЧНАЯ (баг от 22.08): карточка больше не исчезает
+              // под самым кликом — раньше событие успевало «доехать»
+              // до кнопок под тумблером, и шаг перещёлкивался.
+              if (next && editPhase === 'on') {
+                window.setTimeout(() => setTasking(true), 400);
+              }
+            }}
+            label={t.lightMode}
+          />
+        </SettingRow>
+      ),
+      awaits: 'edit-mode' as const,
+      hint: isDesktop ? t.tourEditHint : t.tourEditHintMobile,
+      // Пропуск вернуть нельзя было без защиты: «Пропустить» гасит
+      // режим (см. skipStep) и только потом листает.
+      skippable: true,
+      // Работают ТОЛЬКО глазики (и на телефоне — кнопка открытия
+      // меню): сами пункты меню в это время мертвы.
+      allow: isDesktop ? ['[data-tour-eye]'] : ['[data-tour="menu"]', '[data-tour-eye]'],
       scroll: true,
     },
     {
@@ -446,6 +526,42 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
             />
             <p className="smk-text-label text-slate-500 dark:text-zinc-500">{t.settingsRadiusHint}</p>
           </div>
+
+          {/* Размер текста и начертание — раньше были отдельной модалкой
+              ПОСЛЕ гида («Внешний вид», шаг-сирота). С 21.08.2026 всё
+              оформление собрано в этот шаг: одна тема, один разговор. */}
+          <div className="smk-field space-y-2 px-3 py-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-800 dark:text-zinc-200">{t.settingsFontSize}</span>
+              <span className="text-xs font-extrabold text-emerald-700 dark:text-emerald-400">{settings.fontScale}%</span>
+            </div>
+            <input
+              type="range"
+              min={50}
+              max={150}
+              step={5}
+              value={settings.fontScale}
+              onChange={(event) => update({ fontScale: Number(event.target.value) })}
+              aria-label={t.settingsFontSize}
+              className="w-full accent-emerald-600"
+            />
+          </div>
+          <div className="smk-field space-y-2 px-3 py-3">
+            <label htmlFor="tour-font" className="block text-xs font-bold text-slate-800 dark:text-zinc-200">
+              {t.settingsFontFamily}
+            </label>
+            <select
+              id="tour-font"
+              value={settings.fontFamily}
+              onChange={(event) => update({ fontFamily: event.target.value as FontFamilyId })}
+              className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+            >
+              {(Object.keys(FONT_FAMILIES) as FontFamilyId[]).map((id) => (
+                <option key={id} value={id}>{id}</option>
+              ))}
+            </select>
+            <p className="smk-text-label text-slate-500 dark:text-zinc-500">{t.tourLookc}</p>
+          </div>
         </div>
       ),
       awaits: null,
@@ -476,8 +592,28 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
       skippable: true,
     },
     {
-      title: t.tour7Title,
-      items: [t.tour7a, t.tour7b, t.tour7c],
+      // Анкета — шаг гида, а не отдельная модалка (решение от 21.08:
+      // «11 цельных шагов», без окон-сирот после гида).
+      title: t.tourProfileTitle,
+      items: [t.tourProfileHint],
+      marks: [],
+      panel: (
+        <TourProfileStep
+          onComplete={() => setIndex(TOUR_STEP_FINAL)}
+          onBack={() => setIndex((current) => current - 1)}
+        />
+      ),
+      awaits: null,
+      hint: '',
+      skippable: false,
+      // У шага своя кнопка «Сохранить и продолжить» — обычное «Дальше»
+      // скрыто, иначе можно перескочить анкету пустым.
+      profileStep: true,
+    },
+    {
+      // Финал: только здесь рождается tourDone — кнопка «Завершить».
+      title: t.tourFinalTitle,
+      items: [t.tourFinala, t.tourFinalb],
       marks: [],
       panel: null,
       awaits: null,
@@ -495,8 +631,13 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
    * Сначала человек читает карточку шага. Нажал «Дальше» — карточка
    * уходит, и он выполняет задание на настоящем интерфейсе. Как только
    * задание выполнено (done), шаг сам перелистывается вперёд.
+   *
+   * НАРОЧНО без «&& !done» (п.5 от 21.08, ночь): раньше карточка
+   * возвращалась со СТАРЫМ шагом и через 250 мс перещёлкивалась на
+   * новый — человек видел мигание. Теперь она остаётся скрытой, пока
+   * индекс не сменился, и появляется сразу с новым шагом.
    */
-  const waiting = Boolean(step.awaits) && tasking && !done;
+  const waiting = Boolean(step.awaits) && tasking;
 
   /**
    * Экран полностью отдан человеку.
@@ -506,7 +647,7 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
    * открытого списка мутное стекло и надпись «нажмите и пролистайте» —
    * ровно та жалоба, с которой начинались пункты 2 и 3.
    */
-  const screenFree = waiting && (overlayOpen || catalogOpen);
+  const screenFree = waiting && (overlayOpen || pageOpen);
 
   /**
    * Блокировка интерфейса на всё время гида (п.17/п.18).
@@ -532,7 +673,23 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
     setPlusOpen(false);
     setOverlayOpen(false);
     setTasking(false);
-    setCatalogOpen(false);
+    setPageOpen(false);
+    setEditPhase('on');
+    // Меню — в начало (баг от 22.08, п.1): если человек прокрутил список
+    // на прошлом шаге, подсветка нового шага целится в уехавшие кнопки.
+    // Возвращаем ОБА контейнера прокрутки (рейка и выезд) наверх.
+    document.querySelectorAll('[data-tour-menu-scroll]').forEach((node) => {
+      if (node instanceof HTMLElement) node.scrollTop = 0;
+    });
+    // Вернулись на шаг «Режим редактирования», а режим всё ещё включён
+    // (включили раньше и ушли вперёд) — сразу продолжаем правку, без
+    // повторного чтения текста.
+    if (steps[index]?.awaits === 'edit-mode' && settings.lightMode) {
+      setTasking(true);
+    }
+    // settings.lightMode читается только в момент входа на шаг;
+    // дальше режимом управляет тумблер в карточке.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index]);
 
   /**
@@ -557,35 +714,6 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
   useEffect(() => { onCardVisible?.(!waiting); }, [waiting, onCardVisible]);
 
   /**
-   * Возврат на главную — в фоне, пока экран ещё закрыт гидом (п.9).
-   *
-   * Шаг с каталогом уводит человека на /catalog. Раньше он там и
-   * оставался: гид заканчивался, окно закрывалось, и только потом
-   * происходил переход — человек видел, как его «выбрасывает» на
-   * главную уже после обучения.
-   *
-   * Теперь возвращаемся заранее: как только шаг с каталогом позади, а
-   * фон ещё затемнён и размыт карточкой гида, тихо уходим на главную.
-   * Переход происходит под оверлеем, и к последнему шагу человек уже
-   * стоит там, где нужно.
-   *
-   * router.replace, а не push: страница каталога была частью обучения,
-   * и возвращаться на неё кнопкой «назад» незачем.
-   */
-  useEffect(() => {
-    // Пока идёт сам шаг с каталогом — не мешаем: человек там работает.
-    if (step.awaits === 'catalog-scroll') return;
-    if (!visitedCatalogRef.current) return;
-    if (typeof window === 'undefined') return;
-    if (!window.location.pathname.startsWith('/catalog')) {
-      visitedCatalogRef.current = false;
-      return;
-    }
-    visitedCatalogRef.current = false;
-    router.replace('/');
-  }, [index, step.awaits, router]);
-
-  /**
    * Шаг про виджет требует чистого экрана (п.4).
    *
    * Предыдущий шаг просит открыть меню и пролистать его. Человек часто
@@ -603,21 +731,19 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
   }, [index]);
 
   /**
-   * Переход в каталог (п.2/3).
+   * Переход на страницу задания (п.2/3).
    *
-   * «Каталог» — обычная ссылка, события она не шлёт, поэтому смотрим на
-   * адрес страницы. Как только он сменился на /catalog, задание по сути
-   * началось: экран нужно освободить немедленно.
+   * «Каталог» и «Главная» — обычные ссылки, события они не шлют, поэтому
+   * смотрим на адрес страницы. Как только он сменился на нужный, задание
+   * по сути началось: экран нужно освободить немедленно.
    */
   useEffect(() => {
-    if (step.awaits !== 'catalog-scroll' || !tasking || catalogOpen) return;
+    if ((step.awaits !== 'catalog-scroll' && step.awaits !== 'home-scroll') || !tasking || pageOpen) return;
+    const wanted = step.awaits === 'catalog-scroll' ? '/catalog' : '/';
     const check = () => {
-      if (window.location.pathname.startsWith('/catalog')) {
-        setCatalogOpen(true);
-        // Помечаем, что обучение увело человека со страницы: после шага
-        // его нужно вернуть на главную (п.9).
-        visitedCatalogRef.current = true;
-      }
+      const path = window.location.pathname;
+      const hit = wanted === '/' ? path === '/' : path.startsWith(wanted);
+      if (hit) setPageOpen(true);
     };
     check();
     // pushState в Next.js не поднимает popstate — опрашиваем адрес.
@@ -627,14 +753,14 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
       window.clearInterval(timer);
       window.removeEventListener('popstate', check);
     };
-  }, [step.awaits, tasking, catalogOpen]);
+  }, [step.awaits, tasking, pageOpen]);
 
   useEffect(() => {
-    if (step.awaits !== 'catalog-scroll' || !tasking || done) return;
-    // Прокрутку считаем ТОЛЬКО в самом каталоге. Иначе главная, если она
-    // короткая, сразу оказывается «пролистанной до конца», и шаг
-    // проскакивал бы, ни разу не открыв каталог.
-    if (!catalogOpen) return;
+    if ((step.awaits !== 'catalog-scroll' && step.awaits !== 'home-scroll') || !tasking || done) return;
+    // Прокрутку считаем ТОЛЬКО на самой странице задания. Иначе
+    // предыдущая страница, если она короткая, сразу оказывается
+    // «пролистанной до конца», и шаг проскакивал бы без перехода.
+    if (!pageOpen) return;
 
     // Сколько нужно пролистать, чтобы шаг засчитался.
     //
@@ -643,6 +769,15 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
     // Теперь просим либо полтора экрана, либо докрутить до конца
     // страницы (если карточек мало и крутить особо нечего).
     const NEEDED = Math.round(window.innerHeight * 1.5);
+
+    // Короткая лента (п.11): если каталог короче полутора экранов,
+    // «доскроллил до конца» выполняется сразу — требовать невозможного
+    // нельзя, иначе гид зависал бы навсегда. Даём посмотреть и
+    // возвращаем карточку через те же 2 секунды.
+    let shortPageTimer = 0;
+    if (document.body.scrollHeight <= window.innerHeight + 80) {
+      shortPageTimer = window.setTimeout(() => setDone(true), 2000);
+    }
 
     // Сколько нужно проехать, чтобы «докрутил до конца» засчиталось.
     //
@@ -674,8 +809,9 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
     return () => {
       window.removeEventListener('scroll', onScroll);
       if (timer) window.clearTimeout(timer);
+      if (shortPageTimer) window.clearTimeout(shortPageTimer);
     };
-  }, [step.awaits, tasking, done, catalogOpen]);
+  }, [step.awaits, tasking, done, pageOpen]);
 
   // Меню и плюс сообщают о себе сами — они модальные, страница под ними
   // не двигается, поймать прокрутку окна там нечем.
@@ -687,6 +823,17 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
       // Та же пауза, что и в каталоге: даём досмотреть список.
       window.setTimeout(() => setDone(true), 2000);
     }
+    if (step.awaits === 'menu-scroll' && event === 'menu-open') {
+      // Меню поместилось целиком (п.11): листить нечего — считаем
+      // «дошёл до конца» и возвращаем карточку через 2 секунды.
+      window.setTimeout(() => {
+        const scroller = document.querySelector('[data-tour-menu-scroll]');
+        if (scroller instanceof HTMLElement
+          && scroller.scrollHeight <= scroller.clientHeight + 40) {
+          window.setTimeout(() => setDone(true), 2000);
+        }
+      }, 500);
+    }
     if (step.awaits !== 'plus') return;
     if (event === 'plus-open') setPlusOpen(true);
     // Закрыли меню плюса крестиком — задание выполнено.
@@ -694,18 +841,55 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
   }, [step.awaits, tasking]);
   useTourEvents(onTourEvent);
 
+  // ПК (п.3 от 21.08): боковое меню открыто всегда и обычно помещается
+  // целиком — «пролистайте меню» там невыполнимо. Задание: нажать на
+  // меню, карточка вернётся через 2 секунды.
+  useEffect(() => {
+    if (step.awaits !== 'menu-scroll' || !tasking || done) return;
+    if (!isDesktop) return;
+    let timer = 0;
+    const onClick = (event: Event) => {
+      const el = event.target instanceof Element ? event.target : null;
+      if (!el?.closest('[data-tour="rail-menu"]')) return;
+      if (timer) return;
+      timer = window.setTimeout(() => setDone(true), 2000);
+    };
+    // window-capture срабатывает РАНЬШЕ document-capture замка гида,
+    // поэтому клик по разрешённой рейке виден даже при блокировке.
+    window.addEventListener('click', onClick, true);
+    return () => {
+      window.removeEventListener('click', onClick, true);
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [step.awaits, tasking, done, isDesktop]);
+
   const finish = () => {
-    update({ tourDone: true });
-    try {
-      if (account?.id) window.localStorage.setItem(`daymohk-tour-${account.id}`, '1');
-      // Гид пройден — прогресс шага больше не нужен, иначе следующий
-      // запуск в этой же вкладке открылся бы на последнем шаге.
-      window.sessionStorage.removeItem(TOUR_STEP_KEY);
-    } catch { /* private mode */ }
+    // Кнопка «Завершить» на финальном шаге. tourDone (в БД) ставит
+    // OnboardingModal.finishOnboarding — сюда приходит только после
+    // анкеты, потому что финальный шаг достижим исключительно через неё.
+    persistedRef.current = TOUR_STEP_FINAL;
+    update({ tourStep: TOUR_STEP_FINAL });
     onDone();
   };
 
   const goNext = () => {
+    // Шаг «Режим редактирования» (баг от 22.08: «Дальше» перескакивала
+    // на следующий шаг, минуя правку меню). Теперь: пока режим не
+    // включён — «Дальше» ничего не делает; включён — начинается правка
+    // (обычно карточка уже скрылась сама, сразу после тумблера);
+    // после «Сохранить» (фаза «отключите») — «Дальше» листает шаг.
+    if (step.awaits === 'edit-mode' && !tasking) {
+      if (editPhase === 'on') {
+        if (!settings.lightMode) return;
+        setTasking(true);
+        return;
+      }
+      // Фаза «отключите»: пока режим ВКЛЮЧЁН, дальше идти нельзя
+      // (баг от 22.08, п.2) — изменения не зафиксированы.
+      if (settings.lightMode) return;
+      setIndex((current) => current + 1);
+      return;
+    }
     // На шаге с заданием «Дальше» не листает вперёд, а запускает само
     // задание: карточка уходит, человек работает с интерфейсом.
     if (step.awaits && !tasking) {
@@ -727,6 +911,11 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
 
   /** «Пропустить шаг» листает вперёд всегда, минуя задание. */
   const skipStep = () => {
+    // Пропуск шага редактирования (возвращён по просьбе от 22.08, п.5):
+    // режим гасим, чтобы человек не остался в «полуправленном» меню.
+    if (step.awaits === 'edit-mode' && settings.lightMode) {
+      update({ lightMode: false });
+    }
     if (last) finish();
     else setIndex((current) => current + 1);
   };
@@ -734,12 +923,16 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
   // Задание выполнено — переходим к следующему шагу сами. Возвращать
   // карточку того же шага незачем: человек уже сделал, что просили.
   useEffect(() => {
+    // Шаг «Режим редактирования» листается ТОЛЬКО кнопкой «Дальше»
+    // (фаза «отключите»): авто-переход по done для него запрещён —
+    // иначе любая зацепка со прошлого шага-задания уносила вперёд.
+    if (step.awaits === 'edit-mode') return;
     if (!done || !tasking) return;
     const timer = window.setTimeout(() => {
       setIndex((current) => Math.min(current + 1, steps.length - 1));
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [done, tasking, steps.length]);
+  }, [done, tasking, steps.length, step.awaits]);
 
   return (
     <div ref={cardRef} className={waiting ? 'contents' : 'relative px-6 pb-6 pt-10'}>
@@ -765,7 +958,7 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
         // человек уже сделал то, о чём она просила, и висеть поверх
         // открытого окна ей незачем.
         typeof document !== 'undefined' && !screenFree && createPortal(
-          <div data-tour-ui className="pointer-events-none fixed inset-x-0 bottom-24 z-[96] flex justify-center px-4">
+          <div data-tour-ui className="smk-tour-fade pointer-events-none fixed inset-x-0 bottom-24 z-[96] flex justify-center px-4">
             <p className="smk-sheet pointer-events-auto max-w-sm rounded-2xl px-4 py-3 text-center text-sm font-bold text-slate-800 shadow-2xl dark:text-zinc-100">
               {step.hint}
             </p>
@@ -798,10 +991,17 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
             ))}
           </ol>
 
-          {step.panel && (
-            <div className="mt-4 max-h-[42vh] overflow-y-auto rounded-2xl bg-slate-50 p-3 dark:bg-zinc-900/60">
-              {step.panel}
-            </div>
+          {/* У шага анкеты своя разметка: поля в прокрутке и ПОДВАЛ
+              (назад + «Сохранить и продолжить») вне прокрутки (п.3 от
+              21.08, ночь). Остальные панели — в общей обёртке. */}
+          {step.profileStep ? (
+            step.panel
+          ) : (
+            step.panel && (
+              <div className="mt-4 max-h-[42vh] overflow-y-auto rounded-2xl bg-slate-50 p-3 dark:bg-zinc-900/60">
+                {step.panel}
+              </div>
+            )
           )}
 
           <div className="mt-5 flex items-center gap-1.5" aria-hidden>
@@ -813,7 +1013,7 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
             ))}
           </div>
 
-          <div className="mt-4 flex items-center gap-2">
+          <div className={`mt-4 flex items-center gap-2 ${step.profileStep ? 'hidden' : ''}`}>
             {index > 0 && (
               <button
                 type="button"
@@ -824,6 +1024,9 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
                 <ArrowLeft className="h-5 w-5" />
               </button>
             )}
+            {/* У шага анкеты своя кнопка «Сохранить и продолжить» внутри
+                формы: обычное «Дальше» позволило бы перескочить анкету. */}
+            {!step.profileStep && (
             <button
               type="button"
               onClick={goNext}
@@ -835,6 +1038,7 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
               {last ? t.tourFinish : t.tourNext}
               {!last && <ArrowRight className="h-4 w-4" />}
             </button>
+            )}
           </div>
 
           {step.skippable && (
@@ -847,6 +1051,23 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
             </button>
           )}
         </div>
+      )}
+
+      {/* Кнопка «Сохранить» шага «Режим редактирования» (ТЗ, п.3.2):
+          нижняя часть экрана, по центру, с отступом от краёв. Появляется
+          на этапе правки меню и возвращает карточку гида. Рендерится и
+          в ветке waiting (карточки нет), и поверх открытого меню. */}
+      {step.awaits === 'edit-mode' && tasking && typeof document !== 'undefined' && createPortal(
+        <div data-tour-ui className="smk-tour-fade pointer-events-none fixed inset-x-0 bottom-6 z-[96] flex justify-center px-4">
+          <button
+            type="button"
+            onClick={() => { setEditPhase('off'); setTasking(false); }}
+            className="pointer-events-auto min-h-11 rounded-xl bg-emerald-600 px-8 py-2.5 text-sm font-bold text-white shadow-2xl transition hover:bg-emerald-700"
+          >
+            {t.save}
+          </button>
+        </div>,
+        document.body,
       )}
     </div>
   );

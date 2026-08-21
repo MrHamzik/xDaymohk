@@ -10,6 +10,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import Link from 'next/link';
 import {
   ArrowLeft, ChevronDown, LifeBuoy, Loader2, MessageCircle, Search, Send, Trash2,
@@ -119,8 +120,12 @@ export default function HelpPage() {
     }
   };
 
+  // Подтверждение удаления — модальным окном в дизайне приложения,
+  // как и сброс настроек: системные confirm выглядят чужими.
+  const [removeId, setRemoveId] = useState<string | null>(null);
+
   const remove = async (id: string) => {
-    if (!window.confirm(L('Удалить свой вопрос?', 'Хьайн хаттар дIадаккха?'))) return;
+    setRemoveId(null);
     const accessToken = await token();
     const res = await fetch(`/api/support?id=${encodeURIComponent(id)}`, {
       method: 'DELETE', headers: { Authorization: `Bearer ${accessToken}` },
@@ -267,7 +272,7 @@ export default function HelpPage() {
                       )}
                     </button>
 
-                    <button type="button" onClick={() => remove(q.id)}
+                    <button type="button" onClick={() => setRemoveId(q.id)}
                       aria-label={L('Удалить', 'ДIадаккха')}
                       className="smk-act smk-act--danger flex h-6 w-6 shrink-0 items-center justify-center">
                       <Trash2 className="h-3.5 w-3.5" />
@@ -368,6 +373,16 @@ export default function HelpPage() {
           {SUPPORT_EMAIL}
         </a>
       </div>
+
+      <ConfirmDialog
+        isOpen={Boolean(removeId)}
+        title={L('Удалить вопрос?', 'Хаттар дIабаккха?')}
+        message={L('Удалить свой вопрос?', 'Хьайн хаттар дIадаккха?')}
+        confirmLabel={L('Удалить', 'ДIадаккха')}
+        onConfirm={() => { if (removeId) void remove(removeId); }}
+        onCancel={() => setRemoveId(null)}
+        danger
+      />
     </div>
   );
 }

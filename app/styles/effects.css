@@ -585,6 +585,33 @@ textarea.smk-field:focus {
   animation: smk-tour-fade-in 260ms ease-out both;
 }
 
+/* Карточка гида: мягкое появление и исчезновение (п.5 от 21.08, ночь).
+   Раньше на шагах-заданиях окно скрывалось классом display:none —
+   исчезало и появлялось рывком. Теперь карточка остаётся в DOM и
+   меняет прозрачность с лёгким сдвигом.
+   Задержка visibility стоит только в СКРЫТОМ состоянии: при показе
+   карточка сразу participates в кадре и плавно проявляется, при
+   скрытии — сначала затухает, потом убирается из потока. */
+.smk-tour-card {
+  opacity: 1;
+  transform: none;
+  visibility: visible;
+  transition:
+    opacity 240ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.smk-tour-card--hidden {
+  opacity: 0;
+  transform: translateY(12px) scale(0.985);
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 200ms ease,
+    transform 200ms ease,
+    visibility 0s linear 200ms;
+}
+
 .smk-tour-step-in {
   animation: smk-tour-step-in 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
@@ -615,8 +642,14 @@ textarea.smk-field:focus {
   }
 
   .smk-tour-fade,
+  .smk-tour-card,
   .smk-tour-step-in {
     animation: none;
+  }
+
+  .smk-tour-card,
+  .smk-tour-card--hidden {
+    transition: none;
   }
 }
 

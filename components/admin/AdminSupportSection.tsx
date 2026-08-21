@@ -1,5 +1,7 @@
 'use client';
 
+import ConfirmDialog from '@/components/ConfirmDialog';
+
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChevronDown, Eye, EyeOff, Loader2, Search, Send, Trash2, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -99,8 +101,11 @@ export default function AdminSupportSection() {
     }
   };
 
+  // Подтверждение — модальным окном (как сброс настроек), не системным confirm.
+  const [removeId, setRemoveId] = useState<string | null>(null);
+
   const remove = async (id: string) => {
-    if (!window.confirm(L('Удалить вопрос?', 'Хаттар дIадаккха?'))) return;
+    setRemoveId(null);
     setBusyId(id);
     try {
       const accessToken = await token();
@@ -266,7 +271,7 @@ export default function AdminSupportSection() {
                   </span>
                 </button>
 
-                <button type="button" onClick={() => remove(q.id)} disabled={busyId === q.id}
+                <button type="button" onClick={() => setRemoveId(q.id)} disabled={busyId === q.id}
                   aria-label={L('Удалить', 'ДIадаккха')}
                   className="smk-act smk-act--danger flex h-7 w-7 shrink-0 items-center justify-center">
                   <Trash2 className="h-3.5 w-3.5" />
@@ -348,6 +353,17 @@ export default function AdminSupportSection() {
           );
         })}
       </div>
+
+      <ConfirmDialog
+        isOpen={Boolean(removeId)}
+        title={L('Удалить вопрос?', 'Хаттар дIадаккха?')}
+        message={L('Удалить вопрос без возможности восстановления?', 'Хаттар дIабаккха дуьйцуш юха а ца метта?')}
+        confirmLabel={L('Удалить', 'ДIадаккха')}
+        onConfirm={() => { if (removeId) void remove(removeId); }}
+        onCancel={() => setRemoveId(null)}
+        danger
+        isBusy={Boolean(busyId)}
+      />
     </section>
   );
 }

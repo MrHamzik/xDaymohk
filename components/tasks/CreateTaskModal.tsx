@@ -301,9 +301,11 @@ export default function CreateTaskModal({
   // Контакты берём из анкеты автора: в форме задания их не вводят.
   // Телефон живёт в аккаунте, WhatsApp и Telegram — в анкете.
   const myProfile = account ? profiles.find((profile) => profile.ownerId === account.id) : undefined;
-  const myPhone = account?.phone ?? '';
-  const myWhatsapp = myProfile?.whatsapp ?? '';
-  const myTelegram = myProfile?.telegram ?? '';
+  // Галочки профиля «не показывать в анкетах» действуют и здесь: скрытый
+  // контакт в новое задание не подставляется (решение от 21.08, ночь).
+  const myPhone = account?.hidePhone ? '' : (account?.phone ?? '');
+  const myWhatsapp = account?.hideWhatsapp ? '' : (myProfile?.whatsapp ?? '');
+  const myTelegram = account?.hideTelegram ? '' : (myProfile?.telegram ?? '');
   const hasAnyContact = Boolean(myPhone || myWhatsapp || myTelegram);
 
   const rewardValue = Number(reward) || 0;

@@ -186,7 +186,7 @@ export interface Profile {
   isPersonal?: boolean; // личная анкета, нельзя скрыть/удалить, минимальная инфа
   nickname?: string;
   showNickname?: boolean;
-  gender?: 'male' | 'female';
+  gender?: 'male' | 'female' | 'other';
   birthDate?: string;
   settlement?: string;
   id: string;
@@ -210,6 +210,9 @@ export interface Profile {
   certificates: Certificate[];
   phone: string;
   hidePhone?: boolean;
+  /** Переопределение профиля для этой анкеты: контакт не показывать. */
+  hideWhatsapp?: boolean;
+  hideTelegram?: boolean;
   /**
    * Контакты существуют, но скрыты, потому что смотрит гость
    * (обновление 47: вьюха v_profiles отдаёт телефон только вошедшим).

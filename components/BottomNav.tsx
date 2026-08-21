@@ -94,6 +94,7 @@ export default function BottomNav({ onOpenMenu, onOpenCreate }: BottomNavProps) 
              а сам переход вёл на страницу «не найдено». */}
         <Link
           href="/"
+          data-tour="home"
           className={`flex flex-col items-center justify-center rounded-2xl py-1 transition active:scale-95 ${
             pathname === '/'
               ? 'font-bold text-emerald-600 dark:text-emerald-400'

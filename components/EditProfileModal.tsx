@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { Info, UserPlus, X } from 'lucide-react';
 import { Account } from '@/components/AuthProvider';
-import PhoneField from '@/components/PhoneField';
 import Notice from '@/components/Notice';
 import { extractPhoneDigits, formatPhone } from '@/lib/phone';
 import { findClosestSamashkiHouse, getEffectiveHouseAddresses } from '@/lib/samashki-addresses';
@@ -45,8 +44,10 @@ const DEFAULT_WORK_DAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
 
 export default function EditProfileModal({ isOpen, account, profile = null, onClose, onSave }: EditProfileModalProps) {
   const { t } = useI18n();
-  const [gender, setGender] = useState<'male' | 'female' | ''>('');
-  const [birthYear, setBirthYear] = useState('');
+  const [gender, setGender] = useState<'male' | 'female' | 'other' | ''>('');
+  // Пол и дата рождения живут в АНКЕТЕ (ТЗ-2, п.5): в профиле их
+  // больше нет, здесь — полноценные поля.
+  const [birthDate, setBirthDate] = useState('');
   const [settlement, setSettlement] = useState('Даймохк');
   const [isSpecialist, setIsSpecialist] = useState(true);
   const [professionCategory, setProfessionCategory] = useState('doctor');
@@ -58,10 +59,11 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
   const [bio, setBio] = useState('');
   const [workplaceAddress, setWorkplaceAddress] = useState('');
   const [workplaceCoords, setWorkplaceCoords] = useState<MapPosition | null>(null);
-  const [hidePhone, setHidePhone] = useState(false);
-  const [whatsappDigits, setWhatsappDigits] = useState('');
-  const [sameAsPhoneWhatsapp, setSameAsPhoneWhatsapp] = useState(true);
-  const [telegram, setTelegram] = useState('');
+  // Видимость контактов В ЭТОЙ анкете: галочки «НЕ показывать» (правка
+  // от 22.08, п.4 — единая формулировка), по умолчанию из профиля.
+  const [hidePhone, setHidePhone] = useState(true);
+  const [hideWhatsapp, setHideWhatsapp] = useState(true);
+  const [hideTelegram, setHideTelegram] = useState(true);
   const [videoUrl, setVideoUrl] = useState('');
   const [showVideoHint, setShowVideoHint] = useState(false);
   const [certificates, setCertificates] = useState<Certificate[]>([]);
@@ -92,7 +94,9 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
     setBio(profile?.bio === 'Житель Даймохка.' ? '' : profile?.bio ?? '');
     setWorkplaceAddress(profile?.workplaceAddress ?? '');
     setWorkplaceCoords(profile?.workplaceCoords ?? null);
-    setHidePhone(profile?.hidePhone ?? false);
+    setHidePhone(profile ? profile.hidePhone === true : account?.hidePhone !== false);
+    setHideWhatsapp(profile ? profile.hideWhatsapp === true : account?.hideWhatsapp !== false);
+    setHideTelegram(profile ? profile.hideTelegram === true : account?.hideTelegram !== false);
     setWorkDays(profile?.workDays && profile.workDays.length > 0 ? profile.workDays : DEFAULT_WORK_DAYS);
     setWorkHoursStart(profile?.workHoursStart ?? '09:00');
     setWorkHoursEnd(profile?.workHoursEnd ?? '18:00');
@@ -100,15 +104,14 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
     setBreakEnd(profile?.breakEnd ?? '');
     setIsFlexibleSchedule(Boolean(profile?.isFlexibleSchedule));
 
-    const isWhatsappSame = profile ? Boolean(profile.sameAsPhoneWhatsapp) : true;
-    setSameAsPhoneWhatsapp(isWhatsappSame);
-    if (isWhatsappSame && account) {
-      setWhatsappDigits(extractPhoneDigits(account.phone));
-    } else {
-      setWhatsappDigits(extractPhoneDigits(profile?.whatsapp || ''));
+    // НОВАЯ анкета — дефолты из профиля: вся информация профиля
+    // применяется к каждой новой анкете автоматически (ТЗ, п.4/5).
+    if (!profile?.id && account) {
+      setGender(profile?.gender ?? account?.gender ?? '');
+      setBirthDate(profile?.birthDate ?? account?.birthDate ?? '');
+      setSettlement(account.settlement || 'Даймохк');
     }
 
-    setTelegram(profile?.telegram?.replace(/^@/, '') ?? '');
     setVideoUrl(profile?.videoUrl ?? '');
     setCertificates(profile?.certificates ?? []);
     setNickname(profile?.nickname ?? '');
@@ -119,15 +122,6 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
   useLockBody(isOpen);
 
   if (!isOpen) return null;
-
-  const handleWhatsappChange = (value: string) => {
-    setWhatsappDigits(value);
-    if (account && extractPhoneDigits(value) === extractPhoneDigits(account.phone)) {
-      setSameAsPhoneWhatsapp(true);
-    } else {
-      setSameAsPhoneWhatsapp(false);
-    }
-  };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -141,7 +135,6 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
       return;
     }
 
-    const phoneDigits = extractPhoneDigits(account.phone);
 
     // Личная анкета может иметь любой адрес/дефолт — строгая проверка БД
     // применяется только к анкетам специалистов/жителей в каталоге.
@@ -187,12 +180,14 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
       return;
     }
 
-    let finalWhatsapp: string | undefined = undefined;
-    if (sameAsPhoneWhatsapp) {
-      finalWhatsapp = phoneDigits ? `7${phoneDigits}` : undefined;
-    } else if (whatsappDigits.trim()) {
-      finalWhatsapp = `7${whatsappDigits.trim()}`;
-    }
+    // Контакты анкеты берутся из ПРОФИЛЯ (ТЗ, п.5.1): полей ввода
+    // здесь больше нет. Скрытое профилем не подставляется вовсе.
+    const finalWhatsapp: string | undefined = account?.hideWhatsapp
+      ? undefined
+      : (account?.whatsapp ? `7${extractPhoneDigits(account.whatsapp)}` : undefined);
+    const finalTelegram: string | undefined = account?.hideTelegram
+      ? undefined
+      : (account?.telegram || undefined);
 
     const newProfile: Profile = {
       id: profile?.id ?? `profile-${Date.now()}`,
@@ -216,19 +211,21 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
       rating: profile?.rating ?? 0,
       reviewCount: profile?.reviewCount ?? 0,
       reviews: profile?.reviews ?? [],
-      gender: profile?.gender ?? account.gender,
-      birthDate: profile?.birthDate ?? account.birthDate,
+      gender: gender || profile?.gender || account?.gender,
+      birthDate: birthDate || profile?.birthDate || account?.birthDate,
       settlement: settlement.trim(),
       phone: formatPhone(account.phone),
       hidePhone,
-      sameAsPhoneWhatsapp,
+      hideWhatsapp,
+      hideTelegram,
+      sameAsPhoneWhatsapp: false,
       isVerified: false,
       verificationStatus: isSpecialist && requestVerification ? 'pending' : 'none',
       isAdmin: false,
       isHidden: profile?.isHidden ?? profile?.isBanned ?? false,
       isBanned: profile?.isBanned ?? false,
       whatsapp: finalWhatsapp,
-      telegram: telegram.trim() ? `@${telegram.trim().replace(/^@/, '')}` : undefined,
+      telegram: finalTelegram,
       videoUrl: isSpecialist ? (videoUrl.trim() || undefined) : undefined,
       workDays: isSpecialist ? (workDays.length > 0 ? workDays : undefined) : undefined,
       workHoursStart: isSpecialist && !isFlexibleSchedule ? (workHoursStart.trim() || undefined) : undefined,
@@ -280,7 +277,7 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
               <section className="space-y-2">
                 <div>
                   <label htmlFor="profile-nick" className="mb-1 block text-xs font-bold text-slate-700 dark:text-zinc-400">{t.nicknameLabel}</label>
-                  <input id="profile-nick" value={nickname} onChange={(event) => setNickname(event.target.value)} maxLength={24} className="smk-field w-full px-3 py-2.5 text-xs text-slate-900 dark:text-white" />
+                  <input id="profile-nick" value={nickname} onChange={(event) => setNickname(event.target.value)} maxLength={16} className="smk-field w-full px-3 py-2.5 text-xs text-slate-900 dark:text-white" />
                   <p className="mt-1 smk-text-label text-slate-500 dark:text-zinc-500">{t.nicknameHint}</p>
                 </div>
                 <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-600 dark:text-zinc-400">
@@ -374,42 +371,42 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
                 {t.contactsHeading}
               </h3>
 
-              <div>
-                {/* Подписи полей связи одинаковы во всех формах (п.2/п.8):
-                    «Телефон для звонков», «Номер телефона в WhatsApp»,
-                    «Имя пользователя в Telegram». Раньше здесь стояло
-                    просто «Телефон», а в анкете регистрации — «Телефон /
-                    Телефон»: три формы, три разных набора подписей. */}
-                <label htmlFor="profile-phone" className="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-400">
-                  {t.phoneGeneral}
+              {/* Контакты анкеты берутся из профиля (ТЗ-2, п.6):
+                  никаких полей и пояснений — только три галочки
+                  видимости для ЭТОЙ анкеты (по умолчанию — из профиля). */}
+              <div className="smk-field space-y-1.5 rounded-xl p-2.5">
+                <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-600 dark:text-zinc-400">
+                  <input type="checkbox" checked={hidePhone} onChange={(e) => setHidePhone(e.target.checked)} className="h-4 w-4 rounded accent-emerald-600" />
+                  {t.tourHidePhone}
                 </label>
-                <input
-                  id="profile-phone"
-                  value={account?.phone ? formatPhone(account.phone) : ''}
-                  placeholder={t.phoneNotSet}
-                  readOnly
-                  className="smk-field w-full px-3 py-2.5 text-xs text-slate-500 dark:text-zinc-400"
-                />
-                <p className="mt-1 smk-text-label text-slate-500 dark:text-zinc-500">{t.phoneFromAccount}</p>
+                <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-600 dark:text-zinc-400">
+                  <input type="checkbox" checked={hideWhatsapp} onChange={(e) => setHideWhatsapp(e.target.checked)} className="h-4 w-4 rounded accent-emerald-600" />
+                  {t.tourHideWhatsapp}
+                </label>
+                <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-600 dark:text-zinc-400">
+                  <input type="checkbox" checked={hideTelegram} onChange={(e) => setHideTelegram(e.target.checked)} className="h-4 w-4 rounded accent-emerald-600" />
+                  {t.tourHideTelegram}
+                </label>
               </div>
+            </section>
 
-              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-                <div>
-                  <div className="mb-1 flex items-center justify-between gap-2">
-                  <label htmlFor="profile-whatsapp" className="block text-xs font-semibold text-slate-700 dark:text-zinc-400">{t.phoneWhatsappLabel}</label>
-                  <label className="flex cursor-pointer items-center gap-1 smk-text-label text-emerald-700 dark:text-emerald-400"><input type="checkbox" checked={sameAsPhoneWhatsapp} onChange={(event) => { setSameAsPhoneWhatsapp(event.target.checked); if (event.target.checked && account) setWhatsappDigits(extractPhoneDigits(account.phone)); }} className="h-3 w-3 rounded text-emerald-600 focus:ring-emerald-500" />{t.useCommonNumber}</label>
-                </div>
-                <PhoneField id="profile-whatsapp" value={whatsappDigits} onChange={handleWhatsappChange} />
+            {/* Пол и дата рождения — поля АНКЕТЫ (ТЗ-2, п.5): из
+                профиля они убраны. */}
+            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+              <div>
+                <label htmlFor="profile-gender" className="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-400">{t.genderLabel}</label>
+                <select id="profile-gender" value={gender} onChange={(event) => setGender(event.target.value as 'male' | 'female' | 'other' | '')} className="smk-field w-full px-3 pr-8 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:text-white">
+                  <option value="">{t.genderNotSet}</option>
+                  <option value="male">{t.genderMale}</option>
+                  <option value="female">{t.genderFemale}</option>
+                  <option value="other">{t.genderOther}</option>
+                </select>
               </div>
               <div>
-                <label htmlFor="profile-telegram" className="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-400">{t.phoneTelegramLabel}</label>
-                <div className="relative"><span className="absolute inset-y-0 left-0 flex items-center pl-3 font-bold text-slate-400">@</span><input id="profile-telegram" value={telegram} onChange={(event) => setTelegram(event.target.value.replace(/^@/, ''))} placeholder={t.telegramUsername} className="smk-field w-full py-2.5 pl-8 pr-4 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:text-white" /></div>
+                <label htmlFor="profile-birth" className="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-400">{t.birthDateLabel}</label>
+                <input id="profile-birth" type="date" value={birthDate} onChange={(event) => setBirthDate(event.target.value)} className="smk-field w-full px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:text-white" />
               </div>
             </div>
-
-            <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-600 dark:text-zinc-400"><input type="checkbox" checked={hidePhone} onChange={(event) => setHidePhone(event.target.checked)} className="h-3.5 w-3.5 rounded text-emerald-600 focus:ring-emerald-500" />{t.hidePhoneLabel}</label>
-
-            </section>
 
             <div>
               <label htmlFor="profile-bio" className="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-400">{t.bioLabel}</label>

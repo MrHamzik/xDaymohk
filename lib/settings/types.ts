@@ -117,7 +117,8 @@ export interface NotificationPref {
  *
  * Обязательное условие — поддержка кириллицы: половина «красивых»
  * веб-шрифтов её не покрывает, и текст рассыпался бы на квадраты.
- * Все перечисленные либо системные, либо уже подключены в globals.css.
+ * Manrope подключён в app/layout.tsx постоянно, остальные грузятся
+ * по требованию в момент выбора (см. lib/fonts.ts).
  */
 export type FontFamilyId =
   | 'manrope' | 'inter' | 'rubik' | 'montserrat' | 'jost' | 'onest'
@@ -402,6 +403,16 @@ export interface UserSettings {
   notificationPrefs: Partial<Record<NotificationGroup, NotificationPref>>;
   /** Открыл «Аренца Темщик» → автоматически Активен на 30 минут. */
   autoActiveOnOpen: boolean;
+  /**
+   * Этап онбординга — номер шага единого гида (0–10 обычные шаги,
+   * 11 — «Ваш профиль», 12 — финал с кнопкой «Завершить»).
+   * Проживает в БД (user_settings.tour_step), поэтому гид возобновляется
+   * с того же места с любого устройства и после закрытия браузера.
+   * tourDone ставится только кнопкой «Завершить».
+   */
+  tourStep: number;
+  /** Онбординг пройден целиком: гид + «Внешний вид» + анкета. */
+  tourDone: boolean;
   /** Отклики на мои задания одобряются без моего участия. */
   autoApproveExecutor: boolean;
   advancedMode: boolean;
@@ -433,8 +444,6 @@ export interface UserSettings {
   quickWidgets: string[];
   /** Скрытые пункты меню. */
   hiddenMenu: string[];
-  /** Обязательный гид после первого входа уже пройден. */
-  tourDone: boolean;
   /**
    * Приветственное уведомление уже отправлено.
    *

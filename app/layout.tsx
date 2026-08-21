@@ -10,6 +10,7 @@ import OnboardingModal from '@/components/OnboardingModal';
 import { I18nProvider } from '@/lib/i18n';
 import ServiceWorkerRegister from '@/components/ServiceWorkerRegister';
 import { TOUR_PREFLIGHT_SCRIPT } from '@/lib/tour-preflight';
+import { BUILD_MARK } from '@/lib/build-info';
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://daymohk.vercel.app'),
@@ -62,6 +63,20 @@ export default function RootLayout({
   return (
     <html lang="ru" suppressHydrationWarning>
       <head>
+        {/* Метка сборки (см. lib/build-info.ts): по ней в исходнике
+            страницы видно, КАКОЙ версией кода отвечает сервер. */}
+        <meta name="daymohk-build" content={BUILD_MARK} />
+        {/* Шрифт по умолчанию — постоянным <link> с preconnect.
+            Раньше все десять семейств настроек тянулись CSS-@import из
+            globals.css: цепочка «стили → таблица Google → ~40 файлов»
+            блокировала первый кадр. Остальные семейства догружаются по
+            факту выбора в настройках (lib/fonts.ts). */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
+        />
         {/* Замок «до гида» (п.2).
 
             Скрипт СИНХРОННЫЙ и стоит в <head> нарочно: он обязан

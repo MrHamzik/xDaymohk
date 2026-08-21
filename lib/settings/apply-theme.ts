@@ -1,4 +1,5 @@
 import type { EffectSettings } from '@/lib/settings/types';
+import { ensureFontLoaded } from '@/lib/fonts';
 import {
   DEFAULT_GRADIENTS, FONT_FAMILIES,
   type FontFamilyId, type ThemeColors, type ThemeGradients,
@@ -489,6 +490,11 @@ export function applyTypography(fontScale: number, fontFamily: FontFamilyId): vo
   }
 
   root.style.setProperty('--smk-font-family', FONT_FAMILIES[fontFamily] ?? FONT_FAMILIES.manrope);
+
+  // Выбранное семейство догружается только сейчас: Manrope стоит в
+  // <head> всегда, остальные раньше тянулись одним блокирующим
+  // @import на каждого посетителя (см. lib/fonts.ts).
+  ensureFontLoaded(fontFamily);
 }
 
 /**

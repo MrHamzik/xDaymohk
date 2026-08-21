@@ -52,7 +52,11 @@ describe('шаги с заданием открывают ровно то, чт�
     const marker = `awaits: '${awaits}' as const`;
     const at = firstTour.indexOf(marker);
     expect(at, `шаг ${awaits} не найден`).toBeGreaterThan(-1);
-    return firstTour.slice(at, at + 700);
+    // До начала СЛЕДУЮЩЕГО шага с заданием (раньше окно было 700
+    // символов — шаги обросли комментариями и текстами, и проверка
+    // стала обрезать чужую разметку).
+    const next = firstTour.indexOf("awaits: '", at + marker.length);
+    return firstTour.slice(at, next === -1 ? undefined : next);
   }
 
   it('шаг «Каталог»: прокрутка и открытие анкет, остальное закрыто', () => {
@@ -107,8 +111,11 @@ describe('старые обходные решения не вернулись',
   });
 
   it('гид переживает перезагрузку страницы', () => {
-    expect(firstTour).toContain('daymohk-tour-step');
-    expect(firstTour).toContain('sessionStorage');
+    // Прогресс шага переехал из sessionStorage в настройки (БД):
+    // закрыв браузер на середине, человек продолжит с того же шага и с
+    // другого устройства (миграция 65). Проверяем новый механизм.
+    expect(firstTour).toContain('Number(settings.tourStep)');
+    expect(firstTour).toContain('update({ tourStep: index })');
   });
 });
 
@@ -143,6 +150,14 @@ describe('порталы поверх гида остаются рабочими
     expect(primitives).toContain('z-[97]');
     expect(primitives).toContain('z-[98]');
     expect(primitives).not.toContain('z-[95]');
+  });
+
+  it('подложка подсказки не ловит фокус в aria-hidden', () => {
+    // Кнопка-подложка с aria-hidden получала фокус по клику, и Chrome
+    // предупреждал «focused element must not be inside aria-hidden».
+    // Подложка — неинтерактивный div, для клавиатуры есть Escape.
+    expect(primitives).not.toMatch(/<button[^>]*aria-hidden[\s\S]*?<\/button>/);
+    expect(primitives).toContain("event.key === 'Escape'");
   });
 
   it('п.4: меню выбора темы помечено — иначе тема не меняется', () => {
@@ -180,6 +195,11 @@ describe('замок до проверки «гид пройден»', () => {
     // Цена ошибки несимметрична: пропущенный гид человек переживёт,
     // намертво запертый сайт — нет.
     expect(onboarding).toContain('lockTimedOut');
-    expect(onboarding).toContain('tourSeenLocally');
+    // Второй рубеж снятия — само окно гида: пока tourDone false в БД,
+    // гид открывается на сохранённом шаге (единый гид, миграция 66),
+    // а не молчит под замком. Старую локальную метку tourSeenLocally
+    // убрали: истина — база.
+    expect(onboarding).not.toContain('tourSeenLocally');
+    expect(onboarding).toContain("setStep('tour')");
   });
 });

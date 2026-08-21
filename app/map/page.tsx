@@ -95,7 +95,7 @@ export default function MapPage() {
   const adminOwnerId = account?.isAdmin ? account.id : undefined;
   // Скрытые чёрным списком не должны появляться и на карте: иначе
   // человек, которого вы заблокировали, остаётся виден точкой.
-  const { isHidden: isBlockedOwner } = useBlacklist();
+  const { isHidden: isBlockedOwner, block: blockOwner } = useBlacklist();
   const profilesWithAddresses = useMemo(
     () => profiles.filter((profile) =>
       Boolean(profile.workplaceAddress.trim())
@@ -235,10 +235,12 @@ export default function MapPage() {
         <AppSidebar isAdmin={isCurrentUserAdmin} />
         
         {/* Main Content Area */}
-        {/* Без max-w-3xl: на этой странице главный элемент — карта, и
-            ограничивать её 48rem посреди широкого экрана незачем.
-            Остальные страницы ширину сохраняют — правка только здесь. */}
+        {/* Карта — по ширине общего контейнера (max-w-3xl), как блоки
+            «Анкеты выбранного пользователя», «Фильтры каталога» и все
+            прочие страницы (правка от 21.08: раньше карта растягивалась
+            на весь экран и выбивалась из общего строя). */}
         <main className="smk-shell-main">
+          <div className="mx-auto w-full max-w-3xl">
         <div className="mb-5 flex items-center gap-3">
           <Link
             href="/catalog"
@@ -491,6 +493,7 @@ export default function MapPage() {
             </section>
           )}
         </div>
+      </div>
       </main>
       </div>
       <ProfileModal
@@ -505,7 +508,21 @@ export default function MapPage() {
         profile={reportProfile}
         isOpen={Boolean(reportProfile)}
         onClose={() => setReportProfile(null)}
-        onSubmit={(reason) => reportProfile ? addComplaint(reportProfile.id, reason) : Promise.resolve()}
+        onSubmit={(reason) => {
+          if (!reportProfile) return Promise.resolve();
+          // Жалоба с блокировкой (проверенная анкета): суффикс [ЧС]
+          // раньше просто приклеивался к тексту жалобы — человек считался
+          // заблокированным, но в ЧС не попадал (баг от 22.08, п.8).
+          const withBlacklist = reason.endsWith('[ЧС]');
+          const clean = withBlacklist ? reason.replace(/\s*\[ЧС\]\s*$/, '') : reason;
+          const complaint = addComplaint(reportProfile.id, clean);
+          if (withBlacklist && reportProfile.ownerId) {
+            return blockOwner(reportProfile.ownerId, clean)
+              .then(() => complaint)
+              .catch(() => complaint);
+          }
+          return complaint;
+        }}
       />
       <ConfirmDialog
         isOpen={Boolean(blockProfile)}

@@ -14,20 +14,15 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { humanErrorMessage } from '@/lib/errors';
 import Link from 'next/link';
-import { ArrowLeft, BookOpen, Check, Globe2, LogIn } from 'lucide-react';
+import { ArrowLeft, BookOpen, Globe2, LogIn } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { useSettings } from '@/components/SettingsProvider';
-import { useProfiles } from '@/components/ProfilesProvider';
 import FirstTour from '@/components/FirstTour';
 import { useTourLock } from '@/lib/tour-lock';
 import { releaseTourPreflight } from '@/lib/tour-preflight';
 import { useI18n } from '@/lib/i18n';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import { extractPhoneDigits } from '@/lib/phone';
-import { AVATAR_PRESETS } from '@/lib/types';
-import type { FontFamilyId } from '@/lib/settings/types';
 
 const ONBOARDED_KEY = 'daymohk-onboarded-v1';
 // Флаг «сейчас происходит вход через Google». Хранится в sessionStorage,
@@ -36,38 +31,73 @@ const ONBOARDED_KEY = 'daymohk-onboarded-v1';
 // навигацию в той же вкладке.
 const AUTHING_KEY = 'daymohk-onboarding-authing';
 
-function isValidFullName(name: string): boolean {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length < 2) return false;
-  return parts.every((p) => /^[А-ЯЁа-яё][А-ЯЁа-яё-]{1,29}$/.test(p));
+/**
+ * Публичные «Письма» с коротким кэшем.
+ *
+ * Этот компонент живёт в корневом layout, и без кэша запрос уходил
+ * при КАЖДОЙ полной загрузке страницы — дважды (текст welcome-окна и
+ * приветственного письма), хотя нужны они только новым людям.
+ *
+ * Кэш в sessionStorage на 10 минут: переживает перезагрузку и переходы
+ * внутри вкладки, умирает вместе с ней. Правки админа в «Письмах»
+ * доходят не мгновенно — для приветственного текста это нормально.
+ */
+const LETTERS_CACHE_KEY = 'daymohk-letters-public';
+const LETTERS_CACHE_TTL_MS = 10 * 60_000;
+
+/** Строка из «Писем» — берём только известные поля, остальное не трогаем. */
+interface PublicLetter {
+  key?: string;
+  title_ru?: string;
+  title_ce?: string;
+  message_ru?: string;
+  message_ce?: string;
+  sender?: string;
+}
+
+async function fetchPublicLetters(): Promise<PublicLetter[] | null> {
+  try {
+    const raw = window.sessionStorage.getItem(LETTERS_CACHE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as { at?: number; letters?: PublicLetter[] };
+      if (
+        typeof parsed.at === 'number'
+        && Date.now() - parsed.at < LETTERS_CACHE_TTL_MS
+        && Array.isArray(parsed.letters)
+      ) {
+        return parsed.letters;
+      }
+    }
+  } catch { /* приватный режим — просто идём в сеть */ }
+
+  try {
+    const res = await fetch('/api/letters/public', { cache: 'no-store' });
+    if (!res.ok) return null;
+    const data = await res.json() as { letters?: PublicLetter[] };
+    const letters = Array.isArray(data.letters) ? data.letters : null;
+    if (letters) {
+      try {
+        window.sessionStorage.setItem(LETTERS_CACHE_KEY, JSON.stringify({ at: Date.now(), letters }));
+      } catch { /* приватный режим — кэш не критичен */ }
+    }
+    return letters;
+  } catch {
+    return null;
+  }
 }
 
 export default function OnboardingModal() {
-  const { account, isLoading, updateAccount, signInWithGoogle, signOut } = useAuth();
+  const { account, isLoading, signInWithGoogle } = useAuth();
   const { language, setLanguage, t } = useI18n();
-  const { settings, update: updateSettings } = useSettings();
-  const { profiles, updateProfile } = useProfiles();
-  const [step, setStep] = useState<'welcome' | 'guide' | 'consent' | 'tour' | 'profile' | 'look'>('welcome');
+  const { settings, update: updateSettings, isLoading: isSettingsLoading } = useSettings();
+    const [step, setStep] = useState<'welcome' | 'guide' | 'consent' | 'tour' | 'profile' | 'look'>('welcome');
   // Видна ли сейчас карточка гида. Гид сам её прячет на шагах, где
   // человек нажимает настоящие кнопки.
   const [tourCardVisible, setTourCardVisible] = useState(true);
   const [open, setOpen] = useState(false);
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [gender, setGender] = useState('');
-  const [birthDate, setBirthDate] = useState('');
-  const [phone, setPhone] = useState('');
-  const [settlement, setSettlement] = useState('Даймохк');
-  const [avatarUrl, setAvatarUrl] = useState('');
-  const [telegram, setTelegram] = useState('');
-  const [whatsapp, setWhatsapp] = useState('');
-  const [whatsappUsePhone, setWhatsappUsePhone] = useState(true);
   // Текст модального окна приветствия — из БД (раздел «Письма» → «Модальное окно»).
   const [modalText, setModalText] = useState<{ title_ru?: string; title_ce?: string; message_ru?: string; message_ce?: string }>({});
-  const [hidePhone, setHidePhone] = useState(false);
-  const [bio, setBio] = useState('');
   const [error, setError] = useState('');
-  const [saving, setSaving] = useState(false);
   // Защита от двойной отправки welcome-письма (useEffect + submit).
   const sentRef = useRef(false);
   const authingRef = useRef(false);
@@ -97,19 +127,14 @@ export default function OnboardingModal() {
       let sender = 'Даймохк';
 
       try {
-        const res = await fetch('/api/letters/public', { cache: 'no-store' });
-        if (res.ok) {
-          const data = await res.json();
-          const welcome = Array.isArray(data.letters)
-            ? data.letters.find((l: any) => l.key === 'welcome')
-            : undefined;
-          if (welcome) {
-            title = welcome.title_ru || title;
-            ceTitle = welcome.title_ce || welcome.title_ru || ceTitle;
-            message = welcome.message_ru || message;
-            ceMessage = welcome.message_ce || welcome.message_ru || ceMessage;
-            sender = welcome.sender || sender;
-          }
+        const letters = await fetchPublicLetters();
+        const welcome = letters ? letters.find((l) => l.key === 'welcome') : undefined;
+        if (welcome) {
+          title = welcome.title_ru || title;
+          ceTitle = welcome.title_ce || welcome.title_ru || ceTitle;
+          message = welcome.message_ru || message;
+          ceMessage = welcome.message_ce || welcome.message_ru || ceMessage;
+          sender = welcome.sender || sender;
         }
       } catch {}
 
@@ -136,6 +161,15 @@ export default function OnboardingModal() {
   };
 
   const finishOnboarding = async () => {
+    // Онбординг пройден ЦЕЛИКОМ: 11 шагов гида + «Внешний вид» +
+    // «Заполнить профиль». Только здесь рождается tourDone — с этого
+    // момента гид больше не возвращается, а личная анкета перестаёт
+    // быть скрытой (RLS в миграции 65). Гость (account === null) гид
+    // не проходит — ему и писать нечего.
+    if (account) {
+      updateSettings({ tourDone: true, tourStep: 0 });
+    }
+
     // Приветствие отправляется РОВНО один раз за аккаунт.
     //
     // Три рубежа, и каждый закрывает свой случай:
@@ -205,16 +239,9 @@ export default function OnboardingModal() {
   // Загружаем текст модального окна приветствия из «Писем» (welcome_modal).
   useEffect(() => {
     (async () => {
-      try {
-        const res = await fetch('/api/letters/public', { cache: 'no-store' });
-        if (res.ok) {
-          const data = await res.json();
-          const m = Array.isArray(data.letters)
-            ? data.letters.find((l: any) => l.key === 'welcome_modal')
-            : undefined;
-          if (m) setModalText(m);
-        }
-      } catch {}
+      const letters = await fetchPublicLetters();
+      const m = letters ? letters.find((l) => l.key === 'welcome_modal') : undefined;
+      if (m) setModalText(m);
     })();
   }, []);
 
@@ -230,70 +257,55 @@ export default function OnboardingModal() {
     return () => window.removeEventListener('daymohk-open-consent', handler);
   }, [account]);
 
+  // Гид уже проходили в этом браузере — метка переживает и выход из
+  // аккаунта, и потерю связи с базой. Объявлена ДО эффекта
+  // возобновления: тот на неё ссылается, решая, показывать ли гид
+  // аккаунту с несохранённым флагом.
+  // СНЯТО (миграция 65): истина о прохождении — только база
+  // (user_settings.tour_done). Локальная метка оставалась в браузерах
+  // со времён старой схемы и перечёркивала бы решение базы.
+
   /**
    * Возобновление гида после перезагрузки страницы (п.17).
    *
    * Шаг с каталогом уводит на /catalog по-настоящему, и любое
-   * обновление вкладки в этот момент раньше просто выключало гид: окно
-   * открывалось только по «свежему входу» (AUTHING_KEY), а он к тому
-   * времени уже израсходован. Человек оставался без обучения до
-   * следующего перезахода — ровно эта жалоба и была.
+   * обновление вкладки или закрытие браузера в этот момент раньше
+   * просто выключало гид: окно открывалось только по «свежему входу»
+   * (AUTHING_KEY), а он к тому времени уже израсходован. Человек
+   * оставался зарегистрированным, но без обучения — а гид обязателен.
    *
-   * Признак незаконченного гида — сохранённый номер шага в
-   * sessionStorage: он живёт, пока открыта вкладка. Есть номер, а гид
-   * не пройден — продолжаем с того же места.
+   * Прогресс теперь живёт в БД (user_settings.tour_step) и переживает
+   * всё: перезагрузку, закрытие браузера, вход с другого устройства.
+   * tourDone означает «пройдено ВСЁ: 11 шагов + "Внешний вид" +
+   * анкета». Пока он false, каждый заход открывает онбординг ровно на
+   * том этапе, где человек остановился:
+   *
+   *   tourStep 0–10 → шаг гида с этим номером;
+   *   tourStep 11   → окно «Внешний вид»;
+   *   tourStep 12   → окно «Заполнить профиль».
+   *
+   * Гостю гид не положен: у него нет аккаунта и этого эффекта тоже.
+   *
+   * Свежий вход через Google не трогаем: им распоряжается эффект ниже
+   * по флагу AUTHING_KEY (там решается, гид это или сразу анкета).
    */
   useEffect(() => {
     if (!account || isLoading) return;
+    if (isSettingsLoading) return;
     if (settings.tourDone) return;
-    let resuming = false;
+    if (open || step !== 'welcome') return;
     try {
-      resuming = window.sessionStorage.getItem('daymohk-tour-step') !== null;
-      if (window.localStorage.getItem(`daymohk-tour-${account.id}`) === '1') resuming = false;
+      if (window.sessionStorage.getItem(AUTHING_KEY) === '1') return;
     } catch { /* private mode */ }
-    if (!resuming) return;
     setStep('tour');
     setOpen(true);
-  }, [account, isLoading, settings.tourDone]);
+  }, [account, isLoading, isSettingsLoading, settings.tourDone, settings.tourStep, step, open]);
 
-  /**
-   * Догрузка имени и аватара из Google (п.6).
-   *
-   * Поля заполняются один раз — в момент, когда сработал флаг «только
-   * что вошёл». Но `account` в этот миг часто ещё «черновой»: профиль
-   * из user_profiles не приехал, и в fullName лежит заглушка
-   * «Пользователь», а в avatarUrl — стандартная картинка из пресетов.
-   * Форма открывалась пустой, хотя Google данные прислал.
-   *
-   * Здесь дозаполняем поля, когда настоящие значения доедут. Трогаем
-   * ТОЛЬКО пустые поля: если человек уже начал печатать, перебивать
-   * его нельзя.
-   */
-  useEffect(() => {
-    if (!open || step !== 'profile' || !account) return;
-
-    const full = (account.fullName || '').trim();
-    const looksReal = full && full !== 'Пользователь' && !/^\+?\d+$/.test(full);
-    if (looksReal) {
-      const parts = full.split(/\s+/).filter(Boolean);
-      setFirstName((current) => current || parts[0] || '');
-      setLastName((current) => current || parts.slice(1).join(' ') || '');
-    }
-
-    // Пресетную картинку за аватар из Google не считаем.
-    const avatar = account.avatarUrl || '';
-    if (avatar && !AVATAR_PRESETS.includes(avatar)) {
-      setAvatarUrl((current) => current || avatar);
-    }
-    if (account.phone) setPhone((current) => current || account.phone || '');
-    if (account.settlement) setSettlement((current) => (current && current !== 'Даймохк' ? current : account.settlement || ''));
-  }, [open, step, account]);
-
-  // После появления аккаунта (вход через Google): окно профиля открываем
+  // После появления аккаунта (вход через Google): гид открываем
   // ТОЛЬКО если пользователь только что вошёл (authingRef / sessionStorage),
-  // иначе — не перебиваем welcome (п.2: профиль не должен появляться раньше
-  // welcome). Флаг читаем и из sessionStorage, потому что вход через Google —
-  // это редирект с перезагрузкой страницы, и useRef теряется.
+  // иначе — не перебиваем welcome. Флаг читаем и из sessionStorage, потому
+  // что вход через Google — это редирект с перезагрузкой страницы, и useRef
+  // теряется.
   useEffect(() => {
     if (!account) return;
     let authing = authingRef.current;
@@ -302,35 +314,23 @@ export default function OnboardingModal() {
     try { window.sessionStorage.removeItem(AUTHING_KEY); } catch {}
     if (!authing) return;
 
-    const fillProfileFields = () => {
-      const parts = (account.fullName || '').trim().split(/\s+/).filter(Boolean);
-      setFirstName(parts[0] || '');
-      setLastName(parts.slice(1).join(' ') || '');
-      setAvatarUrl(account.avatarUrl || '');
-      if (account.phone) setPhone(account.phone);
-      if (account.settlement) setSettlement(account.settlement);
-    };
-
-    const showProfileStep = () => {
-      fillProfileFields();
-      setStep('profile');
-      setOpen(true);
-    };
-
-    const startAfterAuth = () => {
-      fillProfileFields();
-      let seen = false;
-      try { seen = window.localStorage.getItem(`daymohk-tour-${account.id}`) === '1'; } catch { /* private */ }
-      if (!settings.tourDone && !seen) {
+    // Свежий вход: пока гид не пройден — открываем его на сохранённом
+    // шаге (FirstTour сам продолжит с settings.tourStep; анкета и финал
+    // теперь шаги гида, отдельных модалок больше нет).
+    const startTour = () => {
+      if (!settings.tourDone) {
         setStep('tour');
         setOpen(true);
         return;
       }
-      showProfileStep();
+      // Возвращающийся пользователь с пройденным онбордингом — тихо
+      // закрываем (заодно чиним флаг в базе, если он не доехал).
+      void finishOnboarding();
     };
 
-    if (isValidFullName(account.fullName || '')) {
-      // Имя уже есть — гид и профиль только у новой регистрации.
+    const looksRegistered = (account.fullName || '').trim().split(/\s+/).filter(Boolean).length >= 2;
+    if (looksRegistered) {
+      // Имя уже есть — гид только у новой регистрации.
       void (async () => {
         let isNewUser = false;
         try {
@@ -340,13 +340,17 @@ export default function OnboardingModal() {
             isNewUser = Number.isFinite(createdAt) && Date.now() - createdAt < 3 * 60_000;
           }
         } catch {}
-        if (isNewUser) startAfterAuth();
-        else void finishOnboarding();
+        if (isNewUser) startTour();
+        else startTour(); // см. startTour: решение принимает tourDone из базы
       })();
       return;
     }
-    startAfterAuth();
-  }, [account, settings.tourDone]);
+    startTour();
+    // finishOnboarding нарочно не в зависимостях: эффект решает «куда
+    // открыть после входа», а не «что делать при каждом рендере», и
+    // пересоздавать его из-за идентичности функции незачем.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [account, settings.tourDone, settings.tourStep]);
 
   /**
    * Интерфейс заперт, пока не выяснено, нужен ли гид (п.3).
@@ -362,17 +366,6 @@ export default function OnboardingModal() {
    * Гостю гид не положен: `account === null` при isLoading === false —
    * это точный ответ «не вошёл», и держать его нельзя.
    */
-  // Гид уже проходили в этом браузере — метка переживает и выход из
-  // аккаунта, и потерю связи с базой. Без неё человек с tourDone=false
-  // в базе (гид закрыт локально, флаг не доехал) оставался бы за
-  // запертым интерфейсом навсегда.
-  const [tourSeenLocally, setTourSeenLocally] = useState(false);
-  useEffect(() => {
-    if (!account) return;
-    try {
-      setTourSeenLocally(window.localStorage.getItem(`daymohk-tour-${account.id}`) === '1');
-    } catch { /* private mode */ }
-  }, [account]);
 
   /**
    * Аварийный предохранитель.
@@ -400,7 +393,6 @@ export default function OnboardingModal() {
       || (
         Boolean(account)
         && !settings.tourDone
-        && !tourSeenLocally
         // Настройки ещё едут: tourDone по умолчанию false, и до ответа
         // сервера отличить «гид не пройден» от «ещё не знаем» нельзя.
         && step === 'welcome'
@@ -411,10 +403,10 @@ export default function OnboardingModal() {
   /**
    * Модалки онбординга ведут себя как настоящие модальные окна (п.5).
    *
-   * Пока открыт шаг «Профиль» или «Внешний вид», фон не должен ни
-   * прокручиваться, ни принимать нажатия: это анкета регистрации, а не
-   * плавающая подсказка. Шаг 'tour' исключён — там всем распоряжается
-   * сам гид (useTourLock внутри FirstTour), и второй замок мешал бы.
+   * Пока открыт любой НЕ-тур шаг (welcome / руководство / согласие),
+   * фон не должен ни прокручиваться, ни принимать нажатия. Шаг 'tour'
+   * исключён — там всем распоряжается сам гид (useTourLock внутри
+   * FirstTour, включая его шаги анкеты и финала), второй замок мешал бы.
    */
   const modalLocked = open && step !== 'tour';
 
@@ -439,18 +431,6 @@ export default function OnboardingModal() {
 
   if (!open) return null;
 
-  const onAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const { compressImageFile } = await import('@/lib/media');
-      const url = await compressImageFile(file, true);
-      setAvatarUrl(url);
-    } catch {
-      setError(ce ? 'Сурт кечйан цаелира' : 'Не удалось обработать фото');
-    }
-  };
-
   const handleGoogleAuth = async () => {
     setError('');
     authingRef.current = true; // после входа откроем окно профиля
@@ -463,117 +443,6 @@ export default function OnboardingModal() {
       authingRef.current = false;
       try { window.sessionStorage.removeItem(AUTHING_KEY); } catch {}
       setError(authError instanceof Error ? authError.message : (ce ? 'Хаамаш ца кхочуш' : 'Не удалось войти через Google'));
-    }
-  };
-
-  // «Назад» из шага профиля = «выйти из профиля»: выходим из аккаунта и
-  // перекидываем на главную (не возвращаемся к welcome).
-  const backFromProfile = async () => {
-    try { window.sessionStorage.removeItem(AUTHING_KEY); } catch {}
-    setOpen(false);
-    try { await signOut(); } catch {}
-    window.location.href = '/';
-  };
-
-  const handleSubmitProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const full = `${firstName.trim()} ${lastName.trim()}`.trim();
-    if (!isValidFullName(full)) {
-      setError(ce ? 'Йоза дика язде: цIе а, фамили а кириллицей.' : 'Введите корректно: имя и фамилию кириллицей.');
-      return;
-    }
-    setSaving(true);
-    setError('');
-    try {
-      await updateAccount({
-        fullName: full,
-        gender: gender ? (gender as 'male' | 'female') : undefined,
-        birthDate: birthDate || undefined,
-        phone: phone || undefined,
-        settlement: settlement.trim() || undefined,
-        avatarUrl: avatarUrl || undefined,
-      });
-
-      // Личная анкета.
-      //
-      // Раньше здесь всё заканчивалось на updateAccount: он пишет только
-      // АККАУНТ (user_profiles), а анкета (profiles) оставалась такой,
-      // какой её создал триггер при регистрации — «Житель Даймохк.
-      // Личная анкета», без телефона, без контактов, без «о себе».
-      // Введённые WhatsApp, Telegram и биография складывались в
-      // localStorage под ключ daymohk-extra-profile, который НИКТО
-      // никогда не читал: данные просто пропадали, а в каталоге
-      // человека не было видно.
-      //
-      // Анкету создаёт база (триггер on_auth_user_created или RPC
-      // ensure_personal_profile), поэтому здесь мы её не создаём, а
-      // дозаполняем — иначе получили бы дубликат.
-      const personalId = account ? `personal-${account.id}` : '';
-      let personal = profiles.find((item) => item.id === personalId)
-        ?? profiles.find((item) => item.ownerId === account?.id && item.isPersonal);
-
-      // Анкета могла ещё не доехать до клиента: пользователь
-      // зарегистрировался секунду назад, а список анкет подгружается
-      // асинхронно. Идемпотентный RPC вернёт уже созданную триггером
-      // строку, а если её почему-то нет — создаст. Дубликата не будет:
-      // и триггер, и функция пишут один и тот же id personal-<uuid>.
-      if (!personal && supabase) {
-        try {
-          const session = await supabase.auth.getSession();
-          const token = session.data.session?.access_token;
-          if (token) {
-            const res = await fetch('/api/account/ensure-personal-profile', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${token}`,
-              },
-            });
-            if (res.ok) {
-              const data = await res.json().catch(() => null);
-              if (data?.profile) personal = data.profile;
-            }
-          }
-        } catch {
-          // Молча: анкету дозаполнить не удалось, но аккаунт уже
-          // сохранён — регистрацию из-за этого обрывать нельзя.
-        }
-      }
-
-      if (personal) {
-        const digits = extractPhoneDigits(phone);
-        // «Использовать общий номер» — значит WhatsApp совпадает с
-        // телефоном. Формат тот же, что в EditProfileModal: 7XXXXXXXXXX.
-        const whatsappDigits = extractPhoneDigits(whatsapp);
-        const finalWhatsapp = whatsappUsePhone
-          ? (digits ? `7${digits}` : undefined)
-          : (whatsappDigits ? `7${whatsappDigits}` : undefined);
-
-        updateProfile(personal.id, {
-          fullName: full,
-          avatarUrl: avatarUrl || personal.avatarUrl,
-          phone: phone || personal.phone,
-          hidePhone,
-          sameAsPhoneWhatsapp: whatsappUsePhone,
-          whatsapp: finalWhatsapp,
-          telegram: telegram.trim()
-            ? `@${telegram.trim().replace(/^@/, '')}`
-            : undefined,
-          bio: bio.trim() || personal.bio,
-          settlement: settlement.trim() || personal.settlement,
-          gender: gender ? (gender as 'male' | 'female') : personal.gender,
-          birthDate: birthDate || personal.birthDate,
-        });
-      }
-
-      // Анкета — последний шаг регистрации: «Внешний вид» показан
-      // раньше, сразу после гида. Здесь регистрация заканчивается.
-      void finishOnboarding();
-    } catch (err) {
-      // Наружу — понятная фраза, подробности уходят в консоль (п.26).
-      setError(humanErrorMessage(err, ce ? 'ce' : 'ru', 'Сохранение анкеты при регистрации'));
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -622,7 +491,7 @@ export default function OnboardingModal() {
       <div
         className={`smk-sheet smk-sign pointer-events-auto relative w-full max-w-md overflow-hidden rounded-3xl shadow-2xl ${
           step === 'tour' ? 'max-h-[calc(100dvh-8rem)] overflow-y-auto' : ''
-        } ${tourCardHidden ? 'hidden' : ''}`}
+        } ${tourCardHidden ? 'smk-tour-card smk-tour-card--hidden' : 'smk-tour-card'}`}
       >
         {step === 'welcome' && (
           <div className="relative px-6 pb-6 pt-12">
@@ -732,252 +601,12 @@ export default function OnboardingModal() {
           </div>
         )}
 
+        {/* Финальная кнопка «Завершить» гида заканчивает весь
+            онбординг: письмо, tourDone в БД, закрытие окна. */}
         {step === 'tour' && (
-          <FirstTour onDone={() => setStep('look')} onCardVisible={setTourCardVisible} />
+          <FirstTour onDone={() => { void finishOnboarding(); }} onCardVisible={setTourCardVisible} />
         )}
 
-        {step === 'profile' && (
-          <form onSubmit={handleSubmitProfile} className="relative px-6 pb-6 pt-10">
-            <div className="mb-4 flex items-center gap-3">
-              <button type="button" onClick={backFromProfile} className="smk-hit flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-300" aria-label="Назад">
-                <ArrowLeft className="h-4 w-4" />
-              </button>
-              <h2 className="text-lg font-black text-slate-900 dark:text-white">{ce ? 'Хьайн анкета' : 'Ваш профиль'}</h2>
-            </div>
-            <p className="mb-4 text-xs text-slate-500 dark:text-zinc-400">
-              {ce ? 'ЦIе а, фамили а язъе — иза массо анкеташкахь хир ду. Кхин дерриг — хьайн лаамца.' : 'Имя и фамилия обязательны. Остальное — по желанию.'}
-            </p>
-            <div className="max-h-[52vh] space-y-3 overflow-y-auto pr-1 no-scrollbar">
-              {/* Аватарка */}
-              <div>
-                <label className="mb-1 block smk-text-label font-bold text-slate-500 dark:text-zinc-400">{ce ? 'Сурт' : 'Аватарка'}</label>
-                <div className="flex items-center gap-3">
-                  <img src={avatarUrl || '/icon.png'} alt="" className="h-14 w-14 rounded-2xl object-cover" />
-                  <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
-                    <input type="file" accept="image/*" className="sr-only" onChange={onAvatarChange} />
-                    {ce ? 'Харжа' : 'Выбрать'}
-                  </label>
-                </div>
-              </div>
-              <div>
-                <label className="mb-1 block smk-text-label font-bold text-slate-500 dark:text-zinc-400">Имя / ЦIе *</label>
-                <input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder={ce ? 'Имам' : 'Имя'} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
-              </div>
-              <div>
-                <label className="mb-1 block smk-text-label font-bold text-slate-500 dark:text-zinc-400">Фамилия / Фамили *</label>
-                <input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder={ce ? 'Хьадаев' : 'Фамилия'} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
-              </div>
-              <div>
-                <label className="mb-1 block smk-text-label font-bold text-slate-500 dark:text-zinc-400">Пол / Стен-боьршалла</label>
-                <select value={gender} onChange={(e) => setGender(e.target.value)} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
-                  <option value="">—</option>
-                  <option value="male">{ce ? 'Къан' : 'Мужской'}</option>
-                  <option value="female">{ce ? 'Зуда' : 'Женский'}</option>
-                </select>
-              </div>
-              <div>
-                <label className="mb-1 block smk-text-label font-bold text-slate-500 dark:text-zinc-400">Дата рождения / Вин терахь</label>
-                <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
-              </div>
-              <div>
-                <label className="mb-1 block smk-text-label font-bold text-slate-500 dark:text-zinc-400">{t.phoneGeneral}</label>
-                <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+7 (___) ___-__-__" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
-              </div>
-              <div>
-                <label className="mb-1 block smk-text-label font-bold text-slate-500 dark:text-zinc-400">{ce ? 'Адрес / Адрес' : 'Адрес (населённый пункт)'}</label>
-                <input value={settlement} onChange={(e) => setSettlement(e.target.value)} placeholder={ce ? 'Даймохк' : 'Даймохк'} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
-              </div>
-              <div>
-                <label className="mb-1 block smk-text-label font-bold text-slate-500 dark:text-zinc-400">{t.phoneTelegramLabel}</label>
-                <input value={telegram} onChange={(e) => setTelegram(e.target.value)} placeholder="@username" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
-              </div>
-              <div>
-                <label className="mb-1 block smk-text-label font-bold text-slate-500 dark:text-zinc-400">{t.phoneWhatsappLabel}</label>
-                <input value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="+7 (___) ___-__-__" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
-                <label className="mt-1.5 flex cursor-pointer items-center gap-2 smk-text-label font-bold text-slate-600 dark:text-zinc-300">
-                  <input type="checkbox" checked={whatsappUsePhone} onChange={(e) => setWhatsappUsePhone(e.target.checked)} className="h-3.5 w-3.5 rounded text-emerald-600" />
-                  {ce ? 'Дерригчура телефон лелае' : 'Использовать общий номер (телефон)'}
-                </label>
-              </div>
-              <label className="flex cursor-pointer items-center gap-2 smk-text-label font-bold text-slate-600 dark:text-zinc-300">
-                <input type="checkbox" checked={hidePhone} onChange={(e) => setHidePhone(e.target.checked)} className="h-3.5 w-3.5 rounded text-emerald-600" />
-                {ce ? 'Сан номер ма гайта' : 'Не показывать мой номер'}
-              </label>
-              <div>
-                <label className="mb-1 block smk-text-label font-bold text-slate-500 dark:text-zinc-400">{ce ? 'Хьоца лаьцна' : 'О себе'}</label>
-                <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={3} placeholder={ce ? 'Хьайн хьокъехь...' : 'Пару слов о себе…'} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
-              </div>
-              {(whatsapp || telegram) && (
-                <p className="smk-note smk-note-warn px-3 py-2">
-                  {ce
-                    ? 'Хьажа: хьайн ватсап а, телеграм а язйина дацахь, уьш телефонан номераца хир ду.'
-                    : 'Если оставите поля WhatsApp и Telegram пустыми, они будут дублировать номер телефона.'}
-                </p>
-              )}
-            </div>
-            {error && (
-              <p className="smk-note smk-note-danger mt-3 px-3 py-2">{error}</p>
-            )}
-            <div className="mt-5 flex items-center gap-2">
-              <button type="button" onClick={backFromProfile} className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
-                ←
-              </button>
-              <button type="submit" disabled={saving} className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-60">
-                <Check className="h-3.5 w-3.5" />
-                {saving ? (ce ? 'Лоьху...' : 'Сохраняем…') : (ce ? 'Чуйаккха' : 'Готово')}
-              </button>
-            </div>
-          </form>
-        )}
-
-        {/* Шаг «Внешний вид» (п.28).
-            Идёт последним: сначала обязательная анкета, потом приятное.
-            Здесь нет ничего, что нужно «сохранять» отдельно — настройки
-            применяются сразу, и человек видит результат на этом же окне. */}
-        {step === 'look' && (
-          <div className="relative px-6 pb-6 pt-10">
-            <h2 className="text-lg font-black text-slate-900 dark:text-white">
-              {ce ? 'Арахьара бос' : 'Внешний вид'}
-            </h2>
-            <p className="mb-4 mt-1 text-xs text-slate-500 dark:text-zinc-400">
-              {ce
-                ? 'Хаьржинарг цкъа а хийца мега нисдарехь. ХIинццехь хьожуш ду.'
-                : 'Всё это можно изменить в любой момент в настройках. Меняется сразу, на этом же окне.'}
-            </p>
-
-            <div className="max-h-[52vh] space-y-3 overflow-y-auto pr-1 no-scrollbar">
-              {/* Тема: светлая или тёмная. Остальные — в настройках,
-                  здесь нужен выбор без раздумий. */}
-              <div>
-                <p className="mb-1.5 smk-text-label font-bold text-slate-500 dark:text-zinc-400">
-                  {ce ? 'Тема' : 'Тема'}
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  {([
-                    { id: 'light', ru: 'Светлая', ce: 'Къегина' },
-                    { id: 'dark', ru: 'Тёмная', ce: 'Iаьржа' },
-                  ] as const).map((option) => (
-                    <button
-                      key={option.id}
-                      type="button"
-                      onClick={() => updateSettings({ themeId: option.id })}
-                      className={`rounded-xl px-3 py-2.5 text-xs font-bold transition ${
-                        settings.themeId === option.id
-                          ? 'bg-emerald-600 text-white shadow-sm'
-                          : 'border border-slate-200 bg-white text-slate-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300'
-                      }`}
-                    >
-                      {ce ? option.ce : option.ru}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Размер текста — первое, что нужно тем, кто плохо видит. */}
-              <div className="rounded-xl border border-slate-200 bg-white px-3 py-3 dark:border-zinc-700 dark:bg-zinc-900">
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="smk-text-label font-bold text-slate-600 dark:text-zinc-300">
-                    {ce ? 'Йозанан барам' : 'Размер текста'}
-                  </span>
-                  <span className="smk-text-label font-extrabold text-emerald-700 dark:text-emerald-400">
-                    {settings.fontScale} %
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min={50}
-                  max={150}
-                  step={5}
-                  value={settings.fontScale}
-                  onChange={(event) => updateSettings({ fontScale: Number(event.target.value) })}
-                  aria-label={ce ? 'Йозанан барам' : 'Размер текста'}
-                  className="w-full accent-emerald-600"
-                />
-              </div>
-
-              {/* Начертание шрифта (п.9).
-                  Раньше здесь стояло скругление углов — настройка
-                  декоративная, её замечают не все. Шрифт важнее: от него
-                  зависит, насколько легко читать, а список тот же, что в
-                  настройках, — общий источник FONT_FAMILIES. */}
-              <div className="rounded-xl border border-slate-200 bg-white px-3 py-3 dark:border-zinc-700 dark:bg-zinc-900">
-                <label
-                  htmlFor="onb-font"
-                  className="mb-1.5 block smk-text-label font-bold text-slate-600 dark:text-zinc-300"
-                >
-                  {ce ? 'Йозанан тайпа' : 'Начертание'}
-                </label>
-                <select
-                  id="onb-font"
-                  value={settings.fontFamily}
-                  onChange={(event) => updateSettings({ fontFamily: event.target.value as FontFamilyId })}
-                  className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
-                >
-                  <optgroup label={ce ? 'Мекхаш йоцуш' : 'Без засечек'}>
-                    <option value="manrope">Manrope</option>
-                    <option value="inter">Inter</option>
-                    <option value="rubik">Rubik</option>
-                    <option value="montserrat">Montserrat</option>
-                    <option value="jost">Jost</option>
-                    <option value="onest">Onest</option>
-                  </optgroup>
-                  <optgroup label={ce ? 'Мекхашца' : 'С засечками'}>
-                    <option value="pt-serif">PT Serif</option>
-                    <option value="literata">Literata</option>
-                    <option value="georgia">Georgia</option>
-                  </optgroup>
-                  <optgroup label={ce ? 'Моноширинни а, системин а' : 'Моноширинный и системный'}>
-                    <option value="roboto-mono">Roboto Mono</option>
-                    <option value="system">{ce ? 'Системин' : 'Системный'}</option>
-                  </optgroup>
-                </select>
-                <p className="mt-1.5 smk-text-label text-slate-500 dark:text-zinc-500">
-                  {ce
-                    ? 'Дерриг программехь элпаш цIеххьана хийцало.'
-                    : 'Буквы во всём приложении сменятся сразу.'}
-                </p>
-              </div>
-
-              {/* Эффекты одним переключателем: на слабом телефоне тени и
-                  размытие заметно тормозят прокрутку. Тонкая настройка
-                  каждого эффекта осталась в разделе настроек. */}
-              <label className="flex cursor-pointer items-start gap-2 rounded-xl border border-slate-200 bg-white px-3 py-3 dark:border-zinc-700 dark:bg-zinc-900">
-                <input
-                  type="checkbox"
-                  checked={settings.effects.motion > 0}
-                  onChange={(event) => updateSettings({
-                    effects: {
-                      ...settings.effects,
-                      motion: event.target.checked ? 100 : 0,
-                      glow: event.target.checked ? 100 : 0,
-                      blur: event.target.checked ? 100 : 0,
-                    },
-                  })}
-                  className="mt-0.5 h-3.5 w-3.5 rounded accent-emerald-600"
-                />
-                <span>
-                  <span className="block smk-text-label font-bold text-slate-700 dark:text-zinc-200">
-                    {ce ? 'Хазна эффекташ' : 'Красивые эффекты'}
-                  </span>
-                  <span className="mt-0.5 block smk-text-label text-slate-500 dark:text-zinc-500">
-                    {ce
-                      ? 'Анимацеш, серло, минкъа. Телефон меллаша болх бахь — дlаяккха.'
-                      : 'Анимации, свечение, размытие. Если телефон работает медленно — выключите.'}
-                  </span>
-                </span>
-              </label>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setStep('profile')}
-              className="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-700"
-            >
-              <Check className="h-3.5 w-3.5" />
-              {ce ? 'Дlаваха' : 'Дальше'}
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );

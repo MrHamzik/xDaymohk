@@ -76,10 +76,13 @@ describe('SQL: ссылки на колонки во вьюхе заданий',
   });
 
   it('контакты лежат там, где мы думаем', () => {
-    // Ровно та путаница, из-за которой упала миграция 56.
+    // Миграция 56 лечила путаницу «колонка не в той таблице».
+    // С ТЗ от 21.08 (п.4.1) WhatsApp и Telegram живут и в ПРОФИЛЕ
+    // (user_profiles, миграция 69) — их вводят там; в анкетах они
+    // лишь копия для показа, полей ввода больше нет.
     expect(userProfiles.has('phone')).toBe(true);
-    expect(userProfiles.has('whatsapp')).toBe(false);
-    expect(userProfiles.has('telegram')).toBe(false);
+    expect(userProfiles.has('whatsapp')).toBe(true);
+    expect(userProfiles.has('telegram')).toBe(true);
     expect(profiles.has('whatsapp')).toBe(true);
     expect(profiles.has('telegram')).toBe(true);
   });

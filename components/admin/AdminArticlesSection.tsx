@@ -1,5 +1,7 @@
 'use client';
 
+import ConfirmDialog from '@/components/ConfirmDialog';
+
 import { useCallback, useEffect, useState } from 'react';
 import {
   ChevronDown, ChevronUp, Eye, EyeOff, Loader2, Plus, Save, Trash2,
@@ -149,8 +151,11 @@ export default function AdminArticlesSection() {
     }
   };
 
+  // Подтверждение — модальным окном (как сброс настроек), не системным confirm.
+  const [removeTarget, setRemoveTarget] = useState<Article | null>(null);
+
   const remove = async (a: Article) => {
-    if (!window.confirm(L('Удалить главу без возможности восстановления?', 'Дийцар дIадаккха?'))) return;
+    setRemoveTarget(null);
     setBusyId(a.id);
     try {
       const accessToken = await token();
@@ -271,7 +276,7 @@ export default function AdminArticlesSection() {
                   className="smk-act flex h-7 w-7 items-center justify-center">
                   {a.isPublished ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
                 </button>
-                <button type="button" onClick={() => remove(a)} disabled={busyId === a.id}
+                <button type="button" onClick={() => setRemoveTarget(a)} disabled={busyId === a.id}
                   aria-label={L('Удалить', 'ДIадаккха')} className="smk-act smk-act--danger flex h-7 w-7 items-center justify-center">
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
@@ -348,6 +353,17 @@ export default function AdminArticlesSection() {
           );
         })}
       </div>
+
+      <ConfirmDialog
+        isOpen={Boolean(removeTarget)}
+        title={L('Удалить главу', 'Дийцар дIадаккха')}
+        message={L('Удалить главу без возможности восстановления?', 'Дийцар дIабаккха дуьйцуш юха а ца метта?')}
+        confirmLabel={L('Удалить', 'ДIадаккха')}
+        onConfirm={() => { if (removeTarget) void remove(removeTarget); }}
+        onCancel={() => setRemoveTarget(null)}
+        danger
+        isBusy={Boolean(busyId)}
+      />
     </section>
   );
 }

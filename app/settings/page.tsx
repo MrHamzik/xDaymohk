@@ -8,6 +8,7 @@ import Navbar from '@/components/Navbar';
 import BottomNav from '@/components/BottomNav';
 import MobileMenuDrawer from '@/components/MobileMenuDrawer';
 import CreateActionModal from '@/components/CreateActionModal';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import MapSegmentedControl from '@/components/MapSegmentedControl';
 import ThemeEditor from '@/components/settings/ThemeEditor';
 import EffectsEditor from '@/components/settings/EffectsEditor';
@@ -119,8 +120,13 @@ export default function SettingsPage() {
     });
   };
 
-  const handleReset = () => {
-    if (!window.confirm(t.settingsResetConfirm)) return;
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
+
+  // Подтверждение сброса — модальным окном в дизайне приложения
+  // (ТЗ-2, п.9): системный window.confirm выглядел чужим.
+  const handleReset = () => setIsResetConfirmOpen(true);
+  const confirmReset = () => {
+    setIsResetConfirmOpen(false);
     reset();
   };
 
@@ -416,17 +422,13 @@ export default function SettingsPage() {
                     />
                     <p className="smk-text-label text-slate-400 dark:text-zinc-500">{t.settingsRadiusHint}</p>
                   </div>
-                  <SettingRow
-                    title={t.lightMode}
-                    hint={hasPro(settings, 'silver') ? t.lightModeHint : t.proNeedSilver}
-                  >
+                  {/* Режим редактирования доступен ВСЕМ (ТЗ, п.3.1):
+                      раньше был платным (Silver) — теперь это базовая
+                      возможность убрать лишнее из меню. */}
+                  <SettingRow title={t.lightMode} hint={t.lightModeHint}>
                     <Toggle
                       checked={settings.lightMode}
-                      disabled={!hasPro(settings, 'silver') && !settings.lightMode}
-                      onChange={(next) => {
-                        if (next && !hasPro(settings, 'silver')) return;
-                        update({ lightMode: next });
-                      }}
+                      onChange={(next) => update({ lightMode: next })}
                       label={t.lightMode}
                     />
                   </SettingRow>
@@ -520,6 +522,16 @@ export default function SettingsPage() {
         onOpenPlus={() => setIsCreateSheetOpen(true)}
         onClose={() => setIsCreateSheetOpen(false)}
         onOpenCreateProfile={() => router.push('/catalog')}
+      />
+
+      <ConfirmDialog
+        isOpen={isResetConfirmOpen}
+        title={t.settingsReset}
+        message={t.settingsResetConfirm}
+        confirmLabel={t.settingsReset}
+        onConfirm={confirmReset}
+        onCancel={() => setIsResetConfirmOpen(false)}
+        danger
       />
     </div>
   );

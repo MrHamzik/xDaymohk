@@ -289,7 +289,7 @@ export default function SidebarNav({ onClose, isAdmin = false, rail = false }: S
 
     // Метка для гида. На ПК нижней панели нет, и «Каталог» с «Картой»
     // он подсвечивает здесь — в боковой колонке.
-    const tourMark = item.id === 'catalog' || item.id === 'map' ? item.id : undefined;
+    const tourMark = ['home', 'catalog', 'map'].includes(item.id) ? item.id : undefined;
 
     const inner = item.href ? (
       <Link
@@ -355,6 +355,9 @@ export default function SidebarNav({ onClose, isAdmin = false, rail = false }: S
             onClick={() => toggleHidden(item.id)}
             aria-label={isHidden ? t.menuShowItem : t.menuHideItem}
             title={locked ? t.settings : (isHidden ? t.menuShowItem : t.menuHideItem)}
+            // data-tour-eye: замок гида пускает ТОЛЬКО глазики на шаге
+            // «Режим редактирования» — сами пункты меню остаются мертвы.
+            data-tour-eye
             className="smk-hit flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 disabled:opacity-30 dark:hover:bg-zinc-800"
           >
             {locked || !isHidden ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
@@ -371,6 +374,10 @@ export default function SidebarNav({ onClose, isAdmin = false, rail = false }: S
       <div className={`flex h-full w-full flex-col overflow-hidden ${rail ? 'px-1.5 py-2.5' : 'p-3.5'}`}>
         <div
           className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-0.5 no-scrollbar"
+          // data-tour-menu-scroll — гид проверяет, помещается ли список
+          // меню целиком: если листить нечего, задание засчитывается
+          // само (иначе на коротких списках гид зависал навсегда).
+          data-tour-menu-scroll
           // Гид на шаге про меню ждёт, пока человек пролистает список:
           // так он видит, что разделов больше, чем помещается на экран.
           onScroll={(event) => {

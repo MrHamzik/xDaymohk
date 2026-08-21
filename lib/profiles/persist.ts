@@ -12,6 +12,10 @@ export async function persistProfileToSupabase(profile: Profile): Promise<void> 
   const row = profileToDbRow(profile);
   const { error } = await supabase.from('profiles').upsert(row, { onConflict: 'id' });
   if (error) {
+    // Не молчим (баг от 22.08, п.6): чаще всего это отсутствующая колонка
+    // (не применены миграции) — один такой столбец раньше silently валил
+    // сохранение ника и галочек, человек узнаывал об этом только в каталоге.
+    console.warn('[profiles] полный upsert не прошёл, пробуем базовый набор:', error.message);
     const baseRow: Record<string, unknown> = {
       id: profile.id,
       owner_id: profile.ownerId ?? null,
@@ -32,6 +36,13 @@ export async function persistProfileToSupabase(profile: Profile): Promise<void> 
       review_count: profile.reviewCount,
       phone: profile.phone,
       hide_phone: profile.hidePhone ?? false,
+      // Раньше fallback терял эти поля (баг от 22.08, п.6): ник и
+      // галочки видимости не сохранялись именно на старых схемах.
+      hide_whatsapp: profile.hideWhatsapp ?? false,
+      hide_telegram: profile.hideTelegram ?? false,
+      nickname: profile.nickname ?? null,
+      show_nickname: profile.showNickname ?? false,
+      settlement: (profile as any).settlement ?? null,
       same_as_phone_whatsapp: profile.sameAsPhoneWhatsapp ?? true,
       is_verified: profile.isVerified ?? false,
       verification_status: profile.verificationStatus ?? 'none',
@@ -48,7 +59,6 @@ export async function persistProfileToSupabase(profile: Profile): Promise<void> 
       is_flexible_schedule: profile.isFlexibleSchedule ?? false,
       gender: profile.gender ?? null,
       birth_date: (profile as any).birthDate ?? null,
-      settlement: (profile as any).settlement ?? null,
       created_at: profile.createdAt,
     };
     const { error: retryError } = await supabase.from('profiles').upsert(baseRow, { onConflict: 'id' });

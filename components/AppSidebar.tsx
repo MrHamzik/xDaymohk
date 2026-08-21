@@ -41,10 +41,18 @@ export default function AppSidebar({ isAdmin = false }: { isAdmin?: boolean }) {
     <aside
       className={`smk-rail-slot ${open ? 'smk-rail-slot--open' : ''}`}
       aria-label="Боковое меню"
-      // Метка для гида: на ПК роль кнопки «Меню» играет эта колонка.
-      data-tour="rail-menu"
     >
-      <div className={`smk-rail-dock ${open ? 'smk-rail--open' : ''}`}>
+      {/* Метка для гида — на САМОМ ДОКЕ, а не на <aside> (исправление
+          21.08, ночь): внутри aside лежит position:fixed, поэтому у
+          aside высота НОЛЬ, и прожектор гида (ищущий цель по видимой
+          высоте) отбраковывал рейку — на ПК шаг «Меню» затемнял весь
+          экран без подсветки блока. Док — фиксированный, с настоящей
+          высотой, и это ровно «весь блок меню». На ПК роль кнопки
+          «Меню» играет эта колонка. */}
+      <div
+        className={`smk-rail-dock ${open ? 'smk-rail--open' : ''}`}
+        data-tour="rail-menu"
+      >
         <button
           type="button"
           onClick={toggle}

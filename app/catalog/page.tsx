@@ -75,7 +75,7 @@ export default function Home() {
   // Чёрный список фильтруем ЗДЕСЬ, а не в ProfilesProvider: скрытие
   // взаимное и зависит от того, кто смотрит, — общий кеш анкет должен
   // оставаться одинаковым для всех.
-  const { isHidden: isBlockedOwner } = useBlacklist();
+  const { isHidden: isBlockedOwner, block: blockOwner } = useBlacklist();
   const visibleProfiles = useMemo(
     () => profiles.filter((profile) =>
       !profile.isHidden && !profile.isBanned && !isBlockedOwner(profile.ownerId)),
@@ -415,7 +415,21 @@ export default function Home() {
         profile={reportProfile}
         isOpen={Boolean(reportProfile)}
         onClose={() => setReportProfile(null)}
-        onSubmit={(reason) => reportProfile ? addComplaint(reportProfile.id, reason) : Promise.resolve()}
+        onSubmit={(reason) => {
+          if (!reportProfile) return Promise.resolve();
+          // Жалоба с блокировкой (проверенная анкета): суффикс [ЧС]
+          // раньше просто приклеивался к тексту жалобы — человек считался
+          // заблокированным, но в ЧС не попадал (баг от 22.08, п.8).
+          const withBlacklist = reason.endsWith('[ЧС]');
+          const clean = withBlacklist ? reason.replace(/\s*\[ЧС\]\s*$/, '') : reason;
+          const complaint = addComplaint(reportProfile.id, clean);
+          if (withBlacklist && reportProfile.ownerId) {
+            return blockOwner(reportProfile.ownerId, clean)
+              .then(() => complaint)
+              .catch(() => complaint);
+          }
+          return complaint;
+        }}
       />
       <AdminBanModal
         profile={blockProfile}

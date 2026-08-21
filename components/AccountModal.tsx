@@ -28,7 +28,7 @@ export default function AccountModal({ isOpen, onClose, onOpenAddModal, onEditPr
   const [lastName, setLastName] = useState('');
   const [firstName, setFirstName] = useState('');
   const [accountPhone, setAccountPhone] = useState('');
-  const [gender, setGender] = useState<'male' | 'female' | ''>('');
+  const [gender, setGender] = useState<'male' | 'female' | 'other' | ''>('');
   const [birthDate, setBirthDate] = useState('');
   const [settlement, setSettlement] = useState('Даймохк');
 

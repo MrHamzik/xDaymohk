@@ -16,7 +16,7 @@ import {
 const ACCOUNT_STORAGE_KEY = 'daymohk-account';
 
 export interface Account {
-  gender?: 'male' | 'female';
+  gender?: 'male' | 'female' | 'other';
   birthDate?: string;
   settlement?: string;
   id: string;
@@ -31,13 +31,25 @@ export interface Account {
   /** ISO timestamp when a temporary ban expires (undefined = no ban / permanent). */
   bannedUntil?: string;
   statusOverride?: UserMasterStatus;
+  /**
+   * Дефолты видимости контактов для НОВЫХ анкет (решение от 21.08,
+   * ночь): что не показывать — телефон, WhatsApp, Telegram. Хранятся
+   * на аккаунте (user_profiles.hide_*), применяются автоматически при
+   * создании личной анкеты, анкеты специалиста и задания.
+   */
+  hidePhone: boolean;
+  hideWhatsapp: boolean;
+  hideTelegram: boolean;
+  /** Номер WhatsApp и имя Telegram — живут в профиле (ТЗ, п.4.1). */
+  whatsapp?: string;
+  telegram?: string;
 }
 
 interface AuthContextValue {
   account: Account | null;
   isLoading: boolean;
   signInWithGoogle: () => Promise<void>;
-  updateAccount: (updates: Partial<Pick<Account, 'fullName' | 'avatarUrl' | 'phone' | 'phoneVerified' | 'gender' | 'birthDate' | 'settlement'>>) => Promise<void>;
+  updateAccount: (updates: Partial<Pick<Account, 'fullName' | 'avatarUrl' | 'phone' | 'phoneVerified' | 'gender' | 'birthDate' | 'settlement' | 'hidePhone' | 'hideWhatsapp' | 'hideTelegram' | 'whatsapp' | 'telegram'>>) => Promise<void>;
   setMasterStatus: (status: UserMasterStatus) => Promise<void>;
   deleteAccount: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -85,6 +97,11 @@ type StoredAccount = {
   is_admin: boolean;
   is_blocked: boolean;
   status_override?: UserMasterStatus;
+  hide_phone?: boolean;
+  hide_whatsapp?: boolean;
+  hide_telegram?: boolean;
+  whatsapp?: string | null;
+  telegram?: string | null;
 };
 
 /**
@@ -128,6 +145,12 @@ function accountFromUser(user: AuthUser): Account {
     phone: oauthPhone(user) || user.phone || '',
     isAdmin: isAdminEmail(user.email),
     statusOverride: 'auto',
+    // Галочки «не показывать» по умолчанию ПОСТАВЛЕНЫ (22.08, п.4).
+    hidePhone: true,
+    hideWhatsapp: true,
+    hideTelegram: true,
+    whatsapp: oauthPhone(user) || '',
+    telegram: '',
   };
 }
 
@@ -152,11 +175,13 @@ async function resolveAccount(user: AuthUser): Promise<Account> {
 
   const { data, error } = await supabase
     .from('user_profiles')
-    .select('id, email, full_name, avatar_url, phone, phone_verified_at, is_admin, is_blocked, status_override, gender, birth_date, birth_year, settlement')
+    .select('id, email, full_name, avatar_url, phone, phone_verified_at, is_admin, is_blocked, status_override, gender, birth_date, birth_year, settlement, hide_phone, hide_whatsapp, hide_telegram, whatsapp, telegram')
     .eq('id', user.id)
     .maybeSingle();
 
-  if (error && /phone_verified_at/i.test(error.message)) {
+  // Колонки появляются миграцией 68: на ещё не обновлённой базе селект
+  // падает «column does not exist» — повторяем коротким списком.
+  if (error && /phone_verified_at|hide_phone|hide_whatsapp|hide_telegram|\bwhatsapp\b|\btelegram\b/i.test(error.message)) {
     const retry = await supabase
       .from('user_profiles')
       .select('id, email, full_name, avatar_url, phone, is_admin, is_blocked, status_override, gender, birth_date, birth_year, settlement')
@@ -243,6 +268,11 @@ async function resolveFromRow(
       isBlocked: Boolean(stored.is_blocked),
       bannedUntil: typeof (user as any).app_metadata?.banned_until === 'string' ? (user as any).app_metadata.banned_until : undefined,
       statusOverride: stored.status_override || 'auto',
+      hidePhone: Boolean(stored.hide_phone),
+      hideWhatsapp: Boolean(stored.hide_whatsapp),
+      hideTelegram: Boolean(stored.hide_telegram),
+      whatsapp: stored.whatsapp ?? undefined,
+      telegram: stored.telegram ?? undefined,
     };
   }
 
@@ -364,7 +394,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     if (error) throw new Error(error.message);
   }, []);
 
-  const updateAccount = useCallback(async (updates: Partial<Pick<Account, 'fullName' | 'avatarUrl' | 'phone' | 'phoneVerified' | 'gender' | 'birthDate' | 'settlement'>>) => {
+  const updateAccount = useCallback(async (updates: Partial<Pick<Account, 'fullName' | 'avatarUrl' | 'phone' | 'phoneVerified' | 'gender' | 'birthDate' | 'settlement' | 'hidePhone' | 'hideWhatsapp' | 'hideTelegram' | 'whatsapp' | 'telegram'>>) => {
     if (!account) return;
 
     const normalizedPhone = updates.phone ? normalizePhone(updates.phone) : account.phone;
@@ -381,6 +411,11 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       gender: updates.gender !== undefined ? updates.gender : account.gender,
       birthDate: updates.birthDate !== undefined ? updates.birthDate : account.birthDate,
       settlement: updates.settlement !== undefined ? updates.settlement : account.settlement,
+      hidePhone: updates.hidePhone !== undefined ? updates.hidePhone : account.hidePhone,
+      hideWhatsapp: updates.hideWhatsapp !== undefined ? updates.hideWhatsapp : account.hideWhatsapp,
+      hideTelegram: updates.hideTelegram !== undefined ? updates.hideTelegram : account.hideTelegram,
+      whatsapp: updates.whatsapp !== undefined ? updates.whatsapp : account.whatsapp,
+      telegram: updates.telegram !== undefined ? updates.telegram : account.telegram,
     };
     setAccount(nextAccount);
     saveLocalAccount(nextAccount);
@@ -397,6 +432,11 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         gender: nextAccount.gender ?? null,
         birth_date: nextAccount.birthDate ?? null,
         settlement: nextAccount.settlement ?? null,
+        hide_phone: nextAccount.hidePhone === true,
+        hide_whatsapp: nextAccount.hideWhatsapp === true,
+        hide_telegram: nextAccount.hideTelegram === true,
+        whatsapp: nextAccount.whatsapp ?? null,
+        telegram: nextAccount.telegram ?? null,
       };
       const { error } = await supabase.from('user_profiles').upsert(upsertPayload as any, { onConflict: 'id' });
       if (error) {

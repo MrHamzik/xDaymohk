@@ -19,6 +19,8 @@ interface AddressAutocompleteProps {
   onSelect: (suggestion: DbAddressSuggestion) => void;
   onFocus?: () => void;
   onBlur?: () => void;
+  /** Обязательность. В анкетах адрес строг, в профиле — по желанию. */
+  required?: boolean;
 }
 
 /**
@@ -27,7 +29,7 @@ interface AddressAutocompleteProps {
  * отправке формы адрес должен точно совпадать с одним из вариантов БД.
  * Формат: «Даймохк, ул. {улица}, д. {номер}» либо «Даймохк, {объект}».
  */
-export default function AddressAutocomplete({ id, value, onChange, onSelect, onFocus, onBlur }: AddressAutocompleteProps) {
+export default function AddressAutocomplete({ id, value, onChange, onSelect, onFocus, onBlur, required = true }: AddressAutocompleteProps) {
   const [isOpen, setIsOpen] = useState(false);
   // Свежие адреса с сервера (источник истины — БД, не локальный кэш).
   const [houses, setHouses] = useState<SamashkiHouseAddress[]>([]);
@@ -64,7 +66,7 @@ export default function AddressAutocomplete({ id, value, onChange, onSelect, onF
         <Search className="smk-ico pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
         <input
           id={id}
-          required
+          required={required}
           value={value}
           onFocus={() => { setIsOpen(true); onFocus?.(); }}
           onBlur={() => {

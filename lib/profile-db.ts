@@ -38,6 +38,8 @@ export function profileFromDb(row: DbRow, certificateRows: DbRow[] = [], reviewR
     })),
     phone: row.phone ?? '',
     hidePhone: Boolean(row.hide_phone),
+    hideWhatsapp: Boolean(row.hide_whatsapp),
+    hideTelegram: Boolean(row.hide_telegram),
     // Приходит только из вьюхи v_profiles; при чтении таблицы напрямую
     // колонки нет — тогда false, и интерфейс ведёт себя как раньше.
     contactsLocked: Boolean(row.contacts_locked),
@@ -99,6 +101,8 @@ export function profileToDbRow(profile: Profile) {
     review_count: profile.reviewCount,
     phone: profile.phone,
     hide_phone: profile.hidePhone ?? false,
+    hide_whatsapp: profile.hideWhatsapp ?? false,
+    hide_telegram: profile.hideTelegram ?? false,
     same_as_phone_whatsapp: profile.sameAsPhoneWhatsapp ?? true,
     is_verified: profile.isVerified ?? false,
     verification_status: profile.verificationStatus ?? 'none',
@@ -148,6 +152,8 @@ export function profileUpdatesToDbRow(updates: Partial<Profile>) {
     reviewCount: 'review_count',
     phone: 'phone',
     hidePhone: 'hide_phone',
+    hideWhatsapp: 'hide_whatsapp',
+    hideTelegram: 'hide_telegram',
     sameAsPhoneWhatsapp: 'same_as_phone_whatsapp',
     isVerified: 'is_verified',
     verificationStatus: 'verification_status',

@@ -333,10 +333,23 @@ export default function SettingsProvider({ children }: { children: React.ReactNo
     ));
   }, [account?.email, isGuest]);
 
+  /**
+   * Сброс к заводским НЕ трогает онбординг (ТЗ, п.2).
+   *
+   * Раньше reset() поднимал DEFAULT_SETTINGS целиком — вместе с
+   * tourDone: false, и «Сбросить всё по умолчанию» заново навязывал
+   * гид человеку, который прошёл его давно. Гид привязан к аккаунту
+   * и показывается строго один раз: что пройдено — то пройдено.
+   */
   const reset = useCallback(() => {
     hasLocalEdit.current = true;
-    setSettings(applyAccess(
-      forceOwnerPlatinum({ ...DEFAULT_SETTINGS }, account?.email),
+    setSettings((current) => applyAccess(
+      forceOwnerPlatinum({
+        ...DEFAULT_SETTINGS,
+        tourDone: current.tourDone,
+        tourStep: current.tourStep,
+        welcomeSent: current.welcomeSent,
+      }, account?.email),
       isGuest,
     ));
   }, [account?.email, isGuest]);

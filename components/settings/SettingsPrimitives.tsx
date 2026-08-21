@@ -84,9 +84,17 @@ export function HintMark({ text }: { text: string }) {
     const onScroll = () => place();
     window.addEventListener('scroll', onScroll, true);
     window.addEventListener('resize', onScroll);
+    // Escape закрывает подсказку: подложка больше не кнопка (см. ниже),
+    // и клавиатурному пользователю нужен явный путь наружу. Замок гида
+    // Escape не глушит — там это единственный аварийный выход.
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
     return () => {
       window.removeEventListener('scroll', onScroll, true);
       window.removeEventListener('resize', onScroll);
+      window.removeEventListener('keydown', onKey);
     };
   }, [isOpen, place]);
 
@@ -115,11 +123,13 @@ export function HintMark({ text }: { text: string }) {
               нажатия, и открытую подсказку было не закрыть.
 
               z-[97]: карточка гида стоит на 95, и подложка вровень с
-              ней перехватывала бы клик первой. */}
-          <button
-            type="button"
-            aria-hidden
-            tabIndex={-1}
+              ней перехватывала бы клик первой.
+
+              div, а не button с aria-hidden: кнопка получала ФОКУС по
+              клику, и Chrome ругался «focused element must not be
+              inside aria-hidden». div не фокусируется — ругаться не
+              на что; для клавиатуры подсказку закрывает Escape. */}
+          <div
             data-tour-portal
             onClick={() => setIsOpen(false)}
             className="fixed inset-0 z-[97] cursor-default"
@@ -204,18 +214,20 @@ export function CollapsibleSection({
           </h2>
         </button>
         {hint && <HintMark text={hint} />}
-        <button
-          type="button"
+        {/* Вторая половина заголовка (линия со стрелкой) — div, а не
+            button с aria-hidden: кнопка ловила фокус по клику, сама
+            будучи aria-hidden, и Chrome предупреждал о скрытии
+            сфокусированного элемента. Клавиатура пользуется первой,
+            настоящей кнопкой выше. */}
+        <div
           onClick={onToggle}
-          tabIndex={-1}
-          aria-hidden
           className="flex min-w-0 flex-1 items-center gap-2"
         >
           <span className="smk-rule h-px flex-1" aria-hidden />
           <ChevronDown
             className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
           />
-        </button>
+        </div>
       </div>
       {isOpen && children}
     </section>

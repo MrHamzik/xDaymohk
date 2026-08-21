@@ -27,9 +27,15 @@ export default function ProfilePage() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [accountPhone, setAccountPhone] = useState('');
-  const [gender, setGender] = useState<'male' | 'female' | ''>('');
-  const [birthDate, setBirthDate] = useState('');
-  const [settlement, setSettlement] = useState('Даймохк');
+  // Контакты профиля (ТЗ, п.4.1): WhatsApp и Telegram живут здесь,
+  // в анкетах — только галочки видимости.
+  const [whatsapp, setWhatsapp] = useState('');
+  const [telegram, setTelegram] = useState('');
+  // Видимость контактов в анкетах: галочки «НЕ показывать» (правка от
+  // 22.08, п.4 — единая формулировка с шагом 13), по умолчанию поставлены.
+  const [hidePhone, setHidePhone] = useState(true);
+  const [hideWhatsapp, setHideWhatsapp] = useState(true);
+  const [hideTelegram, setHideTelegram] = useState(true);
   const [avatarUrl, setAvatarUrl] = useState('');
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -55,9 +61,11 @@ export default function ProfilePage() {
     }
     setAccountPhone(extractPhoneDigits(account.phone));
     setAvatarUrl(account.avatarUrl);
-        setGender(account.gender || '');
-    setBirthDate(account.birthDate || '');
-    setSettlement(account.settlement || 'Даймохк');
+    setWhatsapp(account.whatsapp || '');
+    setTelegram((account.telegram || '').replace(/^@/, ''));
+    setHidePhone(account.hidePhone === true);
+    setHideWhatsapp(account.hideWhatsapp === true);
+    setHideTelegram(account.hideTelegram === true);
   }, [account]);
 
   const ownProfiles = account
@@ -119,13 +127,15 @@ export default function ProfilePage() {
     setIsSaving(true);
     try {
       const combinedFullName = `${firstName.trim()} ${lastName.trim()}`.trim() || 'Пользователь';
-      await updateAccount({ 
-        fullName: combinedFullName, 
-        phone: formatPhone(accountPhone), 
+      await updateAccount({
+        fullName: combinedFullName,
+        phone: formatPhone(accountPhone),
         avatarUrl,
-        gender: gender ? (gender as 'male' | 'female') : undefined,
-        birthDate: birthDate ? birthDate : undefined,
-        settlement: settlement.trim() || 'Даймохк'
+        whatsapp,
+        telegram: telegram.trim() ? `@${telegram.trim().replace(/^@/, '')}` : '',
+        hidePhone,
+        hideWhatsapp,
+        hideTelegram,
       });
       setError('Данные профиля и всех ваших анкет сохранены.');
     } catch (accountError) {
@@ -341,21 +351,44 @@ export default function ProfilePage() {
               </div>
             </div>
 
+            {/* WhatsApp и Telegram — поля профиля (ТЗ, п.4.1); в анкетах
+                их вводить больше не нужно, они подставляются отсюда. */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
-                <label htmlFor="account-gender" className="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-300">{t.genderLabel}</label>
-                <select id="account-gender" value={gender} onChange={(event) => setGender(event.target.value as any)} className="smk-field w-full px-3 pr-8 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-zinc-100">
-                  <option value="">{t.genderNotSet}</option>
-                  <option value="male">{t.genderMale}</option>
-                  <option value="female">{t.genderFemale}</option>
-                </select>
+                <label htmlFor="account-whatsapp" className="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-400">{t.phoneWhatsappLabel}</label>
+                <PhoneField id="account-whatsapp" value={whatsapp} onChange={setWhatsapp} />
               </div>
               <div>
-                <label htmlFor="account-birthDate" className="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-300">{t.birthDateLabel}</label>
-                <input id="account-birthDate" type="date" value={birthDate} onChange={(event) => setBirthDate(event.target.value)} className="smk-field w-full px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-zinc-100" />
+                <label htmlFor="account-telegram" className="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-400">{t.phoneTelegramLabel}</label>
+                <input
+                  id="account-telegram"
+                  value={telegram}
+                  onChange={(event) => setTelegram(event.target.value.replace(/^@/, ''))}
+                  placeholder="@username"
+                  className="smk-field w-full px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white"
+                />
               </div>
             </div>
-            </section>
+
+            {/* Видимость контактов в анкетах (ТЗ, п.5.2): дефолты для
+                каждой новой анкеты и задания. */}
+            <div className="smk-field space-y-1.5 rounded-2xl p-3">
+              <p className="text-xs font-bold text-slate-700 dark:text-zinc-300">{t.contactsHeading}</p>
+              <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-600 dark:text-zinc-400">
+                <input type="checkbox" checked={hidePhone} onChange={(e) => setHidePhone(e.target.checked)} className="h-4 w-4 rounded accent-emerald-600" />
+                {t.tourHidePhone}
+              </label>
+              <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-600 dark:text-zinc-400">
+                <input type="checkbox" checked={hideWhatsapp} onChange={(e) => setHideWhatsapp(e.target.checked)} className="h-4 w-4 rounded accent-emerald-600" />
+                {t.tourHideWhatsapp}
+              </label>
+              <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-600 dark:text-zinc-400">
+                <input type="checkbox" checked={hideTelegram} onChange={(e) => setHideTelegram(e.target.checked)} className="h-4 w-4 rounded accent-emerald-600" />
+                {t.tourHideTelegram}
+              </label>
+            </div>
+
+</section>
 
             {/* Мои анкеты — тот же контейнер-панель, что и личные данные:
                 это второй смысловой блок страницы, и он не должен
