@@ -15,10 +15,13 @@ import {
   EyeOff,
   Globe2,
   HandHeart,
+  Clock,
   Home,
   Landmark,
+  Languages,
   LifeBuoy,
   MapPin,
+  Palette,
   ScrollText,
   Settings as SettingsIcon,
   ShieldAlert,
@@ -38,7 +41,11 @@ import BlacklistModal from '@/components/BlacklistModal';
 import { useSettings } from '@/components/SettingsProvider';
 import { useI18n } from '@/lib/i18n';
 import { shareLink, siteOrigin } from '@/lib/share';
+import { useTheme } from '@/components/ThemeProvider';
+import { useAuth } from '@/components/AuthProvider';
 import { LOCKED_MENU_IDS, widgetLabel } from '@/lib/settings/widgets';
+import { WORK_STATUS_BG, WORK_STATUS_IDS, workStatusText } from '@/lib/settings/work-status';
+import type { UserMasterStatus } from '@/lib/types';
 import { emitTourEvent } from '@/lib/tour';
 
 interface SidebarNavProps {
@@ -48,7 +55,10 @@ interface SidebarNavProps {
   rail?: boolean;
 }
 
-type MenuAction = 'qibla' | 'hijri' | 'blacklist' | 'invite' | 'notify';
+type MenuAction =
+  | 'qibla' | 'hijri' | 'blacklist' | 'invite' | 'notify'
+  // Быстрые настройки строками (п.12).
+  | 'lang' | 'status' | 'theme';
 
 interface MenuItem {
   id: string;
@@ -118,8 +128,15 @@ const SECTIONS: MenuSection[] = [
       { id: 'help', href: '/help', icon: LifeBuoy },
       { id: 'legal', href: '/legal', icon: ScrollText },
       { id: 'invite', action: 'invite', icon: Users },
-      { id: 'notify', action: 'notify', icon: Bell },
       { id: 'blacklist', action: 'blacklist', icon: ShieldBan, danger: true },
+      // Быстрые настройки (п.12). В обычном меню их не видно: те же
+      // четыре переключателя стоят плиткой в шапке, а строками они
+      // нужны не каждому. Все четыре скрыты умолчанием hiddenMenu и
+      // включаются глазиком в лайт-режиме.
+      { id: 'notify', action: 'notify', icon: Bell },
+      { id: 'lang', action: 'lang', icon: Languages },
+      { id: 'status', action: 'status', icon: Clock },
+      { id: 'theme', action: 'theme', icon: Palette },
     ],
   },
 ];
@@ -139,12 +156,16 @@ function railItemClass(active: boolean, danger?: boolean) {
 
 export default function SidebarNav({ onClose, isAdmin = false, rail = false }: SidebarNavProps) {
   const pathname = usePathname();
-  const { language, t } = useI18n();
+  const { language, toggleLanguage, t } = useI18n();
   const { settings, update } = useSettings();
+  const { toggleTheme } = useTheme();
+  const { account, setMasterStatus } = useAuth();
+  const currentStatusId: UserMasterStatus = account?.statusOverride || 'auto';
 
   const [isQiblaOpen, setIsQiblaOpen] = useState(false);
   const [isSpecialDaysOpen, setIsSpecialDaysOpen] = useState(false);
   const [isBlacklistOpen, setIsBlacklistOpen] = useState(false);
+  const [isStatusOpen, setIsStatusOpen] = useState(false);
 
   useEffect(() => {
     const openHijri = () => setIsSpecialDaysOpen(true);
@@ -178,6 +199,30 @@ export default function SidebarNav({ onClose, isAdmin = false, rail = false }: S
     if (action === 'invite') {
       void shareLink(t.siteName, t.inviteNeighbor, `${siteOrigin()}/catalog`);
     }
+    // «Уведомления» (п.12). Пункт в меню был, а обработчика у него не
+    // было вовсе: нажатие просто ничего не делало. Открываем ту же
+    // почту, что и колокольчик в плитке настроек.
+    if (action === 'notify') {
+      onClose?.();
+      window.dispatchEvent(new Event('daymohk-open-mail'));
+    }
+    if (action === 'lang') toggleLanguage();
+    // Тема строкой — простое переключение светлая/тёмная. Богатый
+    // выбор с пользовательскими темами живёт в плитке (ThemePickerButton)
+    // и в настройках: дублировать выпадающий список внутри
+    // прокручиваемого меню незачем.
+    if (action === 'theme') {
+      update({ themeId: settings.themeId === 'dark' ? 'light' : 'dark' });
+      toggleTheme();
+    }
+    // «Режим работы» раскрывается списком прямо под строкой: четыре
+    // статуса — это выбор, а не переключатель.
+    if (action === 'status') setIsStatusOpen((prev) => !prev);
+  };
+
+  const handleSelectStatus = async (statusId: UserMasterStatus) => {
+    setIsStatusOpen(false);
+    if (account) await setMasterStatus(statusId);
   };
 
   const renderItem = (item: MenuItem) => {
@@ -213,6 +258,14 @@ export default function SidebarNav({ onClose, isAdmin = false, rail = false }: S
           ? 'h-4 w-4 shrink-0 text-red-600 dark:text-red-400'
           : 'h-4 w-4 shrink-0 text-[var(--smk-icon)]';
 
+    // Быстрым настройкам показываем текущее значение справа: строка
+    // «Язык» без «RU» рядом ничего не сообщает, пока её не нажмёшь.
+    const valueBadge =
+      item.id === 'lang' ? (language === 'ru' ? 'RU' : 'CE')
+        : item.id === 'theme' ? (settings.themeId === 'dark' ? t.themeDarkShort : t.themeLightShort)
+          : item.id === 'status' ? workStatusText(currentStatusId, language).label
+            : null;
+
     const body = rail ? (
       <>
         <Icon className={iconCls} />
@@ -226,6 +279,9 @@ export default function SidebarNav({ onClose, isAdmin = false, rail = false }: S
           <Icon className={iconCls} />
           <span className="truncate">{label}</span>
         </div>
+        {valueBadge && (
+          <span className="ml-2 shrink-0 smk-text-label font-bold text-slate-500 dark:text-zinc-400">{valueBadge}</span>
+        )}
         {item.chip === 'dev' && <span className="smk-chip smk-note-warn">{t.inDevelopment}</span>}
         {item.chip === 'plan' && <span className="smk-chip smk-note-info">{t.inPlans}</span>}
       </>
@@ -260,11 +316,37 @@ export default function SidebarNav({ onClose, isAdmin = false, rail = false }: S
       </button>
     );
 
+    // Список статусов под строкой «Режим работы» (п.12). В рейке, где
+    // видны одни значки, разворачивать его негде — там строка работает
+    // как раньше.
+    const statusList = item.id === 'status' && isStatusOpen && !rail ? (
+      <div className="mt-0.5 space-y-0.5 pl-9">
+        {WORK_STATUS_IDS.map((id) => {
+          const text = workStatusText(id, language);
+          const selected = id === currentStatusId;
+          return (
+            <button
+              key={id}
+              type="button"
+              onClick={() => void handleSelectStatus(id)}
+              aria-pressed={selected}
+              title={text.description}
+              className={`flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-left smk-text-label font-bold transition ${
+                selected
+                  ? `${WORK_STATUS_BG[id] ?? 'bg-emerald-600'} text-white`
+                  : 'text-slate-600 hover:bg-slate-100 dark:text-zinc-400 dark:hover:bg-zinc-800'
+              }`}
+            >
+              <span className="truncate">{text.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    ) : null;
+
     return (
-      <div
-        key={item.id}
-        className={`flex items-center gap-1 ${editing && isHidden ? 'opacity-45' : ''}`}
-      >
+      <div key={item.id} className={editing && isHidden ? 'opacity-45' : undefined}>
+        <div className="flex items-center gap-1">
         {inner}
         {editing && (
           <button
@@ -278,6 +360,8 @@ export default function SidebarNav({ onClose, isAdmin = false, rail = false }: S
             {locked || !isHidden ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
           </button>
         )}
+        </div>
+        {statusList}
       </div>
     );
   };

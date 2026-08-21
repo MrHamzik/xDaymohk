@@ -17,6 +17,7 @@ import ThemePickerButton from '@/components/settings/ThemePickerButton';
 import QiblaModal from '@/components/QiblaModal';
 import { useSettings } from '@/components/SettingsProvider';
 import { widgetLabel } from '@/lib/settings/widgets';
+import { WORK_STATUS_BG, WORK_STATUS_IDS, workStatusHint, workStatusText } from '@/lib/settings/work-status';
 import { UserMasterStatus } from '@/lib/types';
 
 const TILE =
@@ -102,39 +103,13 @@ export default function SettingsControlsBar() {
   const STATUS_ICONS: Partial<Record<UserMasterStatus, typeof Clock>> = {
     auto: Clock, active: Sparkles, break: Coffee, offline: PowerOff,
   };
-  const STATUS_ACTIVE_BG: Partial<Record<UserMasterStatus, string>> = {
-    auto: 'smk-status-bg--auto',
-    active: 'smk-status-bg--active',
-    break: 'smk-status-bg--break',
-    offline: 'smk-status-bg--offline',
-  };
 
-  const statusOptions: Array<{
-    id: UserMasterStatus;
-    label: string;
-    description: string;
-  }> = [
-    {
-      id: 'auto',
-      label: language === 'ce' ? '🟢 Автоматан раж' : '🟢 Автоматическое',
-      description: language === 'ce' ? 'Расписанца ша шех хийцало' : 'Переключается автоматически по часам',
-    },
-    {
-      id: 'active',
-      label: language === 'ce' ? '🟢 Болх беш ву' : '🟢 Работает',
-      description: language === 'ce' ? 'Анкета къамелашна а, тIечIагIдаршна а схьайиллина ю' : 'Анкета открыта для заказов и звонков',
-    },
-    {
-      id: 'break',
-      label: language === 'ce' ? '🟠 Сацар' : '🟠 Перерыв',
-      description: language === 'ce' ? 'Дена юкъахь ханна сацар' : 'Временный перерыв в течение дня',
-    },
-    {
-      id: 'offline',
-      label: language === 'ce' ? '⚫ Болх ца бо' : '⚫ Не работает',
-      description: language === 'ce' ? 'Болх ца бен де йа садаIар' : 'Выходной или закрыто',
-    },
-  ];
+  // Подписи и цвета статусов — из lib/settings/work-status.ts: тот же
+  // список показывает боковое меню (п.12).
+  const statusOptions = WORK_STATUS_IDS.map((id) => ({
+    id,
+    ...workStatusText(id, language),
+  }));
 
   const openConsent = () => {
     window.dispatchEvent(new Event('daymohk-open-consent'));
@@ -185,7 +160,7 @@ export default function SettingsControlsBar() {
                         aria-label={opt.label}
                         className={`flex h-10 w-10 items-center justify-center rounded-xl transition active:scale-95 ${
                           isSelected
-                            ? `${STATUS_ACTIVE_BG[opt.id] ?? 'bg-emerald-600'} text-white shadow-sm`
+                            ? `${WORK_STATUS_BG[opt.id] ?? 'bg-emerald-600'} text-white shadow-sm`
                             : 'text-slate-500 hover:bg-black/5 dark:text-zinc-400 dark:hover:bg-white/10'
                         }`}
                       >
@@ -195,9 +170,7 @@ export default function SettingsControlsBar() {
                   })}
                 </div>
                 <p className="mt-2 max-w-[15rem] px-1 smk-text-label leading-relaxed text-slate-500 dark:text-zinc-400">
-                  {language === 'ce'
-                    ? 'ХIара низам массо хьайн говзанчин анкетина тIедоьрзу — анкетан расписани хийца. Сохьташца — расписанца; Болх беш ву — схьайиллина; Сацар — ханна; Болх ца бо — садаIар.'
-                    : 'Действует на все ваши анкеты специалиста и перекрывает их расписание. По расписанию — статус по рабочим часам; Работает — открыт для звонков; Перерыв — временно отошли; Не работает — выходной.'}
+                  {workStatusHint(language)}
                 </p>
               </div>,
               document.body,

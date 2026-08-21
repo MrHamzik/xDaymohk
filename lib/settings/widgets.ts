@@ -26,7 +26,11 @@ export const MENU_IDS = [
   'qibla', 'quran', 'hijri', 'sira',
   'taxi', 'vpn', 'vaynakh', 'go', 'gullaq', 'djanna',
   'settings', 'pro', 'guide', 'help', 'legal', 'invite', 'blacklist',
-  'notify', 'profile',
+  // Четвёрка «быстрых» настроек (п.12). Те же переключатели стоят
+  // плиткой в шапке меню, поэтому в списке разделов они по умолчанию
+  // спрятаны лайт-режимом: кому плитки мало — включает строки глазиком.
+  'notify', 'lang', 'status', 'theme',
+  'profile',
 ] as const;
 
 export type MenuId = (typeof MENU_IDS)[number];
