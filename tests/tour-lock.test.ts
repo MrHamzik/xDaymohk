@@ -99,3 +99,75 @@ describe('старые обходные решения не вернулись',
     expect(firstTour).toContain('sessionStorage');
   });
 });
+
+/**
+ * Регрессии, о которых пользователь сообщил ПОВТОРНО (пп. 1, 4).
+ *
+ * Обе появились из-за самой блокировки: она глушит события в фазе
+ * перехвата на document, а всплывающие окна рисуются порталом прямо в
+ * body. По дереву DOM они карточке гида не родня, поэтому проверка
+ * closest('[data-tour-ui]') их не находила и нажатия съедались:
+ * подсказка «!» открывалась и не закрывалась, тема не переключалась.
+ */
+describe('порталы поверх гида остаются рабочими', () => {
+  const primitives = readFileSync(join(root, 'components/settings/SettingsPrimitives.tsx'), 'utf8');
+  const themePicker = readFileSync(join(root, 'components/settings/ThemePickerButton.tsx'), 'utf8');
+  const controlsBar = readFileSync(join(root, 'components/SettingsControlsBar.tsx'), 'utf8');
+
+  it('блокировка пропускает всё, помеченное data-tour-portal', () => {
+    expect(lock).toContain("el.closest('[data-tour-portal]')");
+  });
+
+  it('п.1: подсказка «!» и её подложка помечены, иначе её не закрыть', () => {
+    // Метка нужна ОБОИМ узлам: подложка ловит клик мимо, всплывашка —
+    // клик по самому тексту.
+    const marks = primitives.match(/data-tour-portal/g) ?? [];
+    expect(marks.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('п.1: подсказка перекрывает карточку гида, а не наоборот', () => {
+    // Карточка гида стоит на z-95. Подложка вровень с ней перехватывала
+    // бы клик первой, и подсказка снова стала бы незакрываемой.
+    expect(primitives).toContain('z-[97]');
+    expect(primitives).toContain('z-[98]');
+    expect(primitives).not.toContain('z-[95]');
+  });
+
+  it('п.4: меню выбора темы помечено — иначе тема не меняется', () => {
+    expect(themePicker).toContain('data-tour-portal');
+  });
+
+  it('п.4: во время гида нельзя уйти в «Создать свою»', () => {
+    // Работать должны только светлая и тёмная: ссылка в редактор увела
+    // бы человека со страницы посреди обучения.
+    expect(themePicker).toContain('useTourActive');
+  });
+
+  it('меню рабочего статуса тоже помечено', () => {
+    expect(controlsBar).toContain('data-tour-portal');
+  });
+});
+
+/**
+ * п.3: до выяснения, нужен ли гид, интерфейс заперт — но не навсегда.
+ */
+describe('замок до проверки «гид пройден»', () => {
+  const onboarding = readFileSync(join(root, 'components/OnboardingModal.tsx'), 'utf8');
+
+  it('замок включается, пока ответ неизвестен', () => {
+    expect(onboarding).toContain('useTourLock');
+    expect(onboarding).toContain('undecided');
+  });
+
+  it('гость не запирается: его узнают по account === null', () => {
+    expect(onboarding).toMatch(/isLoading\s*\|\|/);
+    expect(onboarding).toContain('Boolean(account)');
+  });
+
+  it('есть аварийный предохранитель — сайт не может остаться мёртвым', () => {
+    // Цена ошибки несимметрична: пропущенный гид человек переживёт,
+    // намертво запертый сайт — нет.
+    expect(onboarding).toContain('lockTimedOut');
+    expect(onboarding).toContain('tourSeenLocally');
+  });
+});
