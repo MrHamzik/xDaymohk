@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
 import { AlertTriangle, X } from 'lucide-react';
+import { useLockBody } from '@/lib/hooks/useLockBody';
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -15,14 +15,7 @@ interface ConfirmDialogProps {
 }
 
 export default function ConfirmDialog({ isOpen, title, message, confirmLabel, onConfirm, onCancel, danger = false, isBusy = false }: ConfirmDialogProps) {
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = '';
-      };
-    }
-  }, [isOpen]);
+  useLockBody(isOpen);
 
   if (!isOpen) return null;
 

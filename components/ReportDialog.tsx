@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Flag, X } from 'lucide-react';
 import { Profile } from '@/lib/types';
 import { useI18n } from '@/lib/i18n';
+import { useLockBody } from '@/lib/hooks/useLockBody';
 
 interface ReportDialogProps {
   profile: Profile | null;
@@ -22,11 +23,7 @@ export default function ReportDialog({ profile, isOpen, onClose, onSubmit }: Rep
   const [isSaving, setIsSaving] = useState(false);
   const [addToBlacklist, setAddToBlacklist] = useState(false);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
-  }, [isOpen]);
+  useLockBody(isOpen);
 
   useEffect(() => {
     if (isOpen) {

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Bot, Briefcase, CarFront, Globe2, HandHeart, UserPlus, X } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { emitTourEvent, useTourActive, useTourCommands, type TourCommand } from '@/lib/tour';
+import { useLockBody } from '@/lib/hooks/useLockBody';
 
 interface CreateActionModalProps {
   isOpen: boolean;
@@ -52,6 +53,8 @@ export default function CreateActionModal({
   // Длительность обратной анимации. Совпадает с transition ниже.
   const CLOSE_MS = 260;
 
+  useLockBody(isOpen);
+
   useEffect(() => {
     if (!isOpen) {
       setIsMounted(false);
@@ -65,7 +68,6 @@ export default function CreateActionModal({
     }
     setIsPresent(true);
     emitTourEvent('plus-open');
-    document.body.style.overflow = 'hidden';
     const place = () => {
       const desktop = window.innerWidth >= 1024;
       const midX = window.innerWidth / 2;
@@ -94,7 +96,6 @@ export default function CreateActionModal({
     window.addEventListener('resize', place);
     window.visualViewport?.addEventListener('resize', place);
     return () => {
-      document.body.style.overflow = '';
       cancelAnimationFrame(raf);
       window.removeEventListener('keydown', onKey);
       window.removeEventListener('resize', place);

@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { Calendar, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { getMonthlyPrayerSchedule, MONTH_NAMES_CE, MONTH_NAMES_RU } from '@/lib/islamic';
 import { useI18n } from '@/lib/i18n';
+import { useLockBody } from '@/lib/hooks/useLockBody';
 
 interface PrayerTimesModalProps {
   isOpen: boolean;
@@ -19,21 +20,18 @@ export default function PrayerTimesModal({ isOpen, onClose }: PrayerTimesModalPr
   const todayDate = new Date().getDate();
   const isCurrentMonth = currentMonth === new Date().getMonth() && currentYear === new Date().getFullYear();
 
+  useLockBody(isOpen);
+
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') {
-          if (isYearPickerOpen) setIsYearPickerOpen(false);
-          else onClose();
-        }
-      };
-      window.addEventListener('keydown', handleKeyDown);
-      return () => {
-        document.body.style.overflow = '';
-        window.removeEventListener('keydown', handleKeyDown);
-      };
-    }
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (isYearPickerOpen) setIsYearPickerOpen(false);
+        else onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose, isYearPickerOpen]);
 
   if (!isOpen) return null;

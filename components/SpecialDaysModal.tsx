@@ -1,10 +1,10 @@
 'use client';
 
 import { createPortal } from 'react-dom';
-import { useEffect } from 'react';
 import { Calendar, Moon, Sparkles, X } from 'lucide-react';
 import { ISLAMIC_SPECIAL_DAYS } from '@/lib/islamic';
 import { useI18n } from '@/lib/i18n';
+import { useLockBody } from '@/lib/hooks/useLockBody';
 
 interface SpecialDaysModalProps {
   isOpen: boolean;
@@ -14,14 +14,7 @@ interface SpecialDaysModalProps {
 export default function SpecialDaysModal({ isOpen, onClose }: SpecialDaysModalProps) {
   const { language } = useI18n();
 
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = '';
-      };
-    }
-  }, [isOpen]);
+  useLockBody(isOpen);
 
   if (!isOpen) return null;
 

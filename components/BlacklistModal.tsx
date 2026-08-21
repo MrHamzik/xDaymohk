@@ -9,6 +9,7 @@ import { useBlacklist } from '@/components/BlacklistProvider';
 import EmptyState from '@/components/ui/EmptyState';
 import { useSheetSwipe } from '@/lib/hooks/useSheetSwipe';
 import { ListSkeleton } from '@/components/ui/FeedSkeleton';
+import { useLockBody } from '@/lib/hooks/useLockBody';
 
 interface BlacklistModalProps {
   isOpen: boolean;
@@ -34,15 +35,13 @@ export default function BlacklistModal({ isOpen, onClose }: BlacklistModalProps)
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState('');
 
+  useLockBody(isOpen);
+
   useEffect(() => {
     if (!isOpen) return;
-    document.body.style.overflow = 'hidden';
     const handleKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.body.style.overflow = '';
-      window.removeEventListener('keydown', handleKeyDown);
-    };
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
   if (typeof document === 'undefined' || !isOpen) return null;

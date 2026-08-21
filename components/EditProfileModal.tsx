@@ -14,6 +14,7 @@ import DocumentsSection from '@/components/edit-profile/DocumentsSection';
 import WorkplaceSection from '@/components/edit-profile/WorkplaceSection';
 import ExperienceSection, { calculateExperience } from '@/components/edit-profile/ExperienceSection';
 import { useSheetSwipe } from '@/lib/hooks/useSheetSwipe';
+import { useLockBody } from '@/lib/hooks/useLockBody';
 
 interface EditProfileModalProps {
   isOpen: boolean;
@@ -115,14 +116,7 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
     setNotice('');
   }, [isOpen, profile?.id, account?.id]);
 
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = '';
-      };
-    }
-  }, [isOpen]);
+  useLockBody(isOpen);
 
   if (!isOpen) return null;
 

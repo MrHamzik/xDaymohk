@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { Compass, X } from 'lucide-react';
 import { calculateQiblaAzimuth, DEFAULT_LAT, DEFAULT_LNG } from '@/lib/islamic';
 import { useI18n } from '@/lib/i18n';
+import { useLockBody } from '@/lib/hooks/useLockBody';
 
 const DEFAULT_QIBLA_AZIMUTH = calculateQiblaAzimuth(DEFAULT_LAT, DEFAULT_LNG);
 
@@ -39,12 +40,7 @@ export default function QiblaModal({ isOpen, onClose }: QiblaModalProps) {
   const calibrationRef = useRef<number | null>(null);
   const lastAlphaRef = useRef<number | null>(null);
 
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-      return () => { document.body.style.overflow = ''; };
-    }
-  }, [isOpen]);
+  useLockBody(isOpen);
 
   useEffect(() => {
     if (!isOpen) return;

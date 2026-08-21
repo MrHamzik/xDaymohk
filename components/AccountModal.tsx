@@ -12,6 +12,7 @@ import { compressImageFile, cacheBustAvatarUrl } from '@/lib/media';
 import { extractPhoneDigits, formatPhone, isValidCyrillicName } from '@/lib/phone';
 import { Profile } from '@/lib/types';
 import { useSheetSwipe } from '@/lib/hooks/useSheetSwipe';
+import { useLockBody } from '@/lib/hooks/useLockBody';
 
 interface AccountModalProps {
   isOpen: boolean;
@@ -56,14 +57,7 @@ export default function AccountModal({ isOpen, onClose, onOpenAddModal, onEditPr
     setAvatarUrl(account.avatarUrl);
   }, [account]);
 
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = '';
-      };
-    }
-  }, [isOpen]);
+  useLockBody(isOpen);
 
   if (!isOpen) return null;
 

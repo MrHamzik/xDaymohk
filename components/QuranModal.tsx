@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 import { BookOpen, X } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import QuranSurahList from '@/components/QuranSurahList';
+import { useLockBody } from '@/lib/hooks/useLockBody';
 
 interface QuranModalProps {
   isOpen: boolean;
@@ -14,14 +15,7 @@ interface QuranModalProps {
 export default function QuranModal({ isOpen, onClose }: QuranModalProps) {
   const { language } = useI18n();
 
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = '';
-      };
-    }
-  }, [isOpen]);
+  useLockBody(isOpen);
 
   // Escape закрывает окно: модал перекрывает страницу целиком, и без
   // клавиатурного выхода он недоступен тем, кто не пользуется мышью.

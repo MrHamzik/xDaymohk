@@ -4,6 +4,7 @@ import { useCallback, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import SidebarNav from '@/components/SidebarNav';
 import { emitTourEvent, useTourCommands, type TourCommand } from '@/lib/tour';
+import { useLockBody } from '@/lib/hooks/useLockBody';
 
 interface MobileMenuDrawerProps {
   isOpen: boolean;
@@ -19,21 +20,19 @@ interface MobileMenuDrawerProps {
 export default function MobileMenuDrawer({ isOpen, onClose, isAdmin = false }: MobileMenuDrawerProps) {
   const pathname = usePathname();
 
+  useLockBody(isOpen);
+
   useEffect(() => {
     if (!isOpen) {
       emitTourEvent('menu-close');
       return;
     }
     emitTourEvent('menu-open');
-    document.body.style.overflow = 'hidden';
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.body.style.overflow = '';
-      window.removeEventListener('keydown', handleKeyDown);
-    };
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
   useEffect(() => {

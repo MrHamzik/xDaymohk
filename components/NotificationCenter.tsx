@@ -8,6 +8,7 @@ import { useI18n } from '@/lib/i18n';
 import { useNotifications } from '@/components/NotificationsProvider';
 import NotificationLetterModal from '@/components/NotificationLetterModal';
 import { AppNotification, NotificationCategory, notificationCategory } from '@/lib/types';
+import { useLockBody } from '@/lib/hooks/useLockBody';
 
 function formatDate(value: string) {
   const date = new Date(value);
@@ -41,18 +42,15 @@ export default function NotificationCenter({ trigger }: NotificationCenterProps)
     return () => window.removeEventListener('daymohk-open-mail', openMail);
   }, [trigger]);
 
+  useLockBody(isOpen);
+
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') setIsOpen(false);
-      };
-      window.addEventListener('keydown', handleKeyDown);
-      return () => {
-        document.body.style.overflow = '';
-        window.removeEventListener('keydown', handleKeyDown);
-      };
-    }
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsOpen(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen]);
 
   const hasUnread = unreadCount > 0;
