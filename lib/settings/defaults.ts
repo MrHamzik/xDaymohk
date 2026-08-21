@@ -66,7 +66,10 @@ export const DEFAULT_SETTINGS: UserSettings = {
   lightMode: false,
   radiusScale: 100,
   quickWidgets: [...DEFAULT_QUICK_WIDGETS],
-  hiddenMenu: ['notify'],
+  // Ничего не прячем по умолчанию (п.12): раньше «Уведомления» шли
+  // скрытыми, и человек не понимал, почему пункт есть в режиме правки,
+  // но пропадает из обычного меню.
+  hiddenMenu: [],
   tourDone: false,
   welcomeSent: false,
   proTier: 'none',
@@ -906,7 +909,7 @@ export function normalizeSettings(raw: unknown): UserSettings {
       while (list.length < 4) list.push(DEFAULT_QUICK_WIDGETS[list.length] ?? 'status');
       return list.slice(0, 4);
     })(),
-    hiddenMenu: normalizeStringList(input.hiddenMenu, ['notify'], MENU_ID_SET, 28).filter((id) => id !== 'settings'),
+    hiddenMenu: normalizeStringList(input.hiddenMenu, [], MENU_ID_SET, 28).filter((id) => id !== 'settings'),
     tourDone: input.tourDone === true,
     welcomeSent: input.welcomeSent === true,
     proTier: normalizeProTier(input.proTier),

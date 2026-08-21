@@ -20,7 +20,7 @@ function isValidSignature(body: string, provided: string, secret: string) {
 
 export async function POST(request: Request) {
   // Rate limit: 120 req / minute per IP (CloudTips may burst during incidents)
-  const limit = await rateLimit(request, { limit: 120, windowMs: 60_000 });
+  const limit = await rateLimit(request, { limit: 120, windowMs: 60_000 , scope: 'donations' });
   if (!limit.allowed) {
     return withRateLimitHeaders(
       Response.json({ code: 1, error: 'Too many requests' }, { status: 429 }),

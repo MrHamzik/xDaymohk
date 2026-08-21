@@ -291,7 +291,7 @@ html.dark .smk-ring {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  border-radius: 0.5rem;
+  border-radius: calc(0.5rem * var(--smk-radius-scale, 1));
   /* Было 0.125rem/0.375rem — бейджи выглядели сплющенными: текст
      упирался в края. Воздуха по вертикали нужно больше, чем кажется:
      заглавные буквы кириллицы выше латиницы. */
@@ -404,7 +404,7 @@ html.smk-themed .bg-white {
 }
 /* Строка «подпись — значение» внутри карточки задания. */
 .smk-sheet-row {
-  border-radius: 0.75rem;
+  border-radius: calc(0.75rem * var(--smk-radius-scale, 1));
   background: var(--smk-card-inset, #f8fafc);
 }
 
@@ -477,7 +477,7 @@ html.smk-themed .bg-white {
 .smk-dashed {
   position: relative;
   border: 1px dashed var(--smk-hairline-strong, rgb(15 23 42 / 0.12));
-  border-radius: 1rem;
+  border-radius: calc(1rem * var(--smk-radius-scale, 1));
   background: transparent;
   /* Место под орнамент сверху: без него ромб наезжал на текст. */
   padding-top: 2.25rem;
@@ -640,7 +640,7 @@ html.smk-themed .bg-white {
   /* Без рамки: панель и так отделена собственным фоном, а её линия
      была единственной ненастраиваемой обводкой в интерфейсе. */
   background-color: var(--smk-panel, #f1f5f9);
-  border-radius: 0.75rem;
+  border-radius: calc(0.75rem * var(--smk-radius-scale, 1));
 }
 /* Тёмное значение объявляем в html.dark, а не в :root: обе переменные
    в одном блоке конфликтовали — последняя перебивала первую. */
@@ -936,7 +936,7 @@ html.dark .smk-rule {
    Теперь общий слот «Поля заполнения», настраиваемый в редакторе тем;
    ветвление по теме не нужно — палитра задаёт значение для каждой. */
 .smk-field {
-  border-radius: 0.75rem;
+  border-radius: calc(0.75rem * var(--smk-radius-scale, 1));
   background: var(--smk-field);
 }
 
@@ -969,7 +969,7 @@ html.dark .smk-rule {
    поля и даёт нужную ступень полотно → блок. Тень та же, что у полей,
    чтобы глубина в интерфейсе читалась одинаково. */
 .smk-inset {
-  border-radius: 0.75rem;
+  border-radius: calc(0.75rem * var(--smk-radius-scale, 1));
   background: var(--smk-card-inset);
   box-shadow: var(--smk-field-shadow);
 }
@@ -1049,7 +1049,7 @@ html.dark .group:hover .smk-arrow { color: var(--smk-muted-bright); }
   position: relative;
   gap: 2px;
   padding: 3px;
-  border-radius: 0.75rem;
+  border-radius: calc(0.75rem * var(--smk-radius-scale, 1));
   background: var(--smk-card-inset, #f8fafc);
 }
 .smk-seg-btn {
@@ -1058,7 +1058,7 @@ html.dark .group:hover .smk-arrow { color: var(--smk-muted-bright); }
   justify-content: center;
   gap: 0.3rem;
   padding: 0.45rem 0.25rem;
-  border-radius: 0.55rem;
+  border-radius: calc(0.55rem * var(--smk-radius-scale, 1));
   font-size: var(--smk-fs-label);
   font-weight: 700;
   line-height: 1;
@@ -1295,7 +1295,7 @@ html.dark .group:hover .smk-arrow { color: var(--smk-muted-bright); }
   position: relative;
   margin: 1rem 0;
   padding: 0.75rem 0.9rem 0.75rem 1.1rem;
-  border-radius: 0.75rem;
+  border-radius: calc(0.75rem * var(--smk-radius-scale, 1));
   background: var(--smk-card-inset);
   font-style: italic;
   text-align: justify;
@@ -1317,7 +1317,7 @@ html.dark .group:hover .smk-arrow { color: var(--smk-muted-bright); }
   background: color-mix(in srgb, var(--smk-gold) 22%, transparent);
   color: inherit;
   padding: 0 0.2em;
-  border-radius: 0.25rem;
+  border-radius: calc(0.25rem * var(--smk-radius-scale, 1));
   font-weight: 600;
 }
 
@@ -1326,7 +1326,7 @@ html.dark .group:hover .smk-arrow { color: var(--smk-muted-bright); }
 .smk-read-table-wrap {
   margin: 1rem 0;
   overflow-x: auto;
-  border-radius: 0.75rem;
+  border-radius: calc(0.75rem * var(--smk-radius-scale, 1));
 }
 .smk-read-table {
   width: 100%;
@@ -1356,7 +1356,7 @@ html.dark .group:hover .smk-arrow { color: var(--smk-muted-bright); }
   flex: none;
   align-items: center;
   justify-content: center;
-  border-radius: 0.6rem;
+  border-radius: calc(0.6rem * var(--smk-radius-scale, 1));
   background: var(--smk-card-inset);
   font-size: var(--smk-fs-label);
   font-weight: 800;
@@ -1410,7 +1410,7 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
   cursor: pointer;
   padding: 0.35rem;
   margin-right: -0.2rem;
-  border-radius: 0.4rem;
+  border-radius: calc(0.4rem * var(--smk-radius-scale, 1));
   opacity: 0.65;
   transition: opacity 0.15s ease, background-color 0.15s ease;
 }

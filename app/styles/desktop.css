@@ -81,7 +81,7 @@
   height: 100%;
   overflow: hidden;
   border: 1px solid var(--smk-divider);
-  border-radius: 1.55rem;
+  border-radius: calc(1.55rem * var(--smk-radius-scale, 1));
   background: var(
     --smk-rail-gradient,
     linear-gradient(
@@ -228,7 +228,7 @@
    задаёт родитель, а не эта плашка. */
 .smk-snake-label {
   display: inline-block;
-  border-radius: 0.75rem;
+  border-radius: calc(0.75rem * var(--smk-radius-scale, 1));
   border: 1px solid rgb(var(--smk-gold-rgb) / 0.32);
   background: var(--smk-panel);
   color: var(--foreground);

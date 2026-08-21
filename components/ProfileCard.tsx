@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import {
   Award, Ban, Briefcase, BriefcaseBusiness, CalendarDays, ChevronRight, FileText,
-  Flag, MapPin, Star, VenusAndMars,
+  MapPin, Star, VenusAndMars,
 } from 'lucide-react';
 import { Profile } from '@/lib/types';
 import { calculateAge, formatCount, formatReviews } from '@/lib/text';
@@ -22,6 +22,7 @@ interface ProfileCardProps {
   isAdminStatus?: boolean;
   /** Pending review is visible only to the owner and administrators. */
   showPending?: boolean;
+  /** Оставлены для совместимости вызовов; жалоба живёт в ProfileModal (п.6). */
   isOwnProfile?: boolean;
   onReport?: (profile: Profile) => void;
   onBlock?: (profile: Profile) => void;
@@ -45,8 +46,6 @@ export default function ProfileCard({
   isAdmin = false,
   isAdminStatus = false,
   showPending = false,
-  isOwnProfile = false,
-  onReport,
   onBlock,
 }: ProfileCardProps) {
   const { t } = useI18n();
@@ -65,10 +64,12 @@ export default function ProfileCard({
   const residentReviews = Number(ownerReputation?.reviewCount ?? 0);
 
   const profileIsAdmin = Boolean(isAdminStatus);
-  const hasAction = Boolean(
-    (isAdmin && !profileIsAdmin && onBlock)
-    || (!isOwnProfile && !profile.isVerified && profile.verificationStatus !== 'verified' && onReport),
-  );
+  // «Пожаловаться» с карточки убрана (п.6): такая же кнопка уже есть
+  // внутри открытой анкеты (ProfileModal), и дублировать её в списке
+  // незачем — она занимала место и провоцировала жалобы «вслепую», без
+  // чтения самой анкеты. Пропс onReport оставлен: им пользуется
+  // ProfileModal через те же экраны каталога и карты.
+  const hasAction = Boolean(isAdmin && !profileIsAdmin && onBlock);
 
   // Возраст считаем по полной дате рождения (с учётом того, прошёл ли
   // день рождения в этом году). Деление разницы в миллисекундах на
@@ -267,19 +268,6 @@ export default function ProfileCard({
             >
               <Ban className="h-3.5 w-3.5 shrink-0" />
               {t.cardBlock}
-            </button>
-          ) : !isOwnProfile && !profile.isVerified && profile.verificationStatus !== 'verified' && onReport ? (
-            <button
-              type="button"
-              onClick={(event) => {
-                event.stopPropagation();
-                onReport(profile);
-              }}
-              className="smk-btn-gold smk-shine inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap px-3.5 py-1.5 smk-text-label"
-              aria-label={t.cardReportAria}
-            >
-              <Flag className="h-3.5 w-3.5 shrink-0" />
-              {t.cardReport}
             </button>
           ) : null}
         </div>

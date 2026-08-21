@@ -27,7 +27,7 @@ import { log } from '@/lib/logger';
  *   of from the request body.
  */
 export async function POST(request: Request) {
-  const limit = await rateLimit(request, { limit: 20, windowMs: 60_000 });
+  const limit = await rateLimit(request, { limit: 20, windowMs: 60_000 , scope: 'reviews' });
   if (!limit.allowed) {
     return withRateLimitHeaders(
       NextResponse.json({ error: 'Too many requests' }, { status: 429 }),
@@ -223,7 +223,7 @@ export async function POST(request: Request) {
  * so the aggregate can't drift).
  */
 export async function PATCH(request: Request) {
-  const limit = await rateLimit(request, { limit: 20, windowMs: 60_000 });
+  const limit = await rateLimit(request, { limit: 20, windowMs: 60_000 , scope: 'reviews' });
   if (!limit.allowed) {
     return withRateLimitHeaders(
       NextResponse.json({ error: 'Too many requests' }, { status: 429 }),
@@ -373,7 +373,7 @@ export async function PATCH(request: Request) {
  * the trigger is missing or was not wired up yet.
  */
 export async function DELETE(request: Request) {
-  const limit = await rateLimit(request, { limit: 30, windowMs: 60_000 });
+  const limit = await rateLimit(request, { limit: 30, windowMs: 60_000 , scope: 'reviews' });
   if (!limit.allowed) {
     return withRateLimitHeaders(
       NextResponse.json({ error: 'Too many requests' }, { status: 429 }),

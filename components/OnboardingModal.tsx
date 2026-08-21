@@ -144,7 +144,35 @@ export default function OnboardingModal() {
     //  3. ONBOARDED_KEY — по-прежнему локальный, он про показ модалки,
     //     а не про письмо.
     try { window.localStorage.setItem(ONBOARDED_KEY, '1'); } catch {}
-    if (!sentRef.current && !settings.welcomeSent) {
+
+    // Флаг проверяем В БАЗЕ, а не в settings (п.8).
+    //
+    // settings приходит из локальной копии и обновляется серверной
+    // версией асинхронно. finishOnboarding вызывается сразу после
+    // входа — в этот момент settings.welcomeSent часто ещё false,
+    // хотя в базе давно true. Отсюда «Даймохк приветствует тебя» при
+    // каждом заходе: письмо уходило заново.
+    //
+    // Один запрос к user_settings стоит дешевле, чем лишнее письмо
+    // человеку при каждом входе.
+    let alreadySent = settings.welcomeSent;
+    if (!alreadySent && isSupabaseConfigured && supabase && account) {
+      try {
+        const { data } = await supabase
+          .from('user_settings')
+          .select('welcome_sent')
+          .eq('user_id', account.id)
+          .maybeSingle();
+        if (data?.welcome_sent === true) {
+          alreadySent = true;
+          // Подтягиваем флаг в локальные настройки, чтобы следующий
+          // вход обошёлся вообще без запроса.
+          updateSettings({ welcomeSent: true });
+        }
+      } catch { /* сеть недоступна — решаем по локальному флагу */ }
+    }
+
+    if (!sentRef.current && !alreadySent) {
       sentRef.current = true;
       const sent = await sendWelcomeNotification();
       if (sent) {

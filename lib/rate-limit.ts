@@ -15,6 +15,13 @@ interface RateLimitOptions {
   windowMs: number;
   /** Префикс ключа (чтобы разные роуты не мешали друг другу). */
   scope?: string;
+  /**
+   * Кого считаем вместо IP. Нужно там, где за одним адресом сидит
+   * много людей (домашний Wi-Fi, офис, мобильный NAT): по IP они
+   * делят один счётчик и выжигают лимит друг другу. Обычно сюда
+   * передают id пользователя из уже проверенной сессии.
+   */
+  identifier?: string;
 }
 
 interface RateLimitResult {
@@ -105,15 +112,38 @@ async function rateLimitRedis(redis: Redis, key: string, options: Required<RateL
 }
 
 export async function rateLimit(request: Request, options: RateLimitOptions): Promise<RateLimitResult> {
-  const key = `rl:${options.scope ?? 'default'}:${getClientKey(request)}`;
+  const who = options.identifier?.trim() || getClientKey(request);
+  const key = `rl:${options.scope ?? 'default'}:${who}`;
   const full: Required<RateLimitOptions> = {
     limit: options.limit,
     windowMs: options.windowMs,
     scope: options.scope ?? 'default',
+    identifier: who,
   };
   const redis = getRedis();
   if (redis) return rateLimitRedis(redis, key, full);
   return rateLimitMemory(key, full);
+}
+
+/**
+ * Обнуляет счётчик — вызывать после УСПЕШНО завершённой операции.
+ *
+ * Лимит нужен против перебора, а не против того, кто добился своего с
+ * первого раза. Без сброса удачная попытка тратит слот наравне с
+ * неудачной, и человек, однажды удаливший аккаунт и решивший вернуться,
+ * упирался в «Too many requests».
+ */
+export async function resetRateLimit(request: Request, options: Pick<RateLimitOptions, 'scope' | 'identifier'>): Promise<void> {
+  const who = options.identifier?.trim() || getClientKey(request);
+  const key = `rl:${options.scope ?? 'default'}:${who}`;
+  buckets.delete(key);
+  const redis = getRedis();
+  if (!redis) return;
+  try {
+    await redis.del(key);
+  } catch {
+    // Счётчик сам протухнет по TTL — падать из-за этого незачем.
+  }
 }
 
 export function withRateLimitHeaders(response: Response, info: { remaining: number; resetAt: number; limit: number }): Response {

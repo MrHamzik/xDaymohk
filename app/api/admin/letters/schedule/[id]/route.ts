@@ -13,7 +13,7 @@ import { rateLimit, withRateLimitHeaders } from '@/lib/rate-limit';
  * Удаляет письмо из очереди (красная корзина).
  */
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const limit = await rateLimit(request, { limit: 60, windowMs: 60_000 });
+  const limit = await rateLimit(request, { limit: 60, windowMs: 60_000 , scope: 'admin-letter-sched-id' });
   if (!limit.allowed) {
     return withRateLimitHeaders(NextResponse.json({ error: 'Too many requests' }, { status: 429 }), { ...limit, limit: 60 });
   }
@@ -73,7 +73,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 }
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const limit = await rateLimit(request, { limit: 60, windowMs: 60_000 });
+  const limit = await rateLimit(request, { limit: 60, windowMs: 60_000 , scope: 'admin-letter-sched-id' });
   if (!limit.allowed) {
     return withRateLimitHeaders(NextResponse.json({ error: 'Too many requests' }, { status: 429 }), { ...limit, limit: 60 });
   }

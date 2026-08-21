@@ -14,7 +14,7 @@ import { NotificationType } from '@/lib/types';
  * POST { recipientId, type, title, message, ceTitle?, ceMessage?, sender? }
  */
 export async function POST(request: Request) {
-  const limit = await rateLimit(request, { limit: 120, windowMs: 60_000 });
+  const limit = await rateLimit(request, { limit: 120, windowMs: 60_000 , scope: 'notifications' });
   if (!limit.allowed) {
     return withRateLimitHeaders(
       NextResponse.json({ error: 'Too many requests' }, { status: 429 }),

@@ -14,7 +14,8 @@
  * текста.
  */
 
-import { BookOpen } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowLeft, BookOpen } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import QuranSurahList from '@/components/QuranSurahList';
 
@@ -23,6 +24,22 @@ export default function QuranPage() {
 
   return (
     <main className="flex-1 min-w-0 max-w-3xl p-4 pt-20 pb-24 sm:p-6 sm:pt-24">
+      {/* Выход из раздела (п.19).
+          На этой странице нет ни шапки, ни нижней панели, ни боковой
+          колонки — попав сюда, человек оказывался в тупике и мог уйти
+          только кнопкой «назад» в браузере. Ссылка сделана точно такой
+          же, как в «Сире» и «Вайнахах» (ReadingPage), чтобы выход
+          выглядел одинаково во всех читальных разделах. */}
+      <div className="mb-5">
+        <Link
+          href="/"
+          className="smk-solid inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          {language === 'ce' ? 'ЦIа' : 'Назад'}
+        </Link>
+      </div>
+
       <header className="mb-4 flex items-center gap-3">
         <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-sm">
           <BookOpen className="h-5 w-5" />

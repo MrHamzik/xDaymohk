@@ -54,7 +54,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const limit = await rateLimit(request, { limit: 30, windowMs: 60_000 });
+  const limit = await rateLimit(request, { limit: 30, windowMs: 60_000 , scope: 'admin-addresses' });
   if (!limit.allowed) {
     return withRateLimitHeaders(
       NextResponse.json({ error: 'Too many requests' }, { status: 429 }),

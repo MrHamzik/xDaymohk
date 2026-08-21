@@ -103,10 +103,21 @@ export default function PrayerTimesBar() {
             return (
               <div
                 key={prayer.id}
+                // Неактивные намазы (п.5).
+                //
+                // Было dark:bg-zinc-900 (#18181b) — темнее подложки
+                // самого виджета (--smk-panel, #25252a), поэтому в
+                // тёмных темах плитки проваливались в фон и виден был
+                // только зелёный активный намаз.
+                //
+                // Берём --smk-card-inset: это штатная «подложка строк»,
+                // она на шаг светлее панели в тёмной теме и на шаг
+                // темнее в светлой — плитка читается в обеих, и цвет
+                // едет вместе с выбранной темой, а не прибит к zinc.
                 className={`flex flex-col items-center justify-center rounded-lg py-1 px-0.5 transition ${
                   isActive
                     ? 'bg-emerald-600 text-white font-black shadow-sm'
-                    : 'bg-slate-50 text-slate-700 dark:bg-zinc-900 dark:text-zinc-400'
+                    : 'bg-[var(--smk-card-inset)] text-[var(--smk-muted-bright)]'
                 }`}
               >
                 <span className="smk-text-label sm:smk-text-label leading-tight truncate w-full opacity-90">{name}</span>

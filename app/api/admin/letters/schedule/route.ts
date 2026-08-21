@@ -12,7 +12,7 @@ import { rateLimit, withRateLimitHeaders } from '@/lib/rate-limit';
  * Сохраняет шаблон (с полями планирования) и создаёт очередь запусков.
  */
 export async function POST(request: Request) {
-  const limit = await rateLimit(request, { limit: 30, windowMs: 60_000 });
+  const limit = await rateLimit(request, { limit: 30, windowMs: 60_000 , scope: 'admin-letter-sched' });
   if (!limit.allowed) {
     return withRateLimitHeaders(NextResponse.json({ error: 'Too many requests' }, { status: 429 }), { ...limit, limit: 60 });
   }

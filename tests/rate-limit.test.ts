@@ -98,3 +98,55 @@ describe('rateLimit (память процесса)', () => {
     expect(second.allowed).toBe(true);
   });
 });
+
+describe('identifier: счёт по пользователю, а не по IP (п.16)', () => {
+  it('соседи за одним IP не тратят лимит друг друга', async () => {
+    const { rateLimit } = await import('@/lib/rate-limit');
+    const options = { limit: 1, windowMs: 60_000, scope: 'account-delete' };
+    const shared = () => requestFrom('192.168.1.1');
+
+    // Домашний роутер: у всех один внешний адрес. Раньше первый же
+    // удалившийся аккаунт закрывал операцию всей семье на час.
+    expect((await rateLimit(shared(), { ...options, identifier: 'user-a' })).allowed).toBe(true);
+    expect((await rateLimit(shared(), { ...options, identifier: 'user-a' })).allowed).toBe(false);
+    expect((await rateLimit(shared(), { ...options, identifier: 'user-b' })).allowed).toBe(true);
+  });
+
+  it('один пользователь ограничен даже при смене IP', async () => {
+    const { rateLimit } = await import('@/lib/rate-limit');
+    const options = { limit: 1, windowMs: 60_000, scope: 'test-identity' };
+
+    expect((await rateLimit(requestFrom('10.1.1.1'), { ...options, identifier: 'user-c' })).allowed).toBe(true);
+    // Мобильный интернет легко меняет адрес — на защиту это влиять не должно.
+    expect((await rateLimit(requestFrom('10.2.2.2'), { ...options, identifier: 'user-c' })).allowed).toBe(false);
+  });
+});
+
+describe('resetRateLimit', () => {
+  it('после успешной операции счётчик обнуляется', async () => {
+    const { rateLimit, resetRateLimit } = await import('@/lib/rate-limit');
+    const options = { limit: 1, windowMs: 60_000, scope: 'test-reset', identifier: 'user-d' };
+    const req = () => requestFrom('10.3.3.3');
+
+    expect((await rateLimit(req(), options)).allowed).toBe(true);
+    expect((await rateLimit(req(), options)).allowed).toBe(false);
+
+    await resetRateLimit(req(), { scope: 'test-reset', identifier: 'user-d' });
+    expect((await rateLimit(req(), options)).allowed).toBe(true);
+  });
+
+  it('сбрасывает только свой ключ', async () => {
+    const { rateLimit, resetRateLimit } = await import('@/lib/rate-limit');
+    const base = { limit: 1, windowMs: 60_000, scope: 'test-reset-scope' };
+    const req = () => requestFrom('10.4.4.4');
+
+    await rateLimit(req(), { ...base, identifier: 'user-e' });
+    await rateLimit(req(), { ...base, identifier: 'user-f' });
+
+    await resetRateLimit(req(), { scope: 'test-reset-scope', identifier: 'user-e' });
+
+    expect((await rateLimit(req(), { ...base, identifier: 'user-e' })).allowed).toBe(true);
+    // Чужой счётчик трогать нельзя.
+    expect((await rateLimit(req(), { ...base, identifier: 'user-f' })).allowed).toBe(false);
+  });
+});

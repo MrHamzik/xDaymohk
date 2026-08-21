@@ -62,7 +62,7 @@ function adminClient() {
 }
 
 async function rateLimited(request: Request, limit: number) {
-  const info = await rateLimit(request, { limit, windowMs: 60_000 });
+  const info = await rateLimit(request, { limit, windowMs: 60_000 , scope: 'profile-questions' });
   if (!info.allowed) {
     return withRateLimitHeaders(
       NextResponse.json({ error: 'Too many requests' }, { status: 429 }),

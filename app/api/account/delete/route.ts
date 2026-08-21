@@ -1,17 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
-import { rateLimit, withRateLimitHeaders } from '@/lib/rate-limit';
+import { rateLimit, resetRateLimit, withRateLimitHeaders } from '@/lib/rate-limit';
+
+const DELETE_LIMIT = { limit: 5, windowMs: 60 * 60_000, scope: 'account-delete' } as const;
 
 export async function DELETE(request: Request) {
-  // Rate limit: 5 destructive ops / hour per IP
-  const limit = await rateLimit(request, { limit: 5, windowMs: 60 * 60_000 });
-  if (!limit.allowed) {
-    return withRateLimitHeaders(
-      NextResponse.json({ error: 'Too many requests' }, { status: 429 }),
-      { ...limit, limit: 5 }
-    );
-  }
-
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const authorization = request.headers.get('authorization');
@@ -32,6 +25,27 @@ export async function DELETE(request: Request) {
 
   if (userError || !userData.user) {
     return NextResponse.json({ error: 'Сессия недействительна.' }, { status: 401 });
+  }
+
+  // Лимит считаем ПОСЛЕ проверки сессии и по id пользователя, а не по IP (п.16).
+  //
+  // Два прежних изъяна выдавали «Too many requests» тому, кто удаляет
+  // аккаунт впервые:
+  //  1) счёт шёл по IP — за домашним роутером или мобильным NAT все
+  //     сидят под одним адресом и тратили общие 5 попыток в час;
+  //  2) слот списывался до всякой проверки, поэтому его жгли и запросы
+  //     без сессии, и повторные нажатия кнопки.
+  // Теперь у каждого человека свои 5 попыток, а по завершении удаления
+  // счётчик обнуляется (см. resetRateLimit ниже).
+  const limit = await rateLimit(request, { ...DELETE_LIMIT, identifier: userData.user.id });
+  if (!limit.allowed) {
+    return withRateLimitHeaders(
+      NextResponse.json(
+        { error: 'Слишком много попыток удаления. Попробуйте через час.' },
+        { status: 429 },
+      ),
+      { ...limit, limit: DELETE_LIMIT.limit },
+    );
   }
 
   for (const folder of ['avatars', 'documents']) {
@@ -69,6 +83,10 @@ export async function DELETE(request: Request) {
   if (deleteError) {
     return NextResponse.json({ error: `Не удалось удалить аккаунт: ${deleteError.message}` }, { status: 500 });
   }
+
+  // Аккаунта больше нет — держать на его id счётчик незачем. Если
+  // человек зарегистрируется заново, он начнёт с чистого лимита.
+  await resetRateLimit(request, { scope: DELETE_LIMIT.scope, identifier: userData.user.id });
 
   return NextResponse.json({ ok: true });
 }

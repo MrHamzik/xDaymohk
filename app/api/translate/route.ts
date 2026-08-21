@@ -43,7 +43,7 @@ async function translateYandex(text: string, from: string, to: string): Promise<
 }
 
 export async function POST(request: Request) {
-  const limit = await rateLimit(request, { limit: 60, windowMs: 60_000 });
+  const limit = await rateLimit(request, { limit: 60, windowMs: 60_000 , scope: 'translate' });
   if (!limit.allowed) {
     return withRateLimitHeaders(
       NextResponse.json({ error: 'Too many requests' }, { status: 429 }),

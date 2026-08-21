@@ -9,7 +9,7 @@ import { rateLimit, withRateLimitHeaders } from '@/lib/rate-limit';
  * в архиве, вкладка «Отправленные». Само письмо в БД не трогается.
  */
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const limit = await rateLimit(request, { limit: 60, windowMs: 60_000 });
+  const limit = await rateLimit(request, { limit: 60, windowMs: 60_000 , scope: 'admin-letter-log' });
   if (!limit.allowed) {
     return withRateLimitHeaders(NextResponse.json({ error: 'Too many requests' }, { status: 429 }), { ...limit, limit: 60 });
   }

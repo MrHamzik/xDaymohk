@@ -219,7 +219,7 @@ textarea.smk-field:focus {
    он обеспечивается в lib/settings/derive.ts на этапе вывода палитры. */
 .smk-note {
   position: relative;
-  border-radius: 0.75rem;
+  border-radius: calc(0.75rem * var(--smk-radius-scale, 1));
   background: var(--smk-note-info-bg);
   color: var(--smk-note-info);
   padding-left: 0.875rem;
@@ -414,7 +414,7 @@ textarea.smk-field:focus {
       Четыре повторяющихся градиента — по одному на сторону. */
 .smk-quick-armed {
   position: relative;
-  border-radius: 0.75rem;
+  border-radius: calc(0.75rem * var(--smk-radius-scale, 1));
   background-image:
     repeating-linear-gradient(90deg, var(--color-emerald-400) 0 8px, transparent 8px 16px),
     repeating-linear-gradient(90deg, var(--color-emerald-400) 0 8px, transparent 8px 16px),
@@ -514,7 +514,7 @@ textarea.smk-field:focus {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  border-radius: 0.75rem;
+  border-radius: calc(0.75rem * var(--smk-radius-scale, 1));
   background: var(--smk-field);
   color: var(--foreground);
   font-weight: 700;

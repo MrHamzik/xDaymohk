@@ -47,7 +47,7 @@ function parseDadataSuggestion(suggestion: DadataSuggestion) {
 
 export async function GET(request: Request) {
   // Rate limit: 30 req / minute per IP
-  const limit = await rateLimit(request, { limit: 30, windowMs: 60_000 });
+  const limit = await rateLimit(request, { limit: 30, windowMs: 60_000 , scope: 'geocode' });
   if (!limit.allowed) {
     return withRateLimitHeaders(
       NextResponse.json({ error: 'Too many requests' }, { status: 429 }),
@@ -110,7 +110,7 @@ export async function GET(request: Request) {
  * GET /api/geocode/reverse?lat=..&lng=..
  */
 export async function POST(request: Request) {
-  const limit = await rateLimit(request, { limit: 60, windowMs: 60_000 });
+  const limit = await rateLimit(request, { limit: 60, windowMs: 60_000 , scope: 'geocode' });
   if (!limit.allowed) {
     return withRateLimitHeaders(
       NextResponse.json({ error: 'Too many requests' }, { status: 429 }),

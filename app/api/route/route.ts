@@ -39,7 +39,7 @@ function resolveRouterUrl(): string {
 
 export async function GET(request: Request) {
   // Rate limit: 60 req / minute per IP
-  const limit = await rateLimit(request, { limit: 60, windowMs: 60_000 });
+  const limit = await rateLimit(request, { limit: 60, windowMs: 60_000 , scope: 'route-build' });
   if (!limit.allowed) {
     return withRateLimitHeaders(
       NextResponse.json({ error: 'Too many requests' }, { status: 429 }),

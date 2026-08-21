@@ -46,7 +46,7 @@ html.dark .smk-ornament::before {
   top: 0;
   bottom: 0;
   width: 3px;
-  border-radius: 0 3px 3px 0;
+  border-radius: 0 calc(3px * var(--smk-radius-scale, 1)) calc(3px * var(--smk-radius-scale, 1)) 0;
 }
 
 /* --- Слой 4. Цена: подложка с мягким свечением ------------------------------ */
@@ -56,7 +56,7 @@ html.dark .smk-ornament::before {
   flex-direction: column;
   align-items: flex-end;
   padding: 4px 10px;
-  border-radius: 12px;
+  border-radius: calc(12px * var(--smk-radius-scale, 1));
   /* Через переменные шкалы: жёстко прописанные зелёные rgb() были
      последним местом, которое не перекрашивалось темой. */
   background: var(--color-emerald-50);

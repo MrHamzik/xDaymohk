@@ -57,6 +57,27 @@ export default function NotificationCenter({ trigger }: NotificationCenterProps)
 
   const hasUnread = unreadCount > 0;
 
+  // Прокрутка категорий колесом мыши (п.4).
+  //
+  // На ПК ряд «Все / Система / Активность / …» шире окна, но обычное
+  // колесо даёт браузеру только deltaY, а прокрутить нужно по X —
+  // ряд стоял намертво, и до крайних вкладок было не добраться без
+  // тачпада. Переводим вертикальный жест в горизонтальный сдвиг.
+  //
+  // preventDefault зовём только когда ряду ЕСТЬ куда ехать, иначе
+  // страница перестала бы скроллиться при наведении на вкладки.
+  const tabsRef = useRef<HTMLDivElement | null>(null);
+  const handleTabsWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+    const el = tabsRef.current;
+    if (!el || event.deltaY === 0) return;
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    if (maxScroll <= 0) return;
+    const next = Math.min(maxScroll, Math.max(0, el.scrollLeft + event.deltaY));
+    if (next === el.scrollLeft) return;
+    event.preventDefault();
+    el.scrollLeft = next;
+  };
+
   const tabs: { id: 'all' | NotificationCategory; labelRu: string; labelCe: string; Icon: any }[] = [
     { id: 'all', labelRu: 'Все', labelCe: 'Дерриг', Icon: Bell },
     { id: 'system', labelRu: 'Система', labelCe: 'Система', Icon: Settings2 },
@@ -151,7 +172,11 @@ export default function NotificationCenter({ trigger }: NotificationCenterProps)
           {/* Fullscreen Notifications List */}
           {/* Категории: Все / Система / Активность / Жалобы / Такси */}
           {account && notifications.length > 0 && (
-            <div className="mx-auto mt-3 flex w-full max-w-2xl items-center gap-1 overflow-x-auto pb-1 no-scrollbar">
+            <div
+              ref={tabsRef}
+              onWheel={handleTabsWheel}
+              className="mx-auto mt-3 flex w-full max-w-2xl items-center gap-1 overflow-x-auto overscroll-x-contain pb-1 no-scrollbar"
+            >
               {tabs.map((tab) => {
                 const Icon = tab.Icon;
                 const count = tab.id === 'all'

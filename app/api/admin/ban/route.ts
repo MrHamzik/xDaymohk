@@ -20,7 +20,7 @@ import { writeAdminAudit } from '@/lib/admin-audit';
  * Unban reverses all three.
  */
 export async function POST(request: Request) {
-  const limit = await rateLimit(request, { limit: 60, windowMs: 60_000 });
+  const limit = await rateLimit(request, { limit: 60, windowMs: 60_000 , scope: 'admin-ban' });
   if (!limit.allowed) {
     return withRateLimitHeaders(
       NextResponse.json({ error: 'Too many requests' }, { status: 429 }),
@@ -135,7 +135,7 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const limit = await rateLimit(request, { limit: 60, windowMs: 60_000 });
+  const limit = await rateLimit(request, { limit: 60, windowMs: 60_000 , scope: 'admin-ban' });
   if (!limit.allowed) {
     return withRateLimitHeaders(
       NextResponse.json({ error: 'Too many requests' }, { status: 429 }),

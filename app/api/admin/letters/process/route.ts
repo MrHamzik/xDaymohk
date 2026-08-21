@@ -116,7 +116,7 @@ async function deliverInNode(admin: ReturnType<typeof createAdminClient> & NonNu
 }
 
 export async function POST(request: Request) {
-  const limit = await rateLimit(request, { limit: 30, windowMs: 60_000 });
+  const limit = await rateLimit(request, { limit: 30, windowMs: 60_000 , scope: 'admin-letter-process' });
   if (!limit.allowed) {
     return withRateLimitHeaders(NextResponse.json({ error: 'Too many requests' }, { status: 429 }), { ...limit, limit: 30 });
   }

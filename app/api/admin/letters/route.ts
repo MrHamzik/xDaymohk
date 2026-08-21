@@ -140,7 +140,7 @@ export async function GET(request: Request) {
 
 /** PUT /api/admin/letters — создать или обновить шаблон. */
 export async function PUT(request: Request) {
-  const limit = await rateLimit(request, { limit: 60, windowMs: 60_000 });
+  const limit = await rateLimit(request, { limit: 60, windowMs: 60_000 , scope: 'admin-letters' });
   if (!limit.allowed) {
     return withRateLimitHeaders(NextResponse.json({ error: 'Too many requests' }, { status: 429 }), { ...limit, limit: 60 });
   }
