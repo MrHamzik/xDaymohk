@@ -54,12 +54,36 @@ export default function TourSpotlight({ marks }: { marks: string[] }) {
     // Рамка чуть больше самой кнопки, иначе подсветка липнет к краям.
     const PAD = 8;
 
+    /* Предзагрузка следующего шага (п.3).
+
+       Кнопка нового шага может быть ещё не отрисована в тот кадр, когда
+       шаг сменился: страница переезжает, панель до-рендеривается,
+       подгружается шрифт. Раньше на этот случай подсветка немедленно
+       сбрасывалась в null — экран целиком темнел, а через кадр-другой
+       вырез появлялся рывком. Ровно это и читалось как «гид появляется
+       и исчезает слишком резко».
+
+       Теперь цель ищем ещё несколько кадров, сохраняя ПРЕДЫДУЩИЙ вырез.
+       Не нашли за отведённое окно — только тогда снимаем подсветку. */
+    const RETRY_MS = 600;
+    let retryUntil = performance.now() + RETRY_MS;
+    let retryFrame = 0;
+
     const measure = () => {
       const target = findTarget(marks);
       if (!target) {
+        // Ещё есть время — ждём следующий кадр, вырез не трогаем.
+        if (performance.now() < retryUntil) {
+          cancelAnimationFrame(retryFrame);
+          retryFrame = requestAnimationFrame(measure);
+          return;
+        }
         setBox(null);
         return;
       }
+      // Цель нашлась — окно ожидания открываем заново на случай, если
+      // элемент позже снова исчезнет (перерисовка списка, смена страницы).
+      retryUntil = performance.now() + RETRY_MS;
       const rect = target.getBoundingClientRect();
 
       // Отступ прижимаем к границам экрана.
@@ -122,6 +146,7 @@ export default function TourSpotlight({ marks }: { marks: string[] }) {
       window.removeEventListener('scroll', measure, true);
       window.visualViewport?.removeEventListener('resize', measure);
       window.visualViewport?.removeEventListener('scroll', measure);
+      cancelAnimationFrame(retryFrame);
       observer.disconnect();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -146,15 +171,15 @@ export default function TourSpotlight({ marks }: { marks: string[] }) {
   // подсвеченная кнопка. Полосы не перехватывают события: за нажатия
   // отвечает useTourLock.
   const blur = box ? (
-    <div className="pointer-events-none fixed inset-0 z-[92]" aria-hidden>
-      <div className="smk-tour-blur absolute inset-x-0 top-0" style={{ height: Math.max(box.top, 0) }} />
-      <div className="smk-tour-blur absolute inset-x-0 bottom-0" style={{ top: box.top + box.height }} />
-      <div className="smk-tour-blur absolute left-0" style={{ top: box.top, height: box.height, width: Math.max(box.left, 0) }} />
-      <div className="smk-tour-blur absolute right-0" style={{ top: box.top, height: box.height, left: box.left + box.width }} />
+    <div className="smk-tour-fade pointer-events-none fixed inset-0 z-[92]" aria-hidden>
+      <div className="smk-tour-blur smk-tour-band absolute inset-x-0 top-0" style={{ height: Math.max(box.top, 0) }} />
+      <div className="smk-tour-blur smk-tour-band absolute inset-x-0 bottom-0" style={{ top: box.top + box.height }} />
+      <div className="smk-tour-blur smk-tour-band absolute left-0" style={{ top: box.top, height: box.height, width: Math.max(box.left, 0) }} />
+      <div className="smk-tour-blur smk-tour-band absolute right-0" style={{ top: box.top, height: box.height, left: box.left + box.width }} />
     </div>
   ) : (
     // Шаг без подсветки: размываем экран целиком.
-    <div className="smk-tour-blur pointer-events-none fixed inset-0 z-[92]" aria-hidden />
+    <div className="smk-tour-blur smk-tour-fade pointer-events-none fixed inset-0 z-[92]" aria-hidden />
   );
 
   if (!box) {
@@ -163,7 +188,7 @@ export default function TourSpotlight({ marks }: { marks: string[] }) {
         {blur}
         {/* Шаг без подсветки всё равно должен затемнять фон, иначе
             карточка висит на светлом интерфейсе и читается плохо. */}
-        <div className="pointer-events-none fixed inset-0 z-[94] bg-zinc-950/70" aria-hidden />
+        <div className="smk-tour-fade pointer-events-none fixed inset-0 z-[94] bg-zinc-950/70" aria-hidden />
       </>,
       document.body,
     );
@@ -176,7 +201,7 @@ export default function TourSpotlight({ marks }: { marks: string[] }) {
   return createPortal(
     <>
       {blur}
-      <div className="smk-tour-spotlight pointer-events-none fixed inset-0 z-[94]" aria-hidden>
+      <div className="smk-tour-spotlight smk-tour-fade pointer-events-none fixed inset-0 z-[94]" aria-hidden>
         {/* Затемнение сделано огромной тенью вокруг выреза: так «дырка»
             получается одним элементом, без четырёх полос по краям и без
             щелей между ними на дробных пикселях. */}

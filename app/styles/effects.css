@@ -538,6 +538,88 @@ textarea.smk-field:focus {
    её по-разному от кадра к кадру — вырез заметно «дёргался». Радиус
    размытия и прозрачность так не округляются, поэтому анимация
    получается ровной на любом экране. */
+/* Контейнер выреза.
+
+   Затемнение рисует огромная тень вокруг «дырки» (.smk-tour-hole), но
+   тень — это часть отрисовки ДОЧЕРНЕГО элемента, и родитель с
+   inset-0 обрезал её по краям экрана (п.1). Когда подсвеченная кнопка
+   стоит у самой границы — например «Каталог» в боковой колонке на ПК —
+   затемнение с этой стороны срезалось, и оставалось одно размытие без
+   затемнения.
+
+   overflow: visible снимает обрезку, а contain: none не даёт браузеру
+   завести новый контекст отрисовки, который вернул бы ту же проблему. */
+.smk-tour-spotlight {
+  overflow: visible;
+}
+
+/* Плавность гида (п.3).
+
+   Вырез, размытие и карточка появлялись мгновенно: шаг менялся —
+   подсветка прыгала в новое место, окно возникало рывком. Даём
+   переходы позиции и размера, чтобы «глазок» переезжал, а не скакал.
+
+   Анимируем только composited-свойства и геометрию выреза; тень с
+   радиусом 9999px браузер и так не пересчитывает покадрово. */
+.smk-tour-hole {
+  transition:
+    top 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    left 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    width 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    height 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Полосы размытия едут вместе с вырезом — иначе на переходе между
+   шагами появлялась бы рассинхронизация в четверть секунды. */
+.smk-tour-band {
+  transition:
+    top 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    left 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    right 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    width 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    height 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Появление слоёв гида и самой карточки шага. */
+.smk-tour-fade {
+  animation: smk-tour-fade-in 260ms ease-out both;
+}
+
+.smk-tour-step-in {
+  animation: smk-tour-step-in 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes smk-tour-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes smk-tour-step-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Уважаем системную настройку «меньше движения»: людям с вестибулярной
+   чувствительностью переезды и сдвиги противопоказаны. */
+@media (prefers-reduced-motion: reduce) {
+  .smk-tour-hole,
+  .smk-tour-band {
+    transition: none;
+  }
+
+  .smk-tour-fade,
+  .smk-tour-step-in {
+    animation: none;
+  }
+}
+
 .smk-tour-hole {
   box-shadow:
     0 0 0 9999px rgb(9 9 11 / 87%),

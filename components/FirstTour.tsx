@@ -11,8 +11,7 @@ import { sendTourCommand, setTourActive, useTourEvents, type TourEvent } from '@
 import { useTourLock } from '@/lib/tour-lock';
 import TourSpotlight from '@/components/TourSpotlight';
 import QuickWidgetsEditor from '@/components/settings/QuickWidgetsEditor';
-import ThemePickerButton from '@/components/settings/ThemePickerButton';
-import { SettingRow, Toggle } from '@/components/settings/SettingsPrimitives';
+import { HintMark, SettingRow, Toggle } from '@/components/settings/SettingsPrimitives';
 import { prefFor } from '@/lib/settings/defaults';
 import {
   DEFAULT_GROUP_SOUND, playSound, type SoundId,
@@ -254,15 +253,20 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
     {
       title: t.tour2Title,
       items: [t.tour2a, t.tour2b, t.tour2c],
-      marks: ['catalog', 'map'],
+      // Карту на этом шаге НЕ подсвечиваем и НЕ открываем (п.2).
+      // Текст шага говорит только про каталог и карточки анкет, а
+      // «Карта» стояла и в подсветке, и в списке разрешённого — из
+      // каталога можно было уйти на карту и остаться там с гидом,
+      // который ждёт прокрутки каталога. Карте посвящён свой шаг.
+      marks: ['catalog'],
       panel: null,
       awaits: 'catalog-scroll' as const,
       hint: t.tourWaitCatalog,
       skippable: true,
-      // Что оживает на этом шаге (п.17): подсвеченные кнопки перехода,
-      // сами карточки анкет и уже открытая анкета. Всё прочее —
-      // фильтры, поиск, нижняя панель, шапка — заблокировано.
-      allow: ['[data-tour="catalog"]', '[data-tour="map"]', '[data-tour-card]', '[role="dialog"]'],
+      // Что оживает на этом шаге (п.17): переход в каталог, сами
+      // карточки анкет и уже открытая анкета. Всё прочее — фильтры,
+      // поиск, нижняя панель, шапка, карта — заблокировано.
+      allow: ['[data-tour="catalog"]', '[data-tour-card]', '[role="dialog"]'],
       scroll: true,
     },
     {
@@ -383,9 +387,46 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
       marks: [],
       panel: (
         <div className="space-y-3">
-          <SettingRow title={t.settingsThemes} hint={t.settingsThemesHint}>
-            <ThemePickerButton />
-          </SettingRow>
+          {/* Светлая/тёмная — ДВЕ ОБЫЧНЫЕ КНОПКИ, без выпадающего списка (п.4).
+
+              Раньше здесь стоял ThemePickerButton: кнопка-палитра, которая
+              открывает список тем ПОРТАЛОМ в body. Портал во время гида —
+              источник постоянных поломок: он не потомок карточки, поэтому
+              его приходится отдельно отмечать для блокировки, отдельно
+              позиционировать при прокрутке карточки и отдельно закрывать по
+              клику мимо. Любой промах в этой цепочке выглядит одинаково —
+              «нажимаю тему, ничего не происходит».
+
+              На шаге обучения выпадающий список не нужен: выбор здесь ровно
+              из двух вариантов. Рисуем их прямо в карточке — нет портала,
+              нет позиционирования, нет клика мимо, нечему ломаться.
+              Полный список тем остаётся в настройках. */}
+          <div className="smk-field space-y-2 px-3 py-3">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-bold text-slate-800 dark:text-zinc-200">{t.settingsThemes}</span>
+              <HintMark text={t.settingsThemesHint} />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {([
+                { id: 'light', label: t.themeLightShort },
+                { id: 'dark', label: t.themeDarkShort },
+              ] as const).map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => update({ themeId: option.id })}
+                  aria-pressed={settings.themeId === option.id}
+                  className={`rounded-xl px-3 py-2.5 text-xs font-bold transition ${
+                    settings.themeId === option.id
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'border border-slate-200 bg-white text-slate-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="smk-field space-y-2 px-3 py-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-slate-800 dark:text-zinc-200">{t.settingsRadius}</span>
@@ -732,7 +773,10 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
           document.body,
         )
       ) : (
-        <>
+        // key={index} — перезапуск анимации на каждый шаг (п.3). Без
+        // ключа React переиспользует те же узлы, класс с animation
+        // остаётся «уже проигранным», и текст шага подменяется рывком.
+        <div key={index} className="smk-tour-step-in">
           <p className="smk-text-label font-bold uppercase tracking-wide text-[var(--smk-gold)]">
             {t.tourStepOf.replace('{n}', String(index + 1)).replace('{m}', String(steps.length))}
           </p>
@@ -802,7 +846,7 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
               {t.tourSkip}
             </button>
           )}
-        </>
+        </div>
       )}
     </div>
   );

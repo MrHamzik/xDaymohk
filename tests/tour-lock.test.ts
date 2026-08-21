@@ -62,6 +62,18 @@ describe('шаги с заданием открывают ровно то, чт�
     expect(block).toContain('role="dialog"');
   });
 
+  it('шаг «Каталог» НЕ пускает на карту (п.2)', () => {
+    // Жалоба: «из каталога открывается карта, хотя во время гида всё,
+    // кроме каталога и анкет, должно быть заблокировано». Карта стояла
+    // и в подсветке (marks), и в списке разрешённого (allow) — человек
+    // уходил на карту, а гид продолжал ждать прокрутки каталога.
+    const block = stepBlock('catalog-scroll');
+    expect(block).not.toContain('[data-tour="map"]');
+    const marks = block.match(/marks:\s*\[[^\]]*\]/);
+    expect(marks, 'marks шага не найдены').not.toBeNull();
+    expect(marks?.[0]).not.toContain('map');
+  });
+
   it('шаг «Меню»: только прокрутка, никаких иконок и шторок', () => {
     const block = stepBlock('menu-scroll');
     expect(block).toContain('scroll: true');

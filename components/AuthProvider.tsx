@@ -5,6 +5,13 @@ import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { uploadImageIfStorageConfigured } from '@/lib/media';
 import { isAdminEmail } from '@/lib/admin';
 import { AVATAR_PRESETS, UserMasterStatus } from '@/lib/types';
+import {
+  PLACEHOLDER_NAME,
+  oauthAvatarUrl,
+  oauthEmail,
+  oauthFullName,
+  oauthPhone,
+} from '@/lib/oauth-identity';
 
 const ACCOUNT_STORAGE_KEY = 'daymohk-account';
 
@@ -47,7 +54,22 @@ function normalizePhone(value: string) {
   return `+${digits}`;
 }
 
-type AuthUser = { id: string; email?: string; phone?: string; user_metadata?: Record<string, unknown> };
+type AuthUser = {
+  id: string;
+  email?: string;
+  phone?: string;
+  user_metadata?: Record<string, unknown>;
+  /**
+   * Данные от самого провайдера (Google).
+   *
+   * Supabase кладёт их в user_metadata НЕ всегда: при части сценариев
+   * входа (повторная привязка, вход тем же адресом сначала по паролю,
+   * а потом через Google) user_metadata приходит почти пустым, и всё
+   * содержимое остаётся только здесь, в identity_data. Читаем оба
+   * места, иначе ФИО и аватар «не подтягиваются» без видимой причины.
+   */
+  identities?: Array<{ identity_data?: Record<string, unknown> | null } | null> | null;
+};
 
 type StoredAccount = {
   gender?: 'male' | 'female';
@@ -79,7 +101,7 @@ type StoredAccount = {
  * побеждала реальные данные навсегда — отсюда жалоба «ФИО и аватарка
  * не подтягиваются из Google».
  */
-const PLACEHOLDER_NAME = 'Пользователь';
+
 
 /** Значение выглядит как настоящее имя, а не как заглушка/телефон. */
 function isRealName(value: string | undefined | null): boolean {
@@ -96,13 +118,14 @@ function isRealAvatar(value: string | undefined | null): boolean {
 }
 
 function accountFromUser(user: AuthUser): Account {
-  const metadata = user.user_metadata ?? {};
+  // Разбор полей провайдера вынесен в lib/oauth-identity и покрыт
+  // тестами: именно здесь трижды терялись ФИО и аватар из Google.
   return {
     id: user.id,
-    email: user.email ?? '',
-    fullName: String(metadata.full_name ?? metadata.name ?? user.phone ?? 'Пользователь'),
-    avatarUrl: String(metadata.avatar_url ?? AVATAR_PRESETS[0]),
-    phone: String(metadata.phone ?? user.phone ?? ''),
+    email: user.email || oauthEmail(user),
+    fullName: oauthFullName(user) || user.phone || PLACEHOLDER_NAME,
+    avatarUrl: oauthAvatarUrl(user) || AVATAR_PRESETS[0],
+    phone: oauthPhone(user) || user.phone || '',
     isAdmin: isAdminEmail(user.email),
     statusOverride: 'auto',
   };
