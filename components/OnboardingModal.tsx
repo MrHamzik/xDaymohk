@@ -361,7 +361,51 @@ export default function OnboardingModal() {
    * Гостю гид не положен: `account === null` при isLoading === false —
    * это точный ответ «не вошёл», и держать его нельзя.
    */
-  const undecided = isLoading || (Boolean(account) && !settings.tourDone && step === 'welcome' && !open);
+  // Гид уже проходили в этом браузере — метка переживает и выход из
+  // аккаунта, и потерю связи с базой. Без неё человек с tourDone=false
+  // в базе (гид закрыт локально, флаг не доехал) оставался бы за
+  // запертым интерфейсом навсегда.
+  const [tourSeenLocally, setTourSeenLocally] = useState(false);
+  useEffect(() => {
+    if (!account) return;
+    try {
+      setTourSeenLocally(window.localStorage.getItem(`daymohk-tour-${account.id}`) === '1');
+    } catch { /* private mode */ }
+  }, [account]);
+
+  /**
+   * Аварийный предохранитель.
+   *
+   * Замок держится на цепочке условий, и любая из них может не
+   * сойтись: сеть отвалилась на полпути, настройки не доехали, гид не
+   * смонтировался. Цена ошибки здесь несимметрична — пропущенный гид
+   * человек переживёт, намертво запертый сайт означает «ничего не
+   * работает, я туда больше не пойду».
+   *
+   * Поэтому через 10 секунд после загрузки замок снимается в любом
+   * случае. Это дольше любой нормальной загрузки настроек и короче
+   * терпения человека перед мёртвой страницей.
+   */
+  const [lockTimedOut, setLockTimedOut] = useState(false);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setLockTimedOut(true), 10_000);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  const undecided =
+    !lockTimedOut
+    && (
+      isLoading
+      || (
+        Boolean(account)
+        && !settings.tourDone
+        && !tourSeenLocally
+        // Настройки ещё едут: tourDone по умолчанию false, и до ответа
+        // сервера отличить «гид не пройден» от «ещё не знаем» нельзя.
+        && step === 'welcome'
+        && !open
+      )
+    );
 
   /**
    * Модалки онбординга ведут себя как настоящие модальные окна (п.5).
