@@ -82,15 +82,11 @@
   overflow: hidden;
   border: 1px solid var(--smk-divider);
   border-radius: calc(1.55rem * var(--smk-radius-scale, 1));
-  background: var(
-    --smk-rail-gradient,
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--color-emerald-600) 22%, var(--smk-panel)) 0%,
-      var(--smk-panel) 38%,
-      var(--smk-panel) 100%
-    )
-  );
+  /* Запасное значение — тот же каркасный цвет, что у меню на телефоне
+     (п.10). Раньше здесь лежал зелёный градиент по --smk-panel, и без
+     пользовательской темы меню на ПК было серо-зелёным, а на телефоне
+     белым. */
+  background: var(--smk-rail-gradient, var(--smk-surface));
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 6%),
     0 2px 10px -6px rgb(var(--smk-shadow-rgb) / calc(0.35 * var(--fx-shadow))),

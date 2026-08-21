@@ -21,9 +21,11 @@ import { useAuth } from '@/components/AuthProvider';
 import { useSettings } from '@/components/SettingsProvider';
 import { useProfiles } from '@/components/ProfilesProvider';
 import FirstTour from '@/components/FirstTour';
+import { useTourLock } from '@/lib/tour-lock';
 import { useI18n } from '@/lib/i18n';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { extractPhoneDigits } from '@/lib/phone';
+import { AVATAR_PRESETS } from '@/lib/types';
 import type { FontFamilyId } from '@/lib/settings/types';
 
 const ONBOARDED_KEY = 'daymohk-onboarded-v1';
@@ -253,6 +255,39 @@ export default function OnboardingModal() {
     setOpen(true);
   }, [account, isLoading, settings.tourDone]);
 
+  /**
+   * Догрузка имени и аватара из Google (п.6).
+   *
+   * Поля заполняются один раз — в момент, когда сработал флаг «только
+   * что вошёл». Но `account` в этот миг часто ещё «черновой»: профиль
+   * из user_profiles не приехал, и в fullName лежит заглушка
+   * «Пользователь», а в avatarUrl — стандартная картинка из пресетов.
+   * Форма открывалась пустой, хотя Google данные прислал.
+   *
+   * Здесь дозаполняем поля, когда настоящие значения доедут. Трогаем
+   * ТОЛЬКО пустые поля: если человек уже начал печатать, перебивать
+   * его нельзя.
+   */
+  useEffect(() => {
+    if (!open || step !== 'profile' || !account) return;
+
+    const full = (account.fullName || '').trim();
+    const looksReal = full && full !== 'Пользователь' && !/^\+?\d+$/.test(full);
+    if (looksReal) {
+      const parts = full.split(/\s+/).filter(Boolean);
+      setFirstName((current) => current || parts[0] || '');
+      setLastName((current) => current || parts.slice(1).join(' ') || '');
+    }
+
+    // Пресетную картинку за аватар из Google не считаем.
+    const avatar = account.avatarUrl || '';
+    if (avatar && !AVATAR_PRESETS.includes(avatar)) {
+      setAvatarUrl((current) => current || avatar);
+    }
+    if (account.phone) setPhone((current) => current || account.phone || '');
+    if (account.settlement) setSettlement((current) => (current && current !== 'Даймохк' ? current : account.settlement || ''));
+  }, [open, step, account]);
+
   // После появления аккаунта (вход через Google): окно профиля открываем
   // ТОЛЬКО если пользователь только что вошёл (authingRef / sessionStorage),
   // иначе — не перебиваем welcome (п.2: профиль не должен появляться раньше
@@ -311,6 +346,34 @@ export default function OnboardingModal() {
     }
     startAfterAuth();
   }, [account, settings.tourDone]);
+
+  /**
+   * Интерфейс заперт, пока не выяснено, нужен ли гид (п.3).
+   *
+   * Между загрузкой страницы и появлением гида была щель: настройки
+   * ещё едут с сервера, окна нет, и всё это время по сайту можно было
+   * тыкать. Особенно заметно после F5 на середине обучения.
+   *
+   * Держим замок, пока не станет ясно одно из двух: гид не нужен
+   * (гость, или уже пройден) — отпускаем; гид нужен — замок передаёт
+   * эстафету самому гиду, у него свои правила по шагам.
+   *
+   * Гостю гид не положен: `account === null` при isLoading === false —
+   * это точный ответ «не вошёл», и держать его нельзя.
+   */
+  const undecided = isLoading || (Boolean(account) && !settings.tourDone && step === 'welcome' && !open);
+
+  /**
+   * Модалки онбординга ведут себя как настоящие модальные окна (п.5).
+   *
+   * Пока открыт шаг «Профиль» или «Внешний вид», фон не должен ни
+   * прокручиваться, ни принимать нажатия: это анкета регистрации, а не
+   * плавающая подсказка. Шаг 'tour' исключён — там всем распоряжается
+   * сам гид (useTourLock внутри FirstTour), и второй замок мешал бы.
+   */
+  const modalLocked = open && step !== 'tour';
+
+  useTourLock({ active: undecided || modalLocked });
 
   if (!open) return null;
 
@@ -468,6 +531,8 @@ export default function OnboardingModal() {
   // Гид на шаге-задании прячет карточку: человек в это время работает
   // с настоящим интерфейсом, и подложка модального окна ему мешает.
   const tourCardHidden = step === 'tour' && !tourCardVisible;
+
+
 
   return (
     // Во время гида фон НЕ затемняем и НЕ размываем: подсветка показывает
@@ -653,7 +718,7 @@ export default function OnboardingModal() {
                 <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
               </div>
               <div>
-                <label className="mb-1 block smk-text-label font-bold text-slate-500 dark:text-zinc-400">Телефон / Телефон</label>
+                <label className="mb-1 block smk-text-label font-bold text-slate-500 dark:text-zinc-400">{t.phoneGeneral}</label>
                 <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+7 (___) ___-__-__" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
               </div>
               <div>
@@ -661,11 +726,11 @@ export default function OnboardingModal() {
                 <input value={settlement} onChange={(e) => setSettlement(e.target.value)} placeholder={ce ? 'Даймохк' : 'Даймохк'} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
               </div>
               <div>
-                <label className="mb-1 block smk-text-label font-bold text-slate-500 dark:text-zinc-400">Telegram</label>
+                <label className="mb-1 block smk-text-label font-bold text-slate-500 dark:text-zinc-400">{t.phoneTelegramLabel}</label>
                 <input value={telegram} onChange={(e) => setTelegram(e.target.value)} placeholder="@username" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
               </div>
               <div>
-                <label className="mb-1 block smk-text-label font-bold text-slate-500 dark:text-zinc-400">WhatsApp</label>
+                <label className="mb-1 block smk-text-label font-bold text-slate-500 dark:text-zinc-400">{t.phoneWhatsappLabel}</label>
                 <input value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="+7 (___) ___-__-__" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
                 <label className="mt-1.5 flex cursor-pointer items-center gap-2 smk-text-label font-bold text-slate-600 dark:text-zinc-300">
                   <input type="checkbox" checked={whatsappUsePhone} onChange={(e) => setWhatsappUsePhone(e.target.checked)} className="h-3.5 w-3.5 rounded text-emerald-600" />

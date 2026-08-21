@@ -70,6 +70,19 @@ export function useTourLock({ active, scroll = false, allow }: TourLockOptions) 
       if (!el) return false;
       // Окно гида работает всегда — иначе не нажать «Дальше».
       if (el.closest('[data-tour-ui]')) return true;
+
+      // Всплывающие окна, отрисованные ПОРТАЛОМ в body.
+      //
+      // Подсказки «!», выбор темы, меню статуса и подобное живут не
+      // внутри карточки гида, а прямым потомком body. По дереву DOM
+      // они гиду не родня, поэтому closest('[data-tour-ui]') их не
+      // находил, и блокировка их съедала: подсказка открывалась, но
+      // не закрывалась, а выбор темы не срабатывал вовсе.
+      //
+      // Правило: если всплывашка открыта поверх карточки гида (её
+      // z-index не ниже), она часть того же разговора — пропускаем.
+      if (el.closest('[data-tour-portal]')) return true;
+
       return selectors.some((selector) => {
         try {
           return Boolean(el.closest(selector));

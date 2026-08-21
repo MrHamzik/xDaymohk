@@ -163,6 +163,8 @@ export default function SettingsControlsBar() {
             {isStatusMenuOpen && menuBox && typeof document !== 'undefined' && createPortal(
               <div
                 ref={menuRef}
+                // Портал в body — см. data-tour-portal в lib/tour-lock.ts.
+                data-tour-portal
                 style={{ top: menuBox.top, left: menuBox.left }}
                 className="smk-solid fixed z-[111] rounded-2xl p-2 shadow-2xl"
               >

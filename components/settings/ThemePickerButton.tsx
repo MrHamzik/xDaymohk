@@ -8,6 +8,7 @@ import { useSettings } from '@/components/SettingsProvider';
 import { contrastRatio } from '@/lib/settings/derive';
 import { PRESET_THEMES, resolveTheme } from '@/lib/settings/defaults';
 import { useI18n } from '@/lib/i18n';
+import { useTourActive } from '@/lib/tour';
 
 /**
  * Выбор темы из шапки — заменяет кнопку «светлая / тёмная», когда
@@ -20,6 +21,7 @@ import { useI18n } from '@/lib/i18n';
 export default function ThemePickerButton() {
   const { t } = useI18n();
   const { settings, update } = useSettings();
+  const tourActive = useTourActive();
   const [isOpen, setIsOpen] = useState(false);
   const boxRef = useRef<HTMLDivElement | null>(null);
   const btnRef = useRef<HTMLButtonElement | null>(null);
@@ -123,6 +125,10 @@ export default function ThemePickerButton() {
       {isOpen && menuPos && createPortal((
         <div
           ref={boxRef}
+          // data-tour-portal: список тем — портал в body, гиду он не
+          // потомок. На шаге про оформление без метки кнопка палитры
+          // открывалась, а выбрать тему в списке было нельзя.
+          data-tour-portal
           className="smk-solid fixed z-[120] w-52 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-zinc-700 dark:bg-zinc-900"
           style={{ top: menuPos.top, right: menuPos.right }}
         >
@@ -156,14 +162,20 @@ export default function ThemePickerButton() {
             ))}
           </div>
 
-          <Link
-            href="/settings"
-            onClick={() => setIsOpen(false)}
-            className="flex items-center gap-2 border-t border-slate-100 px-3 py-2 smk-text-label font-bold text-slate-600 transition hover:bg-slate-50 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
-          >
-            <SettingsIcon className="h-3.5 w-3.5" />
-            {t.settingsThemeCreate}
-          </Link>
+          {/* «Создать свою» уводит на /settings — во время гида это
+              означало бы уйти с обучения на полпути. Пресеты выбирать
+              можно, а ссылку прячем: показывать неработающий пункт
+              хуже, чем не показывать его вовсе. */}
+          {!tourActive && (
+            <Link
+              href="/settings"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center gap-2 border-t border-slate-100 px-3 py-2 smk-text-label font-bold text-slate-600 transition hover:bg-slate-50 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
+            >
+              <SettingsIcon className="h-3.5 w-3.5" />
+              {t.settingsThemeCreate}
+            </Link>
+          )}
         </div>
       ), document.body)}
     </div>

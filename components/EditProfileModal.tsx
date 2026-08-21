@@ -381,10 +381,13 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
               </h3>
 
               <div>
-                {/* Заголовок был «Телефон / телефон» — одно и то же слово
-                    дважды. Теперь просто «Телефон». */}
+                {/* Подписи полей связи одинаковы во всех формах (п.2/п.8):
+                    «Телефон для звонков», «Номер телефона в WhatsApp»,
+                    «Имя пользователя в Telegram». Раньше здесь стояло
+                    просто «Телефон», а в анкете регистрации — «Телефон /
+                    Телефон»: три формы, три разных набора подписей. */}
                 <label htmlFor="profile-phone" className="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-400">
-                  {t.phoneHeading}
+                  {t.phoneGeneral}
                 </label>
                 <input
                   id="profile-phone"
@@ -399,13 +402,13 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
               <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                 <div>
                   <div className="mb-1 flex items-center justify-between gap-2">
-                  <label htmlFor="profile-whatsapp" className="block text-xs font-semibold text-slate-700 dark:text-zinc-400">WhatsApp</label>
+                  <label htmlFor="profile-whatsapp" className="block text-xs font-semibold text-slate-700 dark:text-zinc-400">{t.phoneWhatsappLabel}</label>
                   <label className="flex cursor-pointer items-center gap-1 smk-text-label text-emerald-700 dark:text-emerald-400"><input type="checkbox" checked={sameAsPhoneWhatsapp} onChange={(event) => { setSameAsPhoneWhatsapp(event.target.checked); if (event.target.checked && account) setWhatsappDigits(extractPhoneDigits(account.phone)); }} className="h-3 w-3 rounded text-emerald-600 focus:ring-emerald-500" />{t.useCommonNumber}</label>
                 </div>
                 <PhoneField id="profile-whatsapp" value={whatsappDigits} onChange={handleWhatsappChange} />
               </div>
               <div>
-                <label htmlFor="profile-telegram" className="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-400">Telegram</label>
+                <label htmlFor="profile-telegram" className="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-400">{t.phoneTelegramLabel}</label>
                 <div className="relative"><span className="absolute inset-y-0 left-0 flex items-center pl-3 font-bold text-slate-400">@</span><input id="profile-telegram" value={telegram} onChange={(event) => setTelegram(event.target.value.replace(/^@/, ''))} placeholder={t.telegramUsername} className="smk-field w-full py-2.5 pl-8 pr-4 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:text-white" /></div>
               </div>
             </div>

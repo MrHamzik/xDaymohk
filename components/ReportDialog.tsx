@@ -53,7 +53,11 @@ export default function ReportDialog({ profile, isOpen, onClose, onSubmit }: Rep
     setIsSaving(true);
     setError('');
     try {
-      await onSubmit(addToBlacklist ? `${finalReason} [ЧС]` : finalReason);
+      // У проверенной анкеты кнопка называется «Заблокировать» и
+      // галочки ЧС нет — значит блокировка подразумевается самим
+      // нажатием, иначе действие не выполнилось бы вовсе.
+      const toBlacklist = profile.isVerified || addToBlacklist;
+      await onSubmit(toBlacklist ? `${finalReason} [ЧС]` : finalReason);
       onClose();
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : t.taskComplaintError);
@@ -79,7 +83,16 @@ export default function ReportDialog({ profile, isOpen, onClose, onSubmit }: Rep
         </div>
 
         {profile.isVerified ? (
-          <p className="smk-note smk-note-warn mt-3 px-3 py-2">{t.profileBlockConfirm}</p>
+          /* Проверенная анкета (п.9).
+             Раньше здесь показывался текст ПОДТВЕРЖДЕНИЯ БЛОКИРОВКИ
+             («Заблокировать этого человека?..»): человек нажимал
+             «Пожаловаться», а читал про блокировку и не понимал, куда
+             делись причины жалобы. Объясняем прямо: жаловаться нельзя и
+             почему, но заблокировать — можно. */
+          <div className="smk-note smk-note-info mt-3 space-y-1 px-3 py-2.5">
+            <p className="font-bold">{t.reportVerifiedTitle}</p>
+            <p className="leading-relaxed">{t.reportVerifiedText}</p>
+          </div>
         ) : (
           <fieldset className="mt-3 space-y-1.5">
             <legend className="smk-sheet-label mb-1.5">{t.reportReasonPick}</legend>
@@ -100,10 +113,16 @@ export default function ReportDialog({ profile, isOpen, onClose, onSubmit }: Rep
           </fieldset>
         )}
 
-        <label className="mt-3 flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-600 dark:text-zinc-400">
-          <input type="checkbox" checked={addToBlacklist} onChange={(e) => setAddToBlacklist(e.target.checked)} className="h-4 w-4 rounded text-emerald-600" />
-          {t.cardBlock}
-        </label>
+        {/* У проверенной анкеты блокировка — единственное доступное
+            действие, и отдельная галочка «ещё и заблокировать» рядом с
+            кнопкой «Заблокировать» только путала. Показываем её лишь
+            там, где есть выбор: жалоба ИЛИ жалоба с блокировкой. */}
+        {!profile.isVerified && (
+          <label className="mt-3 flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-600 dark:text-zinc-400">
+            <input type="checkbox" checked={addToBlacklist} onChange={(e) => setAddToBlacklist(e.target.checked)} className="h-4 w-4 rounded text-emerald-600" />
+            {t.cardBlock}
+          </label>
+        )}
 
         {error && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{error}</p>}
 

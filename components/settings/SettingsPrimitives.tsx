@@ -110,17 +110,25 @@ export function HintMark({ text }: { text: string }) {
         <>
           {/* Подложка: клик мимо закрывает. На телефоне это единственный
               удобный способ убрать подсказку. */}
+          {/* data-tour-portal — подсказка живёт порталом в body и гиду
+              по дереву не родня. Без метки блокировка гида съедала
+              нажатия, и открытую подсказку было не закрыть.
+
+              z-[97]: карточка гида стоит на 95, и подложка вровень с
+              ней перехватывала бы клик первой. */}
           <button
             type="button"
             aria-hidden
             tabIndex={-1}
+            data-tour-portal
             onClick={() => setIsOpen(false)}
-            className="fixed inset-0 z-[95] cursor-default"
+            className="fixed inset-0 z-[97] cursor-default"
           />
           <span
             role="tooltip"
+            data-tour-portal
             style={{ top: box.top, left: box.left, width: box.width }}
-            className="fixed z-[96] rounded-xl bg-slate-900 px-3 py-2 smk-text-label font-medium leading-relaxed text-white shadow-xl dark:bg-zinc-700"
+            className="fixed z-[98] rounded-xl bg-slate-900 px-3 py-2 smk-text-label font-medium leading-relaxed text-white shadow-xl dark:bg-zinc-700"
           >
             {text}
           </span>

@@ -41,6 +41,9 @@ function findTarget(marks: string[]): HTMLElement | null {
 
 export default function TourSpotlight({ marks }: { marks: string[] }) {
   const [box, setBox] = useState<Box | null>(null);
+  // Родитель отдаёт новый массив на каждый рендер. Зависеть от него
+  // напрямую нельзя — эффект пересоздавал бы наблюдателей без конца.
+  const marksKey = marks.join('|');
 
   useEffect(() => {
     if (marks.length === 0) {
@@ -71,12 +74,25 @@ export default function TourSpotlight({ marks }: { marks: string[] }) {
       const right = Math.min(rect.right + PAD, window.innerWidth);
       const bottom = Math.min(rect.bottom + PAD, window.innerHeight);
 
-      setBox({
+      const next = {
         top,
         left,
         width: Math.max(right - left, 0),
         height: Math.max(bottom - top, 0),
-      });
+      };
+      // Обновляем состояние ТОЛЬКО при реальном сдвиге. Замер приходит
+      // на каждый скролл и каждый кадр наблюдателя; без этой проверки
+      // одинаковые значения всё равно рождали новый объект, React
+      // перерисовывал портал, и цикл замер-перерисовка не кончался.
+      setBox((prev) => (
+        prev
+          && prev.top === next.top
+          && prev.left === next.left
+          && prev.width === next.width
+          && prev.height === next.height
+          ? prev
+          : next
+      ));
     };
 
     measure();
@@ -91,8 +107,15 @@ export default function TourSpotlight({ marks }: { marks: string[] }) {
 
     // Ленивая отрисовка панели (шрифты, иконки) сдвигает элементы уже
     // после первого замера — следим за размерами через ResizeObserver.
+    //
+    // Наблюдаем ЗА ЦЕЛЬЮ, а не за document.body. Раньше слушали body, и
+    // получалась петля: измерили → setBox → перерисовали слои подсветки
+    // → изменилась высота body → ResizeObserver → измерили снова.
+    // React упирался в «Maximum update depth exceeded», а браузер
+    // молотил вхолостую — отсюда же и общая медлительность страниц.
+    const target = findTarget(marks);
     const observer = new ResizeObserver(measure);
-    observer.observe(document.body);
+    if (target) observer.observe(target);
 
     return () => {
       window.removeEventListener('resize', measure);
@@ -101,7 +124,8 @@ export default function TourSpotlight({ marks }: { marks: string[] }) {
       window.visualViewport?.removeEventListener('scroll', measure);
       observer.disconnect();
     };
-  }, [marks]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [marksKey]);
 
   if (typeof document === 'undefined') return null;
 

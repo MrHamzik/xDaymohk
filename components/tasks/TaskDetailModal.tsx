@@ -5,7 +5,6 @@ import {
   X, Loader2, Star, MapPin, Clock, Users, CalendarDays, ShieldAlert, Trash2,
   Ban, Check, Pencil, Wallet, Share2, Copy, Phone, MessageSquare, Send, Flag, ShieldBan,
 } from 'lucide-react';
-import Link from 'next/link';
 import PayoutPeekSheet from '@/components/settings/PayoutPeekSheet';
 import Avatar from '@/components/Avatar';
 import { supabase } from '@/lib/supabase';
@@ -300,15 +299,18 @@ export default function TaskDetailModal({
         className="smk-sheet flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl shadow-2xl sm:rounded-3xl"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Шапка задания в две строки (п.11).
+            Когда к иконкам добавились «Пожаловаться» и «Заблокировать»,
+            ряд кнопок занял половину ширины, и название задания в той же
+            строке обрезалось многоточием уже на втором-третьем слове.
+            Теперь сверху — только ряд иконок, а название идёт отдельной
+            строкой под ним и переносится целиком. */}
         <div
-          className="smk-sheet-head flex items-center justify-between px-4 pb-3 pt-4"
+          className="smk-sheet-head flex flex-col gap-2 px-4 pb-3 pt-3"
           onTouchStart={swipe.onTouchStart}
           onTouchEnd={swipe.onTouchEnd}
         >
-          <h2 className="truncate pr-2 text-sm font-extrabold text-slate-900 dark:text-white">
-            {task?.title ?? t.taskDetailTitle}
-          </h2>
-          <div className="flex shrink-0 items-center gap-1">
+          <div className="flex shrink-0 items-center justify-end gap-1">
             {task && (
               <button
                 type="button"
@@ -369,6 +371,9 @@ export default function TaskDetailModal({
               <X className="h-4 w-4" />
             </button>
           </div>
+          <h2 className="break-words text-sm font-extrabold leading-snug text-slate-900 dark:text-white">
+            {task?.title ?? t.taskDetailTitle}
+          </h2>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
