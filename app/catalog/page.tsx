@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
-import { Award, MapPin, Sparkles, Users } from 'lucide-react';
+
 import Navbar from '@/components/Navbar';
 import AppSidebar from '@/components/AppSidebar';
 import BottomNav from '@/components/BottomNav';
@@ -15,11 +14,13 @@ import AccountModal from '@/components/AccountModal';
 import CreateActionModal from '@/components/CreateActionModal';
 import AdminBanModal, { AdminBanPayload } from '@/components/AdminBanModal';
 import MobileMenuDrawer from '@/components/MobileMenuDrawer';
+import CatalogLanding from '@/components/catalog/CatalogLanding';
+import CreateTaskModal from '@/components/tasks/CreateTaskModal';
+import type { QuickTaskPreset } from '@/lib/quick-request';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/lib/supabase';
 import { useProfiles } from '@/components/ProfilesProvider';
 import { useBlacklist } from '@/components/BlacklistProvider';
-import { formatCount } from '@/lib/text';
 import { filterProfiles } from '@/lib/profile-filters';
 import { useI18n } from '@/lib/i18n';
 import { AudienceFilter, Profile } from '@/lib/types';
@@ -56,6 +57,25 @@ export default function Home() {
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
   const [reportProfile, setReportProfile] = useState<Profile | null>(null);
   const [blockProfile, setBlockProfile] = useState<Profile | null>(null);
+  // Лендинг: быстрая заявка открывает штатную форму задания с пресетом.
+  const [quickTaskOpen, setQuickTaskOpen] = useState(false);
+  const [quickPreset, setQuickPreset] = useState<QuickTaskPreset | null>(null);
+
+  const openQuickTask = (preset: QuickTaskPreset | null = null) => {
+    // Гость заявку оставить не может: сначала вход (как и создание
+    // анкеты через openAddProfile).
+    if (!account) {
+      setIsAccountModalOpen(true);
+      return;
+    }
+    setQuickPreset(preset);
+    setQuickTaskOpen(true);
+  };
+
+  const showCatalog = () => {
+    document.getElementById('catalog-list-anchor')
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   // Pagination
   const [pageSize, setPageSize] = useState<number>(PAGE_SIZE_DESKTOP);
@@ -267,41 +287,16 @@ export default function Home() {
           {pull.refreshing && (
             <p className="mb-3 text-center smk-text-label text-slate-500 dark:text-zinc-400">{t.loading}</p>
           )}
-        {/* Compact, clean Hero Banner */}
-        <section className="smk-sign relative mb-4 overflow-hidden rounded-2xl bg-hero-gradient p-4 text-white shadow-md sm:p-5" aria-labelledby="hero-title">
-          <div className="relative z-10 max-w-2xl">
-            <span className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-600/60 px-2.5 py-0.5 smk-text-label font-semibold text-emerald-100 backdrop-blur-md">
-              <Sparkles className="h-3 w-3 text-emerald-300" />
-              {t.heroBadge}
-            </span>
-            <h2 id="hero-title" className="mb-1 text-xl font-extrabold tracking-tight sm:text-2xl">
-              {t.heroTitle}
-            </h2>
-            <p className="mb-3 max-w-xl text-xs leading-relaxed text-emerald-100 sm:text-sm">
-              {t.heroSubtitle}
-            </p>
-            <div className="flex flex-wrap gap-1.5 text-xs">
-              <span className="inline-flex items-center gap-1 rounded-xl bg-white/10 px-2.5 py-1 font-medium backdrop-blur-sm">
-                <Users className="h-3 w-3 text-emerald-300" />
-                {formatCount(visibleProfiles.length, t.heroProfilesCount, t.heroProfilesCount, t.heroProfilesCount)}
-              </span>
-              <span className="inline-flex items-center gap-1 rounded-xl bg-white/10 px-2.5 py-1 font-medium backdrop-blur-sm">
-                <Award className="h-3 w-3 text-emerald-300" />
-                {t.heroRatingDocs}
-              </span>
-              <Link
-                href="/map"
-                className="inline-flex items-center gap-1 rounded-xl bg-emerald-500 px-3 py-1 font-bold text-white shadow-sm transition hover:bg-emerald-600 active:scale-95"
-              >
-                <MapPin className="h-3 w-3" />
-                {t.heroOpenMap}
-              </Link>
-            </div>
-          </div>
-        </section>
+        {/* Лендинг по макету владельца: hero, три карточки услуг,
+            быстрая заявка. Ниже — привычный каталог специалистов. */}
+        <div className="mb-4">
+          <CatalogLanding onOpenTask={openQuickTask} onShowCatalog={showCatalog} />
+        </div>
 
         <SpecialistLeaders onOpen={(id) => setActiveProfileId(id)} />
 
+        {/* Якорь «Найти рабочих»: прокрутка к списку специалистов. */}
+        <div id="catalog-list-anchor" className="scroll-mt-24">
         <SearchFilter
           searchQuery={searchQuery}
           setQuery={setSearchQuery}
@@ -386,6 +381,7 @@ export default function Home() {
             {t.catalogViewedAll.replace('{count}', String(filteredProfiles.length))}
           </p>
         )}
+        </div>{/* /catalog-list-anchor */}
       </main>
       </div>
       <ProfileModal
@@ -396,6 +392,15 @@ export default function Home() {
         onClose={() => setActiveProfileId(null)}
         onReview={handleAddReview}
       />
+      {/* Быстрая заявка лендинга: бесплатное задание с пресетом. */}
+      <CreateTaskModal
+        isOpen={quickTaskOpen}
+        isPaid={false}
+        preset={quickPreset}
+        onClose={() => setQuickTaskOpen(false)}
+        onCreated={() => setQuickTaskOpen(false)}
+      />
+
       <AccountModal
         isOpen={isAccountModalOpen}
         onClose={() => setIsAccountModalOpen(false)}

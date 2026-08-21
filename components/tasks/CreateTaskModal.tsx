@@ -30,6 +30,13 @@ import {
   type AppFilter, type Task, type TaskKind, type TaskPriority,
 } from '@/lib/types';
 
+/** Лёгкое предзаполнение нового задания (быстрая заявка с каталога). */
+export interface TaskPreset {
+  title?: string;
+  description?: string;
+  category?: string;
+}
+
 interface CreateTaskModalProps {
   isOpen: boolean;
   /** true — «Аренца Темщик» (за деньги), false — «ГIончалла» (безвозмездно). */
@@ -44,6 +51,12 @@ interface CreateTaskModalProps {
   editTask?: Task | null;
   /** Предзаполнить форму новым заданием (повторить / шаблон). */
   seedTask?: Task | null;
+  /**
+   * Точечное предзаполнение (быстрая заявка): титул/описание/категория.
+   * Слабее, чем seedTask — остальные поля получают умолчания, черновик
+   * не спрашиваем (заявка и есть черновик).
+   */
+  preset?: TaskPreset | null;
   onClose: () => void;
   onCreated: () => void;
 }
@@ -55,7 +68,7 @@ function toLocalInput(date: Date): string {
 }
 
 export default function CreateTaskModal({
-  isOpen, isPaid, editTask = null, seedTask = null, onClose, onCreated,
+  isOpen, isPaid, editTask = null, seedTask = null, preset = null, onClose, onCreated,
 }: CreateTaskModalProps) {
   const isEditing = Boolean(editTask);
   const source = editTask ?? seedTask;
@@ -213,9 +226,19 @@ export default function CreateTaskModal({
       return;
     }
 
+    // Быстрая заявка (пресет): поля из формы, остальное — умолчания.
+    // Черновик не предлагаем: содержимое заявки и есть начальный текст.
+    if (preset) {
+      setTitle(preset.title ?? '');
+      setDescription(preset.description ?? '');
+      setCategory(preset.category || 'other');
+      setDraftAsk(false);
+      return;
+    }
+
     const draft = loadTaskDraft(isPaid);
     setDraftAsk(Boolean(draft && !draftIsEmpty(draft)));
-  }, [isOpen, editTask, seedTask, isPaid]);
+  }, [isOpen, editTask, seedTask, preset, isPaid]);
 
   useEffect(() => {
     if (!isOpen || isEditing) return;
