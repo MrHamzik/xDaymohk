@@ -98,24 +98,43 @@ export default function ProfilesProvider({ children }: { children: React.ReactNo
     };
     void bootstrap();
 
+    /**
+     * Сборка событий реального времени в один запрос (п.7).
+     *
+     * Раньше каждое сообщение из канала вызывало refreshRemoteData —
+     * а это ЧЕТЫРЕ запроса к базе (анкеты, пользователи, жалобы,
+     * репутация) и перерисовка всех списков. События же приходят
+     * пачками: одна правка анкеты трогает и profiles, и user_profiles,
+     * админ снимает жалобу — прилетает ещё несколько. Сайт уходил в
+     * непрерывную перезагрузку данных и заметно тормозил.
+     *
+     * Ждём 400 мс тишины и делаем один общий запрос. Задержка
+     * незаметна для чужих правок (их и так ждали неопределённое
+     * время), а свои изменения интерфейс показывает сразу сам.
+     */
+    let refreshTimer: number | null = null;
+    const scheduleRefresh = () => {
+      if (cancelled) return;
+      if (refreshTimer !== null) window.clearTimeout(refreshTimer);
+      refreshTimer = window.setTimeout(() => {
+        refreshTimer = null;
+        if (!cancelled) void refreshRemoteData();
+      }, 400);
+    };
+
     let channel: ReturnType<NonNullable<typeof supabase>['channel']> | null = null;
     if (isSupabaseConfigured && supabase) {
       channel = supabase
         .channel('daymohk-live-data')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
-          void refreshRemoteData();
-        })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'user_profiles' }, () => {
-          void refreshRemoteData();
-        })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'complaints' }, () => {
-          void refreshRemoteData();
-        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, scheduleRefresh)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'user_profiles' }, scheduleRefresh)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'complaints' }, scheduleRefresh)
         .subscribe();
     }
 
     return () => {
       cancelled = true;
+      if (refreshTimer !== null) window.clearTimeout(refreshTimer);
       if (channel && supabase) {
         void supabase.removeChannel(channel);
       }

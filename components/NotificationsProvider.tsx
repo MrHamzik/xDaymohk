@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/components/AuthProvider';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { AppNotification, NotificationType } from '@/lib/types';
@@ -86,6 +86,22 @@ export default function NotificationsProvider({ children }: { children: React.Re
     };
   }, [account?.id]);
 
+  /**
+   * Настройки внутри подписки читаем через ref (п.7).
+   *
+   * Эффект ниже держал `settings` в зависимостях, а объект настроек
+   * создаётся заново при любой правке — от смены темы до движения
+   * ползунка цвета. Каждый раз канал реального времени закрывался и
+   * открывался заново: сокет к Supabase пересоздавался десятки раз
+   * подряд, и на это уходило заметное время.
+   *
+   * Настройки нужны здесь только в момент прихода уведомления, а не
+   * при подписке, поэтому берём их из ref — всегда свежие, а
+   * пересоздавать канал незачем.
+   */
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
+
   useEffect(() => {
     if (!account || !supabase || !isSupabaseConfigured) return;
 
@@ -104,8 +120,9 @@ export default function NotificationsProvider({ children }: { children: React.Re
         // Мелодия своя у каждой группы: по сигналу понятно, задание это
         // или жалоба, не доставая телефон.
         const group = notificationGroup(nextNotification.type);
-        const pref = prefFor(settings, group);
-        const muted = settings.quietHours && isQuietNow();
+        const current = settingsRef.current;
+        const pref = prefFor(current, group);
+        const muted = current.quietHours && isQuietNow();
         if (pref.sound && !muted) {
           playSound((pref.soundId ?? DEFAULT_GROUP_SOUND[group] ?? 'chime') as SoundId);
         }
@@ -119,7 +136,9 @@ export default function NotificationsProvider({ children }: { children: React.Re
     return () => {
       void supabase?.removeChannel(channel);
     };
-  }, [account?.id, settings]);
+    // settings нарочно НЕ в зависимостях — см. settingsRef выше.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [account?.id]);
 
   useEffect(() => {
     if (!account) return;

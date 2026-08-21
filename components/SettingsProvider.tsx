@@ -279,7 +279,18 @@ export default function SettingsProvider({ children }: { children: React.ReactNo
   }, [settings.radiusScale]);
 
   const persist = useCallback((next: UserSettings) => {
-    writeLocal(next, account?.id);
+    // Запись в localStorage — синхронный JSON.stringify всего объекта
+    // настроек, и делать его в кадре анимации незачем (п.7): при
+    // перетаскивании ползунка цвета этот кадр и так занят перерисовкой
+    // темы. Откладываем на «когда браузер освободится», с запасным
+    // таймаутом для Safari, где requestIdleCallback нет.
+    const saveLocal = () => writeLocal(next, account?.id);
+    if (typeof window.requestIdleCallback === 'function') {
+      window.requestIdleCallback(saveLocal, { timeout: 1000 });
+    } else {
+      window.setTimeout(saveLocal, 0);
+    }
+
     if (!account || !isSupabaseConfigured || !supabase) return;
 
     if (saveTimer.current) clearTimeout(saveTimer.current);
