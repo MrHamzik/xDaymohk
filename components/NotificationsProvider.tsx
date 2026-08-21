@@ -10,6 +10,9 @@ import { prefFor } from '@/lib/settings/defaults';
 import { DEFAULT_GROUP_SOUND, playSound, type SoundId } from '@/lib/notification-sounds';
 import { isQuietNow } from '@/lib/quiet-hours';
 
+/** Отправитель по умолчанию — то же значение, что в схеме и в серверных маршрутах. */
+const DEFAULT_NOTIFICATION_SENDER = 'Даймохк';
+
 interface NotificationsContextValue {
   notifications: AppNotification[];
   unreadCount: number;
@@ -164,7 +167,14 @@ export default function NotificationsProvider({ children }: { children: React.Re
         message: notification.message,
         title_ce: notification.titleCe ?? null,
         message_ce: notification.messageCe ?? null,
-        sender: notification.sender ?? null,
+        // Отправитель обязателен (п.13). Колонка notifications.sender
+        // объявлена not null с умолчанием «Даймохк», но умолчание
+        // срабатывает, только если колонку в запросе НЕ УПОМИНАТЬ.
+        // Здесь же явно уходил null — база отвечала 400 «null value in
+        // column "sender" violates not-null constraint», и в консоли
+        // появлялось «Не удалось сохранить уведомление». Подставляем то
+        // же значение, что и серверные маршруты.
+        sender: notification.sender || DEFAULT_NOTIFICATION_SENDER,
         is_read: false,
         created_at: notification.createdAt,
       });

@@ -80,7 +80,12 @@ const cspDirectives = [
   "base-uri 'self'",
   "form-action 'self'",
   "frame-ancestors 'self'",
-  'upgrade-insecure-requests',
+  // upgrade-insecure-requests здесь НЕТ намеренно (п.13). В политике
+  // Content-Security-Policy-Report-Only эта директива по спецификации
+  // игнорируется — «наблюдать» за автоподъёмом до HTTPS нечего, его
+  // либо делают, либо нет. Браузер честно писал об этом в консоль
+  // предупреждением. Директиву выносим в отдельный БОЕВОЙ заголовок
+  // ниже.
 ].join('; ');
 
 const securityHeaders = [
@@ -92,6 +97,15 @@ const securityHeaders = [
   // Report-Only: нарушения видны в консоли, но ничего не блокируется.
   // Боевой режим — переименовать ключ в 'Content-Security-Policy'.
   { key: 'Content-Security-Policy-Report-Only', value: cspDirectives },
+
+  // Единственная боевая директива: поднимать http-подресурсы до https.
+  // Она ничего не запрещает — списков источников в этой политике нет,
+  // поэтому включать её без «обкатки» в report-only безопасно, а в
+  // report-only она попросту не работает.
+  //
+  // Только в проде: по http://localhost разработка от такого подъёма
+  // сломалась бы.
+  ...(isDev ? [] : [{ key: 'Content-Security-Policy', value: 'upgrade-insecure-requests' }]),
 
   // HSTS: браузер запоминает, что на домен ходят только по HTTPS.
   // Заголовок действует лишь на HTTPS-ответах, локальной разработке по

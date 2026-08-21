@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Check, ChevronDown, Palette, Plus, Trash2 } from 'lucide-react';
 import { useSettings } from '@/components/SettingsProvider';
 import { PRESET_THEMES, normalizeColors } from '@/lib/settings/defaults';
@@ -162,6 +162,11 @@ export default function ThemeEditor() {
   // ничего не найти.
   const [openGroup, setOpenGroup] = useState<ThemeColorGroup | null>('global');
 
+  // Отложенный кадр выполняется уже после рендера, поэтому замыкание на
+  // settings в нём устарело бы и затирало предыдущие правки.
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
+
   const editing = settings.customThemes.find((theme) => theme.id === editingId) ?? null;
   const canAddMore = settings.customThemes.length < MAX_CUSTOM_THEMES;
 
@@ -201,10 +206,45 @@ export default function ThemeEditor() {
 
   const patchTheme = (id: string, patch: Partial<CustomTheme>) => {
     update({
-      customThemes: settings.customThemes.map((theme) =>
+      customThemes: settingsRef.current.customThemes.map((theme) =>
         theme.id === id ? { ...theme, ...patch } : theme),
     });
   };
+
+  /**
+   * Правка цвета «на лету» (п.13).
+   *
+   * <input type="color"> шлёт onChange НЕПРЕРЫВНО, пока палитру тащат
+   * мышью, — десятки событий в секунду. Каждое уходило в update(), а
+   * это полный прогон normalizeSettings по всем настройкам, повторное
+   * применение всех CSS-переменных темы и запись в localStorage.
+   * React не успевал за потоком и валился в «Maximum update depth
+   * exceeded» (трейс: onChange → patchTheme → update), а сайт на время
+   * перетаскивания подвисал.
+   *
+   * Сжимаем поток до одного обновления на кадр: промежуточные значения
+   * всё равно не видны глазу, а последнее выбранное не теряется —
+   * его записывает кадр, который сработает после отпускания мыши.
+   */
+  const frameRef = useRef<number | null>(null);
+  const pendingRef = useRef<(() => void) | null>(null);
+
+  const patchThemeLive = (run: () => void) => {
+    pendingRef.current = run;
+    if (frameRef.current !== null) return;
+    frameRef.current = requestAnimationFrame(() => {
+      frameRef.current = null;
+      const next = pendingRef.current;
+      pendingRef.current = null;
+      next?.();
+    });
+  };
+
+  // Незаписанный кадр после ухода со страницы обращался бы к update()
+  // размонтированного редактора.
+  useEffect(() => () => {
+    if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
+  }, []);
 
   const removeTheme = (id: string) => {
     const rest = settings.customThemes.filter((theme) => theme.id !== id);
@@ -417,12 +457,13 @@ export default function ThemeEditor() {
                 value={editing.colors.ui}
                 onChange={(e) => {
                   const ui = e.target.value;
-                  patchTheme(editing.id, {
+                  const { id, isDark, colors } = editing;
+                  patchThemeLive(() => patchTheme(id, {
                     colors: normalizeColors(
-                      { ...derivePalette(ui, editing.isDark), ui },
-                      editing.colors,
+                      { ...derivePalette(ui, isDark), ui },
+                      colors,
                     ),
-                  });
+                  }));
                 }}
                 aria-label={language === 'ce' ? MAIN_COLOR.ce : MAIN_COLOR.ru}
                 className="h-9 w-14 shrink-0 cursor-pointer rounded-lg border-0 bg-transparent p-0"
@@ -523,9 +564,10 @@ export default function ThemeEditor() {
                                 }),
                               );
                             }
-                            patchTheme(editing.id, {
-                              colors: normalizeColors(next, editing.colors),
-                            });
+                            const { id, colors } = editing;
+                            patchThemeLive(() => patchTheme(id, {
+                              colors: normalizeColors(next, colors),
+                            }));
                           }}
                           aria-label={language === 'ce' ? COLOR_LABELS[key]?.ce : COLOR_LABELS[key]?.ru}
                           className="h-6 w-10 shrink-0 cursor-pointer rounded border-0 bg-transparent p-0"
