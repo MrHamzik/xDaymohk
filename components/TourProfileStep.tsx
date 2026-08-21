@@ -236,10 +236,6 @@ export default function TourProfileStep({
     setAddressCoords({ lat: suggestion.lat, lng: suggestion.lng });
   };
 
-  const mapHref = addressCoords
-    ? `geo:${addressCoords.lat},${addressCoords.lng}?q=${addressCoords.lat},${addressCoords.lng}`
-    : '/map';
-
   return (
     <form onSubmit={submit} className="mt-4">
       {/* p-1.5: у полей с focus:ring обводка на 2px шире самого поля,

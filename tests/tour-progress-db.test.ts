@@ -66,7 +66,7 @@ describe('FirstTour — единый гид', () => {
 
   it('каталог/меню: нечего листать — задание засчитывается', () => {
     expect(firstTour).toMatch(/scrollHeight <= scroller\.clientHeight \+ 40/);
-    expect(firstTour).toMatch(/scrollHeight <= window\.innerHeight \+ 80/);
+    expect(firstTour).toMatch(/const scrollable = document\.body\.scrollHeight - window\.innerHeight;/);
   });
 });
 
@@ -106,7 +106,7 @@ describe('умолчания: автоактивация и звук включ�
 
 describe('сервис-воркер не кэширует dev-сборки', () => {
   it('версия кэша поднята (старые кэши удалятся при активации)', () => {
-    expect(sw).toContain("daymohk-offline-v3");
+    expect(sw).toContain("daymohk-offline-v4");
   });
 });
 
@@ -391,5 +391,23 @@ describe('финальные правки 22.08 (шесть пунктов)', ()
     expect(persist).toContain('hide_whatsapp: profile.hideWhatsapp ?? false');
     expect(persist).toContain('nickname: profile.nickname ?? null');
     expect(persist).toContain('console.warn');
+  });
+});
+
+describe('правки после выкатки на Vercel (22.08)', () => {
+  it('2: боковое меню ПК по умолчанию развёрнуто', () => {
+    const sidebar = readFileSync(join(root, 'components/AppSidebar.tsx'), 'utf8');
+    expect(sidebar).toContain("useState(true)");
+    expect(sidebar).toContain("localStorage.getItem(RAIL_KEY) !== '0'");
+  });
+
+  it('3: порог скролла достижим на любом экране (2К и выше)', () => {
+    expect(firstTour).toContain('const effectiveMinScroll = Math.min(400, Math.max(60, Math.round(scrollable * 0.5)));');
+    expect(firstTour).toContain('effectiveMinScroll)) return;');
+  });
+
+  it('1: кэш сервис-воркера поднят (v4) для новой выкатки', () => {
+    const sw = readFileSync(join(root, 'public/sw.js'), 'utf8');
+    expect(sw).toContain('daymohk-offline-v4');
   });
 });

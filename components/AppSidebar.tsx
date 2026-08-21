@@ -17,15 +17,18 @@ const RAIL_KEY = 'daymohk-rail-open';
 export default function AppSidebar({ isAdmin = false }: { isAdmin?: boolean }) {
   const { settings } = useSettings();
   const { t } = useI18n();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
 
   useEffect(() => {
     if (settings.lightMode) {
       setOpen(true);
       return;
     }
+    // По умолчанию РАЗВЁРНУТА (правка от 22.08, п.2): развёрнутое меню
+    // сразу показывает подписи — человеку не надо гадать по иконкам.
+    // Своё решение человек всё равно хранит явно ('0' = свернуть).
     try {
-      setOpen(window.localStorage.getItem(RAIL_KEY) === '1');
+      setOpen(window.localStorage.getItem(RAIL_KEY) !== '0');
     } catch { /* private */ }
   }, [settings.lightMode]);
 

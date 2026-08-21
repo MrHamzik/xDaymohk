@@ -16,7 +16,7 @@
  *  · остальное того же origin — network-first с откатом в кэш, чтобы
  *    сайт открывался без сети.
  */
-const CACHE = 'daymohk-offline-v3';
+const CACHE = 'daymohk-offline-v4';
 
 /** Файлы, которые нужны, чтобы показать хоть что-то без сети. */
 const PRECACHE = ['/', '/catalog', '/icon.png'];

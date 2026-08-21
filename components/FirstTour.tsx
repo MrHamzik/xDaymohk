@@ -775,9 +775,15 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
     // нельзя, иначе гид зависал бы навсегда. Даём посмотреть и
     // возвращаем карточку через те же 2 секунды.
     let shortPageTimer = 0;
-    if (document.body.scrollHeight <= window.innerHeight + 80) {
+    const scrollable = document.body.scrollHeight - window.innerHeight;
+    if (scrollable <= 80) {
       shortPageTimer = window.setTimeout(() => setDone(true), 2000);
     }
+    // Порог «настоящего» скролла не должен превышать того, что вообще
+    // можно проскролить (баг от 22.08, п.3: на мониторе 2К каталог
+    // бывает выше вьюпорта меньше чем на 400px — недостижимый MIN_SCROLL
+    // оставлял гид зависшим, карточка не возвращалась).
+    const effectiveMinScroll = Math.min(400, Math.max(60, Math.round(scrollable * 0.5)));
 
     // Сколько нужно проехать, чтобы «докрутил до конца» засчиталось.
     //
@@ -796,7 +802,7 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
       const atBottom =
         window.innerHeight + scrolled >= document.body.scrollHeight - 80;
       // Конец страницы засчитываем, только если человек и правда ехал.
-      if (scrolled < NEEDED && !(atBottom && scrolled >= MIN_SCROLL)) return;
+      if (scrolled < NEEDED && !(atBottom && scrolled >= effectiveMinScroll)) return;
 
       // Пауза перед возвращением карточки: человек только что доскроллил
       // и ещё смотрит на список. Выпрыгивать ему в лицо сразу — грубо.

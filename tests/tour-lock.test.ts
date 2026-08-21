@@ -106,8 +106,10 @@ describe('старые обходные решения не вернулись',
   it('шаг каталога не засчитывается без настоящей прокрутки', () => {
     // Пустой каталог короче экрана, и условие «мы внизу» срабатывало
     // при scrollY = 0: модалка возвращалась сразу после нажатия.
-    expect(firstTour).toContain('MIN_SCROLL');
-    expect(firstTour).toMatch(/atBottom && scrolled >= MIN_SCROLL/);
+    // Порог при этом ДОСТИЖИМ на любом экране (правка 2К от 22.08):
+    // не больше половины того, что вообще можно проскролить.
+    expect(firstTour).toContain('effectiveMinScroll');
+    expect(firstTour).toMatch(/atBottom && scrolled >= effectiveMinScroll/);
   });
 
   it('гид переживает перезагрузку страницы', () => {
