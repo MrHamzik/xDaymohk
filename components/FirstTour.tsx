@@ -7,6 +7,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { useSettings } from '@/components/SettingsProvider';
 import { useI18n } from '@/lib/i18n';
 import { sendTourCommand, setTourActive, useTourEvents, type TourEvent } from '@/lib/tour';
+import { useTourLock } from '@/lib/tour-lock';
 import TourSpotlight from '@/components/TourSpotlight';
 import QuickWidgetsEditor from '@/components/settings/QuickWidgetsEditor';
 import ThemePickerButton from '@/components/settings/ThemePickerButton';
@@ -81,6 +82,9 @@ interface FirstTourProps {
  *    прямо в шаге стоят рабочие переключатели: не нужно запоминать
  *    дорогу в настройки и возвращаться туда потом.
  */
+/** Номер текущего шага гида — переживает перезагрузку вкладки. */
+const TOUR_STEP_KEY = 'daymohk-tour-step';
+
 export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
   const { t, language, setLanguage } = useI18n();
   const { account } = useAuth();
@@ -95,7 +99,31 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
       },
     });
   };
-  const [index, setIndex] = useState(0);
+  /**
+   * Номер шага переживает перезагрузку страницы (п.17).
+   *
+   * Шаг с каталогом уводит человека на /catalog — это настоящий переход,
+   * а не модалка. Если в этот момент обновить страницу (или просто
+   * дождаться, пока браузер восстановит вкладку), гид начинался бы
+   * заново, а чаще просто исчезал до следующего входа.
+   *
+   * Держим прогресс в sessionStorage: он живёт, пока открыта вкладка, и
+   * не тянется в следующие сеансы — законченный гид помечается
+   * настройкой tourDone, у неё своя долгая память.
+   */
+  const [index, setIndex] = useState(() => {
+    if (typeof window === 'undefined') return 0;
+    try {
+      const saved = Number(window.sessionStorage.getItem(TOUR_STEP_KEY));
+      return Number.isInteger(saved) && saved >= 0 ? saved : 0;
+    } catch {
+      return 0;
+    }
+  });
+
+  useEffect(() => {
+    try { window.sessionStorage.setItem(TOUR_STEP_KEY, String(index)); } catch { /* private mode */ }
+  }, [index]);
   /**
    * Шаг-задание выполнен? Пока false — карточка спрятана и человек
    * работает с настоящим интерфейсом. Сбрасывается при смене шага.
@@ -154,7 +182,28 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
   /** Корень карточки шага — нужен для сброса прокрутки (п.5). */
   const cardRef = useRef<HTMLDivElement | null>(null);
 
-  const steps = [
+  /**
+   * Шаг гида.
+   *
+   * allow/scroll описывают, что именно оживает на этом шаге. Не указаны —
+   * значит заблокировано всё: гид сам по себе не разрешает ничего
+   * (п.17/п.18), возможности открываются по одной там, где нужны.
+   */
+  interface TourStep {
+    title: string;
+    items: string[];
+    marks: string[];
+    panel: React.ReactNode;
+    awaits: 'catalog-scroll' | 'menu-scroll' | 'plus' | null;
+    hint: string;
+    skippable: boolean;
+    /** Селекторы островков, остающихся рабочими. */
+    allow?: string[];
+    /** Разрешена ли прокрутка страницы и списков. */
+    scroll?: boolean;
+  }
+
+  const steps: TourStep[] = [
     {
       title: t.tour1Title,
       items: [t.tour1a, t.tour1b, t.tour1c],
@@ -206,6 +255,11 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
       awaits: 'catalog-scroll' as const,
       hint: t.tourWaitCatalog,
       skippable: true,
+      // Что оживает на этом шаге (п.17): подсвеченные кнопки перехода,
+      // сами карточки анкет и уже открытая анкета. Всё прочее —
+      // фильтры, поиск, нижняя панель, шапка — заблокировано.
+      allow: ['[data-tour="catalog"]', '[data-tour="map"]', '[data-tour-card]', '[role="dialog"]'],
+      scroll: true,
     },
     {
       title: t.tour3Title,
@@ -215,6 +269,11 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
       awaits: 'menu-scroll' as const,
       hint: t.tourWaitMenu,
       skippable: true,
+      // Шаг 4 (п.18): работает ТОЛЬКО кнопка, открывающая меню, и
+      // прокрутка внутри него. Ни иконки разделов, ни крестик, ни
+      // шторки не нажимаются — человек просто смотрит список.
+      allow: ['[data-tour="menu"]', '[data-tour="rail-menu"]'],
+      scroll: true,
     },
     {
       // Шаг «Виджет»: если человек оставил боковое меню открытым на
@@ -356,6 +415,9 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
       awaits: 'plus' as const,
       hint: t.tourWaitPlus,
       skippable: true,
+      // Открыть меню плюса и закрыть его крестиком — больше ничего.
+      allow: ['[data-tour="plus"]', '[data-tour="plus-desktop"]', '[data-tour-plus]'],
+      scroll: false,
     },
     {
       // Реквизиты вынесены из шага «Задания»: там это был пятый пункт,
@@ -400,6 +462,25 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
    * ровно та жалоба, с которой начинались пункты 2 и 3.
    */
   const screenFree = waiting && (overlayOpen || catalogOpen);
+
+  /**
+   * Блокировка интерфейса на всё время гида (п.17/п.18).
+   *
+   * Раньше защита жила в слоях-ловушках самой подсветки, и, как только
+   * подсветку убирали (открылся каталог или меню), интерфейс оживал
+   * целиком: на шаге 3 можно было нажимать любые кнопки, на шаге 4 —
+   * иконки, крестик и шторки. Теперь запрет висит на document и не
+   * зависит ни от подсветки, ни от z-index.
+   *
+   * Шаг перечисляет свои islands в allow/scroll; пока человек читает
+   * карточку (не нажал «Дальше»), не работает вообще ничего, кроме
+   * самого окна гида.
+   */
+  useTourLock({
+    active: true,
+    scroll: tasking ? Boolean(step.scroll) : false,
+    allow: tasking ? step.allow : undefined,
+  });
 
   useEffect(() => {
     setDone(false);
@@ -483,6 +564,16 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
     // Теперь просим либо полтора экрана, либо докрутить до конца
     // страницы (если карточек мало и крутить особо нечего).
     const NEEDED = Math.round(window.innerHeight * 1.5);
+
+    // Сколько нужно проехать, чтобы «докрутил до конца» засчиталось.
+    //
+    // Без этого порога шаг заканчивался сам собой (п.17): карточки
+    // каталога подгружаются с сервера, и первые секунды страница пустая
+    // и короткая — условие «мы в самом низу» выполнялось при scrollY = 0.
+    // Гид считал список пролистанным и возвращал модалку сразу после
+    // нажатия «Каталог», не дав ничего посмотреть.
+    const MIN_SCROLL = 400;
+
     let timer = 0;
 
     const onScroll = () => {
@@ -490,7 +581,8 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
       const scrolled = window.scrollY;
       const atBottom =
         window.innerHeight + scrolled >= document.body.scrollHeight - 80;
-      if (scrolled < NEEDED && !atBottom) return;
+      // Конец страницы засчитываем, только если человек и правда ехал.
+      if (scrolled < NEEDED && !(atBottom && scrolled >= MIN_SCROLL)) return;
 
       // Пауза перед возвращением карточки: человек только что доскроллил
       // и ещё смотрит на список. Выпрыгивать ему в лицо сразу — грубо.
@@ -498,7 +590,8 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
     };
 
     window.addEventListener('scroll', onScroll, { passive: true });
-    onScroll(); // страница может быть короткой и уже «в конце»
+    // Сразу onScroll не зовём: на свежеоткрытом каталоге он сработал бы
+    // до появления карточек и закрыл шаг мгновенно. Ждём живой прокрутки.
     return () => {
       window.removeEventListener('scroll', onScroll);
       if (timer) window.clearTimeout(timer);
@@ -526,6 +619,9 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
     update({ tourDone: true });
     try {
       if (account?.id) window.localStorage.setItem(`daymohk-tour-${account.id}`, '1');
+      // Гид пройден — прогресс шага больше не нужен, иначе следующий
+      // запуск в этой же вкладке открылся бы на последнем шаге.
+      window.sessionStorage.removeItem(TOUR_STEP_KEY);
     } catch { /* private mode */ }
     onDone();
   };
@@ -574,10 +670,7 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
       {/* Экран освобождён (п.2/3): каталог открыт или поверх страницы
           висит меню — гид молча ждёт и ничем не мешает смотреть. */}
       {!screenFree && (
-        <TourSpotlight
-          marks={overlayOpen ? [] : step.marks}
-          interactive={overlayOpen || Boolean(step.awaits)}
-        />
+        <TourSpotlight marks={overlayOpen ? [] : step.marks} />
       )}
 
       {/* Шаг-задание: карточки нет, внизу только строка-подсказка. Иначе
@@ -589,7 +682,7 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
         // человек уже сделал то, о чём она просила, и висеть поверх
         // открытого окна ей незачем.
         typeof document !== 'undefined' && !screenFree && createPortal(
-          <div className="pointer-events-none fixed inset-x-0 bottom-24 z-[96] flex justify-center px-4">
+          <div data-tour-ui className="pointer-events-none fixed inset-x-0 bottom-24 z-[96] flex justify-center px-4">
             <p className="smk-sheet pointer-events-auto max-w-sm rounded-2xl px-4 py-3 text-center text-sm font-bold text-slate-800 shadow-2xl dark:text-zinc-100">
               {step.hint}
             </p>

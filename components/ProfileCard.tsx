@@ -99,6 +99,9 @@ export default function ProfileCard({
       role="button"
       tabIndex={0}
       aria-label={`${t.open} ${displayName(profile)}`}
+      // Метка для гида: на шаге «Каталог» карточки остаются рабочими,
+      // чтобы можно было открыть анкету, пока остальное заблокировано.
+      data-tour-card
       className={`smk-lux smk-rays smk-enter smk-cat smk-cat--${profile.professionCategory || (profile.isSpecialist ? 'other' : 'resident')} group flex h-full cursor-pointer flex-col overflow-hidden text-slate-900 dark:text-white`}
     >
       {/* ── Шапка: аватар · имя · рейтинг ─────────────────────────

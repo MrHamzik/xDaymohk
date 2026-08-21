@@ -208,6 +208,9 @@ export default function CreateActionModal({
 
   return (
     <div
+      // Метка для гида: на шаге «плюс» это окно должно оставаться
+      // рабочим (его просят открыть и закрыть крестиком).
+      data-tour-plus
       className={`fixed inset-0 z-[90] bg-zinc-950/55 transition-all duration-[260ms] ease-out ${
         isMounted ? 'opacity-100 backdrop-blur-md' : 'opacity-0 backdrop-blur-0'
       }`}

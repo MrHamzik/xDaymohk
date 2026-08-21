@@ -39,40 +39,8 @@ function findTarget(marks: string[]): HTMLElement | null {
   return null;
 }
 
-export default function TourSpotlight({
-  marks,
-  interactive = false,
-}: {
-  marks: string[];
-  /**
-   * true — разрешить нажать подсвеченную кнопку и прокрутить страницу.
-   * Нужно шагам, где человек сам открывает «Каталог» или «Меню».
-   * По умолчанию интерфейс под подсветкой заблокирован.
-   */
-  interactive?: boolean;
-}) {
+export default function TourSpotlight({ marks }: { marks: string[] }) {
   const [box, setBox] = useState<Box | null>(null);
-
-  // Блокировка страницы на время гида.
-  //
-  // Затемнение — это просто тень, сквозь неё прекрасно нажимались
-  // кнопки и крутилась страница: человек уезжал от подсвеченного
-  // элемента и терял нить. Прокрутку глушим на <html>, а клики
-  // перехватывает отдельный слой-ловушка ниже.
-  useEffect(() => {
-    if (interactive) return;
-    const root = document.documentElement;
-    // Восстанавливаем ПУСТУЮ строку, а не снятое значение.
-    //
-    // Раньше сохранялось root.style.overflow на момент запуска эффекта.
-    // Но interactive переключается на каждом шаге: эффект перезапускался,
-    // считывал уже выставленный 'hidden' и потом «восстанавливал» именно
-    // его. Прокрутка страницы оставалась заблокированной навсегда — при
-    // старте гида после авторизации это выглядело как белый застывший
-    // экран, на котором ничего не происходит.
-    root.style.overflow = 'hidden';
-    return () => { root.style.overflow = ''; };
-  }, [interactive]);
 
   useEffect(() => {
     if (marks.length === 0) {
@@ -137,38 +105,22 @@ export default function TourSpotlight({
 
   if (typeof document === 'undefined') return null;
 
-  // Ловушка нажатий.
+  // Ловушек нажатий здесь больше нет.
   //
-  // Затемнение — это просто тень, сквозь неё прекрасно нажимались кнопки.
-  // Поэтому поверх интерфейса кладём прозрачный слой, который съедает
-  // нажатия и прокрутку колесом или пальцем.
+  // Раньше поверх интерфейса лежали прозрачные слои, съедавшие клики, и
+  // на интерактивных шагах в них прорезалась «дырка» из четырёх полос.
+  // Слой работал только до тех пор, пока над ним не оказывалось окно с
+  // большим z-index (выезд меню, шторка, анкета), а на шаге с каталогом
+  // его снимали целиком — оттуда и жалобы п.17/п.18.
   //
-  // В интерактивном режиме нужен слой С ДЫРКОЙ: человек должен нажать
-  // «Каталог» и прокрутить список, но не разбредаться по остальному
-  // интерфейсу. Дырку делаем четырьмя полосами вокруг подсвеченного
-  // места — над ним, под ним, слева и справа. Так до самой кнопки
-  // нажатие доходит, а мимо неё — нет.
-  const swallow = {
-    onClick: (event: React.MouseEvent) => event.stopPropagation(),
-    onWheel: (event: React.WheelEvent) => { if (!interactive) event.preventDefault(); },
-    onTouchMove: (event: React.TouchEvent) => { if (!interactive) event.preventDefault(); },
-  };
-
-  const blocker = !interactive ? (
-    <div className="fixed inset-0 z-[93]" {...swallow} aria-hidden />
-  ) : box ? (
-    <div className="pointer-events-none fixed inset-0 z-[93]" aria-hidden>
-      <div className="pointer-events-auto absolute inset-x-0 top-0" style={{ height: Math.max(box.top, 0) }} {...swallow} />
-      <div className="pointer-events-auto absolute inset-x-0 bottom-0" style={{ top: box.top + box.height }} {...swallow} />
-      <div className="pointer-events-auto absolute left-0" style={{ top: box.top, height: box.height, width: Math.max(box.left, 0) }} {...swallow} />
-      <div className="pointer-events-auto absolute right-0" style={{ top: box.top, height: box.height, left: box.left + box.width }} {...swallow} />
-    </div>
-  ) : null;
+  // Теперь запретом занимается useTourLock: один обработчик на document
+  // в фазе перехвата, которому z-index безразличен. Здесь остаётся
+  // только картинка — затемнение, размытие и вырез.
 
   // Размытие фона (п.35): четыре полосы ВОКРУГ выреза. Повесить
   // backdrop-filter на слой с дыркой нельзя — размылась бы и сама
   // подсвеченная кнопка. Полосы не перехватывают события: за нажатия
-  // отвечает blocker выше.
+  // отвечает useTourLock.
   const blur = box ? (
     <div className="pointer-events-none fixed inset-0 z-[92]" aria-hidden>
       <div className="smk-tour-blur absolute inset-x-0 top-0" style={{ height: Math.max(box.top, 0) }} />
@@ -188,7 +140,6 @@ export default function TourSpotlight({
         {/* Шаг без подсветки всё равно должен затемнять фон, иначе
             карточка висит на светлом интерфейсе и читается плохо. */}
         <div className="pointer-events-none fixed inset-0 z-[94] bg-zinc-950/70" aria-hidden />
-        {blocker}
       </>,
       document.body,
     );
@@ -201,7 +152,6 @@ export default function TourSpotlight({
   return createPortal(
     <>
       {blur}
-      {blocker}
       <div className="smk-tour-spotlight pointer-events-none fixed inset-0 z-[94]" aria-hidden>
         {/* Затемнение сделано огромной тенью вокруг выреза: так «дырка»
             получается одним элементом, без четырёх полос по краям и без

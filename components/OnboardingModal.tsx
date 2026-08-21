@@ -227,6 +227,32 @@ export default function OnboardingModal() {
     return () => window.removeEventListener('daymohk-open-consent', handler);
   }, [account]);
 
+  /**
+   * Возобновление гида после перезагрузки страницы (п.17).
+   *
+   * Шаг с каталогом уводит на /catalog по-настоящему, и любое
+   * обновление вкладки в этот момент раньше просто выключало гид: окно
+   * открывалось только по «свежему входу» (AUTHING_KEY), а он к тому
+   * времени уже израсходован. Человек оставался без обучения до
+   * следующего перезахода — ровно эта жалоба и была.
+   *
+   * Признак незаконченного гида — сохранённый номер шага в
+   * sessionStorage: он живёт, пока открыта вкладка. Есть номер, а гид
+   * не пройден — продолжаем с того же места.
+   */
+  useEffect(() => {
+    if (!account || isLoading) return;
+    if (settings.tourDone) return;
+    let resuming = false;
+    try {
+      resuming = window.sessionStorage.getItem('daymohk-tour-step') !== null;
+      if (window.localStorage.getItem(`daymohk-tour-${account.id}`) === '1') resuming = false;
+    } catch { /* private mode */ }
+    if (!resuming) return;
+    setStep('tour');
+    setOpen(true);
+  }, [account, isLoading, settings.tourDone]);
+
   // После появления аккаунта (вход через Google): окно профиля открываем
   // ТОЛЬКО если пользователь только что вошёл (authingRef / sessionStorage),
   // иначе — не перебиваем welcome (п.2: профиль не должен появляться раньше
@@ -453,6 +479,10 @@ export default function OnboardingModal() {
     // обрез на низких экранах. Внутренняя прокрутка карточки ниже
     // (max-h + overflow) держит длинные шаги в пределах экрана.
     <div
+      // data-tour-ui — метка для useTourLock: всё внутри окна гида
+      // остаётся рабочим, пока остальной интерфейс заблокирован. Без
+      // неё общий запрет съел бы и кнопку «Дальше».
+      data-tour-ui
       className={`fixed inset-0 z-[95] flex items-center justify-center p-4 ${
         step === 'tour'
           ? 'pointer-events-none'
