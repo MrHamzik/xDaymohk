@@ -15,6 +15,7 @@ import {
 } from '@/lib/articles';
 
 const SECTION_LABELS: Record<ArticleSection, string> = {
+  quran: 'Священный Коран',
   sira: 'Сира Пророка',
   nohchalla: 'Нохчалла',
   guide: 'Руководство',
@@ -257,6 +258,7 @@ export default function AdminArticlesSection() {
                     {a.titleRu || a.titleCe || L('Без названия', 'ЦIе йоцуш')}
                   </span>
                   <span className="smk-meta block smk-text-label">
+                    {a.chapterNumber ? `${a.chapterNumber} · ` : ''}
                     {a.isPublished ? L('Опубликована', 'Зорбане яьлла') : L('Черновик', 'Черновик')}
                     {dirty ? L(' · есть несохранённые правки', ' · дIаязйина йоцу хийцамаш') : ''}
                   </span>
@@ -302,6 +304,16 @@ export default function AdminArticlesSection() {
                     </button>
                   </div>
 
+                  {/* Номер главы — единое поле для всех разделов (п.2 ТЗ
+                      Этапа 2): для Корана это номер суры, при желании
+                      «сура:аят»; у остальных разделов необязательная
+                      метка. Язык не важен — один ввод на главу. */}
+                  <input
+                    value={value(a, 'chapterNumber')}
+                    onChange={(e) => edit(a.id, { chapterNumber: e.target.value })}
+                    placeholder={L('Номер главы (например: 2 или 2:255)', 'Дийцаран лоьмар (масала: 2 я 2:255)')}
+                    className={field}
+                  />
                   <input
                     value={lang === 'ru' ? value(a, 'titleRu') : value(a, 'titleCe')}
                     onChange={(e) => edit(a.id, lang === 'ru' ? { titleRu: e.target.value } : { titleCe: e.target.value })}

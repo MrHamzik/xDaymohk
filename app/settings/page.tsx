@@ -368,6 +368,15 @@ export default function SettingsPage() {
                         label={t.settingsQuietHours}
                       />
                     </SettingRow>
+                    {/* п.9 ТЗ Этапа 2: синхронизирован с чекбоксом из
+                        одноразовой подсказки о сохранении прогресса. */}
+                    <SettingRow title={t.settingsReadingAutosave} hint={t.settingsReadingAutosaveHint}>
+                      <Toggle
+                        checked={settings.readingAutosave}
+                        onChange={(next) => update({ readingAutosave: next })}
+                        label={t.settingsReadingAutosave}
+                      />
+                    </SettingRow>
                     <SettingRow title={t.settingsVibrate} hint={t.settingsVibrateHint}>
                       <Toggle
                         checked={settings.vibrate}

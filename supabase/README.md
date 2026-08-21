@@ -38,6 +38,8 @@ auth.users                        (Supabase managed)
                  │        └── public.profile_question_comments (обсуждение)
                  └── public.complaints              (1:N, жалобы)
 
+public.articles                  (главы чтения: Коран, Нохчалла, Руководство, Сира)
+public.user_reading_progress     (место остановки чтения, 1 строка на раздел)
 public.notifications             (уведомления)
 public.house_addresses           (адресная книга, наполняется админом)
 public.donations                 (реестр пожертвований CloudTips)
@@ -50,6 +52,9 @@ storage.objects / 'profile-media' (аватары + документы)
 | Таблица | SELECT | INSERT | UPDATE | DELETE |
 |---|---|---|---|---|
 | `user_profiles` | self, admin | self | self, admin | — |
+| `user_settings` | self, admin | self | self | — |
+| `user_reading_progress` | self | self | self | self |
+| `articles` | public (опубликованные), admin | admin | admin | admin |
 | `profiles` | public (не скрытые/бан), owner, admin | owner | owner, admin | owner (не личная), admin |
 | `certificates` | public | owner, admin | owner, admin | owner, admin |
 | `reviews` | public | author (через API) | — | author, admin, владелец анкеты |

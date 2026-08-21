@@ -1,68 +1,31 @@
 'use client';
 
 /**
- * /quran — «Священный Коран»: справочник сур.
+ * /quran — «Священный Коран».
  *
- * Раньше страница отдавала заглушку ComingSoonPage, хотя готовый список
- * сур уже лежал в components/QuranModal.tsx и никуда не был подключён.
- * Теперь и страница, и модальное окно рисуют один компонент
- * QuranSurahList — расходиться им больше негде.
- *
- * ВАЖНО: в lib/islamic.ts сейчас 9 сур из 114 — это выборка самых
- * читаемых, а не полный мусхаф. Текстов аятов и переводов в проекте нет,
- * поэтому раздел честно назван справочником, без обещания полного
- * текста.
+ * Этап 2 перевёл Коран на тот же механизм, что и остальные страницы
+ * чтения: главы живут в таблице articles (раздел 'quran'), пишутся из
+ * админки и умеют всё то же самое — поиск, сохранённое место чтения,
+ * режим исследования. Девять сур прежнего статичного справочника
+ * перенесены стартовыми главами миграцией 71 (номер суры — в поле
+ * «номер главы», метаданные — в подводку). Тексты аятов добавляются
+ * через редактор админки.
  */
 
-import Link from 'next/link';
-import { ArrowLeft, BookOpen } from 'lucide-react';
-import { useI18n } from '@/lib/i18n';
-import QuranSurahList from '@/components/QuranSurahList';
+import { BookOpen } from 'lucide-react';
+import ReadingPage from '@/components/reading/ReadingPage';
 
 export default function QuranPage() {
-  const { language } = useI18n();
-
   return (
-    <main className="flex-1 min-w-0 max-w-3xl p-4 pt-20 pb-24 sm:p-6 sm:pt-24">
-      {/* Выход из раздела (п.19).
-          На этой странице нет ни шапки, ни нижней панели, ни боковой
-          колонки — попав сюда, человек оказывался в тупике и мог уйти
-          только кнопкой «назад» в браузере. Ссылка сделана точно такой
-          же, как в «Сире» и «Вайнахах» (ReadingPage), чтобы выход
-          выглядел одинаково во всех читальных разделах. */}
-      <div className="mb-5">
-        <Link
-          href="/"
-          className="smk-solid inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          {language === 'ce' ? 'ЦIа' : 'Назад'}
-        </Link>
-      </div>
-
-      <header className="mb-4 flex items-center gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-sm">
-          <BookOpen className="h-5 w-5" />
-        </div>
-        <div className="min-w-0">
-          <h1 className="text-lg font-bold text-slate-900 dark:text-white sm:text-xl">
-            {language === 'ce' ? 'Сийлахь Къуръан' : 'Священный Коран'}
-          </h1>
-          <p className="text-xs text-slate-600 dark:text-zinc-400">
-            {language === 'ce' ? 'Сурашан справочник' : 'Справочник сур'}
-          </p>
-        </div>
-      </header>
-
-      <div className="smk-lux overflow-hidden rounded-3xl border border-slate-100 shadow-sm dark:border-zinc-800">
-        <QuranSurahList />
-      </div>
-
-      <p className="mt-3 text-center text-xs text-slate-500 dark:text-zinc-400">
-        {language === 'ce'
-          ? 'Хlинца дуькъал сураш ю. Аятийн текст а, гочдарш а тlаьхьа хир ду.'
-          : 'Пока доступны основные суры. Тексты аятов и переводы появятся позже.'}
-      </p>
-    </main>
+    <ReadingPage
+      section="quran"
+      icon={BookOpen}
+      title="Священный Коран"
+      titleCe="Сийлахь Къуръан"
+      subtitle="Суры и аяты"
+      subtitleCe="Сураш а, аяташ а"
+      emptyHint="Тексты сур готовятся к публикации."
+      emptyHintCe="Сурийн йозанаш зорбане кечду."
+    />
   );
 }

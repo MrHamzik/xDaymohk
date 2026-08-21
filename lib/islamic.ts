@@ -41,16 +41,6 @@ export interface IslamicSpecialDay {
   descriptionCe: string;
 }
 
-export interface QuranSurahSummary {
-  number: number;
-  nameArabic: string;
-  nameTranslit: string;
-  nameCe: string;
-  nameRu: string;
-  versesCount: number;
-  place: 'Мекка' | 'Медина';
-}
-
 // Координаты по умолчанию: Даймохк / Чеченская Республика
 export const DEFAULT_LAT = 43.288024;
 export const DEFAULT_LNG = 45.298989;
@@ -139,18 +129,6 @@ export const ISLAMIC_SPECIAL_DAYS: IslamicSpecialDay[] = [
     descriptionRu: 'Благословенный день рождения Пророка Мухаммада (мир ему и благословение Аллаха).',
     descriptionCe: 'Вай Пайхамар Мухьаммад (саллаллахIу Iалайхи ва саллам) дуьненчу ваьлла сийлахь де.',
   },
-];
-
-export const QURAN_SURAHS: QuranSurahSummary[] = [
-  { number: 1, nameArabic: 'الفاتحة', nameTranslit: 'Аль-Фатиха', nameCe: 'Аль-Фатихьа (ДIадолор)', nameRu: 'Открывающая Книгу', versesCount: 7, place: 'Мекка' },
-  { number: 2, nameArabic: 'البقرة', nameTranslit: 'Аль-Бакара', nameCe: 'Аль-Бакъара (Етт)', nameRu: 'Корова', versesCount: 286, place: 'Медина' },
-  { number: 3, nameArabic: 'آل عمران', nameTranslit: 'Али Имран', nameCe: 'Али Iимран (Iимранан доьзал)', nameRu: 'Семейство Имрана', versesCount: 200, place: 'Медина' },
-  { number: 36, nameArabic: 'يس', nameTranslit: 'Йа Син', nameCe: 'Йа Син (Къуръанан дог)', nameRu: 'Йа Син', versesCount: 83, place: 'Мекка' },
-  { number: 55, nameArabic: 'الرحمن', nameTranslit: 'Ар-Рахман', nameCe: 'Ар-Рахьман (Къинхетаме верг)', nameRu: 'Милосердный', versesCount: 78, place: 'Медина' },
-  { number: 67, nameArabic: 'الملك', nameTranslit: 'Аль-Мульк', nameCe: 'Аль-Мульк (Пачхьалкх)', nameRu: 'Власть', versesCount: 30, place: 'Мекка' },
-  { number: 112, nameArabic: 'الإخلاص', nameTranslit: 'Аль-Ихляс', nameCe: 'Аль-Ихляс (ЦIена дин)', nameRu: 'Искренность', versesCount: 4, place: 'Мекка' },
-  { number: 113, nameArabic: 'الفلق', nameTranslit: 'Аль-Фаляк', nameCe: 'Аль-Фалякъ (Iуьйре)', nameRu: 'Рассвет', versesCount: 5, place: 'Мекка' },
-  { number: 114, nameArabic: 'الناس', nameTranslit: 'Ан-Нас', nameCe: 'Ан-Нас (Адамаш)', nameRu: 'Люди', versesCount: 6, place: 'Мекка' },
 ];
 
 export const MONTH_NAMES_RU = [

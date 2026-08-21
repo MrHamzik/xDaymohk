@@ -4,7 +4,7 @@ import { authenticateAdmin } from '@/lib/auth';
 import { log } from '@/lib/logger';
 import { rateLimit, withRateLimitHeaders } from '@/lib/rate-limit';
 import {
-  ARTICLE_BODY_LIMIT, ARTICLE_LEAD_LIMIT, ARTICLE_TITLE_LIMIT,
+  ARTICLE_BODY_LIMIT, ARTICLE_LEAD_LIMIT, ARTICLE_NUMBER_LIMIT, ARTICLE_TITLE_LIMIT,
   isArticleSection, mapArticleRow,
 } from '@/lib/articles';
 
@@ -23,7 +23,7 @@ import {
  */
 
 const SELECT =
-  'id, section, sort_order, title_ru, title_ce, lead_ru, lead_ce, body_ru, body_ce, is_published, updated_at';
+  'id, section, sort_order, chapter_number, title_ru, title_ce, lead_ru, lead_ce, body_ru, body_ce, is_published, updated_at';
 
 /** Обрезать строку до предела; не строка — пустое значение. */
 function text(value: unknown, limit: number): string {
@@ -99,6 +99,7 @@ export async function POST(request: Request) {
   const { data, error } = await admin.from('articles').insert({
     section: body.section,
     sort_order: Number(last?.sort_order ?? 0) + 10,
+    chapter_number: text(body.chapterNumber, ARTICLE_NUMBER_LIMIT).trim(),
     title_ru: text(body.titleRu, ARTICLE_TITLE_LIMIT),
     title_ce: text(body.titleCe, ARTICLE_TITLE_LIMIT),
     lead_ru: text(body.leadRu, ARTICLE_LEAD_LIMIT),
@@ -129,6 +130,7 @@ export async function PATCH(request: Request) {
   // Собираем патч из ПРИСУТСТВУЮЩИХ полей: редактор сохраняет по одной
   // вкладке языка, и отсутствующее поле не должно затираться пустым.
   const patch: Record<string, unknown> = {};
+  if ('chapterNumber' in body) patch.chapter_number = text(body.chapterNumber, ARTICLE_NUMBER_LIMIT).trim();
   if ('titleRu' in body) patch.title_ru = text(body.titleRu, ARTICLE_TITLE_LIMIT);
   if ('titleCe' in body) patch.title_ce = text(body.titleCe, ARTICLE_TITLE_LIMIT);
   if ('leadRu' in body) patch.lead_ru = text(body.leadRu, ARTICLE_LEAD_LIMIT);

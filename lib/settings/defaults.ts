@@ -76,6 +76,11 @@ export const DEFAULT_SETTINGS: UserSettings = {
   tourStep: 0,
   tourDone: false,
   welcomeSent: false,
+  // Автосохранение чтения включено по умолчанию: это основное поведение
+  // «продолжить чтение», выключить его можно в настройках или в
+  // одноразовой подсказке.
+  readingAutosave: true,
+  readingTipShown: false,
   proTier: 'none',
   proUntil: null,
   themeId: 'light',
@@ -949,6 +954,9 @@ export function normalizeSettings(raw: unknown): UserSettings {
     tourStep: normalizeTourStep(input.tourStep),
     tourDone: input.tourDone === true,
     welcomeSent: input.welcomeSent === true,
+    // Умолчание — ВКЛЮЧЕНО: выключенным считается только явное false.
+    readingAutosave: input.readingAutosave !== false,
+    readingTipShown: input.readingTipShown === true,
     proTier: normalizeProTier(input.proTier),
     // Срок принимаем только как разбираемую дату: в поле может лежать
     // мусор из старого клиента или ручной правки.
@@ -986,6 +994,8 @@ export function settingsFromDb(row: Record<string, unknown> | null): UserSetting
     tourStep: normalizeTourStep(row.tour_step ?? 0),
     tourDone: row.tour_done,
     welcomeSent: row.welcome_sent === true,
+    readingAutosave: row.reading_autosave !== false,
+    readingTipShown: row.is_reading_tip_shown === true,
     proTier: row.pro_tier,
     proUntil: row.pro_until,
     themeId: row.theme_id,
@@ -1016,6 +1026,8 @@ export function settingsToDb(settings: UserSettings): Record<string, unknown> {
     tour_step: settings.tourStep,
     tour_done: settings.tourDone,
     welcome_sent: settings.welcomeSent,
+    reading_autosave: settings.readingAutosave,
+    is_reading_tip_shown: settings.readingTipShown,
     // pro_until сюда НЕ попадает намеренно: сроком подписки
     // распоряжается сервер. Триггер guard_pro_tier всё равно отклонил
     // бы правку, но лишний раз слать её незачем.

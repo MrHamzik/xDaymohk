@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { useI18n } from '@/lib/i18n';
+import { useSettings } from '@/components/SettingsProvider';
 import { useProfiles } from '@/components/ProfilesProvider';
 import SpecialistLeaders from '@/components/SpecialistLeaders';
 import ProfileModal from '@/components/ProfileModal';
@@ -14,20 +15,27 @@ import TaskCard from '@/components/tasks/TaskCard';
 import TaskDetailModal from '@/components/tasks/TaskDetailModal';
 import NotificationCenter from '@/components/NotificationCenter';
 import { fetchTasks } from '@/lib/tasks/client';
-import { loadReadingProgress, type ReadingBookmark } from '@/lib/reading-progress';
-import type { ArticleSection } from '@/lib/articles';
+import { loadReadingProgress } from '@/lib/reading-progress';
+import {
+  fetchMyProgress, findProgress, migrateLocalBookmarks,
+} from '@/lib/reading-progress-db';
+import { READING_HREFS, READING_MENU_IDS, READING_SECTIONS, type ReadingSection } from '@/lib/reading-sections';
+import { formatSavedHint, type SavedMark } from '@/lib/reading-rules';
 import type { Profile, Task } from '@/lib/types';
 
+/**
+ * Четыре блока «Продолжить чтение» на главной (п.1 и п.4 ТЗ Этапа 2).
+ * Порядок — по ТЗ: Коран, Нохчалма, Руководство, Сира.
+ */
 const READ_LINKS: Array<{
-  section: ArticleSection | 'quran';
-  href: string;
+  section: ReadingSection;
   icon: typeof BookOpen;
   titleKey: 'navQuran' | 'navSira' | 'vaynakhTitle' | 'navGuide';
 }> = [
-  { section: 'quran', href: '/quran', icon: BookOpen, titleKey: 'navQuran' },
-  { section: 'sira', href: '/sira', icon: BookMarked, titleKey: 'navSira' },
-  { section: 'nohchalla', href: '/vaynakh', icon: Landmark, titleKey: 'vaynakhTitle' },
-  { section: 'guide', href: '/guide', icon: BookOpen, titleKey: 'navGuide' },
+  { section: 'quran', icon: BookOpen, titleKey: 'navQuran' },
+  { section: 'nochchalma', icon: Landmark, titleKey: 'vaynakhTitle' },
+  { section: 'guide', icon: BookOpen, titleKey: 'navGuide' },
+  { section: 'sira', icon: BookMarked, titleKey: 'navSira' },
 ];
 
 /**
@@ -37,11 +45,13 @@ const READ_LINKS: Array<{
 export default function HomeFeed() {
   const { account } = useAuth();
   const { t, language } = useI18n();
+  const { settings } = useSettings();
   const { profiles, isCurrentUserAdmin, isProfileAdmin, addReview } = useProfiles();
   const [activeProfileId, setActiveProfileId] = useState<string | null>(null);
   const [taskId, setTaskId] = useState<string | null>(null);
   const [tasks, setTasks] = useState<Task[] | null>(null);
-  const [marks, setMarks] = useState<Partial<Record<ArticleSection, ReadingBookmark>>>({});
+  /** Сохранённые точки чтения по разделам (БД либо локальные гостевые). */
+  const [progress, setProgress] = useState<Partial<Record<ReadingSection, SavedMark>>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -51,13 +61,58 @@ export default function HomeFeed() {
     return () => { cancelled = true; };
   }, []);
 
+  // Прогресс чтения. У вошедших — база (п.3 ТЗ Этапа 2): состояние
+  // видно с любого устройства, и гостевые закладки после входа
+  // переносятся туда же. У гостей — локальные закладки браузера.
   useEffect(() => {
-    setMarks({
-      sira: loadReadingProgress('sira') ?? undefined,
-      nohchalla: loadReadingProgress('nohchalla') ?? undefined,
-      guide: loadReadingProgress('guide') ?? undefined,
-    });
-  }, []);
+    let cancelled = false;
+
+    if (account) {
+      void (async () => {
+        await migrateLocalBookmarks(account.id);
+        const list = await fetchMyProgress();
+        if (cancelled) return;
+        const next: Partial<Record<ReadingSection, SavedMark>> = {};
+        for (const section of READING_SECTIONS) {
+          const mark = findProgress(list ?? [], section);
+          if (mark) {
+            next[section] = {
+              chapterId: mark.chapterId,
+              scroll: mark.scroll,
+              titleRu: mark.titleRu,
+              titleCe: mark.titleCe,
+              chapterNumber: mark.chapterNumber,
+            };
+          }
+        }
+        setProgress(next);
+      })();
+    } else {
+      const next: Partial<Record<ReadingSection, SavedMark>> = {};
+      for (const section of READING_SECTIONS) {
+        const mark = loadReadingProgress(section);
+        if (mark) {
+          next[section] = {
+            chapterId: mark.articleId,
+            scroll: mark.scroll,
+            titleRu: mark.titleRu,
+            titleCe: mark.titleCe,
+            chapterNumber: mark.chapterNumber,
+          };
+        }
+      }
+      setProgress(next);
+    }
+
+    return () => { cancelled = true; };
+  }, [account?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Блоки разделов показываются, только если раздел не скрыт в боковом
+  // меню (Режим редактирования) — п.1 ТЗ Этапа 2.
+  const hiddenMenu = new Set(settings.hiddenMenu);
+  const visibleReadLinks = READ_LINKS.filter(
+    (item) => !hiddenMenu.has(READING_MENU_IDS[item.section]),
+  );
 
   const firstName = (account?.fullName || '').trim().split(/\s+/)[0];
   const hello = firstName
@@ -136,41 +191,47 @@ export default function HomeFeed() {
 
       <SpecialistLeaders onOpen={(id) => setActiveProfileId(id)} />
 
-      <section>
-        <h2 className="mb-2 smk-text-title font-extrabold text-slate-900 dark:text-white">
-          {t.homeContinue}
-        </h2>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {READ_LINKS.map((item) => {
-            const Icon = item.icon;
-            const mark = item.section === 'quran' ? undefined : marks[item.section];
-            const href = mark ? `${item.href}?chapter=${encodeURIComponent(mark.articleId)}` : item.href;
-            const chapterTitle = mark
-              ? ((language === 'ce' ? mark.titleCe : mark.titleRu) || mark.titleRu || mark.titleCe)
-              : '';
-            return (
-              <Link key={item.href} href={href} className="smk-lux flex items-center gap-3 px-3.5 py-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-hero-gradient text-white">
-                  <Icon className="h-5 w-5" />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate smk-text-title font-bold text-slate-900 dark:text-white">
-                    {t[item.titleKey]}
+      {/* п.1 ТЗ Этапа 2: все четыре блока скрыты — секция не
+          показывается вовсе. */}
+      {visibleReadLinks.length > 0 && (
+        <section>
+          <h2 className="mb-2 smk-text-title font-extrabold text-slate-900 dark:text-white">
+            {t.homeContinue}
+          </h2>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {visibleReadLinks.map((item) => {
+              const Icon = item.icon;
+              const href = READING_HREFS[item.section];
+              // п.4: блок с сохранённым прогрессом ведёт прямо к главе —
+              // страница раздела прокрутит к сохранённой позиции.
+              const mark = progress[item.section];
+              const linkHref = mark
+                ? `${href}?chapter=${encodeURIComponent(mark.chapterId)}`
+                : href;
+              return (
+                <Link key={item.section} href={linkHref} className="smk-lux flex items-center gap-3 px-3.5 py-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-hero-gradient text-white">
+                    <Icon className="h-5 w-5" />
                   </span>
-                  <span className="block truncate smk-text-label text-slate-500 dark:text-zinc-400">
-                    {mark
-                      ? `${mark.index + 1}. ${chapterTitle}`
-                      : item.section === 'quran' ? t.inDevelopment : t.homeContinueStart}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate smk-text-title font-bold text-slate-900 dark:text-white">
+                      {t[item.titleKey]}
+                    </span>
+                    <span className="block truncate smk-text-label text-slate-500 dark:text-zinc-400">
+                      {mark
+                        ? formatSavedHint(mark, language, t.readChapter)
+                        : t.homeContinueStart}
+                    </span>
                   </span>
-                </span>
-                <span className="smk-text-label font-bold text-emerald-700 dark:text-emerald-400">
-                  {mark ? t.homeContinueOpen : t.homeContinueStart}
-                </span>
-              </Link>
-            );
-          })}
-        </div>
-      </section>
+                  <span className="smk-text-label font-bold text-emerald-700 dark:text-emerald-400">
+                    {mark ? t.homeContinueOpen : t.homeContinueStart}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       <section>
         <div className="mb-2 flex items-end justify-between gap-3">
