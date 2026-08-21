@@ -58,6 +58,11 @@ export default function MobileMenuDrawer({ isOpen, onClose, isAdmin = false }: M
       role="dialog"
       aria-modal="true"
       aria-labelledby="menu-drawer-title"
+      // data-tour-drawer — гид по этой метке узнаёт, что выезд УЖЕ
+      // открыт, и не просит открыть его повторно (баг от 22.08:
+      // подсказка «нажмите меню» появлялась при открытом меню, а кнопка
+      // меню была перекрыта шторкой).
+      data-tour-drawer
       onClick={onClose}
     >
       <div

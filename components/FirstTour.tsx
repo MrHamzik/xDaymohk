@@ -354,7 +354,10 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
         </SettingRow>
       ),
       awaits: 'edit-mode' as const,
-      hint: isDesktop ? t.tourEditHint : t.tourEditHintMobile,
+      // «Откройте меню» — только если оно ДЕЙСТВИТЕЛЬНО закрыто
+      // (баг от 22.08): на ПК меню всегда открыто, а на телефоне выезд
+      // мог остаться с прошлого шага — тогда сразу «скройте глазиками».
+      hint: (isDesktop || overlayOpen) ? t.tourEditHint : t.tourEditHintMobile,
       // Пропуск вернуть нельзя было без защиты: «Пропустить» гасит
       // режим (см. skipStep) и только потом листает.
       skippable: true,
@@ -671,7 +674,10 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
   useEffect(() => {
     setDone(false);
     setPlusOpen(false);
-    setOverlayOpen(false);
+    // НЕ сбрасываем вслепую (баг от 22.08): если выезд меню остался
+    // открытым с прошлого шага — фиксируем РЕАЛЬНОЕ состояние по DOM,
+    // иначе гид просил «откройте меню» при открытом меню.
+    setOverlayOpen(Boolean(document.querySelector('[data-tour-drawer]')));
     setTasking(false);
     setPageOpen(false);
     setEditPhase('on');
@@ -963,10 +969,12 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
         // Пока открыто меню плюса или выезд меню, подсказку прячем (п.41):
         // человек уже сделал то, о чём она просила, и висеть поверх
         // открытого окна ей незачем.
-        typeof document !== 'undefined' && !screenFree && createPortal(
+        typeof document !== 'undefined' && (!screenFree || step.awaits === 'edit-mode') && createPortal(
           <div data-tour-ui className="smk-tour-fade pointer-events-none fixed inset-x-0 bottom-24 z-[96] flex justify-center px-4">
             <p className="smk-sheet pointer-events-auto max-w-sm rounded-2xl px-4 py-3 text-center text-sm font-bold text-slate-800 shadow-2xl dark:text-zinc-100">
-              {step.hint}
+              {/* Шаг редактирования: инструкция нужна и при открытом
+                  меню (пилюля z-96 выше шторки z-80). */}
+              {step.awaits === 'edit-mode' && screenFree ? t.tourEditHint : step.hint}
             </p>
           </div>,
           document.body,

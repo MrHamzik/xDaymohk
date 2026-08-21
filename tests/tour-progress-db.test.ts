@@ -411,3 +411,22 @@ describe('правки после выкатки на Vercel (22.08)', () => {
     expect(sw).toContain('daymohk-offline-v4');
   });
 });
+
+describe('баг от 22.08: «откройте меню» при открытом меню (мобилка)', () => {
+  it('выезд меню помечен data-tour-drawer — гид видит реальное состояние', () => {
+    const drawer = readFileSync(join(root, 'components/MobileMenuDrawer.tsx'), 'utf8');
+    expect(drawer).toContain('data-tour-drawer');
+  });
+
+  it('смена шага синхронизирует overlayOpen с DOM, а не сбрасывает вслепую', () => {
+    expect(firstTour).toContain("setOverlayOpen(Boolean(document.querySelector('[data-tour-drawer]')))");
+  });
+
+  it('подсказка «откройте меню» — только когда меню действительно закрыто', () => {
+    expect(firstTour).toContain('(isDesktop || overlayOpen) ? t.tourEditHint : t.tourEditHintMobile');
+  });
+
+  it('на шаге редактирования пилюля-инструкция видна и при открытом меню', () => {
+    expect(firstTour).toContain("!screenFree || step.awaits === 'edit-mode'");
+  });
+});
