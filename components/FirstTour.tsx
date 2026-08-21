@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
 import { useSettings } from '@/components/SettingsProvider';
 import { useI18n } from '@/lib/i18n';
@@ -88,6 +89,7 @@ const TOUR_STEP_KEY = 'daymohk-tour-step';
 export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
   const { t, language, setLanguage } = useI18n();
   const { account } = useAuth();
+  const router = useRouter();
   const { settings, update } = useSettings();
 
   /** Правка настроек уведомлений — та же логика, что на странице настроек. */
@@ -181,6 +183,8 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
   const [catalogOpen, setCatalogOpen] = useState(false);
   /** Корень карточки шага — нужен для сброса прокрутки (п.5). */
   const cardRef = useRef<HTMLDivElement | null>(null);
+  /** Уводил ли гид человека в каталог — тогда его надо вернуть (п.9). */
+  const visitedCatalogRef = useRef(false);
 
   /**
    * Шаг гида.
@@ -512,6 +516,35 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
   useEffect(() => { onCardVisible?.(!waiting); }, [waiting, onCardVisible]);
 
   /**
+   * Возврат на главную — в фоне, пока экран ещё закрыт гидом (п.9).
+   *
+   * Шаг с каталогом уводит человека на /catalog. Раньше он там и
+   * оставался: гид заканчивался, окно закрывалось, и только потом
+   * происходил переход — человек видел, как его «выбрасывает» на
+   * главную уже после обучения.
+   *
+   * Теперь возвращаемся заранее: как только шаг с каталогом позади, а
+   * фон ещё затемнён и размыт карточкой гида, тихо уходим на главную.
+   * Переход происходит под оверлеем, и к последнему шагу человек уже
+   * стоит там, где нужно.
+   *
+   * router.replace, а не push: страница каталога была частью обучения,
+   * и возвращаться на неё кнопкой «назад» незачем.
+   */
+  useEffect(() => {
+    // Пока идёт сам шаг с каталогом — не мешаем: человек там работает.
+    if (step.awaits === 'catalog-scroll') return;
+    if (!visitedCatalogRef.current) return;
+    if (typeof window === 'undefined') return;
+    if (!window.location.pathname.startsWith('/catalog')) {
+      visitedCatalogRef.current = false;
+      return;
+    }
+    visitedCatalogRef.current = false;
+    router.replace('/');
+  }, [index, step.awaits, router]);
+
+  /**
    * Шаг про виджет требует чистого экрана (п.4).
    *
    * Предыдущий шаг просит открыть меню и пролистать его. Человек часто
@@ -538,7 +571,12 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
   useEffect(() => {
     if (step.awaits !== 'catalog-scroll' || !tasking || catalogOpen) return;
     const check = () => {
-      if (window.location.pathname.startsWith('/catalog')) setCatalogOpen(true);
+      if (window.location.pathname.startsWith('/catalog')) {
+        setCatalogOpen(true);
+        // Помечаем, что обучение увело человека со страницы: после шага
+        // его нужно вернуть на главную (п.9).
+        visitedCatalogRef.current = true;
+      }
     };
     check();
     // pushState в Next.js не поднимает popstate — опрашиваем адрес.

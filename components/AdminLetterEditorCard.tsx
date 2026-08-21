@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
-import { BookOpen, Bell, ChevronDown, Globe2, Languages, LogIn, PartyPopper, Save as SaveIcon, Sparkles } from 'lucide-react';
+import { BookOpen, Bell, ChevronDown, Globe2, Languages, LogIn, Save as SaveIcon } from 'lucide-react';
 import LetterPreview, { AutoTextarea } from '@/components/LetterPreview';
 import { useI18n } from '@/lib/i18n';
 
@@ -44,11 +44,23 @@ const EDIT_AFFORDANCE =
   'outline-none transition hover:bg-amber-100/50 focus:bg-amber-100/60 focus:ring-2 focus:ring-emerald-400/60 dark:hover:bg-zinc-700/60 dark:focus:bg-zinc-700/70';
 
 /**
- * Превью модального окна приветствия — точная копия шага welcome в
- * OnboardingModal (первый запуск): фон с разводами, иконка PartyPopper,
- * разделитель со Sparkles, три кнопки (Руководство / Войти в Даймохк /
- * Продолжить как гость) и переключатель языка. Заголовок и текст редактируются
- * прямо в превью; кнопки — статичные (это действия, в БД не хранятся).
+ * Превью модального окна приветствия (п.10).
+ *
+ * Копия шага welcome из OnboardingModal, и копия должна быть точной:
+ * админ правит текст, глядя на превью, и вправе считать, что у
+ * человека окно выглядит так же.
+ *
+ * Раньше здесь жила ПРЕЖНЯЯ версия окна — цветные разводы, квадрат с
+ * градиентом и хлопушкой, разделитель со Sparkles. Само окно с тех пор
+ * переделали на фирменный герб (.smk-emblem) и орнаментальную линейку
+ * (.smk-orn), а превью осталось старым, и админка показывала то, чего
+ * пользователь никогда не увидит.
+ *
+ * Разметка ниже повторяет OnboardingModal шаг в шаг: подложка
+ * .smk-sheet .smk-sign, отступы px-6 pb-6 pt-12, герб, заголовок,
+ * .smk-orn, текст, три кнопки и переключатель языка. Отличие ровно
+ * одно и намеренное: заголовок и текст — редактируемые поля, а кнопки
+ * статичные (это действия, в БД они не хранятся).
  */
 function WelcomeModalPreview({
   draft,
@@ -61,19 +73,10 @@ function WelcomeModalPreview({
 }) {
   const ce = lang === 'ce';
   return (
-    <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-zinc-700 dark:bg-zinc-950">
-      {/* Узоры фона (как в реальном окне) */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-24 overflow-hidden opacity-60 dark:opacity-40" aria-hidden="true">
-        <div className="absolute -top-10 -left-10 h-28 w-28 rounded-full bg-emerald-200/60 blur-2xl dark:bg-emerald-900/40" />
-        <div className="absolute -top-6 right-0 h-24 w-24 rounded-full bg-teal-200/50 blur-2xl dark:bg-teal-900/30" />
-        <div className="absolute left-1/2 top-2 h-10 w-10 -translate-x-1/2 rotate-45 rounded-md border border-emerald-300/70 dark:border-emerald-700/50" />
-      </div>
-
-      <div className="relative px-6 pb-6 pt-14">
+    <div className="smk-sheet smk-sign relative w-full max-w-md overflow-hidden rounded-3xl shadow-2xl">
+      <div className="relative px-6 pb-6 pt-12">
         <div className="mb-5 text-center">
-          <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg">
-            <PartyPopper className="h-8 w-8" />
-          </div>
+          <div className="smk-emblem mb-3" aria-hidden="true" />
           <input
             value={ce ? draft.title_ce : draft.title_ru}
             onChange={(e) => onChange(ce ? { title_ce: e.target.value } : { title_ru: e.target.value })}
@@ -83,11 +86,7 @@ function WelcomeModalPreview({
           />
         </div>
 
-        <div className="mb-4 flex items-center gap-2 text-emerald-500/70" aria-hidden="true">
-          <span className="h-px flex-1 bg-gradient-to-r from-transparent to-emerald-300/60 dark:to-emerald-800" />
-          <Sparkles className="h-4 w-4" />
-          <span className="h-px flex-1 bg-gradient-to-l from-transparent to-emerald-300/60 dark:to-emerald-800" />
-        </div>
+        <hr className="smk-orn mb-4" />
 
         <AutoTextarea
           value={ce ? draft.message_ce : draft.message_ru}

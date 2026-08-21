@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   X, Loader2, Star, MapPin, Clock, Users, CalendarDays, ShieldAlert, Trash2,
-  Ban, Check, Pencil, Wallet, Share2, Copy, Phone, MessageSquare, Send,
+  Ban, Check, Pencil, Wallet, Share2, Copy, Phone, MessageSquare, Send, Flag, ShieldBan,
 } from 'lucide-react';
 import Link from 'next/link';
 import PayoutPeekSheet from '@/components/settings/PayoutPeekSheet';
@@ -27,6 +27,7 @@ import MapSegmentedControl from '@/components/MapSegmentedControl';
 import { type MapLayerMode } from '@/components/InteractiveMap';
 import { useI18n } from '@/lib/i18n';
 import { useSettings } from '@/components/SettingsProvider';
+import { useBlacklist } from '@/components/BlacklistProvider';
 import { useSheetSwipe } from '@/lib/hooks/useSheetSwipe';
 import { useLockBody } from '@/lib/hooks/useLockBody';
 import { shareLink, siteOrigin } from '@/lib/share';
@@ -63,6 +64,7 @@ export default function TaskDetailModal({
   // «Скрыть подсказки» прячет только статичные пояснения. Сообщения о
   // состоянии и причины неактивных кнопок остаются всегда.
   const { settings } = useSettings();
+  const { block } = useBlacklist();
   const showHints = !settings.hideHints;
   const swipe = useSheetSwipe(onClose);
   const [task, setTask] = useState<Task | null>(null);
@@ -89,6 +91,9 @@ export default function TaskDetailModal({
   // Что подтверждаем: удаление (никто не взял) или отмену (взяли).
   const [confirmClose, setConfirmClose] = useState<'delete' | 'cancel' | null>(null);
   const [complaintSent, setComplaintSent] = useState(false);
+  // Блокировка автора задания из шапки (п.7).
+  const [confirmBlock, setConfirmBlock] = useState(false);
+  const [blockBusy, setBlockBusy] = useState(false);
   const [shareHint, setShareHint] = useState(false);
   const [payoutOpen, setPayoutOpen] = useState(false);
   const [mapLayerMode, setMapLayerMode] = useState<MapLayerMode>('streets');
@@ -324,6 +329,36 @@ export default function TaskDetailModal({
               >
                 <Share2 className="h-4 w-4" />
               </button>
+            )}
+            {/* Жалоба и блокировка — те же действия и в том же месте,
+                что в шапке анкеты (п.7). Раньше пожаловаться можно было
+                только по спорному заданию, из глубины карточки: на
+                обычное объявление управы не было вовсе.
+
+                Своё задание не блокируют и на себя не жалуются, поэтому
+                автору кнопки не показываем. */}
+            {task && !isAuthor && currentUserId && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setIsComplaintOpen(true)}
+                  aria-label={t.cardReportAria}
+                  title={t.cardReport}
+                  className="smk-act flex h-7 w-7 items-center justify-center text-[var(--smk-gold-deep)]"
+                >
+                  <Flag className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmBlock(true)}
+                  disabled={blockBusy}
+                  aria-label={t.profileBlockUser}
+                  title={t.profileBlockUser}
+                  className="smk-act smk-act--danger flex h-7 w-7 items-center justify-center"
+                >
+                  <ShieldBan className="h-4 w-4" />
+                </button>
+              </>
             )}
             <button
               type="button"
@@ -1106,6 +1141,37 @@ export default function TaskDetailModal({
             return;
           }
           act('cancel', () => runTaskAction(task.id, 'cancel'));
+        }}
+      />
+
+      {/* Подтверждение блокировки автора (п.7): та же формулировка,
+          что и в анкете, — действие одинаковое, и предупреждать о
+          последствиях надо одинаково. */}
+      <ConfirmDialog
+        isOpen={confirmBlock}
+        title={t.profileBlockUser}
+        message={t.profileBlockConfirm}
+        confirmLabel={t.profileBlockUser}
+        danger
+        isBusy={blockBusy}
+        onCancel={() => setConfirmBlock(false)}
+        onConfirm={() => {
+          if (!task?.authorId) return;
+          setBlockBusy(true);
+          void (async () => {
+            try {
+              await block(task.authorId);
+              setConfirmBlock(false);
+              // Заблокированный автор пропадает из списков — держать
+              // его задание открытым уже незачем.
+              onClose();
+            } catch (blockError) {
+              setError(blockError instanceof Error ? blockError.message : t.taskComplaintError);
+              setConfirmBlock(false);
+            } finally {
+              setBlockBusy(false);
+            }
+          })();
         }}
       />
 
