@@ -25,13 +25,22 @@ export default function ThemePickerButton() {
   const [isOpen, setIsOpen] = useState(false);
   const boxRef = useRef<HTMLDivElement | null>(null);
   const btnRef = useRef<HTMLButtonElement | null>(null);
+  // Отдельный ref для списка (п.4). Раньше boxRef вешался И на обёртку
+  // кнопки, И на портал — второй вызов затирал первый, boxRef указывал
+  // на список, и нажатие по самой кнопке считалось «мимо»: обработчик
+  // закрывал меню в том же клике, которым оно открывалось. Тема при
+  // этом не менялась, хотя нажималось всё исправно.
+  const menuRef = useRef<HTMLDivElement | null>(null);
   // Координаты меню в окне: список рендерится порталом в <body>.
   const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
     const onClickOutside = (event: MouseEvent) => {
-      if (boxRef.current && !boxRef.current.contains(event.target as Node)) setIsOpen(false);
+      const target = event.target as Node;
+      if (boxRef.current?.contains(target)) return;
+      if (menuRef.current?.contains(target)) return;
+      setIsOpen(false);
     };
     document.addEventListener('mousedown', onClickOutside);
     return () => document.removeEventListener('mousedown', onClickOutside);
@@ -124,7 +133,7 @@ export default function ThemePickerButton() {
 
       {isOpen && menuPos && createPortal((
         <div
-          ref={boxRef}
+          ref={menuRef}
           // data-tour-portal: список тем — портал в body, гиду он не
           // потомок. На шаге про оформление без метки кнопка палитры
           // открывалась, а выбрать тему в списке было нельзя.

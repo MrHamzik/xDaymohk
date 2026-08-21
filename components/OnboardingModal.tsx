@@ -22,6 +22,7 @@ import { useSettings } from '@/components/SettingsProvider';
 import { useProfiles } from '@/components/ProfilesProvider';
 import FirstTour from '@/components/FirstTour';
 import { useTourLock } from '@/lib/tour-lock';
+import { releaseTourPreflight } from '@/lib/tour-preflight';
 import { useI18n } from '@/lib/i18n';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { extractPhoneDigits } from '@/lib/phone';
@@ -418,6 +419,23 @@ export default function OnboardingModal() {
   const modalLocked = open && step !== 'tour';
 
   useTourLock({ active: undecided || modalLocked });
+
+  /**
+   * Передача замка от CSS к React (п.2).
+   *
+   * До гидратации интерфейс держит класс smk-preflight-lock, который
+   * поставил синхронный скрипт из <head>. Как только React разобрался,
+   * нужен гид или нет, класс снимаем: дальше всем распоряжается
+   * useTourLock, у которого есть разбор по шагам и списки исключений.
+   *
+   * Снимаем только когда замок React уже НЕ нужен либо когда он уже
+   * взял управление на себя, иначе между двумя механизмами возникла бы
+   * щель в один кадр — та самая, из-за которой всё и затевалось.
+   */
+  useEffect(() => {
+    if (undecided) return;
+    releaseTourPreflight();
+  }, [undecided]);
 
   if (!open) return null;
 

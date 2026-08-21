@@ -65,6 +65,36 @@ type StoredAccount = {
   status_override?: UserMasterStatus;
 };
 
+/**
+ * Заглушки, которые НЕ считаются настоящими данными профиля (п.4/п.6).
+ *
+ * При самом первом входе через Google профиль в user_profiles ещё не
+ * создан, и accountFromUser подставляет запасные значения: имя
+ * «Пользователь» и первую картинку из пресетов. Эта строка тут же
+ * записывалась в базу первым upsert'ом.
+ *
+ * Дальше начиналось неприятное: при каждом следующем входе
+ * `stored.full_name` («Пользователь») перекрывал настоящее имя из
+ * метаданных Google, потому что в мерже он стоит первым. Заглушка
+ * побеждала реальные данные навсегда — отсюда жалоба «ФИО и аватарка
+ * не подтягиваются из Google».
+ */
+const PLACEHOLDER_NAME = 'Пользователь';
+
+/** Значение выглядит как настоящее имя, а не как заглушка/телефон. */
+function isRealName(value: string | undefined | null): boolean {
+  const name = (value || '').trim();
+  if (!name || name === PLACEHOLDER_NAME) return false;
+  // Чисто цифровая строка — это подставленный номер телефона.
+  return !/^\+?\d+$/.test(name);
+}
+
+/** Аватар задан человеком/Google, а не взят из набора по умолчанию. */
+function isRealAvatar(value: string | undefined | null): boolean {
+  const url = (value || '').trim();
+  return Boolean(url) && !AVATAR_PRESETS.includes(url);
+}
+
 function accountFromUser(user: AuthUser): Account {
   const metadata = user.user_metadata ?? {};
   return {
@@ -140,11 +170,47 @@ async function resolveFromRow(
     const mergedGender = stored.gender || (localMine ? localMine.gender : undefined);
     const mergedBirth = stored.birth_date || (stored.birth_year ? String(stored.birth_year) : undefined) || (localMine ? localMine.birthDate : undefined);
     const mergedSettlement = stored.settlement || (localMine ? localMine.settlement : undefined);
+
+    /**
+     * Лечим строку в базе, если там осталась заглушка (п.4).
+     *
+     * У всех, кто уже входил, в user_profiles лежит «Пользователь» и
+     * пресетная картинка — их записал самый первый upsert. Читать-то мы
+     * их теперь не будем, но чинить базу всё равно надо: иначе анкеты
+     * этого человека и списки специалистов продолжат показывать
+     * «Пользователь» другим людям.
+     *
+     * Пишем только когда в метаданных Google есть что записать, и
+     * только поверх заглушки — настоящее имя не трогаем.
+     */
+    const healName = !isRealName(stored.full_name) && isRealName(fallbackAccount.fullName);
+    const healAvatar = !isRealAvatar(stored.avatar_url) && isRealAvatar(fallbackAccount.avatarUrl);
+    if ((healName || healAvatar) && supabase) {
+      const patch: Record<string, string> = {};
+      if (healName) patch.full_name = fallbackAccount.fullName;
+      if (healAvatar) patch.avatar_url = fallbackAccount.avatarUrl;
+      // Без await: чинить базу можно в фоне, показ профиля этого не ждёт.
+      void supabase.from('user_profiles').update(patch).eq('id', user.id);
+    }
+
     return {
       id: stored.id,
       email: stored.email || fallbackAccount.email,
-      fullName: stored.full_name || (localMine ? localMine.fullName : undefined) || fallbackAccount.fullName,
-      avatarUrl: stored.avatar_url || (localMine ? localMine.avatarUrl : undefined) || fallbackAccount.avatarUrl,
+      // Заглушка в базе НЕ перекрывает настоящее имя из Google (п.4).
+      // Порядок: реальное значение из базы → реальное локальное →
+      // данные Google → в самом конце заглушка, если больше нечего.
+      fullName: [
+        isRealName(stored.full_name) ? stored.full_name : '',
+        localMine && isRealName(localMine.fullName) ? localMine.fullName : '',
+        isRealName(fallbackAccount.fullName) ? fallbackAccount.fullName : '',
+        stored.full_name || fallbackAccount.fullName,
+      ].find(Boolean) as string,
+      avatarUrl: [
+        isRealAvatar(stored.avatar_url) ? stored.avatar_url : '',
+        localMine && isRealAvatar(localMine.avatarUrl) ? localMine.avatarUrl : '',
+        isRealAvatar(fallbackAccount.avatarUrl) ? fallbackAccount.avatarUrl : '',
+        stored.avatar_url || fallbackAccount.avatarUrl,
+      ].find(Boolean) as string,
       phone: stored.phone || fallbackAccount.phone,
       phoneVerified: Boolean(stored.phone_verified_at),
       gender: mergedGender,

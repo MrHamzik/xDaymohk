@@ -9,6 +9,7 @@ import SettingsProvider from '@/components/SettingsProvider';
 import OnboardingModal from '@/components/OnboardingModal';
 import { I18nProvider } from '@/lib/i18n';
 import ServiceWorkerRegister from '@/components/ServiceWorkerRegister';
+import { TOUR_PREFLIGHT_SCRIPT } from '@/lib/tour-preflight';
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://daymohk.vercel.app'),
@@ -60,6 +61,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru" suppressHydrationWarning>
+      <head>
+        {/* Замок «до гида» (п.2).
+
+            Скрипт СИНХРОННЫЙ и стоит в <head> нарочно: он обязан
+            отработать до первого кадра. Блокировка внутри React
+            включалась только после гидратации, а до неё по сайту
+            можно было нажимать и прокручивать — ровно та жалоба.
+
+            Содержимое не зависит от пользовательского ввода: это
+            константа из lib/tour-preflight.ts, не данные из запроса. */}
+        <script dangerouslySetInnerHTML={{ __html: TOUR_PREFLIGHT_SCRIPT }} />
+      </head>
       <body suppressHydrationWarning className="antialiased transition-colors duration-200">
         <I18nProvider>
           <ThemeProvider>

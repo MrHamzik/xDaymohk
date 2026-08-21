@@ -557,3 +557,36 @@ html.dark .smk-cluster div {
   color: #e4e4e7;
   box-shadow: 0 1px 8px -1px rgba(0, 0, 0, 0.6);
 }
+
+/* ─────────────────────────────────────────────────────────────────────
+   Замок «до гида» (п.2).
+
+   Класс ставит синхронный скрипт из <head> (lib/tour-preflight.ts) —
+   ещё до того, как страница нарисована и до того, как поднялся React.
+   Раньше блокировка включалась только после гидратации, и в этот
+   промежуток по сайту можно было нажимать и прокручивать.
+
+   Ввод глушим на уровне CSS, а не обработчиков: правило действует с
+   первого кадра и не зависит от порядка загрузки скриптов.
+
+   Само окно гида и его порталы остаются живыми — они помечены
+   data-tour-ui / data-tour-portal, как и в useTourLock.
+   ──────────────────────────────────────────────────────────────────── */
+html.smk-preflight-lock,
+html.smk-preflight-lock body {
+  overflow: hidden !important;
+  overscroll-behavior: none;
+}
+
+html.smk-preflight-lock body * {
+  pointer-events: none !important;
+  user-select: none !important;
+}
+
+html.smk-preflight-lock [data-tour-ui],
+html.smk-preflight-lock [data-tour-ui] *,
+html.smk-preflight-lock [data-tour-portal],
+html.smk-preflight-lock [data-tour-portal] * {
+  pointer-events: auto !important;
+  user-select: auto !important;
+}
