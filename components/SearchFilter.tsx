@@ -17,6 +17,7 @@ import {
   X,
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
+import GeoFilter from '@/components/GeoFilter';
 import { AudienceFilter, PROFESSION_CATEGORIES } from '@/lib/types';
 import {
   GEO_CITIES, GEO_DISTRICTS, GEO_VILLAGES,
@@ -232,55 +233,8 @@ export default function SearchFilter({
                   <ChevronDown className={`h-3.5 w-3.5 transition ${isRegionOpen ? 'rotate-180' : ''}`} />
                 </button>
                 {isRegionOpen && (
-                  /* п.3 Этапа 2-каталог: вместо склеенных «Республика +
-                     район» — три подкатегории: города, районы, сёла.
-                     Выбор района включает его сёла. */
-                  <div className="mt-2 space-y-1">
-                    {([
-                      { key: 'cities' as const, label: t.geoCities, selected: geo.cities, items: GEO_CITIES.map((name) => ({ value: name, label: name })) },
-                      { key: 'districts' as const, label: t.geoDistricts, selected: geo.districts, items: GEO_DISTRICTS.map((d) => ({ value: d.id, label: d.name })) },
-                      { key: 'villages' as const, label: t.geoVillages, selected: geo.villages, items: GEO_VILLAGES.map((name) => ({ value: name, label: name })) },
-                    ]).map((group) => (
-                      <div key={group.key}>
-                        <button
-                          type="button"
-                          onClick={() => setOpenGeoGroup(openGeoGroup === group.key ? null : group.key)}
-                          className="flex w-full items-center justify-between rounded-lg px-1.5 py-1 text-left smk-text-label font-bold text-slate-600 transition hover:bg-slate-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                        >
-                          <span>
-                            {group.label}
-                            {group.selected.length > 0 && (
-                              <span className="ml-1 rounded-full bg-emerald-600 px-1.5 py-0.5 text-white smk-text-label">
-                                {group.selected.length}
-                              </span>
-                            )}
-                          </span>
-                          <ChevronDown className={`h-3 w-3 transition ${openGeoGroup === group.key ? 'rotate-180' : ''}`} />
-                        </button>
-                        {openGeoGroup === group.key && (
-                          <div className="mt-1 flex flex-wrap gap-1.5 pb-1">
-                            {group.items.map((item) => {
-                              const on = group.selected.includes(item.value);
-                              return (
-                                <button
-                                  key={item.value}
-                                  type="button"
-                                  onClick={() => toggleGeo(group.key, item.value)}
-                                  aria-pressed={on}
-                                  className={`rounded-lg px-2 py-1 text-xs font-semibold transition ${
-                                    on
-                                      ? 'bg-emerald-600 text-white shadow-sm'
-                                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700'
-                                  }`}
-                                >
-                                  {item.label}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                  <div className="mt-2">
+                    <GeoFilter value={geo} onChange={setGeo} />
                   </div>
                 )}
               </div>
@@ -300,13 +254,13 @@ export default function SearchFilter({
                     {whoOptions.map((option) => (
                       <label
                         key={option.id}
-                        className="flex cursor-pointer items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 smk-text-label font-semibold text-slate-700 transition hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+                        className="flex cursor-pointer items-center gap-1.5 rounded-[calc(1.25rem*var(--smk-radius-scale,1))] bg-slate-100 px-2.5 py-1 smk-text-label font-semibold text-slate-700 transition hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
                       >
                         <input
                           type="checkbox"
                           checked={audienceFilters.includes(option.id)}
                           onChange={() => toggleAudience(option.id)}
-                          className="h-3 w-3 rounded text-emerald-600 focus:ring-emerald-500"
+                          className="h-3 w-3 rounded-[calc(0.25rem*var(--smk-radius-scale,1))] text-emerald-600 focus:ring-emerald-500"
                         />
                         {option.label}
                       </label>
@@ -330,13 +284,13 @@ export default function SearchFilter({
                     {statusFilterOptions.map((option) => (
                       <label
                         key={option.id}
-                        className="flex cursor-pointer items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 smk-text-label font-semibold text-slate-700 transition hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+                        className="flex cursor-pointer items-center gap-1.5 rounded-[calc(1.25rem*var(--smk-radius-scale,1))] bg-slate-100 px-2.5 py-1 smk-text-label font-semibold text-slate-700 transition hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
                       >
                         <input
                           type="checkbox"
                           checked={audienceFilters.includes(option.id)}
                           onChange={() => toggleAudience(option.id)}
-                          className="h-3 w-3 rounded text-emerald-600 focus:ring-emerald-500"
+                          className="h-3 w-3 rounded-[calc(0.25rem*var(--smk-radius-scale,1))] text-emerald-600 focus:ring-emerald-500"
                         />
                         <span className={`h-2 w-2 rounded-full ${option.dotColor}`} />
                         {option.label}

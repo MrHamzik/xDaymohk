@@ -277,7 +277,7 @@ export default function MapPage() {
             прочие страницы (правка от 21.08: раньше карта растягивалась
             на весь экран и выбивалась из общего строя). */}
         <main className="smk-shell-main">
-          <div className="mx-auto w-full max-w-3xl">
+          <div className="w-full min-w-0">
 
         <SearchFilter
           searchQuery={searchQuery}
@@ -368,7 +368,7 @@ export default function MapPage() {
               routeMode ? 'bg-emerald-600 text-white shadow-sm' : 'smk-field text-slate-700 dark:text-zinc-300'
             }`}
           >
-            {routeMode ? (routeB ? t.mapRouteReset : t.mapRoutePick) : t.mapRouteBuild}
+            {routeMode ? (routeB ? t.mapRouteReset : t.mapRouteTo) : t.mapRouteBuild}
           </button>
           {routeInfo && (
             <span className="rounded-xl bg-emerald-50 px-2.5 py-1.5 text-xs font-bold text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">

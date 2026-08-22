@@ -308,6 +308,7 @@ textarea.smk-field:focus {
 
    Начертание спокойное, как у подсказок: цвет уже несёт смысл. */
 .smk-chip {
+  border-radius: calc(0.5rem * var(--smk-radius-scale, 1));
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;

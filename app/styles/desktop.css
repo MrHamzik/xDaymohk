@@ -117,7 +117,8 @@
   align-items: center;
   justify-content: center;
   gap: 0.65rem;
-  border-radius: 999px;
+  /* п.16 замечаний 23.08: скругление подчиняется настройке. */
+  border-radius: calc(0.9rem * var(--smk-radius-scale, 1));
   padding: 0.55rem 0.7rem;
   font-size: var(--smk-fs-label);
   font-weight: 700;
@@ -138,7 +139,10 @@
 }
 
 .smk-rail-item:hover {
-  background: color-mix(in srgb, var(--smk-card-a) 55%, transparent);
+  /* п.16: в светлой теме белый ховер сливался с текстом — берём
+     главный цвет и слегка затемняем, как просил владелец. */
+  background: color-mix(in srgb, var(--color-emerald-600) 14%, transparent);
+  color: color-mix(in srgb, var(--color-emerald-700) 80%, var(--foreground));
 }
 
 /* Выбранный пункт — как в мобильном меню (п.24/31): сплошная зелёная

@@ -11,6 +11,7 @@ import 'leaflet.markercluster';
 import type * as Leaflet from 'leaflet';
 import type { MapMarker, MapPosition } from '@/lib/types';
 import { SAMASHKI_HOUSE_ADDRESSES, SAMASHKI_PLACE_OBJECTS, getEffectiveHouseAddresses, fetchEffectiveHouseAddresses, findClosestSamashkiHouse, type SamashkiHouseAddress } from '@/lib/samashki-addresses';
+import { Home, Store, UserRound } from 'lucide-react';
 import { escapeHtml } from '@/lib/sanitize';
 import MapSegmentedControl from '@/components/MapSegmentedControl';
 
@@ -39,6 +40,8 @@ export interface InteractiveMapProps {
   showPlaces?: boolean;
   /** Активный слой объектов: 'profiles' | 'houses' | 'places' | 'none' (один за раз). */
   objectMode?: MapObjectMode;
+  /** Кнопки-иконки слоёв в панели контролов (п.1 замечаний 23.08). */
+  onObjectModeChange?: (mode: MapObjectMode) => void;
   /** Фильтр категории для слоя «Другое» (как в админке); пусто — все категории. */
   placesCategory?: string;
   mapLayerMode?: MapLayerMode;
@@ -92,6 +95,7 @@ export function LeafletMap({
   // независимо друг от друга. Дефолт 'profiles' здесь глушил слои домов и
   // объектов — карта в анкетах оставалась без маркеров.
   objectMode,
+  onObjectModeChange,
   placesCategory = '',
   mapLayerMode: controlledMapLayerMode,
   onMapLayerModeChange,
@@ -211,7 +215,7 @@ export function LeafletMap({
         });
       };
       objectClusterRef.current = L.markerClusterGroup({
-        maxClusterRadius: 30,
+        maxClusterRadius: 60,
         spiderfyOnMaxZoom: true,
         showCoverageOnHover: false,
         zoomToBoundsOnClick: true,
@@ -438,8 +442,8 @@ export function LeafletMap({
     // п.2 замечаний 23.08: на дальнем зуме домов нет вообще —
     // появляются только при приближении (зум >= 15), иначе тысячи
     // маркеров вешают ПК. Зум попадает в сигнатуру пересборки.
-    sigParts.push(map.getZoom() >= 15 ? 'zoom-near' : 'zoom-far');
-    if (wantHouses && map.getZoom() >= 15) {
+    sigParts.push(map.getZoom() >= 14 ? 'zoom-near' : 'zoom-far');
+    if (wantHouses && map.getZoom() >= 14) {
       // Только видимая область (+40% запаса): тысячи адресов сразу не
       // рендерим, остальное подхватывается на moveend/zoomend.
       const bounds = map.getBounds().pad(0.4);
@@ -837,6 +841,33 @@ export function LeafletMap({
               { value: 'hybrid' as MapLayerMode, label: 'Гибрид' },
             ]}
           />
+          {/* Слои объектов — иконками справа от режимов подложки
+              (п.1 замечаний 23.08): человек, дом, другое. */}
+          {onObjectModeChange && objectMode !== undefined && (
+            <div className="flex items-center gap-1">
+              {([
+                ['profiles', UserRound, 'Анкеты'],
+                ['houses', Home, 'Дома'],
+                ['places', Store, 'Другое'],
+              ] as const).map(([mode, Icon, label]) => (
+                <button
+                  key={mode}
+                  type="button"
+                  title={label}
+                  aria-label={label}
+                  aria-pressed={objectMode === mode}
+                  onClick={() => onObjectModeChange(objectMode === mode ? 'none' : mode)}
+                  className={`flex h-7 w-7 items-center justify-center rounded-lg transition ${
+                    objectMode === mode
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'text-slate-500 hover:bg-slate-100 dark:text-zinc-400 dark:hover:bg-zinc-800'
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
       <div ref={containerRef} className="h-full w-full" />

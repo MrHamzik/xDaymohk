@@ -1,37 +1,38 @@
 /**
- * Справочник топонимов Чеченской Республики для фильтра каталога
- * «Города / Районы / Сёла» (решение владельца, Этап 2-каталог, п.3).
+ * Справочник топонимов Чеченской Республики для гео-фильтров
+ * («Города / Районы / Сёла» в фильтрах каталога, карты и Темщика).
  *
- * Статичный словарь, а не данные из БД: населённые пункты ЧР —
- * константа, а адресная книга проекта содержит только дома Самашек.
- * Список правится здесь одной правкой; выбор РАЙОНА включает все его
- * сёла (владелец подтвердил).
- *
- * Фильтр ищет топоним подстрокой в адресе анкеты (поселение + адрес
- * места работы), регистр не важен.
+ * Статусы актуализированы по 2026 год [Википедия, реестр АТД ЧР]:
+ * городами стали Ачхой-Мартан (2023), Курчалой (2021), Ойсхара,
+ * Серноводское, Наурская, Шелковская (2024). В «сёлах» их больше нет.
  */
 
-export interface District {
+export const GEO_CITIES: string[] = [
+  'Грозный', 'Аргун', 'Ачхой-Мартан', 'Курчалой', 'Урус-Мартан',
+  'Шали', 'Гудермес', 'Ойсхара', 'Серноводское', 'Наурская', 'Шелковская',
+];
+
+export interface GeoDistrict {
   id: string;
   name: string;
   /** Сёла, входящие в район. */
   villages: string[];
 }
 
-export const GEO_CITIES: string[] = [
-  'Грозный', 'Аргун', 'Гудермес', 'Урус-Мартан', 'Шали', 'Курчалой',
-];
-
-export const GEO_DISTRICTS: District[] = [
+export const GEO_DISTRICTS: GeoDistrict[] = [
   {
     id: 'achkhoy',
     name: 'Ачхой-Мартановский',
-    villages: ['Самашки', 'Катаяма', 'Давыденко', 'Новый Шарой', 'Ачхой-Мартан', 'Янди', 'Бамут', 'Закан-Юрт', 'Кулары'],
+    villages: [
+      'Самашки', 'Катаяма', 'Давыденко', 'Новый Шарой', 'Янди', 'Бамут',
+      'Закан-Юрт', 'Кулары', 'Валерик', 'Шаами-Юрт', 'Старый Ачхой',
+      'Хамби-Ирзи', 'Катар-Юрт',
+    ],
   },
   {
     id: 'sunzha',
     name: 'Сунженский',
-    villages: ['Серноводское', 'Ассиновская', 'Бердкел'],
+    villages: ['Ассиновская', 'Бердкел'],
   },
   {
     id: 'urus',
@@ -41,7 +42,7 @@ export const GEO_DISTRICTS: District[] = [
   {
     id: 'gudermes',
     name: 'Гудермесский',
-    villages: ['Джалка', 'Илсхан-Юрт', 'Кошкельды', 'Ойсхара'],
+    villages: ['Джалка', 'Илсхан-Юрт', 'Кошкельды'],
   },
   {
     id: 'shali',
@@ -54,27 +55,29 @@ export const GEO_DISTRICTS: District[] = [
     villages: ['Ахмат-Юрт', 'Майртуп', 'Цоци-Юрт'],
   },
   {
-    id: 'grozny-district',
+    id: 'grozny',
     name: 'Грозненский',
     villages: ['Старые Атаги', 'Алхан-Кала', 'Толстой-Юрт'],
   },
   {
     id: 'naur',
     name: 'Наурский',
-    villages: ['Наурская', 'Ищерская'],
+    villages: ['Ищерская', 'Чернокозово', 'Мекенское'],
   },
   {
     id: 'shelkovskoy',
     name: 'Шелковской',
-    villages: ['Шелковская', 'Гребенская', 'Червленная'],
+    villages: ['Гребенская', 'Червленная'],
   },
 ];
 
-/** Все сёла плоским списком (для группы «Сёла»). */
+/** Все сёла плоским списком. */
 export const GEO_VILLAGES: string[] = GEO_DISTRICTS.flatMap((d) => d.villages);
 
-export type GeoGroup = 'city' | 'district' | 'village';
-
+/**
+ * Требования к машинам по тарифам живут в БД (car_requirements,
+ * миграция 80); здесь — только топонимы для фильтров.
+ */
 export interface GeoSelection {
   cities: string[];
   districts: string[];
@@ -87,15 +90,10 @@ export function geoSelectionIsEmpty(sel: GeoSelection): boolean {
   return sel.cities.length === 0 && sel.districts.length === 0 && sel.villages.length === 0;
 }
 
-/** Суммарное число выбранных топонимов — для счётчика в фильтре. */
-export function geoSelectionCount(sel: GeoSelection): number {
-  return sel.cities.length + sel.districts.length + sel.villages.length;
-}
-
 /**
- * Совпадает ли адрес анкеты с выбором. Пустой выбор — совпадает всё.
- * Район раскрывается в свои сёла + собственное имя («Ачхой-Мартановский
- * район» в адресе тоже засчитывается).
+ * Совпадает ли адрес анкеты с выбором. Пустой выбор = «Даймохк —
+ * Чеченская Республика» (охватывает всё, п.11 замечаний 23.08).
+ * Район раскрывается в свои сёла + собственное имя.
  */
 export function matchesGeoSelection(
   haystackRaw: string,
@@ -104,9 +102,7 @@ export function matchesGeoSelection(
   if (geoSelectionIsEmpty(sel)) return true;
   const haystack = haystackRaw.toLowerCase();
   if (!haystack.trim()) return false;
-
   const hit = (name: string) => haystack.includes(name.toLowerCase());
-
   if (sel.cities.some(hit)) return true;
   if (sel.villages.some(hit)) return true;
   return sel.districts.some((id) => {
@@ -115,4 +111,9 @@ export function matchesGeoSelection(
     if (hit(district.name)) return true;
     return district.villages.some(hit);
   });
+}
+
+/** Число выбранных топонимов — для счётчика в кнопке «Фильтры». */
+export function geoSelectionCount(sel: GeoSelection): number {
+  return sel.cities.length + sel.districts.length + sel.villages.length;
 }

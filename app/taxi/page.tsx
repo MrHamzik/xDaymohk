@@ -358,30 +358,9 @@ export default function TaxiPage() {
 
               {/* Слои (п.2): «Анкеты, Дома, Другое», отдельно от
                   «Карта/Спутник/Гибрид»; повторный клик выключает. */}
-              <div className="absolute left-2 top-16 z-[450] flex gap-1 sm:top-14">
-                {([
-                  ['profiles', L('Анкеты', 'Анкеташ')],
-                  ['houses', L('Дома', 'ЦIенош')],
-                  ['places', L('Другое', 'Кхин')],
-                ] as const).map(([mode, label]) => (
-                  <button
-                    key={mode}
-                    type="button"
-                    onClick={() => setObjectMode(objectMode === mode ? 'none' : mode)}
-                    className={`rounded-xl px-2.5 py-1.5 text-[11px] font-bold shadow-md transition ${
-                      objectMode === mode
-                        ? 'bg-emerald-600 text-white'
-                        : 'bg-white/95 text-slate-600 hover:bg-white dark:bg-zinc-900/95 dark:text-zinc-400 dark:hover:bg-zinc-900'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-
               {/* Таксист на линии: лента заказов вместо формы (п.1). */}
               {driverLoaded && driverOnline ? (
-                <div className="relative z-10 -mt-4 max-h-[55%] space-y-2 overflow-y-auto px-2 pb-4 sm:px-4">
+                <div className="absolute inset-x-0 bottom-0 z-[450] max-h-[62%] space-y-2 overflow-y-auto px-2 pb-2 sm:px-4">
                   <div className="smk-sheet flex items-center gap-2 rounded-2xl p-2.5 shadow-xl">
                     <CircleCheck className="h-4 w-4 shrink-0 text-emerald-600" />
                     <p className="flex-1 text-xs font-bold text-slate-900 dark:text-white">
@@ -447,7 +426,7 @@ export default function TaxiPage() {
               ) : (
                 <>
                 {/* Шторка заказа: фиксирована над нижним меню (п.3). */}
-                <div className="relative z-10 -mt-6 px-2 pb-4 sm:px-4">
+                <div className="absolute inset-x-0 bottom-0 z-[450] max-h-[62%] overflow-y-auto px-2 pb-2 sm:px-4">
                   <div className="smk-sheet max-h-[55%] space-y-2 overflow-y-auto rounded-3xl p-3 shadow-2xl">
                     {/* п.8: вместо «откуда/куда» — цена, расстояние, время. */}
                     <p className="text-center text-sm font-black text-slate-900 dark:text-white">
