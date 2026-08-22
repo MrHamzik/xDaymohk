@@ -111,5 +111,33 @@ export async function POST(
     return NextResponse.json({ error: 'Не удалось обновить поездку' }, { status: 500 });
   }
 
+  // Лента событий + уведомление второй стороне (п.13 замечаний
+  // 23.08): уведомления уходят в раздел «Такси» (type taxi_info).
+  const actor = isDriver ? 'driver' : 'rider';
+  await admin.from('taxi_events').insert({ ride_id: id, event_type: action, actor });
+
+  const MESSAGES: Record<string, { title: string; message: string; to: 'rider' | 'driver' | null }> = {
+    accept: { title: 'Таксист принял заказ', message: 'Машина и водитель назначены — следите за статусом в Такси.', to: 'rider' },
+    to_pickup: { title: 'Таксист выехал к вам', message: 'Водитель в пути к точке подачи.', to: 'rider' },
+    in_ride: { title: 'Поездка началась', message: 'Пассажир в машине.', to: 'rider' },
+    complete: { title: 'Поездка завершена', message: 'Оцените поездку в разделе Такси.', to: 'rider' },
+    cancel: isRider
+      ? { title: 'Заказ отменён пассажиром', message: 'Пассажир отменил заказ.', to: 'driver' }
+      : { title: 'Таксист отменил заказ', message: 'Заказ снова в поиске таксиста.', to: 'rider' },
+  };
+  const note = MESSAGES[action];
+  if (note && note.to) {
+    const recipient = note.to === 'rider' ? ride.rider_id : ride.driver_id;
+    if (recipient) {
+      await admin.from('notifications').insert({
+        recipient_id: recipient,
+        type: 'taxi_info',
+        title: note.title,
+        message: note.message,
+        sender: 'Такси',
+      });
+    }
+  }
+
   return withRateLimitHeaders(NextResponse.json({ ride: updated }), { ...limit, limit: 30 });
 }

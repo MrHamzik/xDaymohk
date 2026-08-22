@@ -10,6 +10,11 @@ import PayoutPeekSheet from '@/components/settings/PayoutPeekSheet';
 import Avatar from '@/components/Avatar';
 import { supabase } from '@/lib/supabase';
 import { findClosestSamashkiHouse } from '@/lib/samashki-addresses';
+import { Route as RouteIcon } from 'lucide-react';
+import dynamic from 'next/dynamic';
+import { getUserCoords } from '@/lib/geo';
+
+const TaxiMapModal = dynamic(() => import('@/components/taxi/TaxiMapModal'), { ssr: false });
 import {
   canAcceptPayment, isPaymentMethod, type PaymentMethod, type PayoutMethods,
 } from '@/lib/payments';
@@ -86,6 +91,16 @@ export default function TaskDetailModal({
   // Leaflet тянет свой бандл и тайлы, а адрес нужен не в каждом
   // открытии карточки.
   const [isMapOpen, setIsMapOpen] = useState(false);
+  const [routeOpen, setRouteOpen] = useState(false);
+  const [routeFrom, setRouteFrom] = useState<{ lat: number; lng: number } | null>(null);
+
+  // Путь от исполнителя до точки заказчика (п.5).
+  const openRoute = async () => {
+    let from: { lat: number; lng: number } | null = null;
+    try { from = await getUserCoords(true); } catch { from = null; }
+    setRouteFrom(from);
+    setRouteOpen(true);
+  };
   // Жалоба по спору: модалка поверх карточки, чтобы не терять контекст.
   const [isComplaintOpen, setIsComplaintOpen] = useState(false);
   // Что подтверждаем: удаление (никто не взял) или отмену (взяли).
@@ -537,15 +552,27 @@ export default function TaskDetailModal({
                           внешние Яндекс.Карты: точку мы умеем показать
                           сами, и уходить из приложения незачем. */}
                       {typeof task.lat === 'number' && typeof task.lng === 'number' && (
-                        <button
-                          type="button"
-                          onClick={() => setIsMapOpen((open) => !open)}
-                          aria-expanded={isMapOpen}
-                          className="mt-1.5 inline-flex items-center gap-1 smk-text-label font-bold text-emerald-600 hover:underline dark:text-emerald-400"
-                        >
-                          <MapPin className="h-3 w-3" />
-                          {isMapOpen ? t.hideMap : t.openOnMap}
-                        </button>
+                        <span className="mt-1.5 flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setIsMapOpen((open) => !open)}
+                            aria-expanded={isMapOpen}
+                            className="inline-flex items-center gap-1 smk-text-label font-bold text-emerald-600 hover:underline dark:text-emerald-400"
+                          >
+                            <MapPin className="h-3 w-3" />
+                            {isMapOpen ? t.hideMap : t.openOnMap}
+                          </button>
+                          {/* п.5: исполнитель видит путь от своего
+                              местоположения до точки заказчика. */}
+                          <button
+                            type="button"
+                            onClick={() => void openRoute()}
+                            className="inline-flex items-center gap-1 smk-text-label font-bold text-emerald-600 hover:underline dark:text-emerald-400"
+                          >
+                            <RouteIcon className="h-3 w-3" />
+                            {t.taskRouteToCustomer}
+                          </button>
+                        </span>
                       )}
                     </div>
                   </div>
@@ -1221,6 +1248,16 @@ export default function TaskDetailModal({
         />
       )}
       <PayoutPeekSheet isOpen={payoutOpen} onClose={() => setPayoutOpen(false)} />
+      {/* Маршрут исполнителя: моё GPS → точка заказчика (п.5). */}
+      {task && typeof task.lat === 'number' && typeof task.lng === 'number' && (
+        <TaxiMapModal
+          isOpen={routeOpen}
+          onClose={() => setRouteOpen(false)}
+          from={routeFrom ? { ...routeFrom, label: '' } : null}
+          to={{ lat: task.lat, lng: task.lng, label: task.address }}
+        />
+      )}
+
     </div>
   );
 }

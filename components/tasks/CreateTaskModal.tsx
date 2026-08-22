@@ -5,7 +5,8 @@ import {
   clearTaskDraft, draftIsEmpty, loadTaskDraft, loadTemplates, removeTemplate, saveTaskDraft, saveTemplate,
   type TaskDraft,
 } from '@/lib/tasks/drafts';
-import { X, Loader2, MapPin } from 'lucide-react';
+import { X, Loader2, LocateFixed, MapPin } from 'lucide-react';
+import { reverseGeocode } from '@/lib/geocoding';
 import { useSheetSwipe } from '@/lib/hooks/useSheetSwipe';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 import InteractiveMap from '@/components/InteractiveMapLazy';
@@ -13,6 +14,7 @@ import MapSegmentedControl from '@/components/MapSegmentedControl';
 import { type MapLayerMode } from '@/components/InteractiveMap';
 import { useI18n } from '@/lib/i18n';
 import { createTask, updateTask, fetchTaskFilters } from '@/lib/tasks/client';
+import { filterIcon } from '@/lib/filter-icons';
 import { getUserCoords } from '@/lib/geo';
 import { useAuth } from '@/components/AuthProvider';
 import { SettingRow, Toggle } from '@/components/settings/SettingsPrimitives';
@@ -327,6 +329,25 @@ export default function CreateTaskModal({
     return () => document.removeEventListener('keydown', onKey);
   }, [isOpen, onClose]);
 
+  // «Где я?»: GPS + обратное геокодирование (п.5).
+  const [locating, setLocating] = useState(false);
+  const locateMe = async () => {
+    setLocating(true);
+    try {
+      const position = await getUserCoords(true);
+      if (!position) return;
+      setCoords({ lat: position.lat, lng: position.lng });
+      let label = `${position.lat.toFixed(4)}, ${position.lng.toFixed(4)}`;
+      try {
+        const geo = await reverseGeocode(position);
+        if (geo) label = geo;
+      } catch { /* компактные координаты */ }
+      setAddress(label);
+    } finally {
+      setLocating(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   // Контакты берём из анкеты автора: в форме задания их не вводят.
@@ -561,21 +582,36 @@ export default function CreateTaskModal({
           </div>
 
           <div className={`${sectionClass} grid grid-cols-2 gap-3`}>
-            <div>
-              <label htmlFor="task-category" className={labelClass}>{t.taskCategoryLabel}</label>
-              <select
-                id="task-category"
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className={fieldClass}
-              >
-                {categories.length === 0 && <option value="other">{t.taskCategoryOther}</option>}
-                {categories.map((c) => (
-                  <option key={c.id} value={c.value}>
-                    {(language === 'ce' && c.labelCe) || c.labelRu}
-                  </option>
-                ))}
-              </select>
+            <div className="col-span-2">
+              {/* Категории — чипами с иконками из админки: что админ
+                  поставил в «Фильтрах», то и видит житель (п.4
+                  замечаний 23.08). */}
+              <span className={labelClass}>{t.taskCategoryLabel}</span>
+              <div className="flex flex-wrap gap-1.5">
+                {(categories.length > 0
+                  ? categories
+                  : [{ id: 'other', value: 'other', labelRu: t.taskCategoryOther, labelCe: null, icon: null }]
+                ).map((c) => {
+                  const Icon = filterIcon(c.icon ?? undefined, c.value);
+                  const on = category === c.value;
+                  return (
+                    <button
+                      key={c.value}
+                      type="button"
+                      onClick={() => setCategory(c.value)}
+                      aria-pressed={on}
+                      className={`inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-bold transition ${
+                        on
+                          ? 'bg-emerald-600 text-white shadow-sm'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700'
+                      }`}
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                      {(language === 'ce' && c.labelCe) || c.labelRu}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {isPaid && (
@@ -799,6 +835,18 @@ export default function CreateTaskModal({
                 setCoords({ lat: s.lat, lng: s.lng });
               }}
             />
+
+            {/* «Где я?» (п.5 замечаний 23.08): GPS ставит точку там, где
+                стоит заказчик, адрес — ближайшая улица через обратное
+                геокодирование; дома из БД остаются подсказками. */}
+            <button
+              type="button"
+              onClick={() => void locateMe()}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-emerald-700"
+            >
+              <LocateFixed className="h-3.5 w-3.5" />
+              {t.taskWhereAmI}
+            </button>
 
             {/* Карта на выбор точки: клик по ней уточняет адрес — тот же
                 сценарий, что в анкете. Грузим только после раскрытия:

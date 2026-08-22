@@ -428,11 +428,13 @@ export default function Home() {
       {/* Быстрая заявка лендинга: бесплатное задание с пресетом.
           Без вопроса про черновик: быстрое создание не копится
           в шаблоны/черновики (п.8 замечаний 22.08). */}
+      {/* Быстрые карточки — задания Темщика (платные): ГIончалла —
+          это «Помощь», а не доставка/еда (п.6 замечаний 23.08). */}
       <CreateTaskModal
         isOpen={quickTaskOpen}
-        isPaid={false}
-        preset={quickPreset}
+        isPaid
         skipDraftAsk
+        preset={quickPreset}
         onClose={() => setQuickTaskOpen(false)}
         onCreated={() => setQuickTaskOpen(false)}
       />

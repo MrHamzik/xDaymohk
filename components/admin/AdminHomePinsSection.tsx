@@ -31,6 +31,11 @@ export default function AdminHomePinsSection() {
   const [pinned, setPinned] = useState<Set<string>>(new Set());
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [error, setError] = useState('');
+  // п.3 замечаний 23.08: закрепление — через модалку со сроком
+  // (часы/дни из вариантов или свой вариант, либо бессрочно).
+  const [pinTarget, setPinTarget] = useState<{ type: 'profile' | 'task'; id: string } | null>(null);
+  const [pinHours, setPinHours] = useState<number | 'forever' | 'custom'>('forever');
+  const [pinCustomHours, setPinCustomHours] = useState('48');
 
   const load = useCallback(async () => {
     if (!supabase) return;
@@ -66,7 +71,54 @@ export default function AdminHomePinsSection() {
   useEffect(() => { void load(); }, [load]);
 
   /** Закрепить/открепить объект предложения (обновление 74). */
+  const PIN_PRESETS: Array<{ value: number | 'forever'; label: string }> = [
+    { value: 1, label: L('1 час', '1 сахьт') },
+    { value: 6, label: L('6 часов', '6 сахьт') },
+    { value: 12, label: L('12 часов', '12 сахьт') },
+    { value: 24, label: L('1 день', '1 де') },
+    { value: 72, label: L('3 дня', '3 де') },
+    { value: 168, label: L('7 дней', '7 де') },
+    { value: 720, label: L('30 дней', '30 де') },
+    { value: 'forever', label: L('Бессрочно', 'Бессрочно') },
+  ];
+
+  const confirmPin = async () => {
+    if (!pinTarget || !supabase) return;
+    const session = await supabase.auth.getSession();
+    const token = session.data.session?.access_token;
+    if (!token) return;
+    const custom = Number(pinCustomHours);
+    const hours = pinHours === 'custom'
+      ? (Number.isFinite(custom) && custom > 0 ? custom : null)
+      : pinHours === 'forever' ? 'forever' : pinHours;
+    setBusyKey(`${pinTarget.type}:${pinTarget.id}`);
+    try {
+      const res = await fetch('/api/home-pinned', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          targetType: pinTarget.type,
+          targetId: pinTarget.id,
+          expiresInHours: hours,
+        }),
+      });
+      if (!res.ok) {
+        setError(L('Не удалось закрепить', 'ЧIопагIдаккха ца делира'));
+        return;
+      }
+      setPinTarget(null);
+      await load();
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
   const togglePin = async (entry: { type: 'profile' | 'task'; id: string }) => {
+    // Ещё не закреплено — модалка со сроком; уже закреплено — снять.
+    if (!pinned.has(`${entry.type}:${entry.id}`)) {
+      setPinTarget(entry);
+      return;
+    }
     if (!supabase) return;
     const key = `${entry.type}:${entry.id}`;
     const session = await supabase.auth.getSession();
@@ -74,27 +126,20 @@ export default function AdminHomePinsSection() {
     if (!token) return;
     setBusyKey(key);
     try {
-      const isPinned = pinned.has(key);
-      const res = isPinned
-        ? await fetch(`/api/home-pinned?targetType=${entry.type}&targetId=${encodeURIComponent(entry.id)}`, {
-          method: 'DELETE',
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        : await fetch('/api/home-pinned', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ targetType: entry.type, targetId: entry.id }),
-        });
+      const res = await fetch(`/api/home-pinned?targetType=${entry.type}&targetId=${encodeURIComponent(entry.id)}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (!res.ok) {
         setError(L('Не удалось изменить закрепление', 'Закрепленни хийца ца делира'));
         return;
       }
       setPinned((current) => {
         const next = new Set(current);
-        if (isPinned) next.delete(key);
-        else next.add(key);
+        next.delete(key);
         return next;
       });
+      await load();
     } finally {
       setBusyKey(null);
     }
@@ -182,6 +227,72 @@ export default function AdminHomePinsSection() {
           </div>
         ))}
       </div>
+
+      {/* Модалка срока закрепления (п.3 замечаний 23.08). */}
+      {pinTarget && (
+        <div className="fixed inset-0 z-[95] flex items-center justify-center bg-zinc-950/60 p-4 backdrop-blur-sm" role="dialog" aria-modal="true">
+          <div className="smk-sheet w-full max-w-xs rounded-2xl p-4 shadow-2xl">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+              {L('На какой срок закрепить?', 'Мукха ханна чIопагIдаккха?')}
+            </h3>
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {PIN_PRESETS.map((preset) => (
+                <button
+                  key={String(preset.value)}
+                  type="button"
+                  onClick={() => setPinHours(preset.value)}
+                  className={`rounded-xl px-2.5 py-1.5 text-xs font-bold transition ${
+                    pinHours === preset.value
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700'
+                  }`}
+                >
+                  {preset.label}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setPinHours('custom')}
+                className={`rounded-xl px-2.5 py-1.5 text-xs font-bold transition ${
+                  pinHours === 'custom'
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700'
+                }`}
+              >
+                {L('Свой', 'Шен')}
+              </button>
+            </div>
+            {pinHours === 'custom' && (
+              <div className="mt-2 flex items-center gap-2">
+                <input
+                  type="number" min={1} max={8760}
+                  value={pinCustomHours}
+                  onChange={(e) => setPinCustomHours(e.target.value)}
+                  className="smk-field w-24 px-2.5 py-2 text-xs text-slate-900 dark:text-white"
+                />
+                <span className="text-xs text-slate-500 dark:text-zinc-400">{L('часов', 'сахьт')}</span>
+              </div>
+            )}
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setPinTarget(null)}
+                className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 dark:border-zinc-800 dark:text-zinc-400"
+              >
+                {L('Отмена', 'Юхадаккха')}
+              </button>
+              <button
+                type="button"
+                disabled={busyKey !== null}
+                onClick={() => void confirmPin()}
+                className="flex-1 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+              >
+                {L('Закрепить', 'ЧIопагIдаккха')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

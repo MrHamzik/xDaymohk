@@ -1650,5 +1650,75 @@
     "data_type": "boolean",
     "is_nullable": "NO",
     "column_default": "false"
+  },
+  {
+    "table_name": "home_pinned",
+    "column_name": "expires_at",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES",
+    "column_default": null
+  },
+  {
+    "table_name": "taxi_rides",
+    "column_name": "pref_gender",
+    "data_type": "text",
+    "is_nullable": "NO",
+    "column_default": "'any'::text"
+  },
+  {
+    "table_name": "taxi_rides",
+    "column_name": "pref_min_age",
+    "data_type": "integer",
+    "is_nullable": "NO",
+    "column_default": "18"
+  },
+  {
+    "table_name": "taxi_rides",
+    "column_name": "options",
+    "data_type": "ARRAY",
+    "is_nullable": "NO",
+    "column_default": "'{}'::text[]"
+  },
+  {
+    "table_name": "taxi_events",
+    "column_name": "id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "column_default": "gen_random_uuid()"
+  },
+  {
+    "table_name": "taxi_events",
+    "column_name": "ride_id",
+    "data_type": "uuid",
+    "is_nullable": "NO",
+    "column_default": null
+  },
+  {
+    "table_name": "taxi_events",
+    "column_name": "event_type",
+    "data_type": "text",
+    "is_nullable": "NO",
+    "column_default": null
+  },
+  {
+    "table_name": "taxi_events",
+    "column_name": "actor",
+    "data_type": "text",
+    "is_nullable": "NO",
+    "column_default": "'system'::text"
+  },
+  {
+    "table_name": "taxi_events",
+    "column_name": "note",
+    "data_type": "text",
+    "is_nullable": "NO",
+    "column_default": "''::text"
+  },
+  {
+    "table_name": "taxi_events",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "NO",
+    "column_default": "now()"
   }
 ]

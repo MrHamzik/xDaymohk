@@ -126,21 +126,35 @@ export default function AdminTaxiSection() {
         ))}
       </div>
 
-      {/* Цена */}
+      {/* Тарифная сетка: из чего складывается цена поездки. */}
       <div className="space-y-2">
         <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
-          {L('Цена: подача / км / мин / минималка / дороги', 'Цена: подача / км / мин / минималка / дороги')}
+          {L('Тарифная сетка', 'Тарифан сетка')}
         </h3>
+        <p className="smk-text-label leading-relaxed text-slate-500 dark:text-zinc-500">
+          {L(
+            'Цена поездки = подача + км × «за км» + минуты × «за мин», сверху множитель тарифа и множитель спроса. «Минималка» — ниже неё цена не опустится. «Коэффициент дорог» переводит прямую линию в реальную дорогу.',
+            'Нехан цена = подача + км × «км» + миноти × «мин», тIехь тарифан а, эхаран а множитель. «Минималка» — сов совна цена.',
+          )}
+        </p>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-          {(['baseFare', 'perKm', 'perMin', 'minFare', 'roadFactor'] as const).map((key) => (
-            <input
-              key={key}
-              value={fare[key] ?? ''}
-              onChange={(e) => setFare((f) => ({ ...f, [key]: e.target.value }))}
-              placeholder={key}
-              inputMode="decimal"
-              className={field}
-            />
+          {([
+            ['baseFare', L('Подача, ₽', 'Подача, ₽')],
+            ['perKm', L('За км, ₽', 'Км, ₽')],
+            ['perMin', L('За мин, ₽', 'Мин, ₽')],
+            ['minFare', L('Минималка, ₽', 'Минималка, ₽')],
+            ['roadFactor', L('Коэф. дороги', 'Некъан коэф.')],
+          ] as const).map(([key, label]) => (
+            <div key={key}>
+              <span className="mb-1 block smk-text-label font-semibold text-slate-600 dark:text-zinc-400">{label}</span>
+              <input
+                value={fare[key] ?? ''}
+                onChange={(e) => setFare((f) => ({ ...f, [key]: e.target.value }))}
+                placeholder="0"
+                inputMode="decimal"
+                className={field}
+              />
+            </div>
           ))}
         </div>
         <button

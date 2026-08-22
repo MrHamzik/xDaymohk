@@ -126,21 +126,7 @@ export default function HomeFeed() {
     ? profiles.find((profile) => profile.id === activeProfileId) ?? null
     : null;
 
-  // Видимые специалисты для вкладки «Рейтинг»: по числу отзывов.
-  const rankedSpecialists = useMemo(
-    () => profiles
-      .filter((profile) => profile.isSpecialist && !profile.isHidden && !profile.isBanned)
-      .sort((a, b) => (b.reviewCount ?? 0) - (a.reviewCount ?? 0)),
-    [profiles],
-  );
 
-  // Личная анкета — для «Предложить на главную» (скрепка) из вкладки
-  // «Главная».
-  const personalProfile = useMemo(
-    () => profiles.find((p) => p.isPersonal && p.ownerId === account?.id) ?? null,
-    [profiles, account?.id],
-  );
-  const [pinOpen, setPinOpen] = useState(false);
 
   return (
     <div className="space-y-5">
@@ -152,53 +138,12 @@ export default function HomeFeed() {
         ]}
         active={homeTab}
         onChange={setHomeTab}
-        underBar={(
-          <div className="mb-4">
-            <HomeHeroBanner specialistCount={rankedSpecialists.length} />
-          </div>
-        )}
         panels={{
-          /* «Главная» — про аккаунт и его продвижение. */
+          /* «Главная» наполняется следующим этапом: баннер «Каталог
+              родины» и аккаунт-блок убраны по замечаниям 23.08
+              (п.7, п.8). */
           main: (
-            <div className="space-y-5">
-              <section className="smk-lux flex items-center gap-3 p-4">
-                {account?.avatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={account.avatarUrl} alt="" className="h-12 w-12 rounded-xl object-cover" />
-                ) : (
-                  <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-600 text-sm font-black text-white">
-                    {(account?.fullName || 'Д').slice(0, 1)}
-                  </span>
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-bold text-slate-900 dark:text-white">
-                    {account?.fullName || t.homeHelloGuest}
-                  </p>
-                  <p className="smk-text-label text-slate-500 dark:text-zinc-400">
-                    {account?.phone || t.phoneNotSet}
-                  </p>
-                </div>
-              </section>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                <Link href="/profile" className="smk-lux px-3.5 py-3 text-center text-xs font-bold text-slate-700 dark:text-zinc-300">
-                  {t.homeAccountProfile}
-                </Link>
-                <Link
-                  href={personalProfile ? `/catalog?profile=${encodeURIComponent(personalProfile.id)}` : '/profile'}
-                  className="smk-lux px-3.5 py-3 text-center text-xs font-bold text-slate-700 dark:text-zinc-300"
-                >
-                  {t.homeAccountAnketa}
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => setPinOpen(true)}
-                  disabled={!personalProfile}
-                  className="smk-lux px-3.5 py-3 text-center text-xs font-bold text-emerald-700 transition hover:brightness-95 dark:text-emerald-400 disabled:opacity-50"
-                >
-                  {t.homeAccountPromo}
-                </button>
-              </div>
-            </div>
+            <EmptyState title={t.inDevelopment} hint={t.homeMainEmpty} />
           ),
 
           /* «Подборка» — предложенное жителями и закреплённое админом. */
@@ -318,49 +263,8 @@ export default function HomeFeed() {
             </div>
           ),
 
-          rating: (
-            <div className="space-y-4">
-              <SpecialistLeaders onOpen={(id) => setActiveProfileId(id)} />
-              <section>
-                <h2 className="text-sm font-extrabold text-slate-900 dark:text-white">
-                  {t.ratingListTitle}
-                </h2>
-                <p className="mb-2 smk-text-label text-slate-500 dark:text-zinc-400">
-                  {t.ratingListHint}
-                </p>
-                {rankedSpecialists.length === 0 ? (
-                  <EmptyState title={t.nothingFound} hint={t.homeNoTasks} />
-                ) : (
-                  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
-                    {rankedSpecialists.map((profile) => (
-                      <ProfileCard
-                        key={profile.id}
-                        profile={profile}
-                        onSelect={(selected) => setActiveProfileId(selected.id)}
-                        isAdminStatus={isProfileAdmin(profile)}
-                        showPending={Boolean(isCurrentUserAdmin || (account && profile.ownerId === account.id))}
-                        isOwnProfile={Boolean(account && profile.ownerId === account.id)}
-                        isAdmin={isCurrentUserAdmin}
-                      />
-                    ))}
-                  </div>
-                )}
-              </section>
-            </div>
-          ),
-
-          tasks: <HomeTasksTab onOpenTask={setTaskId} />,
         }}
       />
-
-      {personalProfile && (
-        <PinProposeModal
-          isOpen={pinOpen}
-          targetType="profile"
-          targetId={personalProfile.id}
-          onClose={() => setPinOpen(false)}
-        />
-      )}
 
       <ProfileModal
         profile={activeProfile}
@@ -393,171 +297,12 @@ const READ_LINKS: Array<{
 ];
 
 /** Прежний hero каталога — двухцветный градиент, теперь на главной. */
-function HomeHeroBanner({ specialistCount }: { specialistCount: number }) {
-  const { t } = useI18n();
-  return (
-    <section className="smk-sign relative overflow-hidden rounded-2xl bg-hero-gradient p-4 text-white shadow-md sm:p-5" aria-labelledby="home-hero-title">
-      <div className="relative z-10 max-w-2xl">
-        <span className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-600/60 px-2.5 py-0.5 smk-text-label font-semibold text-emerald-100 backdrop-blur-md">
-          <Sparkles className="h-3 w-3 text-emerald-300" />
-          {t.heroBadge}
-        </span>
-        <h2 id="home-hero-title" className="mb-1 text-xl font-extrabold tracking-tight sm:text-2xl">
-          {t.heroTitle}
-        </h2>
-        <p className="mb-3 max-w-xl text-xs leading-relaxed text-emerald-100 sm:text-sm">
-          {t.heroSubtitle}
-        </p>
-        <div className="flex flex-wrap gap-1.5 text-xs">
-          <span className="inline-flex items-center gap-1 rounded-xl bg-white/10 px-2.5 py-1 font-medium backdrop-blur-sm">
-            <Users className="h-3 w-3 text-emerald-300" />
-            {formatCount(specialistCount, t.heroProfilesCount, t.heroProfilesCount, t.heroProfilesCount)}
-          </span>
-          <span className="inline-flex items-center gap-1 rounded-xl bg-white/10 px-2.5 py-1 font-medium backdrop-blur-sm">
-            <Award className="h-3 w-3 text-emerald-300" />
-            {t.heroRatingDocs}
-          </span>
-          <Link
-            href="/map"
-            className="inline-flex items-center gap-1 rounded-xl bg-emerald-500 px-3 py-1 font-bold text-white shadow-sm transition hover:bg-emerald-600 active:scale-95"
-          >
-            <MapPin className="h-3 w-3" />
-            {t.heroOpenMap}
-          </Link>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/**
- * Вкладка «Задания»: сначала дорогие, потом остальные; лёгкие
- * фильтры — поиск, категория, платные/бесплатные (решение владельца).
- */
-function HomeTasksTab({ onOpenTask }: { onOpenTask: (id: string) => void }) {
-  const { t } = useI18n();
-  const [tasks, setTasks] = useState<Task[] | null>(null);
-  const [categories, setCategories] = useState<AppFilter[]>([]);
-  const [query, setQuery] = useState('');
-  const [category, setCategory] = useState('all');
-  const [paidMode, setPaidMode] = useState<'all' | 'paid' | 'free'>('all');
-
-  useEffect(() => {
-    let cancelled = false;
-    void fetchTasks({ status: 'open', sort: 'reward', limit: 100 })
-      .then((list) => { if (!cancelled) setTasks(list); })
-      .catch(() => { if (!cancelled) setTasks([]); });
-    void fetchTaskFilters('tasks')
-      .then((list) => { if (!cancelled) setCategories(list); })
-      .catch(() => { if (!cancelled) setCategories([]); });
-    return () => { cancelled = true; };
-  }, []);
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return (tasks ?? []).filter((task) => {
-      if (paidMode === 'paid' && !task.isPaid) return false;
-      if (paidMode === 'free' && task.isPaid) return false;
-      if (category !== 'all' && task.category !== category) return false;
-      if (q && !`${task.title} ${task.description}`.toLowerCase().includes(q)) return false;
-      return true;
-    });
-  }, [tasks, query, category, paidMode]);
-
-  const expensive = filtered.filter((task) => task.isPaid);
-  const rest = filtered.filter((task) => !task.isPaid);
-
-  const field = 'smk-field w-full px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:text-white';
-
-  return (
-    <div className="space-y-4">
-      {/* Лёгкие фильтры */}
-      <div className="space-y-2">
-        <div className="relative">
-          <Search className="smk-ico pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder={t.tasksSearchPlaceholder}
-            aria-label={t.tasksSearchPlaceholder}
-            className={`${field} pl-9`}
-          />
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {(['all', 'paid', 'free'] as const).map((mode) => (
-            <button
-              key={mode}
-              type="button"
-              onClick={() => setPaidMode(mode)}
-              className={`rounded-xl px-2.5 py-1.5 text-xs font-bold transition ${
-                paidMode === mode
-                  ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'smk-field text-slate-600 dark:text-zinc-400'
-              }`}
-            >
-              {mode === 'all' ? t.tasksFilterPaidAll : mode === 'paid' ? t.tasksFilterPaidOnly : t.tasksFilterFreeOnly}
-            </button>
-          ))}
-          <select
-            value={category}
-            onChange={(event) => setCategory(event.target.value)}
-            aria-label={t.tasksFilterCategoryAll}
-            className="smk-field rounded-xl px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-zinc-300"
-          >
-            <option value="all">{t.tasksFilterCategoryAll}</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.value}>{c.labelRu}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {tasks === null && <p className="smk-text-label text-slate-500 dark:text-zinc-400">{t.loading}</p>}
-      {tasks !== null && filtered.length === 0 && (
-        <EmptyState title={t.homeNoTasks} hint={t.searchEmptyHint} />
-      )}
-
-      {expensive.length > 0 && (
-        <section>
-          <h2 className="mb-2 smk-text-title font-extrabold text-slate-900 dark:text-white">
-            {t.tasksTabExpensive}
-          </h2>
-          <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
-            {expensive.map((task) => (
-              <TaskCard key={task.id} task={task} onOpen={(item) => onOpenTask(item.id)} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {rest.length > 0 && (
-        <section>
-          <h2 className="mb-2 smk-text-title font-extrabold text-slate-900 dark:text-white">
-            {t.tasksTabRest}
-          </h2>
-          <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
-            {rest.map((task) => (
-              <TaskCard key={task.id} task={task} onOpen={(item) => onOpenTask(item.id)} />
-            ))}
-          </div>
-        </section>
-      )}
-    </div>
-  );
-}
-
 interface PinnedRow {
   id: string;
   target_type: 'profile' | 'task';
   target_id: string;
 }
 
-/**
- * Закреплённые администрацией анкеты и задания на главной
- * (обновление 74, финал цикла «скрепка»). Скрытые и забаненные
- * анкеты отсеиваются здесь же, как во всём каталоге. Пусто — блок
- * не рисуется вовсе.
- */
 function HomePinnedSection({
   onOpenProfile,
   onOpenTask,

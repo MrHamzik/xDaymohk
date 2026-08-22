@@ -17,6 +17,7 @@ import {
 
 /* Карта — только на клиенте (leaflet не живёт в SSR). */
 const TaxiMapModal = dynamic(() => import('@/components/taxi/TaxiMapModal'), { ssr: false });
+const TaxiMapInline = dynamic(() => import('@/components/taxi/TaxiMapInline'), { ssr: false });
 import Navbar from '@/components/Navbar';
 import AppSidebar from '@/components/AppSidebar';
 import BottomNav from '@/components/BottomNav';
@@ -64,6 +65,7 @@ interface RideRow {
   multiplier: number;
   comment: string;
   created_at: string;
+  taxi_events?: Array<{ event_type: string; actor: string; created_at: string }>;
   taxi_drivers?: {
     car_model: string;
     car_color: string;
@@ -75,6 +77,16 @@ interface RideRow {
     user_profiles?: { full_name: string; gender?: string | null; birth_date?: string | null } | null;
   } | null;
 }
+
+/** Лента событий поездки (п.13): что и когда произошло. */
+const EVENT_LABELS: Record<string, { ru: string; ce: string }> = {
+  created: { ru: 'Заказ создан', ce: 'Заказ кхоьллина' },
+  accept: { ru: 'Таксист принял заказ', ce: 'Таксиста заказ тIеэцна' },
+  to_pickup: { ru: 'Таксист выехал к точке', ce: 'Таксист точке воьлу' },
+  in_ride: { ru: 'Поездка началась', ce: 'Некъ болабелла' },
+  complete: { ru: 'Поездка завершена', ce: 'Некъ чекхбаьлла' },
+  cancel: { ru: 'Заказ отменён', ce: 'Заказ дIаяьккхина' },
+};
 
 const STATUS_LABELS: Record<string, { ru: string; ce: string }> = {
   searching: { ru: 'Ищем таксиста…', ce: 'Таксист лоьхуш…' },
@@ -104,6 +116,11 @@ export default function TaxiPage() {
   } | null>(null);
   /** Карта: выбор точки «откуда/куда» или просмотр маршрута. */
   const [mapMode, setMapMode] = useState<null | 'from' | 'to' | 'route'>(null);
+  const [pickTarget, setPickTarget] = useState<'from' | 'to'>('to');
+  // п.11: предпочтения пассажира и опции поездки.
+  const [prefGender, setPrefGender] = useState<'any' | 'male' | 'female'>('any');
+  const [prefMinAge, setPrefMinAge] = useState(18);
+  const [rideOptions, setRideOptions] = useState<string[]>([]);
   const [routeRide, setRouteRide] = useState<RideRow | null>(null);
 
   // ── пассажир ──
@@ -217,6 +234,7 @@ export default function TaxiPage() {
           fromLat: fromPoint?.lat, fromLng: fromPoint?.lng,
           toLat: toPoint?.lat, toLng: toPoint?.lng,
           tariffId, comment,
+          prefGender, prefMinAge, options: rideOptions,
         }),
       });
       const data = await res.json().catch(() => null);
@@ -351,102 +369,173 @@ export default function TaxiPage() {
               {/* relative z-20: подсказки адресов и тарифы не должны
                   перекрываться следующими блоками (п.11). */}
               {!activeRide && (
-                <section className="smk-lux relative z-20 space-y-2.5 rounded-3xl p-4">
-                  <div className="flex items-end gap-2">
-                    <div className="flex-1">
-                      <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-zinc-400">
-                        {L('Откуда', 'Мичара')}
-                      </label>
-                      <AddressAutocomplete id="taxi-from" value={fromLabel} onChange={(v) => { setFromLabel(v); }} onSelect={(s) => { setFromLabel(s.displayName); setFromPoint({ lat: s.lat, lng: s.lng }); }} />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => void locateMe()}
-                      aria-label={L('Моё местоположение', 'Сан меттиг')}
-                      title={L('Моё местоположение', 'Сан меттиг')}
-                      className="smk-field flex h-9 w-9 shrink-0 items-center justify-center"
-                    >
-                      {locating ? <Loader2 className="h-4 w-4 animate-spin" /> : <LocateFixed className="h-4 w-4" />}
-                    </button>
-                    {/* п.13: точку можно ткнуть прямо на карте. */}
-                    <button
-                      type="button"
-                      onClick={() => setMapMode('from')}
-                      aria-label={L('Точка на карте', 'Картехь точка')}
-                      title={L('Точка на карте', 'Картехь точка')}
-                      className="smk-field flex h-9 w-9 shrink-0 items-center justify-center"
-                    >
-                      <MapIcon className="h-4 w-4" />
-                    </button>
-                  </div>
-                  <div className="flex items-end gap-2">
-                    <div className="flex-1">
-                      <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-zinc-400">
-                        {L('Куда', 'Мича')}
-                      </label>
-                      <AddressAutocomplete id="taxi-to" value={toLabel} onChange={(v) => { setToLabel(v); }} onSelect={(s) => { setToLabel(s.displayName); setToPoint({ lat: s.lat, lng: s.lng }); }} />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setMapMode('to')}
-                      aria-label={L('Точка на карте', 'Картехь точка')}
-                      title={L('Точка на карте', 'Картехь точка')}
-                      className="smk-field flex h-9 w-9 shrink-0 items-center justify-center"
-                    >
-                      <MapIcon className="h-4 w-4" />
-                    </button>
+                <section className="smk-lux relative z-20 overflow-hidden rounded-3xl">
+                  {/* Карта сверху на весь экран (п.12): режимы,
+                      слои точек, маршрут А→Б, автоподстановка адреса. */}
+                  <div className="h-[42dvh]">
+                    <TaxiMapInline
+                      from={fromPoint ? { ...fromPoint, label: fromLabel } : null}
+                      to={toPoint ? { ...toPoint, label: toLabel } : null}
+                      pickTarget={pickTarget}
+                      onPick={(pt, target) => {
+                        if (target === 'from') { setFromPoint({ lat: pt.lat, lng: pt.lng }); setFromLabel(pt.label ?? ''); }
+                        else { setToPoint({ lat: pt.lat, lng: pt.lng }); setToLabel(pt.label ?? ''); }
+                      }}
+                    />
                   </div>
 
-                  {/* Тарифы с ценой «на берегу» */}
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    {(summary?.tariffs ?? []).map((tariff) => {
-                      const price = (() => {
-                        if (!summary?.fare || !fromPoint || !toPoint) return null;
-                        return estimateRide(fromPoint, toPoint, summary.fare, Number(tariff.multiplier), summary.slots ?? [], new Date()).price;
-                      })();
-                      return (
+                  <div className="space-y-2.5 p-4">
+                    {/* Куда ставить точку кликом по карте. */}
+                    <div className="flex gap-1.5">
+                      {(['from', 'to'] as const).map((target) => (
                         <button
-                          key={tariff.id}
+                          key={target}
                           type="button"
-                          onClick={() => setTariffId(tariff.id)}
+                          onClick={() => setPickTarget(target)}
                           className={`rounded-xl px-2.5 py-1.5 text-xs font-bold transition ${
-                            tariffId === tariff.id
+                            pickTarget === target
                               ? 'bg-emerald-600 text-white shadow-sm'
                               : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700'
                           }`}
                         >
-                          {language === 'ce' && tariff.labelCe ? tariff.labelCe : tariff.labelRu}
-                          {price != null ? ` · ${price} ₽` : ''}
+                          {target === 'from' ? L('Точка «откуда» на карте', '«Мичара» карта тIехь') : L('Точка «куда» на карте', '«Мича» карта тIехь')}
                         </button>
-                      );
-                    })}
+                      ))}
+                    </div>
+
+                    <div className="flex items-end gap-2">
+                      <div className="flex-1">
+                        <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-zinc-400">
+                          {L('Откуда', 'Мичара')}
+                        </label>
+                        <AddressAutocomplete id="taxi-from" value={fromLabel} onChange={(v) => { setFromLabel(v); }} onSelect={(sg) => { setFromLabel(sg.displayName); setFromPoint({ lat: sg.lat, lng: sg.lng }); }} />
+                      </div>
+                      {/* «Где я?»: GPS фокусирует и ставит точку. */}
+                      <button
+                        type="button"
+                        onClick={() => void locateMe()}
+                        title={L('Где я?', 'Со мичахь?')}
+                        aria-label={L('Где я?', 'Со мичахь?')}
+                        className="smk-field flex h-9 w-9 shrink-0 items-center justify-center"
+                      >
+                        {locating ? <Loader2 className="h-4 w-4 animate-spin" /> : <LocateFixed className="h-4 w-4" />}
+                      </button>
+                    </div>
+
+                    <div>
+                      <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-zinc-400">
+                        {L('Куда', 'Мича')}
+                      </label>
+                      <AddressAutocomplete id="taxi-to" value={toLabel} onChange={(v) => { setToLabel(v); }} onSelect={(sg) => { setToLabel(sg.displayName); setToPoint({ lat: sg.lat, lng: sg.lng }); }} />
+                    </div>
+
+                    {/* Предпочтения пассажира (п.11). */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <span className="mb-1 block text-xs font-bold text-slate-700 dark:text-zinc-400">
+                          {L('Пол таксиста', 'Таксистан пол')}
+                        </span>
+                        <select
+                          value={prefGender}
+                          onChange={(e) => setPrefGender(e.target.value as 'any' | 'male' | 'female')}
+                          className="smk-field w-full px-2.5 py-2 text-xs text-slate-900 dark:text-white"
+                        >
+                          <option value="any">{L('Без разницы', 'Тайпана дац')}</option>
+                          <option value="female">{L('Женщина', 'Зуда')}</option>
+                          <option value="male">{L('Мужчина', 'боьрша')}</option>
+                        </select>
+                      </div>
+                      <div>
+                        <span className="mb-1 block text-xs font-bold text-slate-700 dark:text-zinc-400">
+                          {L('Возраст таксиста', 'Таксистан хан')}
+                        </span>
+                        <select
+                          value={String(prefMinAge)}
+                          onChange={(e) => setPrefMinAge(Number(e.target.value))}
+                          className="smk-field w-full px-2.5 py-2 text-xs text-slate-900 dark:text-white"
+                        >
+                          {[18, 21, 25, 30, 40].map((age) => (
+                            <option key={age} value={age}>{L(`от ${age}`, `${age}+`)}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Опции поездки. */}
+                    <div className="flex flex-wrap gap-1.5">
+                      {([
+                        ['animals', L('С животными', 'Дийнаташца')],
+                        ['cargo', L('Багаж', 'Багаж')],
+                        ['child_seat', L('Детское кресло', 'Беран гIанда')],
+                      ] as const).map(([id, label]) => (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => setRideOptions((current) => current.includes(id)
+                            ? current.filter((x) => x !== id)
+                            : [...current, id])}
+                          className={`rounded-xl px-2.5 py-1.5 text-xs font-bold transition ${
+                            rideOptions.includes(id)
+                              ? 'bg-emerald-600 text-white shadow-sm'
+                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Тарифы с ценой «на берегу», с множителем. */}
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {(summary?.tariffs ?? []).map((tariff) => {
+                        const price = (() => {
+                          if (!summary?.fare || !fromPoint || !toPoint) return null;
+                          return estimateRide(fromPoint, toPoint, summary.fare, Number(tariff.multiplier), summary.slots ?? [], new Date()).price;
+                        })();
+                        return (
+                          <button
+                            key={tariff.id}
+                            type="button"
+                            onClick={() => setTariffId(tariff.id)}
+                            className={`rounded-xl px-2.5 py-1.5 text-xs font-bold transition ${
+                              tariffId === tariff.id
+                                ? 'bg-emerald-600 text-white shadow-sm'
+                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700'
+                            }`}
+                          >
+                            {language === 'ce' && tariff.labelCe ? tariff.labelCe : tariff.labelRu}
+                            {price != null ? ` · ${price} ₽` : ''}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <input
+                      value={comment}
+                      onChange={(e) => setComment(e.target.value)}
+                      placeholder={L('Комментарий: ворота синие, собака добрая…', 'Комментари: кевнар моьла ю…')}
+                      maxLength={500}
+                      className={field}
+                    />
+
+                    <button
+                      type="button"
+                      disabled={busy || !fromLabel || !toLabel || !fromPoint || !toPoint}
+                      onClick={() => void orderRide()}
+                      className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-emerald-600/25 transition hover:bg-emerald-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <Car className="h-4 w-4" />
+                      {estimate != null
+                        ? `${L('Заказать', 'Заказ дала')} · ${estimate.price} ₽`
+                        : L('Заказать', 'Заказ дала')}
+                    </button>
+                    {estimate && (
+                      <p className="text-center smk-text-label text-slate-400 dark:text-zinc-500">
+                        {L(`≈ ${estimate.distanceKm} км, ${estimate.minutes} мин`, `≈ ${estimate.distanceKm} км, ${estimate.minutes} мин`)}
+                        {estimate.surge > 1 ? ` · ${L('повышенный спрос', 'эхар лакхадаьлла')} ×${estimate.surge}` : ''}
+                      </p>
+                    )}
                   </div>
-
-                  <input
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                    placeholder={L('Комментарий: ворота синие, собака добрая…', 'Комментари: кертан кевнар моьла ю…')}
-                    maxLength={500}
-                    className={field}
-                  />
-
-                  <button
-                    type="button"
-                    disabled={busy || !fromLabel || !toLabel || !fromPoint || !toPoint}
-                    onClick={() => void orderRide()}
-                    className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-emerald-600/25 transition hover:bg-emerald-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <Car className="h-4 w-4" />
-                    {estimate != null
-                      ? `${L('Заказать', 'Заказ дала')} · ${estimate.price} ₽`
-                      : L('Заказать', 'Заказ дала')}
-                  </button>
-                  {estimate && (
-                    <p className="text-center smk-text-label text-slate-400 dark:text-zinc-500">
-                      {L(`≈ ${estimate.distanceKm} км, ${estimate.minutes} мин`, `≈ ${estimate.distanceKm} км, ${estimate.minutes} мин`)}
-                      {estimate.surge > 1 ? ` · ${L('повышенный спрос', 'эхар лакхадаьлла')}` : ''}
-                    </p>
-                  )}
                 </section>
               )}
 
@@ -772,6 +861,22 @@ function RideCard({
           </button>
         )}
       </div>
+
+      {/* Лента событий (п.13): уведомления дублируются в разделе. */}
+      {Array.isArray(ride.taxi_events) && ride.taxi_events.length > 0 && (
+        <div className="space-y-0.5 border-t border-slate-100 pt-2 dark:border-zinc-800">
+          {[...ride.taxi_events]
+            .sort((x, y) => x.created_at.localeCompare(y.created_at))
+            .slice(-4)
+            .map((ev) => (
+              <p key={ev.created_at + ev.event_type} className="smk-text-label text-slate-500 dark:text-zinc-500">
+                {(EVENT_LABELS[ev.event_type] ?? { ru: ev.event_type, ce: ev.event_type })[language === 'ce' ? 'ce' : 'ru']}
+                {' · '}
+                {new Date(ev.created_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+              </p>
+            ))}
+        </div>
+      )}
     </section>
   );
 }

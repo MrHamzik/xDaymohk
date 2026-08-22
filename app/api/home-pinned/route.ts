@@ -27,7 +27,7 @@ export async function GET(request: Request) {
 
   const { data, error } = await admin
     .from('home_pinned')
-    .select('id, target_type, target_id, created_at')
+    .select('id, target_type, target_id, created_at, expires_at')
     .order('created_at', { ascending: true });
 
   if (error) {
@@ -36,7 +36,13 @@ export async function GET(request: Request) {
     return NextResponse.json({ pinned: [] });
   }
 
-  return withRateLimitHeaders(NextResponse.json({ pinned: data ?? [] }), { ...limit, limit: 60 });
+  // Просроченные закрепления не показываются (срок выбирает админ,
+  // п.3 замечаний 23.08). Строки остаются для журнала.
+  const nowIso = new Date().toISOString();
+  const pinned = ((data ?? []) as Array<Record<string, unknown>>)
+    .filter((row) => !row.expires_at || String(row.expires_at) > nowIso);
+
+  return withRateLimitHeaders(NextResponse.json({ pinned }), { ...limit, limit: 60 });
 }
 
 export async function POST(request: Request) {
@@ -58,8 +64,15 @@ export async function POST(request: Request) {
   const { data: target } = await admin.from(table).select('id').eq('id', targetId).maybeSingle();
   if (!target) return NextResponse.json({ error: 'Объект не найден' }, { status: 404 });
 
+  // Срок закрепления: часы/дни из модалки админа или «бессрочно».
+  let expiresAt: string | null = null;
+  const hours = Number(body.expiresInHours);
+  if (body.expiresInHours !== 'forever' && Number.isFinite(hours) && hours > 0) {
+    expiresAt = new Date(Date.now() + hours * 3_600_000).toISOString();
+  }
+
   const { error } = await admin.from('home_pinned').upsert(
-    { target_type: targetType, target_id: targetId, pinned_by: auth.userId },
+    { target_type: targetType, target_id: targetId, pinned_by: auth.userId, expires_at: expiresAt },
     { onConflict: 'target_type,target_id' },
   );
   if (error) {

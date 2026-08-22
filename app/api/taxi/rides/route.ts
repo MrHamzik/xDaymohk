@@ -39,7 +39,7 @@ export async function GET(request: Request) {
     if (!driver) return NextResponse.json({ rides: [], online: false });
 
     const tariffs: string[] = Array.isArray(driver.tariffs) ? driver.tariffs : [];
-    const selectWithRider = '*, user_profiles(full_name)';
+    const selectWithRider = '*, user_profiles(full_name), taxi_events(event_type, actor, created_at)';
     const { data: open } = await admin.from('taxi_rides')
       .select(selectWithRider)
       .eq('status', 'searching')
@@ -59,7 +59,7 @@ export async function GET(request: Request) {
   }
 
   const { data: rides } = await admin.from('taxi_rides')
-    .select('*, taxi_drivers(car_model, car_color, car_plate, rating, is_verified, show_gender, show_age, user_profiles(full_name, gender, birth_date))')
+    .select('*, taxi_drivers(car_model, car_color, car_plate, rating, is_verified, show_gender, show_age, user_profiles(full_name, gender, birth_date)), taxi_events(event_type, actor, created_at)')
     .eq('rider_id', auth.user.id)
     .order('created_at', { ascending: false })
     .limit(50);
@@ -86,6 +86,13 @@ export async function POST(request: Request) {
   const toLng = num(body.toLng);
   const tariffId = typeof body.tariffId === 'string' ? body.tariffId : '';
   const comment = typeof body.comment === 'string' ? body.comment.slice(0, 500) : '';
+  // Предпочтения пассажира (п.11): пол таксиста и минимальный возраст.
+  const prefGender = body.prefGender === 'male' || body.prefGender === 'female' ? body.prefGender : 'any';
+  const prefMinAge = Math.min(99, Math.max(16, Math.trunc(Number(body.prefMinAge)) || 18));
+  const RIDE_OPTIONS = ['animals', 'cargo', 'child_seat'];
+  const options = Array.isArray(body.options)
+    ? body.options.filter((o: unknown): o is string => typeof o === 'string' && RIDE_OPTIONS.includes(o))
+    : [];
 
   if (!fromLabel || !toLabel) {
     return NextResponse.json({ error: 'Укажите, откуда и куда ехать' }, { status: 400 });
@@ -136,6 +143,9 @@ export async function POST(request: Request) {
     price: estimate.price,
     multiplier: estimate.surge * Number(tariffRow.data.multiplier),
     comment,
+    pref_gender: prefGender,
+    pref_min_age: prefMinAge,
+    options,
   }).select('*').single();
 
   if (error) {
@@ -156,10 +166,18 @@ export async function POST(request: Request) {
       recipient_id: target.user_id,
       type: 'taxi_request',
       title: `Новый заказ: ${fromLabel} → ${toLabel}`,
-      message: `${estimate.distanceKm} км, цена ${estimate.price} ₽. Примите заказ в ВайТакси.`,
-      sender: 'ВайТакси',
+      message: `${estimate.distanceKm} км, цена ${estimate.price} ₽. Примите заказ в Такси.`,
+      sender: 'Такси',
     });
   }
+
+  // Событие для ленты раздела такси (п.13).
+  await admin.from('taxi_events').insert({
+    ride_id: ride.id,
+    event_type: 'created',
+    actor: 'rider',
+    note: `${fromLabel} → ${toLabel}`,
+  });
 
   return withRateLimitHeaders(NextResponse.json({ ride }), { ...limit, limit: 10 });
 }
