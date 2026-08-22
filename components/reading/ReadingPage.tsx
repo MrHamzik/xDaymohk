@@ -581,12 +581,11 @@ export default function ReadingPage({
       {/* п.8: одноразовая подсказка о сохранении прогресса */}
       <ReadingTipModal
         isOpen={tipOpen}
-        autosaveDefault={settings.readingAutosave}
-        onClose={(autosave) => {
+        onClose={() => {
           setTipOpen(false);
-          // Флаг и чекбокс уходят в настройки аккаунта (БД): подсказка
-          // показывается один раз за всё время, на любом устройстве.
-          update({ readingTipShown: true, readingAutosave: autosave });
+          // Тумблеры модалка пишет в настройки сама; здесь только
+          // флаг «подсказка показана» — один раз за всё время.
+          update({ readingTipShown: true });
         }}
       />
     </div>

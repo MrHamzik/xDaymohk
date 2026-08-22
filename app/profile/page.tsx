@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, CircleUserRound, Clock3, LogIn, LogOut, Pencil, RotateCcw, ShieldOff, Trash2, UserPlus, UserRound, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Car, CircleUserRound, Clock3, LogIn, LogOut, Pencil, RotateCcw, ShieldOff, Trash2, UserPlus, UserRound, Eye, EyeOff } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 import Navbar from '@/components/Navbar';
 import AppSidebar from '@/components/AppSidebar';
 import BottomNav from '@/components/BottomNav';
@@ -49,6 +50,22 @@ export default function ProfilePage() {
   const [anketaTypeOpen, setAnketaTypeOpen] = useState(false);
   const [newAnketaCategory, setNewAnketaCategory] = useState<string | undefined>(undefined);
   const [taxiDriverOpen, setTaxiDriverOpen] = useState(false);
+  const [driverCard, setDriverCard] = useState<{ carModel: string; carPlate: string; isOnline: boolean } | null>(null);
+
+  // п.6 замечаний 23.08: анкета таксиста видна в «Мои анкеты».
+  useEffect(() => {
+    if (!account || !supabase) { setDriverCard(null); return; }
+    let cancelled = false;
+    void (async () => {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      if (!token) return;
+      const res = await fetch('/api/taxi/driver', { cache: 'no-store', headers: { Authorization: `Bearer ${token}` } }).catch(() => null);
+      const data = res ? await res.json().catch(() => null) : null;
+      if (!cancelled) setDriverCard(data?.driver ? { carModel: data.driver.carModel, carPlate: data.driver.carPlate, isOnline: data.driver.isOnline } : null);
+    })();
+    return () => { cancelled = true; };
+  }, [account?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const [isMenuDrawerOpen, setIsMenuDrawerOpen] = useState(false);
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
   const [isSignOutAllOpen, setIsSignOutAllOpen] = useState(false);
@@ -404,6 +421,18 @@ export default function ProfilePage() {
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-400">{t.myProfiles}</h3>
                 <span className="rounded-full bg-emerald-100 px-2 py-0.5 smk-text-label font-black text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300">{ownProfiles.length}</span>
               </div>
+              {driverCard && (
+                <div className="flex items-center gap-2 rounded-xl border border-sky-200 bg-sky-50/60 p-2 dark:border-sky-900 dark:bg-sky-950/20">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sky-600 text-white"><Car className="h-4 w-4" /></span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-bold text-slate-900 dark:text-white">{t.taxiDriverAnketa}</p>
+                    <p className="truncate smk-text-label text-slate-500 dark:text-zinc-400">{driverCard.carModel} · {driverCard.carPlate}{driverCard.isOnline ? ` · ${t.taxiOnlineShort}` : ''}</p>
+                  </div>
+                  <button type="button" onClick={() => setTaxiDriverOpen(true)} className="shrink-0 rounded-lg p-1.5 text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/40" aria-label={t.edit}>
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
               {ownProfiles.length === 0 ? (
                 <p className="py-2 text-center text-xs text-slate-500 dark:text-zinc-500">{t.noProfilesYet}</p>
               ) : ownProfiles.map((profile) => (

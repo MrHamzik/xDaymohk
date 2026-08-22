@@ -199,15 +199,14 @@ export default function MapPage() {
     void (async () => {
       try {
         const res = await fetch(
-          `https://router.project-osrm.org/route/v1/driving/${routeA.lng},${routeA.lat};${routeB.lng},${routeB.lat}?overview=full&geometries=geojson`,
+          `/api/route?from=${routeA.lat},${routeA.lng}&to=${routeB.lat},${routeB.lng}`,
           { signal: controller.signal },
         );
         const data = await res.json();
-        const route = data?.routes?.[0];
-        const coords = route?.geometry?.coordinates;
+        const coords = data?.coordinates;
         if (Array.isArray(coords) && coords.length > 1) {
-          setRoutePath(coords.map(([lng, lat]: [number, number]) => [lat, lng] as [number, number]));
-          setRouteInfo({ km: Math.round((route.distance / 1000) * 10) / 10, min: Math.max(1, Math.round(route.duration / 60)) });
+          setRoutePath(coords as Array<[number, number]>);
+          setRouteInfo({ km: Number(data.distanceKm) || 0, min: Number(data.minutes) || 0 });
           return;
         }
         setRoutePath(null); setRouteInfo(null);
@@ -368,7 +367,7 @@ export default function MapPage() {
               routeMode ? 'bg-emerald-600 text-white shadow-sm' : 'smk-field text-slate-700 dark:text-zinc-300'
             }`}
           >
-            {routeMode ? (routeB ? t.mapRouteReset : t.mapRouteTo) : t.mapRouteBuild}
+            {!routeMode ? t.mapRouteBuild : !routeA ? t.mapRoutePick : !routeB ? t.mapRouteTo : t.mapRouteReset}
           </button>
           {routeInfo && (
             <span className="rounded-xl bg-emerald-50 px-2.5 py-1.5 text-xs font-bold text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
@@ -378,7 +377,7 @@ export default function MapPage() {
         </div>
 
         <div className="grid min-w-0 grid-cols-1 gap-6 md:grid-cols-3">
-          <section className="min-w-0 overflow-hidden rounded-3xl border border-slate-200 bg-white p-3 shadow-sm dark:border-zinc-700 dark:bg-zinc-800 md:col-span-2" aria-labelledby="map-section-title">
+          <section className="min-w-0 overflow-hidden rounded-3xl border border-slate-200 bg-white p-3 shadow-sm dark:border-zinc-700 dark:bg-zinc-800 md:col-span-3" aria-labelledby="map-section-title">
             <div className="mb-3 flex items-center justify-between gap-3 px-2">
               <div className="flex min-w-0 items-center gap-1.5">
                 <MapPinned className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />

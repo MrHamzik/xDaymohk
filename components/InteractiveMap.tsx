@@ -442,8 +442,8 @@ export function LeafletMap({
     // п.2 замечаний 23.08: на дальнем зуме домов нет вообще —
     // появляются только при приближении (зум >= 15), иначе тысячи
     // маркеров вешают ПК. Зум попадает в сигнатуру пересборки.
-    sigParts.push(map.getZoom() >= 14 ? 'zoom-near' : 'zoom-far');
-    if (wantHouses && map.getZoom() >= 14) {
+    sigParts.push(map.getZoom() >= 12 ? 'zoom-near' : 'zoom-far');
+    if (wantHouses && map.getZoom() >= 12) {
       // Только видимая область (+40% запаса): тысячи адресов сразу не
       // рендерим, остальное подхватывается на moveend/zoomend.
       const bounds = map.getBounds().pad(0.4);

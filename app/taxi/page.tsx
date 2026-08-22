@@ -321,7 +321,6 @@ export default function TaxiPage() {
 
   return (
     <div className="flex min-h-[100dvh] min-w-0 flex-col overflow-x-hidden bg-slate-50 bg-radial-gradient transition-colors dark:bg-zinc-950">
-      <Navbar />
       {notice && <Notice message={notice} type="error" onClose={() => setNotice('')} />}
 
       <div className="smk-shell">
@@ -329,7 +328,7 @@ export default function TaxiPage() {
         <main className="smk-shell-main relative">
           {/* Карта во весь экран (п.1): только карта и точки. */}
           <section className="relative -mx-4 -my-4 overflow-hidden sm:-mx-6">
-            <div className="relative h-[calc(100dvh-4rem)] min-h-[520px]">
+            <div className="relative h-[100dvh] min-h-[520px] lg:h-full">
               <InteractiveMapLazy
                 className="h-full w-full"
                 route={fromPoint && toPoint ? { from: fromPoint, to: toPoint, path: routePath ?? undefined } : null}
@@ -338,6 +337,7 @@ export default function TaxiPage() {
                 showPlaces
                 objectMode={objectMode}
                 markers={profileMarkers}
+                onObjectModeChange={setObjectMode}
                 onSelect={(pos, explicit) => {
                   const target = pickTarget;
                   void (async () => {
@@ -360,7 +360,7 @@ export default function TaxiPage() {
                   «Карта/Спутник/Гибрид»; повторный клик выключает. */}
               {/* Таксист на линии: лента заказов вместо формы (п.1). */}
               {driverLoaded && driverOnline ? (
-                <div className="absolute inset-x-0 bottom-0 z-[450] max-h-[62%] space-y-2 overflow-y-auto px-2 pb-2 sm:px-4">
+                <div className="fixed inset-x-0 bottom-0 z-30 max-h-[62%] space-y-2 overflow-y-auto rounded-t-2xl bg-white/95 p-2 pb-16 backdrop-blur dark:bg-zinc-950/95 sm:pb-2 lg:absolute lg:z-[450] lg:bg-transparent lg:p-2 lg:backdrop-blur-none dark:lg:bg-transparent">
                   <div className="smk-sheet flex items-center gap-2 rounded-2xl p-2.5 shadow-xl">
                     <CircleCheck className="h-4 w-4 shrink-0 text-emerald-600" />
                     <p className="flex-1 text-xs font-bold text-slate-900 dark:text-white">
@@ -426,7 +426,7 @@ export default function TaxiPage() {
               ) : (
                 <>
                 {/* Шторка заказа: фиксирована над нижним меню (п.3). */}
-                <div className="absolute inset-x-0 bottom-0 z-[450] max-h-[62%] overflow-y-auto px-2 pb-2 sm:px-4">
+                <div className="fixed inset-x-0 bottom-0 z-30 max-h-[62%] overflow-y-auto rounded-t-2xl bg-white/95 p-2 pb-16 backdrop-blur dark:bg-zinc-950/95 sm:pb-2 lg:absolute lg:z-[450] lg:bg-transparent lg:p-2 lg:backdrop-blur-none dark:lg:bg-transparent">
                   <div className="smk-sheet max-h-[55%] space-y-2 overflow-y-auto rounded-3xl p-3 shadow-2xl">
                     {/* п.8: вместо «откуда/куда» — цена, расстояние, время. */}
                     <p className="text-center text-sm font-black text-slate-900 dark:text-white">

@@ -9,6 +9,7 @@ import { sendTourCommand, setTourActive, useTourEvents, type TourEvent } from '@
 import { useTourLock } from '@/lib/tour-lock';
 import TourSpotlight from '@/components/TourSpotlight';
 import QuickWidgetsEditor from '@/components/settings/QuickWidgetsEditor';
+import { GUIDE_TOGGLES } from '@/lib/settings/guide-toggles';
 import { HintMark, SettingRow, Toggle } from '@/components/settings/SettingsPrimitives';
 import TourProfileStep from '@/components/TourProfileStep';
 import {
@@ -528,6 +529,25 @@ export default function FirstTour({ onDone, onCardVisible }: FirstTourProps) {
               className="w-full accent-emerald-600"
             />
             <p className="smk-text-label text-slate-500 dark:text-zinc-500">{t.settingsRadiusHint}</p>
+          </div>
+
+          {/* Тумблеры чтения из АВТОРЕЕСТРА (п.4 замечаний 23.08):
+              новый тумблер в GUIDE_TOGGLES появляется здесь сам. */}
+          <div className="smk-field space-y-2 px-3 py-3">
+            {GUIDE_TOGGLES.map((toggle) => (
+              <label key={toggle.id} className="flex cursor-pointer items-start gap-2">
+                <input
+                  type="checkbox"
+                  checked={Boolean(settings[toggle.id])}
+                  onChange={(e) => update({ [toggle.id]: e.target.checked })}
+                  className="mt-0.5 h-3.5 w-3.5 accent-emerald-600"
+                />
+                <span className="min-w-0">
+                  <span className="block text-xs font-bold text-slate-800 dark:text-zinc-200">{t[toggle.labelKey]}</span>
+                  <span className="block smk-text-label leading-snug text-slate-500 dark:text-zinc-500">{t[toggle.hintKey]}</span>
+                </span>
+              </label>
+            ))}
           </div>
 
           {/* Размер текста и начертание — раньше были отдельной модалкой
