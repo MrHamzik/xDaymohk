@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ArrowLeft, Moon, ShieldAlert, Sun } from 'lucide-react';
 import AdminFiltersSection from '@/components/admin/AdminFiltersSection';
 import AdminArticlesSection from '@/components/admin/AdminArticlesSection';
+import AdminHomePinsSection from '@/components/admin/AdminHomePinsSection';
 import AdminSupportSection from '@/components/admin/AdminSupportSection';
 import AdminAuditSection from '@/components/admin/AdminAuditSection';
 import AdminProfilesSection from '@/components/admin/AdminProfilesSection';
@@ -21,7 +22,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { useProfiles } from '@/components/ProfilesProvider';
 import { useI18n } from '@/lib/i18n';
 
-type AdminSection = 'profiles' | 'complaints' | 'users' | 'addresses' | 'letters' | 'filters' | 'articles' | 'support' | 'audit';
+type AdminSection = 'profiles' | 'complaints' | 'users' | 'addresses' | 'letters' | 'filters' | 'articles' | 'support' | 'audit' | 'home';
 
 /**
  * Оболочка админки: доступ, шапка, вкладки.
@@ -134,6 +135,7 @@ export default function AdminPage() {
             ['letters', L('Письма', 'Кехаташ'), 0],
             ['filters', L('Фильтры', 'Фильтраш'), 0],
             ['articles', L('Статьи', 'Статьяш'), 0],
+            ['home', L('Главная страница', 'Коьрта агIо'), 0],
             ['support', L('Помощь', 'ГIо'), 0],
             ['audit', L('Журнал', 'Журнал'), 0],
           ] as const).map(([section, label, count]) => (
@@ -148,6 +150,7 @@ export default function AdminPage() {
         {activeSection === 'letters' && <AdminLettersSection />}
         {activeSection === 'filters' && <AdminFiltersSection />}
         {activeSection === 'articles' && <AdminArticlesSection />}
+        {activeSection === 'home' && <AdminHomePinsSection />}
         {activeSection === 'support' && <AdminSupportSection />}
         {activeSection === 'audit' && <AdminAuditSection language={language} />}
       </main>

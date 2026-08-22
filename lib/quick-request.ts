@@ -13,8 +13,10 @@ export interface QuickRequestFields {
 }
 
 export interface QuickTaskPreset {
-  title: string;
-  description: string;
+  title?: string;
+  description?: string;
+  /** «Сбор рабочих» — задание «на дату» (решение владельца). */
+  kind?: 'urgent' | 'scheduled';
 }
 
 /** Ограничение заголовка — как у серверного лимита названий заданий. */
@@ -28,10 +30,16 @@ const TITLE_LIMIT = 80;
  * аккаунта (заявку оставляют и за родственника), поэтому они идут
  * текстом в описание, а не подменяют контакты профиля.
  */
+/** Результат сборки: титул и тело всегда на месте. */
+export interface BuiltQuickPreset extends QuickTaskPreset {
+  title: string;
+  description: string;
+}
+
 export function buildQuickTaskPreset(
   fields: QuickRequestFields,
   words: { defaultTitle: string; contactsWord: string },
-): QuickTaskPreset {
+): BuiltQuickPreset {
   const description = fields.description.trim();
   const name = fields.name.trim();
   const phone = fields.phone.trim();

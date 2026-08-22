@@ -35,6 +35,8 @@ export interface TaskPreset {
   title?: string;
   description?: string;
   category?: string;
+  /** «Сбор рабочих» приходит как запланированное («на дату»). */
+  kind?: 'urgent' | 'scheduled';
 }
 
 interface CreateTaskModalProps {
@@ -229,6 +231,7 @@ export default function CreateTaskModal({
     // Быстрая заявка (пресет): поля из формы, остальное — умолчания.
     // Черновик не предлагаем: содержимое заявки и есть начальный текст.
     if (preset) {
+      if (preset.kind === 'scheduled' || preset.kind === 'urgent') setKind(preset.kind);
       setTitle(preset.title ?? '');
       setDescription(preset.description ?? '');
       setCategory(preset.category || 'other');

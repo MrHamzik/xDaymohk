@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   X, Loader2, Star, MapPin, Clock, Users, CalendarDays, ShieldAlert, Trash2,
-  Ban, Check, Pencil, Wallet, Share2, Copy, Phone, MessageSquare, Send, Flag, ShieldBan,
+  Ban, Check, Pencil, Wallet, Share2, Copy, Phone, MessageSquare, Send, Flag, ShieldBan, Paperclip,
 } from 'lucide-react';
+import PinProposeModal from '@/components/PinProposeModal';
 import PayoutPeekSheet from '@/components/settings/PayoutPeekSheet';
 import Avatar from '@/components/Avatar';
 import { supabase } from '@/lib/supabase';
@@ -92,6 +93,7 @@ export default function TaskDetailModal({
   const [complaintSent, setComplaintSent] = useState(false);
   // Блокировка автора задания из шапки (п.7).
   const [confirmBlock, setConfirmBlock] = useState(false);
+  const [pinOpen, setPinOpen] = useState(false);
   const [blockBusy, setBlockBusy] = useState(false);
   const [shareHint, setShareHint] = useState(false);
   const [payoutOpen, setPayoutOpen] = useState(false);
@@ -330,6 +332,18 @@ export default function TaskDetailModal({
                 className="smk-act rounded-lg p-1.5"
               >
                 <Share2 className="h-4 w-4" />
+              </button>
+            )}
+            {/* Скрепка: предложить задание на главную (раз в день). */}
+            {currentUserId && (
+              <button
+                type="button"
+                onClick={() => setPinOpen(true)}
+                aria-label={t.pinTitle}
+                title={t.pinTitle}
+                className="smk-act flex h-7 w-7 items-center justify-center"
+              >
+                <Paperclip className="h-4 w-4" />
               </button>
             )}
             {/* Жалоба и блокировка — те же действия и в том же месте,
@@ -1186,6 +1200,15 @@ export default function TaskDetailModal({
           role={isAuthor ? 'author' : 'executor'}
           onClose={() => setIsComplaintOpen(false)}
           onSent={() => setComplaintSent(true)}
+        />
+      )}
+
+      {task && (
+        <PinProposeModal
+          isOpen={pinOpen}
+          targetType="task"
+          targetId={task.id}
+          onClose={() => setPinOpen(false)}
         />
       )}
 

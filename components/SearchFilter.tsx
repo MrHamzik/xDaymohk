@@ -7,7 +7,6 @@ import {
   Filter,
   GraduationCap,
   Hammer,
-  MapPin,
   Scissors,
   Search,
   ShoppingBag,
@@ -19,6 +18,10 @@ import {
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { AudienceFilter, PROFESSION_CATEGORIES } from '@/lib/types';
+import {
+  GEO_CITIES, GEO_DISTRICTS, GEO_VILLAGES,
+  geoSelectionCount, type GeoSelection,
+} from '@/lib/geo-dictionary';
 
 interface SearchFilterProps {
   searchQuery: string;
@@ -27,6 +30,9 @@ interface SearchFilterProps {
   setAudienceFilters: (filters: AudienceFilter[]) => void;
   professionFilters: string[];
   setProfessionFilters: (filters: string[]) => void;
+  /** Выбранные топонимы «города / районы / сёла» (п.3 Этапа 2-каталог). */
+  geo: GeoSelection;
+  setGeo: (geo: GeoSelection) => void;
 }
 
 const iconMap: Record<string, typeof Briefcase> = {
@@ -48,13 +54,22 @@ export default function SearchFilter({
   setAudienceFilters,
   professionFilters,
   setProfessionFilters,
+  geo,
+  setGeo,
 }: SearchFilterProps) {
   const { t } = useI18n();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isRegionOpen, setIsRegionOpen] = useState(true);
-  // Регионы: «Даймохк (везде)» и «Самашки» — отключаемые чекбоксы.
-  const [regionAll, setRegionAll] = useState(true);
-  const [regionSamashki, setRegionSamashki] = useState(true);
+  /** Какая группа топонимов раскрыта: списки длинные, все три сразу — простыня. */
+  const [openGeoGroup, setOpenGeoGroup] = useState<'cities' | 'districts' | 'villages' | null>('cities');
+
+  const toggleGeo = (group: 'cities' | 'districts' | 'villages', value: string) => {
+    const list = geo[group];
+    setGeo({
+      ...geo,
+      [group]: list.includes(value) ? list.filter((v) => v !== value) : [...list, value],
+    });
+  };
   const [isWhoOpen, setIsWhoOpen] = useState(true);
   const [isStatusOpen, setIsStatusOpen] = useState(true);
   const [isProfessionOpen, setIsProfessionOpen] = useState(true);
@@ -77,7 +92,7 @@ export default function SearchFilter({
     return () => { cancelled = true; };
   }, []);
 
-  const activeFilterCount = audienceFilters.length + professionFilters.length;
+  const activeFilterCount = audienceFilters.length + professionFilters.length + geoSelectionCount(geo);
 
   const whoOptions: { id: AudienceFilter; label: string }[] = [
     { id: 'residents', label: t.filterResidents },
@@ -136,6 +151,7 @@ export default function SearchFilter({
   const resetFilters = () => {
     setAudienceFilters([]);
     setProfessionFilters([]);
+    setGeo({ cities: [], districts: [], villages: [] });
     setIsFilterOpen(false);
   };
 
@@ -216,40 +232,55 @@ export default function SearchFilter({
                   <ChevronDown className={`h-3.5 w-3.5 transition ${isRegionOpen ? 'rotate-180' : ''}`} />
                 </button>
                 {isRegionOpen && (
-                  <div className="mt-2 space-y-1.5">
-                    <div className="flex flex-wrap items-center gap-1.5 text-xs font-semibold">
-                      <span className="rounded-lg bg-emerald-100 px-2 py-0.5 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300">
-                        {t.filterRegionChr}
-                      </span>
-                      <span className="rounded-lg bg-slate-200 px-2 py-0.5 text-slate-700 dark:bg-zinc-700 dark:text-zinc-300">
-                        {t.filterRegionDistrict}
-                      </span>
-                    </div>
-                    <div className="grid flex flex-wrap gap-2">
-                      <label className="flex cursor-pointer items-center gap-2 rounded-xl bg-emerald-600 px-2.5 py-1.5 text-xs font-bold text-white shadow-sm">
-                        <input
-                          type="checkbox"
-                          checked={regionAll}
-                          onChange={(e) => setRegionAll(e.target.checked)}
-                          className="h-3.5 w-3.5 rounded text-white focus:ring-emerald-500"
-                        />
-                        <MapPin className="h-3.5 w-3.5" />
-                        {t.filterRegionAll}
-                      </label>
-                      <label className="flex cursor-pointer items-center gap-2 rounded-xl bg-white px-2.5 py-1.5 text-xs font-bold text-slate-900 shadow-sm dark:bg-zinc-800 dark:text-white">
-                        <input
-                          type="checkbox"
-                          checked={regionSamashki}
-                          onChange={(e) => setRegionSamashki(e.target.checked)}
-                          className="h-3.5 w-3.5 rounded text-emerald-600 focus:ring-emerald-500"
-                        />
-                        <MapPin className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                        {t.filterRegionSamashki}
-                      </label>
-                      <div className="flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs text-slate-400 dark:text-zinc-500">
-                        <span>{t.filterRegionOthers}</span>
+                  /* п.3 Этапа 2-каталог: вместо склеенных «Республика +
+                     район» — три подкатегории: города, районы, сёла.
+                     Выбор района включает его сёла. */
+                  <div className="mt-2 space-y-1">
+                    {([
+                      { key: 'cities' as const, label: t.geoCities, selected: geo.cities, items: GEO_CITIES.map((name) => ({ value: name, label: name })) },
+                      { key: 'districts' as const, label: t.geoDistricts, selected: geo.districts, items: GEO_DISTRICTS.map((d) => ({ value: d.id, label: d.name })) },
+                      { key: 'villages' as const, label: t.geoVillages, selected: geo.villages, items: GEO_VILLAGES.map((name) => ({ value: name, label: name })) },
+                    ]).map((group) => (
+                      <div key={group.key}>
+                        <button
+                          type="button"
+                          onClick={() => setOpenGeoGroup(openGeoGroup === group.key ? null : group.key)}
+                          className="flex w-full items-center justify-between rounded-lg px-1.5 py-1 text-left smk-text-label font-bold text-slate-600 transition hover:bg-slate-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                        >
+                          <span>
+                            {group.label}
+                            {group.selected.length > 0 && (
+                              <span className="ml-1 rounded-full bg-emerald-600 px-1.5 py-0.5 text-white smk-text-label">
+                                {group.selected.length}
+                              </span>
+                            )}
+                          </span>
+                          <ChevronDown className={`h-3 w-3 transition ${openGeoGroup === group.key ? 'rotate-180' : ''}`} />
+                        </button>
+                        {openGeoGroup === group.key && (
+                          <div className="mt-1 flex flex-wrap gap-1.5 pb-1">
+                            {group.items.map((item) => {
+                              const on = group.selected.includes(item.value);
+                              return (
+                                <button
+                                  key={item.value}
+                                  type="button"
+                                  onClick={() => toggleGeo(group.key, item.value)}
+                                  aria-pressed={on}
+                                  className={`rounded-lg px-2 py-1 text-xs font-semibold transition ${
+                                    on
+                                      ? 'bg-emerald-600 text-white shadow-sm'
+                                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700'
+                                  }`}
+                                >
+                                  {item.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
-                    </div>
+                    ))}
                   </div>
                 )}
               </div>

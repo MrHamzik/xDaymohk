@@ -4,7 +4,8 @@ import Avatar from '@/components/Avatar';
 import { humanErrorMessage } from '@/lib/errors';
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { Flag, Heart, Lock, MapPin, MessageSquare, Phone, Send, Share2, ShieldBan, Star, X } from 'lucide-react';
+import { Flag, Heart, Lock, MapPin, MessageSquare, Paperclip, Phone, Send, Share2, ShieldBan, Star, X } from 'lucide-react';
+import PinProposeModal from '@/components/PinProposeModal';
 import { shareLink, siteOrigin } from '@/lib/share';
 import { displayName } from '@/lib/profile-name';
 import ReportDialog from '@/components/ReportDialog';
@@ -71,6 +72,7 @@ export default function ProfileModal({
   const [nestedProfile, setNestedProfile] = useState<Profile | null>(null);
   const [activeTab, setActiveTab] = useState<'reviews' | 'questions' | 'ratings'>('reviews');
   const [notice, setNotice] = useState('');
+  const [pinOpen, setPinOpen] = useState(false);
   const [noticeKind, setNoticeKind] = useState<'error' | 'success'>('error');
   const [blockBusy, setBlockBusy] = useState(false);
   const [reviewStats, setReviewStats] = useState({
@@ -173,6 +175,18 @@ export default function ProfileModal({
               >
                 <Share2 className="h-4 w-4" />
               </button>
+              {/* Скрепка: предложить анкету на главную (раз в день). */}
+              {account && (
+                <button
+                  type="button"
+                  onClick={() => setPinOpen(true)}
+                  aria-label={t.pinTitle}
+                  title={t.pinTitle}
+                  className="smk-act flex h-7 w-7 items-center justify-center"
+                >
+                  <Paperclip className="h-4 w-4" />
+                </button>
+              )}
               {account && (
                 <button
                   type="button"
@@ -618,6 +632,15 @@ export default function ProfileModal({
         onClose={() => setReportOpen(false)}
         onSubmit={(reason) => addComplaint(profile.id, reason)}
       />
+
+      {profile && (
+        <PinProposeModal
+          isOpen={pinOpen}
+          targetType="profile"
+          targetId={profile.id}
+          onClose={() => setPinOpen(false)}
+        />
+      )}
 
       <ConfirmDialog
         isOpen={isBlockConfirmOpen}

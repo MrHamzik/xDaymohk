@@ -16,7 +16,9 @@ import AdminBanModal, { AdminBanPayload } from '@/components/AdminBanModal';
 import MobileMenuDrawer from '@/components/MobileMenuDrawer';
 import CatalogLanding from '@/components/catalog/CatalogLanding';
 import CreateTaskModal from '@/components/tasks/CreateTaskModal';
+import SwipeTabs from '@/components/SwipeTabs';
 import type { QuickTaskPreset } from '@/lib/quick-request';
+import { EMPTY_GEO_SELECTION, type GeoSelection } from '@/lib/geo-dictionary';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/lib/supabase';
 import { useProfiles } from '@/components/ProfilesProvider';
@@ -60,6 +62,10 @@ export default function Home() {
   // Лендинг: быстрая заявка открывает штатную форму задания с пресетом.
   const [quickTaskOpen, setQuickTaskOpen] = useState(false);
   const [quickPreset, setQuickPreset] = useState<QuickTaskPreset | null>(null);
+  // Вкладки каталога (Услуги/Рейтинг/Каталог) и гео-фильтр «города /
+  // районы / сёла».
+  const [catalogTab, setCatalogTab] = useState('services');
+  const [geo, setGeo] = useState<GeoSelection>(EMPTY_GEO_SELECTION);
 
   const openQuickTask = (preset: QuickTaskPreset | null = null) => {
     // Гость заявку оставить не может: сначала вход (как и создание
@@ -75,6 +81,12 @@ export default function Home() {
   const showCatalog = () => {
     document.getElementById('catalog-list-anchor')
       ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  // «Найти рабочих»: переключает вкладку каталога и подводит к списку.
+  const showCatalogTab = () => {
+    setCatalogTab('catalog');
+    window.setTimeout(showCatalog, 80);
   };
 
   // Pagination
@@ -157,6 +169,7 @@ export default function Home() {
       professionFilters,
       adminOwnerId,
       users,
+      geo,
     });
     if (!favOnly) return base;
     return base.filter((profile) => favIds.includes(profile.id));
@@ -287,16 +300,24 @@ export default function Home() {
           {pull.refreshing && (
             <p className="mb-3 text-center smk-text-label text-slate-500 dark:text-zinc-400">{t.loading}</p>
           )}
-        {/* Лендинг по макету владельца: hero, три карточки услуг,
-            быстрая заявка. Ниже — привычный каталог специалистов. */}
-        <div className="mb-4">
-          <CatalogLanding onOpenTask={openQuickTask} onShowCatalog={showCatalog} />
-        </div>
-
-        <SpecialistLeaders onOpen={(id) => setActiveProfileId(id)} />
-
-        {/* Якорь «Найти рабочих»: прокрутка к списку специалистов. */}
-        <div id="catalog-list-anchor" className="scroll-mt-24">
+        {/* Три вкладки с горизонтальным свайпом (п.4): Услуги /
+            Рейтинг / Каталог. Панели держатся в памяти после первого
+            открытия, переключение мгновенное (п.5). */}
+        <SwipeTabs
+          tabs={[
+            { id: 'services', label: t.catTabServices },
+            { id: 'rating', label: t.catTabRating },
+            { id: 'catalog', label: t.catTabCatalog },
+          ]}
+          active={catalogTab}
+          onChange={setCatalogTab}
+          panels={{
+            services: (
+              <CatalogLanding onOpenTask={openQuickTask} onShowCatalog={showCatalogTab} />
+            ),
+            rating: <SpecialistLeaders onOpen={(id) => setActiveProfileId(id)} />,
+            catalog: (
+              <div id="catalog-list-anchor" className="scroll-mt-24">
         <SearchFilter
           searchQuery={searchQuery}
           setQuery={setSearchQuery}
@@ -304,6 +325,8 @@ export default function Home() {
           setAudienceFilters={setAudienceFilters}
           professionFilters={professionFilters}
           setProfessionFilters={setProfessionFilters}
+          geo={geo}
+          setGeo={setGeo}
         />
 
         {account && (
@@ -381,7 +404,10 @@ export default function Home() {
             {t.catalogViewedAll.replace('{count}', String(filteredProfiles.length))}
           </p>
         )}
-        </div>{/* /catalog-list-anchor */}
+              </div>
+            ),
+          }}
+        />
       </main>
       </div>
       <ProfileModal

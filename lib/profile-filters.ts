@@ -1,6 +1,7 @@
 import { AudienceFilter, Profile, UserSummary } from './types';
 import { calculateWorkingStatus } from './schedule';
 import { isAdminEmail, isVisibleAdminEmail, ADMIN_EMAILS } from './admin';
+import { matchesGeoSelection, type GeoSelection } from './geo-dictionary';
 
 export { ADMIN_EMAILS, isAdminEmail };
 
@@ -10,6 +11,8 @@ export interface ProfileFilterOptions {
   professionFilters?: string[];
   adminOwnerId?: string;
   users?: UserSummary[];
+  /** «Города / районы / сёла»: пустой выбор — без ограничения. */
+  geo?: GeoSelection;
 }
 
 /**
@@ -49,6 +52,14 @@ export function filterProfiles(profiles: Profile[], options: ProfileFilterOption
     const adminProfile = isAdminProfile(profile, options.adminOwnerId, options.users);
 
     if (professionFilters.length > 0 && !professionFilters.includes(profile.professionCategory ?? '')) {
+      return false;
+    }
+
+    // Гео: поселение + адрес места работы. Выбор района включает его сёла.
+    if (options.geo && !matchesGeoSelection(
+      `${profile.settlement ?? ''} ${profile.workplaceAddress ?? ''}`,
+      options.geo,
+    )) {
       return false;
     }
 

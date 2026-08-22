@@ -26,6 +26,7 @@ import MobileMenuDrawer from '@/components/MobileMenuDrawer';
 import { useAuth } from '@/components/AuthProvider';
 import { useProfiles } from '@/components/ProfilesProvider';
 import { filterProfiles } from '@/lib/profile-filters';
+import { EMPTY_GEO_SELECTION, type GeoSelection } from '@/lib/geo-dictionary';
 import { calculateWorkingStatus, resolveOwnerOverride } from '@/lib/schedule';
 import { formatReviews } from '@/lib/text';
 import { useI18n } from '@/lib/i18n';
@@ -57,6 +58,7 @@ export default function MapPage() {
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [audienceFilters, setAudienceFilters] = useState<AudienceFilter[]>([]);
+  const [geo, setGeo] = useState<GeoSelection>(EMPTY_GEO_SELECTION);
   const [professionFilters, setProfessionFilters] = useState<string[]>([]);
   const [mapLayerMode, setMapLayerMode] = useState<MapLayerMode>('streets');
   const [locationRequestKey, setLocationRequestKey] = useState(0);
@@ -110,8 +112,9 @@ export default function MapPage() {
       professionFilters,
       adminOwnerId,
       users,
+      geo,
     }),
-    [profilesWithAddresses, searchQuery, audienceFilters, professionFilters, adminOwnerId, users],
+    [profilesWithAddresses, searchQuery, audienceFilters, professionFilters, adminOwnerId, users, geo],
   );
 
   useEffect(() => {
@@ -263,6 +266,8 @@ export default function MapPage() {
           setAudienceFilters={setAudienceFilters}
           professionFilters={professionFilters}
           setProfessionFilters={setProfessionFilters}
+          geo={geo}
+          setGeo={setGeo}
         />
 
         <section className="mb-5 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-800" aria-labelledby="map-profiles-title">
