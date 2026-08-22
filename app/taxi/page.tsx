@@ -177,10 +177,12 @@ export default function TaxiPage() {
     void loadDriver();
     if (account) void loadRiderRides();
     const timer = window.setInterval(() => {
+      // п.6: не долбим сервер, когда вкладка скрыта (иначе 429).
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
       loadSummary();
       void loadDriver();
       if (account) void loadRiderRides();
-    }, 15_000);
+    }, 20_000);
     return () => window.clearInterval(timer);
   }, [account?.id, loadSummary, loadDriver, loadRiderRides]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -379,7 +381,7 @@ export default function TaxiPage() {
 
               {/* Таксист на линии: лента заказов вместо формы (п.1). */}
               {driverLoaded && driverOnline ? (
-                <div className="absolute inset-x-0 bottom-20 z-[450] max-h-[55%] space-y-2 overflow-y-auto p-2 sm:bottom-3">
+                <div className="relative z-10 -mt-4 max-h-[55%] space-y-2 overflow-y-auto px-2 pb-4 sm:px-4">
                   <div className="smk-sheet flex items-center gap-2 rounded-2xl p-2.5 shadow-xl">
                     <CircleCheck className="h-4 w-4 shrink-0 text-emerald-600" />
                     <p className="flex-1 text-xs font-bold text-slate-900 dark:text-white">
@@ -445,7 +447,7 @@ export default function TaxiPage() {
               ) : (
                 <>
                 {/* Шторка заказа: фиксирована над нижним меню (п.3). */}
-                <div className="absolute inset-x-0 bottom-20 z-[450] p-2 sm:bottom-3 sm:p-3">
+                <div className="relative z-10 -mt-6 px-2 pb-4 sm:px-4">
                   <div className="smk-sheet max-h-[55%] space-y-2 overflow-y-auto rounded-3xl p-3 shadow-2xl">
                     {/* п.8: вместо «откуда/куда» — цена, расстояние, время. */}
                     <p className="text-center text-sm font-black text-slate-900 dark:text-white">
@@ -720,7 +722,7 @@ function RideCard({
             className="inline-flex items-center gap-1 rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 transition hover:bg-slate-50 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
           >
             <Route className="h-3.5 w-3.5" />
-            {L('Маршрут', 'Маршрут')}
+            {L('Показать маршрут', 'Маршрут гойта')}
           </a>
         )}
       </div>

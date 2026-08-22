@@ -211,7 +211,7 @@ export function LeafletMap({
         });
       };
       objectClusterRef.current = L.markerClusterGroup({
-        maxClusterRadius: 40,
+        maxClusterRadius: 30,
         spiderfyOnMaxZoom: true,
         showCoverageOnHover: false,
         zoomToBoundsOnClick: true,
@@ -226,7 +226,7 @@ export function LeafletMap({
         // «застрявшие» иконки-призраки рядом с новыми — ещё один источник
         // визуальных дублей.
         animate: false,
-        disableClusteringAtZoom: 18,
+        disableClusteringAtZoom: 17,
         iconCreateFunction: makeClusterIcon,
       }).addTo(map);
       map.on('click', (event) => {
@@ -435,7 +435,11 @@ export function LeafletMap({
     };
 
     // ===== Дома =====
-    if (wantHouses) {
+    // п.2 замечаний 23.08: на дальнем зуме домов нет вообще —
+    // появляются только при приближении (зум >= 15), иначе тысячи
+    // маркеров вешают ПК. Зум попадает в сигнатуру пересборки.
+    sigParts.push(map.getZoom() >= 15 ? 'zoom-near' : 'zoom-far');
+    if (wantHouses && map.getZoom() >= 15) {
       // Только видимая область (+40% запаса): тысячи адресов сразу не
       // рендерим, остальное подхватывается на moveend/zoomend.
       const bounds = map.getBounds().pad(0.4);
@@ -817,9 +821,8 @@ export function LeafletMap({
 
   return (
     <div className={`relative z-0 isolate w-full overflow-hidden rounded-2xl ${className}`}>
-      <div ref={containerRef} className="h-full w-full" />
       {showControls && (
-        <div className="absolute left-3 right-3 top-3 z-[400] flex max-w-[calc(100%-1.5rem)] flex-wrap items-center justify-between gap-2 rounded-xl bg-white/95 px-3 py-2 text-xs font-semibold text-slate-700 shadow-md backdrop-blur dark:bg-zinc-950/95 dark:text-zinc-300">
+        <div className="sticky top-2 z-[450] mx-1 mb-2 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/95 px-3 py-2 text-xs font-semibold text-slate-700 shadow-md backdrop-blur dark:bg-zinc-950/95 dark:text-zinc-300">
           <div className="flex min-w-0 items-center gap-2">
             <span className="truncate">{locationStatus}</span>
             <button type="button" onClick={locateAgain} className="shrink-0 text-emerald-700 hover:underline dark:text-emerald-400">Моё место</button>
@@ -836,6 +839,7 @@ export function LeafletMap({
           />
         </div>
       )}
+      <div ref={containerRef} className="h-full w-full" />
     </div>
   );
 }

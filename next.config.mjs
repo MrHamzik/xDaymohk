@@ -72,7 +72,7 @@ const cspDirectives = [
     SUPABASE_ORIGIN,
     SUPABASE_ORIGIN.replace(/^https:/, 'wss:'),
     'https://open.er-api.com',
-    'https://nominatim.openstreetmap.org',
+    'https://nominatim.openstreetmap.org https://router.project-osrm.org',
   ].filter(Boolean).join(' '),
   "frame-src 'self' https://www.youtube-nocookie.com",
   "media-src 'self' data: blob:",

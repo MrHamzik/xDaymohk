@@ -3,8 +3,7 @@
 import Avatar from '@/components/Avatar';
 import { useBlacklist } from '@/components/BlacklistProvider';
 import { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
-import { ArrowLeft, FileText, LocateFixed, MapPinned, Phone, Users, Star } from 'lucide-react';
+import { FileText, LocateFixed, MapPinned, Phone, Users, Star } from 'lucide-react';
 import { cacheBustAvatarUrl } from '@/lib/media';
 import { fetchEffectiveHouseAddresses, type SamashkiHouseAddress } from '@/lib/samashki-addresses';
 import { getMapCategories, fetchMapCategories } from '@/lib/map-categories';
@@ -279,17 +278,6 @@ export default function MapPage() {
             на весь экран и выбивалась из общего строя). */}
         <main className="smk-shell-main">
           <div className="mx-auto w-full max-w-3xl">
-        {/* п.1 замечаний 23.08: заголовок-описание убраны, чтобы
-            карта и списки получили больше места; осталась кнопка назад. */}
-        <div className="mb-3 flex items-center gap-3">
-          <Link
-            href="/catalog"
-            aria-label="Вернуться в каталог"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-        </div>
 
         <SearchFilter
           searchQuery={searchQuery}
