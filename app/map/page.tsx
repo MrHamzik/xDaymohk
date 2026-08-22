@@ -64,6 +64,12 @@ export default function MapPage() {
   const [locationRequestKey, setLocationRequestKey] = useState(0);
   // Слой объектов на карте — только один активный (как «карта/спутник/гибрид»).
   const [objectMode, setObjectMode] = useState<MapObjectMode>('profiles');
+  // п.5 замечаний 23.08: маршрут по улицам на нашей карте (OSRM).
+  const [routeMode, setRouteMode] = useState(false);
+  const [routeA, setRouteA] = useState<{ lat: number; lng: number } | null>(null);
+  const [routeB, setRouteB] = useState<{ lat: number; lng: number } | null>(null);
+  const [routePath, setRoutePath] = useState<Array<[number, number]> | null>(null);
+  const [routeInfo, setRouteInfo] = useState<{ km: number; min: number } | null>(null);
   // Категория для слоя «Другое» ('' = все), как фильтр в админке.
   const [placesCategory, setPlacesCategory] = useState('');
   const [allAddresses, setAllAddresses] = useState<SamashkiHouseAddress[]>([]);
@@ -187,7 +193,36 @@ export default function MapPage() {
 
   /** Клик по карте/дому выбирает ближайший адрес (в пределах ~250 м) —
    *  панель выше покажет анкеты всех, кто живёт/работает по этому адресу. */
+  // Режим маршрута: первый клик — «откуда», второй — «куда».
+  useEffect(() => {
+    if (!routeA || !routeB) { setRoutePath(null); setRouteInfo(null); return; }
+    const controller = new AbortController();
+    void (async () => {
+      try {
+        const res = await fetch(
+          `https://router.project-osrm.org/route/v1/driving/${routeA.lng},${routeA.lat};${routeB.lng},${routeB.lat}?overview=full&geometries=geojson`,
+          { signal: controller.signal },
+        );
+        const data = await res.json();
+        const route = data?.routes?.[0];
+        const coords = route?.geometry?.coordinates;
+        if (Array.isArray(coords) && coords.length > 1) {
+          setRoutePath(coords.map(([lng, lat]: [number, number]) => [lat, lng] as [number, number]));
+          setRouteInfo({ km: Math.round((route.distance / 1000) * 10) / 10, min: Math.max(1, Math.round(route.duration / 60)) });
+          return;
+        }
+        setRoutePath(null); setRouteInfo(null);
+      } catch { setRoutePath(null); setRouteInfo(null); }
+    })();
+    return () => controller.abort();
+  }, [routeA?.lat, routeA?.lng, routeB?.lat, routeB?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleMapSelect = (position: { lat: number; lng: number }) => {
+    if (routeMode) {
+      if (!routeA) setRouteA(position);
+      else { setRouteB(position); }
+      return;
+    }
     // Адреса без настоящих координат («нет координат», нули, заглушка
     // центра села) не участвуют — они и на карте не отображаются.
     const pool = allAddresses.filter((a) => hasRealAddressCoords(a.lat, a.lng));
@@ -244,7 +279,9 @@ export default function MapPage() {
             на весь экран и выбивалась из общего строя). */}
         <main className="smk-shell-main">
           <div className="mx-auto w-full max-w-3xl">
-        <div className="mb-5 flex items-center gap-3">
+        {/* п.1 замечаний 23.08: заголовок-описание убраны, чтобы
+            карта и списки получили больше места; осталась кнопка назад. */}
+        <div className="mb-3 flex items-center gap-3">
           <Link
             href="/catalog"
             aria-label="Вернуться в каталог"
@@ -252,12 +289,7 @@ export default function MapPage() {
           >
             <ArrowLeft className="h-4 w-4" />
           </Link>
-          <div className="min-w-0">
-            <h2 className="text-lg font-extrabold text-slate-900 dark:text-white">{t.mapPageTitle}</h2>
-            <p className="text-sm text-slate-500 dark:text-zinc-500">{t.mapPageSubtitle}</p>
-          </div>
         </div>
-        <hr className="smk-orn mb-5" />
 
         <SearchFilter
           searchQuery={searchQuery}
@@ -339,6 +371,24 @@ export default function MapPage() {
           )}
         </section>
 
+        {/* п.5: маршрут на нашей карте, как «построить маршрут» в Яндексе. */}
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => { setRouteMode((v) => !v); setRouteA(null); setRouteB(null); setRoutePath(null); setRouteInfo(null); }}
+            className={`rounded-xl px-3 py-2 text-xs font-bold transition ${
+              routeMode ? 'bg-emerald-600 text-white shadow-sm' : 'smk-field text-slate-700 dark:text-zinc-300'
+            }`}
+          >
+            {routeMode ? (routeB ? t.mapRouteReset : t.mapRoutePick) : t.mapRouteBuild}
+          </button>
+          {routeInfo && (
+            <span className="rounded-xl bg-emerald-50 px-2.5 py-1.5 text-xs font-bold text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
+              {routeInfo.km} {t.mapRouteKm} · ≈{routeInfo.min} {t.mapRouteMin}
+            </span>
+          )}
+        </div>
+
         <div className="grid min-w-0 grid-cols-1 gap-6 md:grid-cols-3">
           <section className="min-w-0 overflow-hidden rounded-3xl border border-slate-200 bg-white p-3 shadow-sm dark:border-zinc-700 dark:bg-zinc-800 md:col-span-2" aria-labelledby="map-section-title">
             <div className="mb-3 flex items-center justify-between gap-3 px-2">
@@ -381,6 +431,7 @@ export default function MapPage() {
               mapLayerMode={mapLayerMode}
               onMapLayerModeChange={setMapLayerMode}
               locationRequestKey={locationRequestKey}
+              route={routeA && routeB ? { from: routeA, to: routeB, path: routePath ?? undefined } : null}
               markers={filteredProfiles.map((profile) => {
                 // Режим работы владельца действует на всех его анкетах:
                 // чужому зрителю берём его из публичной репутации.

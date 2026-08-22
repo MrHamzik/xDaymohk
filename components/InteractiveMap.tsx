@@ -118,6 +118,12 @@ export function LeafletMap({
   const onSelectRef = useRef(onSelect);
   const onClearSelectionRef = useRef(onClearSelection);
   const [isReady, setIsReady] = useState(false);
+  // п.4 замечаний 23.08 (лаги на «Домах»): маркеры создаются один раз
+  // и переиспользуются; пересборка кластера пропускается, если состав
+  // видимых объектов не изменился; moveend/zoomend — с дебаунсом.
+  const markerCacheRef = useRef<Map<string, Leaflet.Marker>>(new Map());
+  const lastSigRef = useRef('');
+  const viewportTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [localMapLayerMode, setLocalMapLayerMode] = useState<MapLayerMode>('streets');
   const [isFarZoom, setIsFarZoom] = useState(false);
   // Тик при каждом moveend/zoomend — рендерим дома только в видимой области,
@@ -210,6 +216,11 @@ export function LeafletMap({
         showCoverageOnHover: false,
         zoomToBoundsOnClick: true,
         removeOutsideVisibleBounds: true,
+        // Тысячи маркеров добавляются порциями, не блокируя ввод
+        // (п.4 замечаний 23.08: лаги при слое «Дома»).
+        chunkedLoading: true,
+        chunkInterval: 200,
+        chunkDelay: 30,
         // Без анимации схлопывания: при быстрой перерисовке слоёв
         // (clearLayers во время анимации) markercluster оставлял на карте
         // «застрявшие» иконки-призраки рядом с новыми — ещё один источник
@@ -222,9 +233,15 @@ export function LeafletMap({
         onSelectRef.current?.({ lat: event.latlng.lat, lng: event.latlng.lng });
         onClearSelectionRef.current?.();
       });
-      // При каждом движении/зуме перерисовываем дома только видимой области.
-      map.on('moveend', () => setViewportTick((t) => t + 1));
-      map.on('zoomend', () => setViewportTick((t) => t + 1));
+      // При каждом движении/зуме перерисовываем дома только видимой
+      // области. Дебаунс 200 мс: серия moveend во время инерции не
+      // запускает пересборку на каждом кадре (источник лагов).
+      const bumpViewport = () => {
+        if (viewportTimerRef.current) clearTimeout(viewportTimerRef.current);
+        viewportTimerRef.current = setTimeout(() => setViewportTick((t) => t + 1), 200);
+      };
+      map.on('moveend', bumpViewport);
+      map.on('zoomend', bumpViewport);
 
       const updateZoomClass = () => {
         if (!containerRef.current) return;
@@ -391,7 +408,6 @@ export function LeafletMap({
     const cluster = objectClusterRef.current;
     if (!map || !leaflet || !cluster) return;
 
-    cluster.clearLayers();
 
     // Спутник — чистая карта без единого маркера (по требованию).
     if (mapLayerMode === 'satellite') return;
@@ -404,6 +420,10 @@ export function LeafletMap({
     if (!wantProfiles && !wantHouses && !wantPlaces) return;
 
     const layers: Leaflet.Layer[] = [];
+    const sigParts: string[] = [
+      mapLayerMode, String(objectMode ?? 'auto'), String(wantHouses),
+      String(wantPlaces), String(wantProfiles), placesCategory ?? '',
+    ];
     // Дедупликация по «слой + координата + подпись»: один и тот же дом,
     // пришедший из БД дважды (пересечение seed/localStorage/сервера), не
     // должен давать две иконки и раздувать счётчик кластера.
@@ -429,7 +449,10 @@ export function LeafletMap({
           && dedupe(`h|${h.id}`),
       );
 
-      const makeHouseMarker = (house: SamashkiHouseAddress) => {
+      const makeHouseMarker = (house: SamashkiHouseAddress, spiralIdx = 0) => {
+        const cacheKey = `h|${house.id}|${spiralIdx}`;
+        const cached = markerCacheRef.current.get(cacheKey);
+        if (cached) return cached;
         const houseIcon = leaflet.divIcon({
           className: 'bg-transparent border-none',
           html: `
@@ -452,8 +475,11 @@ export function LeafletMap({
           leaflet.DomEvent.stopPropagation(e);
           onSelectRef.current?.({ lat: house.lat, lng: house.lng });
         });
+        markerCacheRef.current.set(cacheKey, houseMarker);
         return houseMarker;
       };
+
+      sigParts.push(visibleHouses.map((h) => h.id).join(','));
 
       // Дома с одинаковыми координатами (вся улица получила координаты
       // улицы) раздвигаем по спирали, чтобы они не наслаивались.
@@ -473,7 +499,7 @@ export function LeafletMap({
             ...house,
             lat: house.lat + Math.cos(angle) * radius,
             lng: house.lng + Math.sin(angle) * radius,
-          }));
+          }, idx));
         });
       });
     }
@@ -546,6 +572,7 @@ export function LeafletMap({
 
     // ===== Анкеты =====
     if (wantProfiles) {
+      sigParts.push(markers.map((m) => m.id).join(','));
       markers
         .filter((marker) => hasRealCoords(marker.position.lat, marker.position.lng))
         .forEach((marker) => {
@@ -593,6 +620,13 @@ export function LeafletMap({
         });
     }
 
+    // Состав не изменился (пан/зум в ту же область) — не трогаем
+    // кластер вовсе: clearLayers+addLayers на каждой перерисовке и был
+    // главным источником лагов при тысячах домов.
+    const sig = sigParts.join('|');
+    if (sig === lastSigRef.current) return;
+    lastSigRef.current = sig;
+    cluster.clearLayers();
     if (layers.length > 0) cluster.addLayers(layers);
   }, [
     mapLayerMode,

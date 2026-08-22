@@ -267,6 +267,11 @@ export const translations = {
     // Map Page
     mapPageTitle: 'Даймохк',
     mapPageSubtitle: 'Все анкеты с адресами и их точки на карте',
+    mapRouteBuild: 'Построить маршрут',
+    mapRoutePick: 'Ткните точку «куда»',
+    mapRouteReset: 'Сбросить маршрут',
+    mapRouteKm: 'км',
+    mapRouteMin: 'мин',
     mapLayerStreets: 'Карта',
     mapLayerSatellite: 'Спутник',
     mapLayerHybrid: 'Гибрид',
@@ -1265,6 +1270,11 @@ export const translations = {
 
     // Map Page
     mapPageTitle: 'Даймохк',
+    mapRouteBuild: 'Маршрут дIаотта',
+    mapRoutePick: '«Мича» точка тIетаIа',
+    mapRouteReset: 'Маршрут дIаяккха',
+    mapRouteKm: 'км',
+    mapRouteMin: 'мин',
     mapPageSubtitle: 'Адресаш долу дерриг анкет а, церан меттигаш а карти тIехь',
     mapLayerStreets: 'Карта',
     mapLayerSatellite: 'Спутник',
