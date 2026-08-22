@@ -79,7 +79,9 @@ export default function Home() {
       setIsAccountModalOpen(true);
       return;
     }
-    setQuickPreset(preset);
+    // Пустой объект — тоже «быстрое создание»: без вопроса про
+    // черновик (п.8 замечаний 22.08).
+    setQuickPreset(preset ?? {});
     setQuickTaskOpen(true);
   };
 
@@ -423,11 +425,14 @@ export default function Home() {
         onClose={() => setActiveProfileId(null)}
         onReview={handleAddReview}
       />
-      {/* Быстрая заявка лендинга: бесплатное задание с пресетом. */}
+      {/* Быстрая заявка лендинга: бесплатное задание с пресетом.
+          Без вопроса про черновик: быстрое создание не копится
+          в шаблоны/черновики (п.8 замечаний 22.08). */}
       <CreateTaskModal
         isOpen={quickTaskOpen}
         isPaid={false}
         preset={quickPreset}
+        skipDraftAsk
         onClose={() => setQuickTaskOpen(false)}
         onCreated={() => setQuickTaskOpen(false)}
       />

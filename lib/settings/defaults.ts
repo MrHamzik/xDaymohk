@@ -72,7 +72,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   // спрятаны по умолчанию: ровно те же переключатели уже стоят плиткой
   // в шапке меню, и дублировать их строками для всех незачем. Кому
   // удобнее строкой — включает глазиком в лайт-режиме.
-  hiddenMenu: ['notify', 'lang', 'status', 'theme'],
+  hiddenMenu: ['notify', 'lang', 'status', 'theme', 'taxiline'],
   tourStep: 0,
   tourDone: false,
   welcomeSent: false,

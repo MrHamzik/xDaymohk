@@ -39,6 +39,7 @@ import QiblaModal from '@/components/QiblaModal';
 import SpecialDaysModal from '@/components/SpecialDaysModal';
 import BlacklistModal from '@/components/BlacklistModal';
 import { useSettings } from '@/components/SettingsProvider';
+import { supabase } from '@/lib/supabase';
 import { useI18n } from '@/lib/i18n';
 import { shareLink, siteOrigin } from '@/lib/share';
 import { useTheme } from '@/components/ThemeProvider';
@@ -58,7 +59,9 @@ interface SidebarNavProps {
 type MenuAction =
   | 'qibla' | 'hijri' | 'blacklist' | 'invite' | 'notify'
   // Быстрые настройки строками (п.12).
-  | 'lang' | 'status' | 'theme';
+  | 'lang' | 'status' | 'theme'
+  // Переключатель «на линии» для таксистов (п.15).
+  | 'taxiline';
 
 interface MenuItem {
   id: string;
@@ -106,10 +109,9 @@ const SECTIONS: MenuSection[] = [
     titleRu: 'Сервисы экосистемы',
     titleCe: 'Вай сервисаш',
     items: [
-      // href нет: раздел ещё не сделан. Раньше стояло href: '/', и на
-      // главной эти пункты подсвечивались как активные вместе с
-      // «Главная» — pathname совпадал.
-      { id: 'taxi', icon: CarFront, chip: 'dev' as const },
+      // ВайТакси v1 работает: пункт ведёт в раздел, чип «в
+      // разработке» снят (п.10 замечаний 22.08).
+      { id: 'taxi', href: '/taxi', icon: CarFront },
       { id: 'vpn', icon: Globe2, chip: 'dev' as const },
       { id: 'vaynakh', href: '/vaynakh', icon: Landmark },
       { id: 'go', href: '/goncholla', icon: HandHeart },
@@ -137,6 +139,9 @@ const SECTIONS: MenuSection[] = [
       { id: 'lang', action: 'lang', icon: Languages },
       { id: 'status', action: 'status', icon: Clock },
       { id: 'theme', action: 'theme', icon: Palette },
+      // «На линии» для таксистов (п.15): скрыт по умолчанию, кому
+      // нужен — включает глазиком в режиме редактирования.
+      { id: 'taxiline', action: 'taxiline', icon: CarFront },
     ],
   },
 ];
@@ -218,6 +223,24 @@ export default function SidebarNav({ onClose, isAdmin = false, rail = false }: S
     // «Режим работы» раскрывается списком прямо под строкой: четыре
     // статуса — это выбор, а не переключатель.
     if (action === 'status') setIsStatusOpen((prev) => !prev);
+    // «На линии»: читаем текущее состояние и переключаем. Без анкеты
+    // авто сервер вернёт ошибку — пользователь останется офлайн.
+    if (action === 'taxiline') {
+      void (async () => {
+        if (!supabase) return;
+        const session = await supabase.auth.getSession();
+        const token = session.data.session?.access_token;
+        if (!token) return;
+        const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+        const current = await fetch('/api/taxi/driver', { cache: 'no-store', headers })
+          .then((r) => r.json()).catch(() => null);
+        await fetch('/api/taxi/driver', {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify({ isOnline: !(current?.driver?.isOnline) }),
+        }).catch(() => {});
+      })();
+    }
   };
 
   const handleSelectStatus = async (statusId: UserMasterStatus) => {

@@ -143,27 +143,9 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
       setNotice('Укажите место работы или адрес.');
       return;
     }
-    if (!isPersonalProfile) {
-      // Строгий формат: адрес должен быть из базы (домов/объектов) или
-      // выбран точкой на карте. Допускается префикс «Даймохк, …» / «Самашки, …»
-      // (normalizeAddress добавляет его при сохранении).
-      const dbAddresses = getEffectiveHouseAddresses().map((a) => a.fullAddress);
-      const trimmedAddress = workplaceAddress.trim();
-      // «Даймохк» — всегда валидный адрес (область по умолчанию), даже если
-      // пользователь не выбрал точку на карте.
-      const isDefaultRegion = /^даймохк$/i.test(trimmedAddress)
-        || /^с\.\s+даймохк$/i.test(trimmedAddress)
-        || /^даймохк,\s*/i.test(trimmedAddress);
-      const addressMatchesDb = isDefaultRegion || dbAddresses.some((db) =>
-        trimmedAddress === db
-        || trimmedAddress.endsWith(`, ${db}`)
-        || trimmedAddress.endsWith(db),
-      );
-      if (!addressMatchesDb) {
-        setNotice('Адрес не найден в базе. Выберите адрес из списка подсказок или отметьте точку на карте.');
-        return;
-      }
-    }
+    // п.6 замечаний 22.08: адреса пользователя может не быть в базе —
+    // строгая проверка убрана. Подсказки из БД и точка на карте
+    // остаются помощью, но вводится и сохраняется любой адрес.
 
     if (isSpecialist && experienceStart && !experienceCurrent && !experienceEnd) {
       setNotice('Укажите дату окончания или отметьте «Работаю здесь сейчас».');

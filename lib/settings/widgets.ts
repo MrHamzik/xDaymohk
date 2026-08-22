@@ -15,6 +15,7 @@ export const QUICK_WIDGET_IDS = [
   'qibla', 'quran', 'hijri', 'sira', 'profile',
   'gullaq', 'go', 'vaynakh', 'taxi', 'vpn', 'djanna',
   'settings', 'pro', 'guide', 'help', 'legal', 'invite', 'blacklist',
+  'taxiline',
 ] as const;
 
 export type QuickWidgetId = (typeof QUICK_WIDGET_IDS)[number];
@@ -31,6 +32,8 @@ export const MENU_IDS = [
   // спрятаны лайт-режимом: кому плитки мало — включает строки глазиком.
   'notify', 'lang', 'status', 'theme',
   'profile',
+  // Таксистский переключатель «на линии» (п.15): скрыт по умолчанию.
+  'taxiline',
 ] as const;
 
 export type MenuId = (typeof MENU_IDS)[number];
@@ -59,6 +62,7 @@ export function widgetLabel(id: string, t: Dict): string {
     case 'go': return t.goTitle;
     case 'vaynakh': return t.vaynakhTitle;
     case 'taxi': return t.taxiTitle;
+    case 'taxiline': return t.taxiOnlineLabel;
     case 'vpn': return t.vpnTitle;
     case 'djanna': return t.djannaTitle;
     case 'about': return t.about;

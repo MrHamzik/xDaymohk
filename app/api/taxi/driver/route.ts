@@ -31,15 +31,27 @@ export async function GET(request: Request) {
   const { data: driver } = await admin.from('taxi_drivers')
     .select('*').eq('user_id', auth.user.id).maybeSingle();
 
-  const { data: rides } = await admin.from('taxi_rides')
+  const { data: mine } = await admin.from('taxi_rides')
     .select('*')
     .eq('driver_id', auth.user.id)
     .in('status', ['assigned', 'to_pickup', 'in_ride'])
     .order('created_at', { ascending: false });
 
+  // Лента входящих заказов для таксиста на линии (п.16): поиск по
+  // его тарифам. Без этого таксист видел только свои активные поездки.
+  const tariffs: string[] = Array.isArray(driver?.tariffs) ? driver.tariffs : [];
+  const { data: open } = driver?.is_online
+    ? await admin.from('taxi_rides')
+      .select('*, user_profiles(full_name)')
+      .eq('status', 'searching')
+      .in('tariff_id', tariffs.length > 0 ? tariffs : ['__none__'])
+      .order('created_at', { ascending: true })
+      .limit(20)
+    : { data: [] as never[] };
+
   return withRateLimitHeaders(NextResponse.json({
     driver: driver ? mapDriver(driver) : null,
-    rides: rides ?? [],
+    rides: [...(mine ?? []), ...(open ?? [])],
   }), { ...limit, limit: 60 });
 }
 
@@ -68,6 +80,9 @@ export async function PUT(request: Request) {
     if (list.length === 0) return NextResponse.json({ error: 'Выберите хотя бы один тариф' }, { status: 400 });
     patch.tariffs = list;
   }
+  // Приватность (п.17): пол/возраст пассажир видит только с разрешения.
+  if ('showGender' in body) patch.show_gender = body.showGender === true;
+  if ('showAge' in body) patch.show_age = body.showAge === true;
 
   const wantOnline = typeof body.isOnline === 'boolean' ? body.isOnline : null;
 
@@ -128,6 +143,8 @@ function mapDriver(row: any) {
     isVerified: row.is_verified === true,
     rating: Number(row.rating ?? 0),
     rideCount: Number(row.ride_count ?? 0),
+    showGender: row.show_gender === true,
+    showAge: row.show_age === true,
   };
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */

@@ -16,6 +16,7 @@ import ProfileCard from '@/components/ProfileCard';
 import TaskCard from '@/components/tasks/TaskCard';
 import TaskDetailModal from '@/components/tasks/TaskDetailModal';
 import NotificationCenter from '@/components/NotificationCenter';
+import PinProposeModal from '@/components/PinProposeModal';
 import SwipeTabs from '@/components/SwipeTabs';
 import EmptyState from '@/components/ui/EmptyState';
 import { fetchTasks, fetchTask, fetchTaskFilters } from '@/lib/tasks/client';
@@ -121,11 +122,6 @@ export default function HomeFeed() {
     (item) => !hiddenMenu.has(READING_MENU_IDS[item.section]) && progress[item.section],
   );
 
-  const firstName = (account?.fullName || '').trim().split(/\s+/)[0];
-  const hello = firstName
-    ? t.homeHello.replace('{name}', firstName)
-    : t.homeHelloGuest;
-
   const activeProfile: Profile | null = activeProfileId
     ? profiles.find((profile) => profile.id === activeProfileId) ?? null
     : null;
@@ -138,25 +134,83 @@ export default function HomeFeed() {
     [profiles],
   );
 
+  // Личная анкета — для «Предложить на главную» (скрепка) из вкладки
+  // «Главная».
+  const personalProfile = useMemo(
+    () => profiles.find((p) => p.isPersonal && p.ownerId === account?.id) ?? null,
+    [profiles, account?.id],
+  );
+  const [pinOpen, setPinOpen] = useState(false);
+
   return (
     <div className="space-y-5">
-      <header>
-        <h1 className="smk-title smk-text-display font-black text-slate-900 dark:text-white">
-          {hello}
-        </h1>
-        <p className="mt-1 smk-text-body text-slate-500 dark:text-zinc-400">{t.homeFeedLead}</p>
-      </header>
-
       <SwipeTabs
         tabs={[
           { id: 'main', label: t.homeTabMain },
-          { id: 'rating', label: t.homeTabRating },
-          { id: 'tasks', label: t.homeTabTasks },
+          { id: 'picks', label: t.homeTabPicks },
+          { id: 'stats', label: t.homeTabStats },
         ]}
         active={homeTab}
         onChange={setHomeTab}
+        underBar={(
+          <div className="mb-4">
+            <HomeHeroBanner specialistCount={rankedSpecialists.length} />
+          </div>
+        )}
         panels={{
+          /* «Главная» — про аккаунт и его продвижение. */
           main: (
+            <div className="space-y-5">
+              <section className="smk-lux flex items-center gap-3 p-4">
+                {account?.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={account.avatarUrl} alt="" className="h-12 w-12 rounded-xl object-cover" />
+                ) : (
+                  <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-600 text-sm font-black text-white">
+                    {(account?.fullName || 'Д').slice(0, 1)}
+                  </span>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-bold text-slate-900 dark:text-white">
+                    {account?.fullName || t.homeHelloGuest}
+                  </p>
+                  <p className="smk-text-label text-slate-500 dark:text-zinc-400">
+                    {account?.phone || t.phoneNotSet}
+                  </p>
+                </div>
+              </section>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <Link href="/profile" className="smk-lux px-3.5 py-3 text-center text-xs font-bold text-slate-700 dark:text-zinc-300">
+                  {t.homeAccountProfile}
+                </Link>
+                <Link
+                  href={personalProfile ? `/catalog?profile=${encodeURIComponent(personalProfile.id)}` : '/profile'}
+                  className="smk-lux px-3.5 py-3 text-center text-xs font-bold text-slate-700 dark:text-zinc-300"
+                >
+                  {t.homeAccountAnketa}
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setPinOpen(true)}
+                  disabled={!personalProfile}
+                  className="smk-lux px-3.5 py-3 text-center text-xs font-bold text-emerald-700 transition hover:brightness-95 dark:text-emerald-400 disabled:opacity-50"
+                >
+                  {t.homeAccountPromo}
+                </button>
+              </div>
+            </div>
+          ),
+
+          /* «Подборка» — предложенное жителями и закреплённое админом. */
+          picks: (
+            <HomePinnedSection
+              onOpenProfile={setActiveProfileId}
+              onOpenTask={setTaskId}
+            />
+          ),
+
+          /* «Статистика» — письма, подписка, такси, чтение. */
+          stats: (
             <div className="space-y-5">
               <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                 <NotificationCenter
@@ -261,16 +315,6 @@ export default function HomeFeed() {
                 </section>
               )}
 
-              {/* Старый градиентный баннер каталога перенесён на
-                  главную (решение владельца). */}
-              <HomeHeroBanner specialistCount={rankedSpecialists.length} />
-
-              {/* Закреплённые администрацией блоки (скрепка → админка
-                  → главная), обновление 74. */}
-              <HomePinnedSection
-                onOpenProfile={setActiveProfileId}
-                onOpenTask={setTaskId}
-              />
             </div>
           ),
 
@@ -308,6 +352,15 @@ export default function HomeFeed() {
           tasks: <HomeTasksTab onOpenTask={setTaskId} />,
         }}
       />
+
+      {personalProfile && (
+        <PinProposeModal
+          isOpen={pinOpen}
+          targetType="profile"
+          targetId={personalProfile.id}
+          onClose={() => setPinOpen(false)}
+        />
+      )}
 
       <ProfileModal
         profile={activeProfile}

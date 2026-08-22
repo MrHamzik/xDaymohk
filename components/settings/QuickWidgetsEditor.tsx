@@ -40,6 +40,7 @@ const ICONS: Record<QuickWidgetId, typeof Clock> = {
   legal: ScrollText,
   invite: Users,
   blacklist: ShieldBan,
+  taxiline: CarFront,
 };
 
 /**

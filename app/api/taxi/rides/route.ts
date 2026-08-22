@@ -59,7 +59,7 @@ export async function GET(request: Request) {
   }
 
   const { data: rides } = await admin.from('taxi_rides')
-    .select('*, taxi_drivers(car_model, car_color, car_plate, rating, is_verified, user_profiles(full_name))')
+    .select('*, taxi_drivers(car_model, car_color, car_plate, rating, is_verified, show_gender, show_age, user_profiles(full_name, gender, birth_date))')
     .eq('rider_id', auth.user.id)
     .order('created_at', { ascending: false })
     .limit(50);

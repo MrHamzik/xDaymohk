@@ -59,6 +59,11 @@ interface CreateTaskModalProps {
    * не спрашиваем (заявка и есть черновик).
    */
   preset?: TaskPreset | null;
+  /**
+   * Быстрое создание (карточки каталога): не предлагать «Есть
+   * незаконченное задание» — черновики для них не копятся (п.8).
+   */
+  skipDraftAsk?: boolean;
   onClose: () => void;
   onCreated: () => void;
 }
@@ -70,7 +75,7 @@ function toLocalInput(date: Date): string {
 }
 
 export default function CreateTaskModal({
-  isOpen, isPaid, editTask = null, seedTask = null, preset = null, onClose, onCreated,
+  isOpen, isPaid, editTask = null, seedTask = null, preset = null, skipDraftAsk = false, onClose, onCreated,
 }: CreateTaskModalProps) {
   const isEditing = Boolean(editTask);
   const source = editTask ?? seedTask;
@@ -240,8 +245,8 @@ export default function CreateTaskModal({
     }
 
     const draft = loadTaskDraft(isPaid);
-    setDraftAsk(Boolean(draft && !draftIsEmpty(draft)));
-  }, [isOpen, editTask, seedTask, preset, isPaid]);
+    setDraftAsk(skipDraftAsk ? false : Boolean(draft && !draftIsEmpty(draft)));
+  }, [isOpen, editTask, seedTask, preset, skipDraftAsk, isPaid]);
 
   useEffect(() => {
     if (!isOpen || isEditing) return;
@@ -504,43 +509,6 @@ export default function CreateTaskModal({
               </div>
             </div>
           )}
-
-          {/* Контакты по заданию.
-              Раньше здесь стоял «Общий номер»: телефон вводился заново
-              на каждое задание и разъезжался с профилем. Теперь номера
-              живут только в профиле, а тут выбирается их видимость. */}
-          <div className="smk-sheet-section space-y-2 px-4 py-4">
-            <h3 className="smk-sheet-label">{t.taskContactsTitle}</h3>
-            <p className="smk-text-label leading-relaxed text-slate-500 dark:text-zinc-500">
-              {t.taskContactsHint}
-            </p>
-
-            {hasAnyContact ? (
-              <div className="space-y-1.5 pt-1">
-                {/* Тумблер показываем только для заполненного контакта:
-                    предлагать «показать телефон», которого нет, — обман. */}
-                {Boolean(myPhone) && (
-                  <SettingRow title={t.taskShowPhone}>
-                    <Toggle checked={showPhone} onChange={setShowPhone} label={t.taskShowPhone} />
-                  </SettingRow>
-                )}
-                {Boolean(myWhatsapp) && (
-                  <SettingRow title={t.taskShowWhatsapp}>
-                    <Toggle checked={showWhatsapp} onChange={setShowWhatsapp} label={t.taskShowWhatsapp} />
-                  </SettingRow>
-                )}
-                {Boolean(myTelegram) && (
-                  <SettingRow title={t.taskShowTelegram}>
-                    <Toggle checked={showTelegram} onChange={setShowTelegram} label={t.taskShowTelegram} />
-                  </SettingRow>
-                )}
-              </div>
-            ) : (
-              <p className="smk-text-label leading-relaxed text-amber-700 dark:text-amber-400">
-                {t.taskContactsEmpty}
-              </p>
-            )}
-          </div>
 
           {/* Тип задания */}
           <div className="px-4 pb-4 pt-4">
@@ -936,6 +904,44 @@ export default function CreateTaskModal({
             </div>
           )}
         </div>
+
+                  {/* Контакты по заданию.
+              Раньше здесь стоял «Общий номер»: телефон вводился заново
+              на каждое задание и разъезжался с профилем. Теперь номера
+              живут только в профиле, а тут выбирается их видимость. */}
+          <div className="smk-sheet-section space-y-2 px-4 py-4">
+            <h3 className="smk-sheet-label">{t.taskContactsTitle}</h3>
+            <p className="smk-text-label leading-relaxed text-slate-500 dark:text-zinc-500">
+              {t.taskContactsHint}
+            </p>
+
+            {hasAnyContact ? (
+              <div className="space-y-1.5 pt-1">
+                {/* Тумблер показываем только для заполненного контакта:
+                    предлагать «показать телефон», которого нет, — обман. */}
+                {Boolean(myPhone) && (
+                  <SettingRow title={t.taskShowPhone}>
+                    <Toggle checked={showPhone} onChange={setShowPhone} label={t.taskShowPhone} />
+                  </SettingRow>
+                )}
+                {Boolean(myWhatsapp) && (
+                  <SettingRow title={t.taskShowWhatsapp}>
+                    <Toggle checked={showWhatsapp} onChange={setShowWhatsapp} label={t.taskShowWhatsapp} />
+                  </SettingRow>
+                )}
+                {Boolean(myTelegram) && (
+                  <SettingRow title={t.taskShowTelegram}>
+                    <Toggle checked={showTelegram} onChange={setShowTelegram} label={t.taskShowTelegram} />
+                  </SettingRow>
+                )}
+              </div>
+            ) : (
+              <p className="smk-text-label leading-relaxed text-amber-700 dark:text-amber-400">
+                {t.taskContactsEmpty}
+              </p>
+            )}
+          </div>
+
 
         <div className="smk-sheet-section smk-sheet-foot flex gap-2 p-4">
           <button

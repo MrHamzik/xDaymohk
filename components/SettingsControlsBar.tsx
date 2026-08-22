@@ -17,6 +17,7 @@ import ThemePickerButton from '@/components/settings/ThemePickerButton';
 import QiblaModal from '@/components/QiblaModal';
 import { useSettings } from '@/components/SettingsProvider';
 import { widgetLabel } from '@/lib/settings/widgets';
+import { supabase } from '@/lib/supabase';
 import { WORK_STATUS_BG, WORK_STATUS_IDS, workStatusHint, workStatusText } from '@/lib/settings/work-status';
 import { UserMasterStatus } from '@/lib/types';
 
@@ -291,7 +292,9 @@ export default function SettingsControlsBar() {
       case 'vaynakh':
         return navTile('/vaynakh', t.vaynakhTitle, <Landmark className="h-5 w-5" />);
       case 'taxi':
-        return navTile('/', t.taxiTitle, <CarFront className="h-5 w-5" />);
+        return navTile('/taxi', t.taxiTitle, <CarFront className="h-5 w-5" />);
+      case 'taxiline':
+        return <TaxiOnlineTile />;
       case 'vpn':
         return navTile('/', t.vpnTitle, <Globe2 className="h-5 w-5" />);
       case 'djanna':
@@ -312,5 +315,63 @@ export default function SettingsControlsBar() {
       ))}
       <QiblaModal isOpen={isQiblaOpen} onClose={() => setIsQiblaOpen(false)} />
     </div>
+  );
+}
+
+/**
+ * Быстрый виджет «на линии» (п.15): таксисту не надо идти в /taxi,
+ * чтобы выйти на линию или сойти с неё. Без анкеты авто сервер не
+ * включит онлайн — плитка останется серой.
+ */
+function TaxiOnlineTile() {
+  const { t } = useI18n();
+  const [online, setOnline] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      if (!supabase) return;
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      if (!token) return;
+      const res = await fetch('/api/taxi/driver', {
+        cache: 'no-store',
+        headers: { Authorization: `Bearer ${token}` },
+      }).catch(() => null);
+      const data = res ? await res.json().catch(() => null) : null;
+      if (!cancelled) setOnline(Boolean(data?.driver?.isOnline));
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const toggle = async () => {
+    if (!supabase) return;
+    const session = await supabase.auth.getSession();
+    const token = session.data.session?.access_token;
+    if (!token) return;
+    const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+    const res = await fetch('/api/taxi/driver', {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify({ isOnline: !online }),
+    }).catch(() => null);
+    if (res?.ok) setOnline(!online);
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={() => void toggle()}
+      title={t.taxiOnlineLabel}
+      aria-label={t.taxiOnlineLabel}
+      aria-pressed={online}
+      className={`flex h-11 w-11 items-center justify-center rounded-2xl shadow-md transition active:scale-95 ${
+        online
+          ? 'bg-emerald-600 text-white shadow-emerald-600/30'
+          : 'bg-slate-200 text-slate-600 hover:bg-slate-300 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700'
+      }`}
+    >
+      <CarFront className="h-5 w-5" />
+    </button>
   );
 }

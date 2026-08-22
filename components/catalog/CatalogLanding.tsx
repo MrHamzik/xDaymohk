@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import Image from 'next/image';
 import {
   Bike, ChefHat, Clock, HardHat, MapPin, Send, ShieldCheck,
@@ -135,7 +134,7 @@ export default function CatalogLanding({ onOpenTask, onShowCatalog }: CatalogLan
           <p className="mt-1 flex-1 text-xs leading-relaxed text-slate-500 dark:text-zinc-400">{t.catCardFoodDesc}</p>
           <button
             type="button"
-            onClick={() => onOpenTask(null)}
+            onClick={() => onOpenTask({ category: 'purchases' })}
             className="mt-3 inline-flex items-center gap-1 self-start rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-emerald-700"
           >
             {t.catCardFoodBtn}
@@ -150,7 +149,7 @@ export default function CatalogLanding({ onOpenTask, onShowCatalog }: CatalogLan
           <p className="mt-1 flex-1 text-xs leading-relaxed text-slate-500 dark:text-zinc-400">{t.catCardWorkersDesc}</p>
           <button
             type="button"
-            onClick={() => onOpenTask({ kind: 'scheduled' })}
+            onClick={() => onOpenTask({ kind: 'scheduled', category: 'building' })}
             className="mt-3 inline-flex items-center gap-1 self-start rounded-xl bg-emerald-600/90 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-emerald-700"
           >
             {t.catCardWorkersBtn}
@@ -163,12 +162,13 @@ export default function CatalogLanding({ onOpenTask, onShowCatalog }: CatalogLan
           </span>
           <h3 className="mt-2.5 text-sm font-bold text-slate-900 dark:text-white">{t.catCardCourier}</h3>
           <p className="mt-1 flex-1 text-xs leading-relaxed text-slate-500 dark:text-zinc-400">{t.catCardCourierDesc}</p>
-          <Link
-            href="/taxi"
-            className="mt-3 inline-flex items-center gap-1 self-start rounded-xl bg-slate-200/80 px-3 py-1.5 text-xs font-bold text-slate-700 transition hover:bg-slate-300/80 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+          <button
+            type="button"
+            onClick={() => onOpenTask({ category: 'delivery' })}
+            className="mt-3 inline-flex items-center gap-1 self-start rounded-xl bg-sky-600/90 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-sky-700"
           >
             {t.catCardCourierBtn}
-          </Link>
+          </button>
         </div>
       </div>
 

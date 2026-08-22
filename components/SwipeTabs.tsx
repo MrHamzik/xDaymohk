@@ -14,6 +14,8 @@ interface SwipeTabsProps {
   onChange: (id: string) => void;
   /** Панели по id вкладки. */
   panels: Record<string, React.ReactNode>;
+  /** Контент сразу под панелью вкладок (над активной панелью). */
+  underBar?: React.ReactNode;
 }
 
 /**
@@ -28,7 +30,7 @@ interface SwipeTabsProps {
  * До первого визита панель не рендерится вовсе, чтобы не грузить
  * тяжёлые списки заранее.
  */
-export default function SwipeTabs({ tabs, active, onChange, panels }: SwipeTabsProps) {
+export default function SwipeTabs({ tabs, active, onChange, panels, underBar }: SwipeTabsProps) {
   const { t } = useI18n();
   const [visited, setVisited] = useState<Set<string>>(() => new Set([active]));
   useEffect(() => {
@@ -77,6 +79,8 @@ export default function SwipeTabs({ tabs, active, onChange, panels }: SwipeTabsP
           </button>
         ))}
       </div>
+
+      {underBar}
 
       <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
         {tabs.map((tab) => (

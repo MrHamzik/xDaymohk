@@ -10,9 +10,13 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import {
-  Bike, Car, CircleCheck, Loader2, LocateFixed, MapPin, Star, X,
+  Bike, Car, CircleCheck, Loader2, LocateFixed, Map as MapIcon, MapPin, Route, Star, X,
 } from 'lucide-react';
+
+/* Карта — только на клиенте (leaflet не живёт в SSR). */
+const TaxiMapModal = dynamic(() => import('@/components/taxi/TaxiMapModal'), { ssr: false });
 import Navbar from '@/components/Navbar';
 import AppSidebar from '@/components/AppSidebar';
 import BottomNav from '@/components/BottomNav';
@@ -39,6 +43,8 @@ interface DriverCard {
   isVerified: boolean;
   rating: number;
   rideCount: number;
+  showGender: boolean;
+  showAge: boolean;
 }
 
 interface RideRow {
@@ -48,7 +54,11 @@ interface RideRow {
   status: string;
   tariff_id: string;
   from_label: string;
+  from_lat: number | null;
+  from_lng: number | null;
   to_label: string;
+  to_lat: number | null;
+  to_lng: number | null;
   distance_km: number;
   price: number;
   multiplier: number;
@@ -60,7 +70,9 @@ interface RideRow {
     car_plate: string;
     rating: number;
     is_verified: boolean;
-    user_profiles?: { full_name: string } | null;
+    show_gender?: boolean;
+    show_age?: boolean;
+    user_profiles?: { full_name: string; gender?: string | null; birth_date?: string | null } | null;
   } | null;
 }
 
@@ -84,8 +96,15 @@ export default function TaxiPage() {
 
   const [mode, setMode] = useState<'rider' | 'driver'>('rider');
   const [summary, setSummary] = useState<{
-    onlineDrivers: number; surge: number; tariffs: TaxiTariff[]; fare: TaxiFare | null;
+    onlineDrivers: number;
+    surge: number;
+    tariffs: TaxiTariff[];
+    fare: TaxiFare | null;
+    slots: SurgeSlot[];
   } | null>(null);
+  /** Карта: выбор точки «откуда/куда» или просмотр маршрута. */
+  const [mapMode, setMapMode] = useState<null | 'from' | 'to' | 'route'>(null);
+  const [routeRide, setRouteRide] = useState<RideRow | null>(null);
 
   // ── пассажир ──
   const [fromLabel, setFromLabel] = useState('');
@@ -104,6 +123,8 @@ export default function TaxiPage() {
   const [carColor, setCarColor] = useState('');
   const [carPlate, setCarPlate] = useState('');
   const [driverTariffs, setDriverTariffs] = useState<string[]>(['economy']);
+  const [showGender, setShowGender] = useState(false);
+  const [showAge, setShowAge] = useState(false);
   const [orders, setOrders] = useState<RideRow[]>([]);
   const [busy, setBusy] = useState(false);
 
@@ -141,6 +162,8 @@ export default function TaxiPage() {
       setCarColor(data.driver.carColor);
       setCarPlate(data.driver.carPlate);
       setDriverTariffs(data.driver.tariffs?.length ? data.driver.tariffs : ['economy']);
+      setShowGender(Boolean(data.driver.showGender));
+      setShowAge(Boolean(data.driver.showAge));
     }
     setDriverLoaded(true);
   }, [authHeaders]);
@@ -172,11 +195,13 @@ export default function TaxiPage() {
   );
 
   // Цена «на берегу» — та же математика, что на сервере.
+  // Цена «на берегу» — та же математика, что на сервере, и с текущим
+  // множителем спроса: пассажир видит, сколько реально заплатит (п.12).
   const estimate = useMemo(() => {
     if (!summary?.fare || !fromPoint || !toPoint) return null;
     const tariff = summary.tariffs.find((x) => x.id === tariffId);
     if (!tariff) return null;
-    return estimateRide(fromPoint, toPoint, summary.fare, Number(tariff.multiplier), [], new Date());
+    return estimateRide(fromPoint, toPoint, summary.fare, Number(tariff.multiplier), summary.slots ?? [], new Date());
   }, [summary, fromPoint, toPoint, tariffId]);
 
   const orderRide = async () => {
@@ -233,6 +258,7 @@ export default function TaxiPage() {
         headers: { ...headers, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           carModel, carColor, carPlate, tariffs: driverTariffs,
+          showGender, showAge,
           ...(online !== undefined ? { isOnline: online } : {}),
         }),
       });
@@ -288,7 +314,7 @@ export default function TaxiPage() {
             </div>
             <div className="min-w-0 flex-1">
               <h1 className="text-lg font-black text-slate-900 dark:text-white sm:text-xl">
-                {L('ВайТакси', 'ВайТакси')}
+                {L('Такси', 'Такси')}
               </h1>
               <p className="text-xs text-slate-500 dark:text-zinc-400">
                 {summary
@@ -322,8 +348,10 @@ export default function TaxiPage() {
 
           {mode === 'rider' && (
             <div className="space-y-4">
+              {/* relative z-20: подсказки адресов и тарифы не должны
+                  перекрываться следующими блоками (п.11). */}
               {!activeRide && (
-                <section className="smk-lux space-y-2.5 rounded-3xl p-4">
+                <section className="smk-lux relative z-20 space-y-2.5 rounded-3xl p-4">
                   <div className="flex items-end gap-2">
                     <div className="flex-1">
                       <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-zinc-400">
@@ -340,12 +368,33 @@ export default function TaxiPage() {
                     >
                       {locating ? <Loader2 className="h-4 w-4 animate-spin" /> : <LocateFixed className="h-4 w-4" />}
                     </button>
+                    {/* п.13: точку можно ткнуть прямо на карте. */}
+                    <button
+                      type="button"
+                      onClick={() => setMapMode('from')}
+                      aria-label={L('Точка на карте', 'Картехь точка')}
+                      title={L('Точка на карте', 'Картехь точка')}
+                      className="smk-field flex h-9 w-9 shrink-0 items-center justify-center"
+                    >
+                      <MapIcon className="h-4 w-4" />
+                    </button>
                   </div>
-                  <div>
-                    <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-zinc-400">
-                      {L('Куда', 'Мича')}
-                    </label>
-                    <AddressAutocomplete id="taxi-to" value={toLabel} onChange={(v) => { setToLabel(v); }} onSelect={(s) => { setToLabel(s.displayName); setToPoint({ lat: s.lat, lng: s.lng }); }} />
+                  <div className="flex items-end gap-2">
+                    <div className="flex-1">
+                      <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-zinc-400">
+                        {L('Куда', 'Мича')}
+                      </label>
+                      <AddressAutocomplete id="taxi-to" value={toLabel} onChange={(v) => { setToLabel(v); }} onSelect={(s) => { setToLabel(s.displayName); setToPoint({ lat: s.lat, lng: s.lng }); }} />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setMapMode('to')}
+                      aria-label={L('Точка на карте', 'Картехь точка')}
+                      title={L('Точка на карте', 'Картехь точка')}
+                      className="smk-field flex h-9 w-9 shrink-0 items-center justify-center"
+                    >
+                      <MapIcon className="h-4 w-4" />
+                    </button>
                   </div>
 
                   {/* Тарифы с ценой «на берегу» */}
@@ -353,7 +402,7 @@ export default function TaxiPage() {
                     {(summary?.tariffs ?? []).map((tariff) => {
                       const price = (() => {
                         if (!summary?.fare || !fromPoint || !toPoint) return null;
-                        return estimateRide(fromPoint, toPoint, summary.fare, Number(tariff.multiplier), [], new Date()).price;
+                        return estimateRide(fromPoint, toPoint, summary.fare, Number(tariff.multiplier), summary.slots ?? [], new Date()).price;
                       })();
                       return (
                         <button
@@ -408,6 +457,7 @@ export default function TaxiPage() {
                   language={language}
                   busy={busy}
                   onAction={(action) => void rideAction(activeRide.id, action, loadRiderRides)}
+                  onShowRoute={() => { setRouteRide(activeRide); setMapMode('route'); }}
                 />
               )}
 
@@ -491,11 +541,43 @@ export default function TaxiPage() {
 
               {driverLoaded && driver && (
                 <section className="smk-lux space-y-2.5 rounded-3xl p-4">
-                  <div className="flex items-center gap-3">
+                  {/* Анкета авто правится на месте (п.17): раньше
+                      после создания карточки поля пропадали. */}
+                  <input value={carModel} onChange={(e) => setCarModel(e.target.value)} placeholder={L('Машина', 'Машина')} className={field} />
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <input value={carColor} onChange={(e) => setCarColor(e.target.value)} placeholder={L('Цвет', 'Бос')} className={field} />
+                    <input value={carPlate} onChange={(e) => setCarPlate(e.target.value)} placeholder={L('Номер', 'Лоьмар')} className={field} />
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <label className="flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-zinc-400">
+                      <input
+                        type="checkbox"
+                        checked={showGender}
+                        onChange={(e) => setShowGender(e.target.checked)}
+                        className="h-3.5 w-3.5 accent-emerald-600"
+                      />
+                      {L('Показывать пол', 'Дуьненан пол гойта')}
+                    </label>
+                    <label className="flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-zinc-400">
+                      <input
+                        type="checkbox"
+                        checked={showAge}
+                        onChange={(e) => setShowAge(e.target.checked)}
+                        className="h-3.5 w-3.5 accent-emerald-600"
+                      />
+                      {L('Показывать возраст', 'Хан гойта')}
+                    </label>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void saveDriverCard()}
+                      className="ml-auto rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+                    >
+                      {L('Сохранить', 'ДӀаязъе')}
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-3 border-t border-slate-100 pt-2.5 dark:border-zinc-800">
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-extrabold text-slate-900 dark:text-white">
-                        {driver.carModel} {driver.carColor} · {driver.carPlate}
-                      </p>
                       <p className="smk-text-label text-slate-500 dark:text-zinc-500">
                         ★ {driver.rating.toFixed(1)} · {driver.rideCount} {L('поездок', 'некъ')}
                         {driver.isVerified ? ` · ${L('проверен', 'теллина')}` : ''}
@@ -520,6 +602,7 @@ export default function TaxiPage() {
                       language={language}
                       busy={busy}
                       onAction={(action) => void rideAction(activeDriverRide.id, action, loadDriver)}
+                      onShowRoute={() => { setRouteRide(activeDriverRide); setMapMode('route'); }}
                     />
                   ) : driver.isOnline ? (
                     <div className="space-y-2">
@@ -566,19 +649,55 @@ export default function TaxiPage() {
         onOpenCreateProfile={() => setIsCreateOpen(false)}
         onOpenTaxi={() => setIsCreateOpen(false)}
       />
+
+      <TaxiMapModal
+        isOpen={mapMode !== null}
+        onClose={() => setMapMode(null)}
+        pick={mapMode === 'from' || mapMode === 'to' ? mapMode : null}
+        onPick={(pt) => {
+          if (mapMode === 'from') {
+            setFromPoint(pt);
+            setFromLabel(L('Точка на карте', 'Картехь точка'));
+          }
+          if (mapMode === 'to') {
+            setToPoint(pt);
+            setToLabel(L('Точка на карте', 'Картехь точка'));
+          }
+          setMapMode(null);
+        }}
+        pickHint={mapMode === 'from' || mapMode === 'to'
+          ? L('Ткните в точку на карте', 'Картехь точка тIетаIайе')
+          : undefined}
+        from={mapMode === 'route' && routeRide?.from_lat != null && routeRide?.from_lng != null
+          ? { lat: Number(routeRide.from_lat), lng: Number(routeRide.from_lng), label: routeRide.from_label }
+          : mapMode === 'to' && fromPoint
+            ? { ...fromPoint, label: fromLabel }
+            : null}
+        to={mapMode === 'route' && routeRide?.to_lat != null && routeRide?.to_lng != null
+          ? { lat: Number(routeRide.to_lat), lng: Number(routeRide.to_lng), label: routeRide.to_label }
+          : null}
+      />
     </div>
   );
 }
 
 /** Карточка активной поездки со статусной линейкой и действиями. */
+function ageFromBirth(birth?: string | null): string | null {
+  if (!birth) return null;
+  const year = Number(String(birth).slice(0, 4));
+  if (!Number.isFinite(year) || year < 1900) return null;
+  return String(new Date().getFullYear() - year);
+}
+
 function RideCard({
-  ride, isRiderView, language, busy, onAction,
+  ride, isRiderView, language, busy, onAction, onShowRoute,
 }: {
   ride: RideRow;
   isRiderView: boolean;
   language: 'ru' | 'ce';
   busy: boolean;
   onAction: (action: string) => void;
+  onShowRoute?: () => void;
 }) {
   const L = (ru: string, ce: string) => (language === 'ce' ? ce : ru);
   const status = STATUS_LABELS[ride.status] ?? { ru: ride.status, ce: ride.status };
@@ -607,9 +726,28 @@ function RideCard({
       {isRiderView && driver && (
         <p className="text-xs text-slate-600 dark:text-zinc-400">
           <Car className="mr-1 inline h-3 w-3 text-emerald-600" />
-          {driver.user_profiles?.full_name ?? L('Таксист', 'Таксист')} · {driver.car_color} {driver.car_model} · {driver.car_plate}
+          {driver.user_profiles?.full_name ?? L('Таксист', 'Таксист')}
+          {/* п.17: пол/возраст — только если таксист разрешил. */}
+          {driver.show_gender && driver.user_profiles?.gender
+            ? ` · ${driver.user_profiles.gender === 'female' ? L('жен', 'зуда') : driver.user_profiles.gender === 'male' ? L('муж', 'боьрша') : driver.user_profiles.gender}`
+            : ''}
+          {driver.show_age ? (() => {
+            const age = ageFromBirth(driver.user_profiles?.birth_date);
+            return age ? ` · ${age} ${L('лет', 'шо')}` : '';
+          })() : ''}
+          {' '}· {driver.car_color} {driver.car_model} · {driver.car_plate}
           {driver.is_verified ? ` · ${L('проверен', 'теллина')}` : ''}
         </p>
+      )}
+      {ride.from_lat != null && ride.to_lat != null && onShowRoute && (
+        <button
+          type="button"
+          onClick={onShowRoute}
+          className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 hover:underline dark:text-emerald-400"
+        >
+          <Route className="h-3.5 w-3.5" />
+          {L('Маршрут на карте', 'Маршрут карт тIехь')}
+        </button>
       )}
       <div className="flex gap-2 pt-1">
         {nextAction && nextLabel && (

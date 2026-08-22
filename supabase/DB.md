@@ -1636,5 +1636,19 @@
     "data_type": "timestamp with time zone",
     "is_nullable": "NO",
     "column_default": "now()"
+  },
+  {
+    "table_name": "taxi_drivers",
+    "column_name": "show_gender",
+    "data_type": "boolean",
+    "is_nullable": "NO",
+    "column_default": "false"
+  },
+  {
+    "table_name": "taxi_drivers",
+    "column_name": "show_age",
+    "data_type": "boolean",
+    "is_nullable": "NO",
+    "column_default": "false"
   }
 ]

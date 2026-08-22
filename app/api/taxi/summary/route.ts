@@ -49,6 +49,13 @@ export async function GET(request: Request) {
   return withRateLimitHeaders(NextResponse.json({
     onlineDrivers: (drivers.data ?? []).length,
     surge,
+    // Слоты нужны клиенту, чтобы показывать цену С множителем
+    // «на берегу» (п.12 замечаний 22.08).
+    slots: (slots.data ?? []).map((s) => ({
+      startHour: Number(s.start_hour),
+      endHour: Number(s.end_hour),
+      multiplier: Number(s.multiplier),
+    })),
     tariffs: (tariffs.data ?? []).filter((t) => t.is_active),
     fare: fare.data ? {
       baseFare: Number(fare.data.base_fare),
