@@ -25,6 +25,7 @@ import { useProfiles } from '@/components/ProfilesProvider';
 import { useBlacklist } from '@/components/BlacklistProvider';
 import { filterProfiles } from '@/lib/profile-filters';
 import { useI18n } from '@/lib/i18n';
+import { useSettings } from '@/components/SettingsProvider';
 import { AudienceFilter, Profile } from '@/lib/types';
 import EmptyState from '@/components/ui/EmptyState';
 import SpecialistLeaders from '@/components/SpecialistLeaders';
@@ -44,6 +45,7 @@ function pickPageSize(): number {
 
 export default function Home() {
   const { account } = useAuth();
+  const { settings } = useSettings();
   const { profiles, users, isCurrentUserAdmin, isProfileAdmin, addProfile, updateProfile, addReview, addComplaint, updateUserBlocked, createNotification, refreshRemoteData } = useProfiles();
   const { t } = useI18n();
   const [searchQuery, setSearchQuery] = useState('');
@@ -64,7 +66,10 @@ export default function Home() {
   const [quickPreset, setQuickPreset] = useState<QuickTaskPreset | null>(null);
   // Вкладки каталога (Услуги/Рейтинг/Каталог) и гео-фильтр «города /
   // районы / сёла».
-  const [catalogTab, setCatalogTab] = useState('services');
+  // Пока гид не пройден, открываем вкладку «Каталог»: шаг гида ждёт
+  // прокрутки карточек анкет, а они живут именно там — лендинг
+  // сломал бы первое прохождение.
+  const [catalogTab, setCatalogTab] = useState(() => (settings.tourDone ? 'services' : 'catalog'));
   const [geo, setGeo] = useState<GeoSelection>(EMPTY_GEO_SELECTION);
 
   const openQuickTask = (preset: QuickTaskPreset | null = null) => {

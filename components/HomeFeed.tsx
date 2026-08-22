@@ -18,7 +18,7 @@ import TaskDetailModal from '@/components/tasks/TaskDetailModal';
 import NotificationCenter from '@/components/NotificationCenter';
 import SwipeTabs from '@/components/SwipeTabs';
 import EmptyState from '@/components/ui/EmptyState';
-import { fetchTasks, fetchTaskFilters } from '@/lib/tasks/client';
+import { fetchTasks, fetchTask, fetchTaskFilters } from '@/lib/tasks/client';
 import { loadReadingProgress } from '@/lib/reading-progress';
 import {
   fetchMyProgress, findProgress, migrateLocalBookmarks,
@@ -244,6 +244,13 @@ export default function HomeFeed() {
               {/* Старый градиентный баннер каталога перенесён на
                   главную (решение владельца). */}
               <HomeHeroBanner specialistCount={rankedSpecialists.length} />
+
+              {/* Закреплённые администрацией блоки (скрепка → админка
+                  → главная), обновление 74. */}
+              <HomePinnedSection
+                onOpenProfile={setActiveProfileId}
+                onOpenTask={setTaskId}
+              />
             </div>
           ),
 
@@ -463,5 +470,89 @@ function HomeTasksTab({ onOpenTask }: { onOpenTask: (id: string) => void }) {
         </section>
       )}
     </div>
+  );
+}
+
+interface PinnedRow {
+  id: string;
+  target_type: 'profile' | 'task';
+  target_id: string;
+}
+
+/**
+ * Закреплённые администрацией анкеты и задания на главной
+ * (обновление 74, финал цикла «скрепка»). Скрытые и забаненные
+ * анкеты отсеиваются здесь же, как во всём каталоге. Пусто — блок
+ * не рисуется вовсе.
+ */
+function HomePinnedSection({
+  onOpenProfile,
+  onOpenTask,
+}: {
+  onOpenProfile: (id: string) => void;
+  onOpenTask: (id: string) => void;
+}) {
+  const { t } = useI18n();
+  const { profiles, isCurrentUserAdmin, isProfileAdmin } = useProfiles();
+  const { account } = useAuth();
+  const [pinned, setPinned] = useState<PinnedRow[] | null>(null);
+  const [pinnedTasks, setPinnedTasks] = useState<Task[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/home-pinned', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : { pinned: [] }))
+      .then((data) => {
+        if (cancelled) return;
+        const list: PinnedRow[] = Array.isArray(data?.pinned) ? data.pinned : [];
+        setPinned(list);
+        const taskIds = list.filter((p) => p.target_type === 'task').map((p) => p.target_id);
+        void Promise.all(taskIds.map((id) => fetchTask(id).then((r) => r.task).catch(() => null)))
+          .then((tasks) => {
+            if (!cancelled) setPinnedTasks(tasks.filter((task): task is Task => Boolean(task && task.status === 'open')));
+          });
+      })
+      .catch(() => { if (!cancelled) setPinned([]); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const pinnedProfiles = useMemo(
+    () => (pinned ?? [])
+      .filter((p) => p.target_type === 'profile')
+      .map((p) => profiles.find((profile) => profile.id === p.target_id))
+      .filter((profile): profile is Profile => Boolean(profile && !profile.isHidden && !profile.isBanned)),
+    [pinned, profiles],
+  );
+
+  if (!pinned || (pinnedProfiles.length === 0 && pinnedTasks.length === 0)) return null;
+
+  return (
+    <section>
+      <h2 className="mb-2 smk-text-title font-extrabold text-slate-900 dark:text-white">
+        {t.homePinnedTitle}
+      </h2>
+      {pinnedProfiles.length > 0 && (
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
+          {pinnedProfiles.map((profile) => (
+            <ProfileCard
+              key={profile.id}
+              profile={profile}
+              onSelect={(selected) => onOpenProfile(selected.id)}
+              isAdminStatus={isProfileAdmin(profile)}
+              showPending={Boolean(isCurrentUserAdmin || (account && profile.ownerId === account.id))}
+              isOwnProfile={Boolean(account && profile.ownerId === account.id)}
+              isAdmin={isCurrentUserAdmin}
+            />
+          ))}
+        </div>
+      )}
+      {pinnedTasks.length > 0 && (
+        <div className="mt-2.5 grid grid-cols-1 gap-2.5 lg:grid-cols-2">
+          {pinnedTasks.map((task) => (
+            <TaskCard key={task.id} task={task} onOpen={(item) => onOpenTask(item.id)} />
+          ))}
+        </div>
+      )}
+    </section>
   );
 }

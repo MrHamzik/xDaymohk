@@ -61,3 +61,7 @@ drop policy if exists "home pins self select" on public.home_pin_proposals;
 create policy "home pins self select"
   on public.home_pin_proposals for select
   using (auth.uid()::text = user_id::text or is_admin_email());
+
+-- Чтение — вошедшему свои строки и админу все; запись только через
+-- сервер (сервисная роль), напрямую из клиента вставка невозможна.
+grant select on public.home_pin_proposals to anon, authenticated;

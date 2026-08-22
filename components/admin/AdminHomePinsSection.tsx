@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Loader2, Paperclip } from 'lucide-react';
+import { Loader2, Paperclip, Pin, PinOff } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useI18n } from '@/lib/i18n';
 import { useProfiles } from '@/components/ProfilesProvider';
@@ -27,6 +27,9 @@ export default function AdminHomePinsSection() {
   const L = (ru: string, ce: string) => (language === 'ce' ? ce : ru);
   const { profiles } = useProfiles();
   const [rows, setRows] = useState<PinRow[] | null>(null);
+  /** Ключи «тип:id» закреплённых объектов. */
+  const [pinned, setPinned] = useState<Set<string>>(new Set());
+  const [busyKey, setBusyKey] = useState<string | null>(null);
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
@@ -48,9 +51,54 @@ export default function AdminHomePinsSection() {
     } catch {
       setError(L('Не удалось загрузить предложения', 'ТIедаьхнарш чуэца ца делира'));
     }
+    // Закреплённые — отдельным запросом (публичный эндпоинт).
+    try {
+      const res = await fetch('/api/home-pinned', { cache: 'no-store' });
+      const data = await res.json().catch(() => null);
+      if (res.ok && Array.isArray(data?.pinned)) {
+        setPinned(new Set(data.pinned.map((p: { target_type: string; target_id: string }) => `${p.target_type}:${p.target_id}`)));
+      }
+    } catch {
+      // без закреплённых список предложений всё равно полезен
+    }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { void load(); }, [load]);
+
+  /** Закрепить/открепить объект предложения (обновление 74). */
+  const togglePin = async (entry: { type: 'profile' | 'task'; id: string }) => {
+    if (!supabase) return;
+    const key = `${entry.type}:${entry.id}`;
+    const session = await supabase.auth.getSession();
+    const token = session.data.session?.access_token;
+    if (!token) return;
+    setBusyKey(key);
+    try {
+      const isPinned = pinned.has(key);
+      const res = isPinned
+        ? await fetch(`/api/home-pinned?targetType=${entry.type}&targetId=${encodeURIComponent(entry.id)}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        : await fetch('/api/home-pinned', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ targetType: entry.type, targetId: entry.id }),
+        });
+      if (!res.ok) {
+        setError(L('Не удалось изменить закрепление', 'Закрепленни хийца ца делира'));
+        return;
+      }
+      setPinned((current) => {
+        const next = new Set(current);
+        if (isPinned) next.delete(key);
+        else next.add(key);
+        return next;
+      });
+    } finally {
+      setBusyKey(null);
+    }
+  };
 
   // Группировка по объекту: сколько раз предложили, кто и когда.
   const grouped = useMemo(() => {
@@ -114,6 +162,23 @@ export default function AdminHomePinsSection() {
                 {entry.names.length > 0 ? ` · ${entry.names.slice(0, 3).join(', ')}${entry.names.length > 3 ? '…' : ''}` : ''}
               </p>
             </div>
+            <button
+              type="button"
+              disabled={busyKey === `${entry.type}:${entry.id}`}
+              onClick={() => void togglePin(entry)}
+              className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-bold transition disabled:opacity-50 ${
+                pinned.has(`${entry.type}:${entry.id}`)
+                  ? 'border border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800'
+                  : 'bg-emerald-600 text-white hover:bg-emerald-700'
+              }`}
+            >
+              {busyKey === `${entry.type}:${entry.id}`
+                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                : pinned.has(`${entry.type}:${entry.id}`)
+                  ? <PinOff className="h-3.5 w-3.5" />
+                  : <Pin className="h-3.5 w-3.5" />}
+              {pinned.has(`${entry.type}:${entry.id}`) ? t.adminUnpin : t.adminPin}
+            </button>
           </div>
         ))}
       </div>
