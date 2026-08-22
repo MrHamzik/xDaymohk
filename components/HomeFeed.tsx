@@ -52,6 +52,21 @@ export default function HomeFeed() {
   const [homeTab, setHomeTab] = useState('main');
   const [activeProfileId, setActiveProfileId] = useState<string | null>(null);
   const [taskId, setTaskId] = useState<string | null>(null);
+  /** Живая сводка ВайТакси: онлайн-таксисты и множитель спроса. */
+  const [taxiSummary, setTaxiSummary] = useState<{ onlineDrivers: number; surge: number } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/taxi/summary', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled && data) {
+          setTaxiSummary({ onlineDrivers: Number(data.onlineDrivers ?? 0), surge: Number(data.surge ?? 1) });
+        }
+      })
+      .catch(() => { /* такси пока без БД — карточка останется заглушкой */ });
+    return () => { cancelled = true; };
+  }, []);
   /** Сохранённые точки чтения по разделам (БД либо локальные гостевые). */
   const [progress, setProgress] = useState<Partial<Record<ReadingSection, SavedMark>>>({});
 
@@ -184,8 +199,9 @@ export default function HomeFeed() {
                   <ChevronRight className="h-4 w-4 shrink-0 smk-arrow" />
                 </Link>
 
-                {/* Такси: позже здесь будет живая сводка (активные
-                    таксисты, множитель) — решение владельца. */}
+                {/* Живая сводка ВайТакси: сколько таксистов онлайн и
+                    текущий множитель («в разное время разные
+                    ценники») — решение владельца. */}
                 <Link href="/taxi" className="smk-lux flex items-center gap-3 px-3.5 py-3">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white">
                     <CarFront className="h-5 w-5" />
@@ -195,10 +211,14 @@ export default function HomeFeed() {
                       {t.homeTaxiPeak}
                     </span>
                     <span className="smk-text-label text-slate-500 dark:text-zinc-400">
-                      {t.homeTaxiNone}
+                      {taxiSummary
+                        ? `${language === 'ce' ? 'Онлайн таксисташ' : 'Онлайн таксистов'}: ${taxiSummary.onlineDrivers} · ×${taxiSummary.surge}`
+                        : t.homeTaxiNone}
                     </span>
                   </span>
-                  <span className="smk-chip smk-note-warn">{t.inDevelopment}</span>
+                  {taxiSummary && taxiSummary.surge > 1 && (
+                    <span className="smk-chip smk-note-warn">×{taxiSummary.surge}</span>
+                  )}
                 </Link>
               </div>
 
