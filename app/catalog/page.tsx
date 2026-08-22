@@ -47,6 +47,15 @@ export default function Home() {
   const { account } = useAuth();
   const { settings } = useSettings();
   const { profiles, users, isCurrentUserAdmin, isProfileAdmin, addProfile, updateProfile, addReview, addComplaint, updateUserBlocked, createNotification, refreshRemoteData } = useProfiles();
+
+  // Топ специалистов по числу отзывов (п.2 замечаний 23.08).
+  const topSpecialists = useMemo(
+    () => profiles
+      .filter((p) => p.isSpecialist && !p.isHidden && !p.isBanned)
+      .sort((a, b) => (b.reviewCount ?? 0) - (a.reviewCount ?? 0))
+      .slice(0, 20),
+    [profiles],
+  );
   const { t } = useI18n();
   const [searchQuery, setSearchQuery] = useState('');
   const [audienceFilters, setAudienceFilters] = useState<AudienceFilter[]>([]);
@@ -322,7 +331,49 @@ export default function Home() {
             services: (
               <CatalogLanding onOpenTask={openQuickTask} onShowCatalog={showCatalogTab} />
             ),
-            rating: <SpecialistLeaders onOpen={(id) => setActiveProfileId(id)} />,
+            rating: (
+              <div className="space-y-3">
+                <SpecialistLeaders compact onOpen={(id) => setActiveProfileId(id)} />
+                {/* Компактный топ всех специалистов по числу отзывов
+                    (п.2 замечаний 23.08). */}
+                <section>
+                  <h2 className="text-sm font-extrabold text-slate-900 dark:text-white">
+                    {t.ratingListTitle}
+                  </h2>
+                  <p className="mb-1.5 smk-text-label text-slate-500 dark:text-zinc-400">
+                    {t.ratingListHint}
+                  </p>
+                  <div className="space-y-1">
+                    {topSpecialists.map((profile, index) => (
+                      <button
+                        key={profile.id}
+                        type="button"
+                        onClick={() => setActiveProfileId(profile.id)}
+                        className="smk-lux flex w-full items-center gap-2 px-2.5 py-1.5 text-left transition hover:brightness-95 dark:hover:brightness-110"
+                      >
+                        <span className="w-5 shrink-0 text-center smk-text-label font-black text-slate-400">
+                          {index + 1}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-xs font-bold text-slate-900 dark:text-white">
+                            {profile.fullName}
+                          </span>
+                          <span className="block truncate smk-text-label text-slate-500 dark:text-zinc-400">
+                            {profile.professionTitle || t.catalog}
+                          </span>
+                        </span>
+                        <span className="shrink-0 smk-text-label font-bold text-slate-600 dark:text-zinc-300">
+                          ★ {profile.rating.toFixed(1)} · {profile.reviewCount}
+                        </span>
+                      </button>
+                    ))}
+                    {topSpecialists.length === 0 && (
+                      <p className="smk-dashed p-3 text-center text-xs text-slate-500">{t.nothingFound}</p>
+                    )}
+                  </div>
+                </section>
+              </div>
+            ),
             catalog: (
               <div id="catalog-list-anchor" className="scroll-mt-24">
         <SearchFilter

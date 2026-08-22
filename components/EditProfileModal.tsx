@@ -19,6 +19,8 @@ interface EditProfileModalProps {
   isOpen: boolean;
   account: Account | null;
   profile?: Profile | null;
+  /** Тип новой анкеты из модалки выбора (п.3): например 'business'. */
+  initialCategory?: string;
   onClose: () => void;
   onSave: (newProfile: Profile) => void;
 }
@@ -42,7 +44,7 @@ function isVideoLink(value: string) {
 
 const DEFAULT_WORK_DAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
 
-export default function EditProfileModal({ isOpen, account, profile = null, onClose, onSave }: EditProfileModalProps) {
+export default function EditProfileModal({ isOpen, account, profile = null, initialCategory, onClose, onSave }: EditProfileModalProps) {
   const { t } = useI18n();
   const [gender, setGender] = useState<'male' | 'female' | 'other' | ''>('');
   // Пол и дата рождения живут в АНКЕТЕ (ТЗ-2, п.5): в профиле их
@@ -85,7 +87,7 @@ export default function EditProfileModal({ isOpen, account, profile = null, onCl
     // and cannot be removed). Editing an existing profile keeps its
     // current isSpecialist value (including the personal=false one).
     setIsSpecialist(profile?.id ? Boolean(profile.isSpecialist) : true);
-    setProfessionCategory(profile?.professionCategory ?? 'doctor');
+    setProfessionCategory(profile?.professionCategory ?? initialCategory ?? 'doctor');
     setProfessionTitle(profile?.professionTitle ?? '');
     setExperienceStart(profile?.experienceStart ?? '');
     setExperienceEnd(profile?.experienceEnd ?? '');

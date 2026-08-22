@@ -29,7 +29,19 @@ export async function GET(request: Request) {
     log.warn('taxi:admin:GET', 'query failed', { message: error.message });
     return NextResponse.json({ drivers: [] });
   }
-  return NextResponse.json({ drivers: data ?? [] });
+
+  // Группы «Такси» в админке: таксисты, марки, предложения марок.
+  const [suggestions, brands] = await Promise.all([
+    admin.from('car_brand_suggestions').select('*, user_profiles(full_name)')
+      .eq('status', 'pending').order('created_at', { ascending: false }).limit(100),
+    admin.from('car_brands').select('id, name, is_active').order('name', { ascending: true }).limit(500),
+  ]);
+
+  return NextResponse.json({
+    drivers: data ?? [],
+    suggestions: suggestions.data ?? [],
+    brands: brands.data ?? [],
+  });
 }
 
 export async function PUT(request: Request) {
@@ -77,6 +89,30 @@ export async function PUT(request: Request) {
       const { error } = await admin.from('taxi_tariffs')
         .update({ multiplier }).eq('id', String(body.tariffId ?? ''));
       if (error) return NextResponse.json({ error: 'Не удалось обновить' }, { status: 500 });
+      break;
+    }
+    case 'brand_add': {
+      const name = String(body.name ?? '').trim().slice(0, 80);
+      if (name.length < 3) return NextResponse.json({ error: 'Укажите марку и модель' }, { status: 400 });
+      const { error } = await admin.from('car_brands').insert({ name });
+      if (error && !/duplicate/i.test(error.message)) {
+        return NextResponse.json({ error: 'Не удалось добавить' }, { status: 500 });
+      }
+      break;
+    }
+    case 'brand_approve': {
+      const id = Number(body.suggestionId);
+      if (!Number.isFinite(id)) return NextResponse.json({ error: 'Не указано предложение' }, { status: 400 });
+      const { data: sug } = await admin.from('car_brand_suggestions').select('*').eq('id', id).maybeSingle();
+      if (!sug) return NextResponse.json({ error: 'Предложение не найдено' }, { status: 404 });
+      await admin.from('car_brands').insert({ name: sug.name });
+      await admin.from('car_brand_suggestions').update({ status: 'approved' }).eq('id', id);
+      break;
+    }
+    case 'brand_reject': {
+      const id = Number(body.suggestionId);
+      if (!Number.isFinite(id)) return NextResponse.json({ error: 'Не указано предложение' }, { status: 400 });
+      await admin.from('car_brand_suggestions').update({ status: 'rejected' }).eq('id', id);
       break;
     }
     case 'surge': {

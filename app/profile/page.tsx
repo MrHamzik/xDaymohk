@@ -22,7 +22,7 @@ import { Profile } from '@/lib/types';
 export default function ProfilePage() {
   const { account, isLoading, signInWithGoogle, updateAccount, deleteAccount, signOut, signOutEverywhere } = useAuth();
   const { profiles, isCurrentUserAdmin, updateProfile, deleteProfile, addProfile } = useProfiles();
-  const { t } = useI18n();
+  const { t, language } = useI18n();
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -44,6 +44,9 @@ export default function ProfilePage() {
   const [profileToDelete, setProfileToDelete] = useState<Profile | null>(null);
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  // п.3 замечаний 23.08: «новая анкета» спрашивает тип.
+  const [anketaTypeOpen, setAnketaTypeOpen] = useState(false);
+  const [newAnketaCategory, setNewAnketaCategory] = useState<string | undefined>(undefined);
   const [isMenuDrawerOpen, setIsMenuDrawerOpen] = useState(false);
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
   const [isSignOutAllOpen, setIsSignOutAllOpen] = useState(false);
@@ -425,7 +428,7 @@ export default function ProfilePage() {
             {/* Action Buttons */}
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <button type="submit" disabled={isSaving || Boolean(account.isBlocked)} className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50">{isSaving ? t.saving : t.save}</button>
-              <button type="button" disabled={Boolean(account.isBlocked)} onClick={() => { setEditingProfile(null); setIsAddModalOpen(true); }} className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-emerald-200 px-4 py-2 text-xs font-bold text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950/40"><UserPlus className="h-3.5 w-3.5" />{t.newProfile}</button>
+              <button type="button" disabled={Boolean(account.isBlocked)} onClick={() => { setAnketaTypeOpen(true); }} className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-emerald-200 px-4 py-2 text-xs font-bold text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950/40"><UserPlus className="h-3.5 w-3.5" />{t.newProfile}</button>
             </div>
 
             <div className="flex flex-col gap-1.5 pt-2">
@@ -464,9 +467,52 @@ export default function ProfilePage() {
         isOpen={isAddModalOpen}
         account={account}
         profile={editingProfile}
-        onClose={() => { setEditingProfile(null); setIsAddModalOpen(false); }}
+        initialCategory={newAnketaCategory}
+        onClose={() => { setEditingProfile(null); setIsAddModalOpen(false); setNewAnketaCategory(undefined); }}
         onSave={handleSaveProfile}
       />
+
+      {/* п.3 замечаний 23.08: выбор типа новой анкеты. */}
+      {anketaTypeOpen && (
+        <div className="fixed inset-0 z-[95] flex items-center justify-center bg-zinc-950/60 p-4 backdrop-blur-sm" role="dialog" aria-modal="true">
+          <div className="smk-sheet w-full max-w-sm space-y-2 rounded-2xl p-4 shadow-2xl">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+              {language === 'ce' ? 'Керла анкета: тайпа харжа' : 'Новая анкета: выберите тип'}
+            </h3>
+            {([
+              ['specialist', 'Специалист', 'Хириг', 'Человек с навыками в определённой области: врач, учитель, строитель, механик — к нему обращаются за личной услугой.'],
+              ['business', 'Бизнес', 'Бизнес', 'Заведение или дело с физической точкой: магазин, кафе, парикмахерская, стоматология, СТО.'],
+              ['taxi', 'Такси', 'Такси', 'Анкета водителя: машина, требования (18+, стаж), онлайн-статус. Пассажиром может быть каждый.'],
+            ] as const).map(([id, ru, ce, desc]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => {
+                  setAnketaTypeOpen(false);
+                  if (id === 'taxi') {
+                    window.location.href = '/taxi?tab=driver';
+                    return;
+                  }
+                  setNewAnketaCategory(id === 'business' ? 'business' : undefined);
+                  setEditingProfile(null);
+                  setIsAddModalOpen(true);
+                }}
+                className="w-full rounded-xl border border-slate-200 p-3 text-left transition hover:border-emerald-300 hover:bg-emerald-50/40 dark:border-zinc-800 dark:hover:bg-emerald-950/20"
+              >
+                <span className="block text-xs font-bold text-slate-900 dark:text-white">{language === 'ce' ? ce : ru}</span>
+                <span className="mt-0.5 block smk-text-label leading-snug text-slate-500 dark:text-zinc-400">{desc}</span>
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => setAnketaTypeOpen(false)}
+              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 dark:border-zinc-800 dark:text-zinc-400"
+            >
+              {language === 'ce' ? 'Юхадаккха' : 'Отмена'}
+            </button>
+          </div>
+        </div>
+      )}
 
       <ConfirmDialog
         isOpen={Boolean(profileToDelete)}

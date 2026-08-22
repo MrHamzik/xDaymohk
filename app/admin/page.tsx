@@ -19,6 +19,7 @@ import BottomNav from '@/components/BottomNav';
 import CreateActionModal from '@/components/CreateActionModal';
 import MobileMenuDrawer from '@/components/MobileMenuDrawer';
 import { useTheme } from '@/components/ThemeProvider';
+import { useSettings } from '@/components/SettingsProvider';
 import { useAuth } from '@/components/AuthProvider';
 import { useProfiles } from '@/components/ProfilesProvider';
 import { useI18n } from '@/lib/i18n';
@@ -36,7 +37,12 @@ export default function AdminPage() {
   const { account, signInWithGoogle } = useAuth();
   const { profiles, users, complaints, isCurrentUserAdmin } = useProfiles();
   const { language, setLanguage } = useI18n();
-  const { isDarkMode, toggleTheme } = useTheme();
+  const { toggleTheme } = useTheme();
+  // п.5 замечаний 23.08: класс .dark владеет SettingsProvider, поэтому
+  // кнопка темы обязана писать themeId в настройки, а не только в
+  // локальное состояние ThemeProvider.
+  const { settings, update } = useSettings();
+  const isDarkMode = settings.themeId === 'dark';
   const L = (ru: string, ce: string) => (language === 'ce' ? ce : ru);
   const [isMenuDrawerOpen, setIsMenuDrawerOpen] = useState(false);
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
@@ -116,7 +122,7 @@ export default function AdminPage() {
             </div>
             <button
               type="button"
-              onClick={toggleTheme}
+              onClick={() => { update({ themeId: isDarkMode ? 'light' : 'dark' }); toggleTheme(); }}
               className="flex h-9 w-9 items-center justify-center smk-field text-slate-600 shadow-sm transition hover:bg-slate-50  dark:text-zinc-300 dark:hover:bg-zinc-800"
               aria-label={isDarkMode ? 'Светлая тема' : 'Тёмная тема'}
               title={isDarkMode ? 'Светлая тема' : 'Тёмная тема'}

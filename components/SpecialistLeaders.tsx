@@ -26,6 +26,8 @@ interface Leader {
 
 interface SpecialistLeadersProps {
   onOpen: (profileId: string) => void;
+  /** п.2 замечаний 23.08: компактные плитки день/неделя/месяц. */
+  compact?: boolean;
 }
 
 function asLeader(profile: Profile): Leader {
@@ -56,7 +58,7 @@ function fallbackLeaders(profiles: Profile[]): { day: Leader | null; week: Leade
   };
 }
 
-export default function SpecialistLeaders({ onOpen }: SpecialistLeadersProps) {
+export default function SpecialistLeaders({ onOpen, compact = false }: SpecialistLeadersProps) {
   const { t } = useI18n();
   const { profiles } = useProfiles();
   const [remote, setRemote] = useState<{ day: Leader | null; week: Leader | null; month: Leader | null } | null>(null);
@@ -110,8 +112,8 @@ export default function SpecialistLeaders({ onOpen }: SpecialistLeadersProps) {
   if (!slots.some((slot) => slot.person)) return null;
 
   return (
-    <section className="mb-4" aria-label={t.specialistLeaders}>
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+    <section className={compact ? 'mb-3' : 'mb-4'} aria-label={t.specialistLeaders}>
+      <div className={compact ? 'grid grid-cols-1 gap-1.5 sm:grid-cols-3' : 'grid grid-cols-1 gap-2 sm:grid-cols-3'}>
         {slots.map((slot) => {
           const person = slot.person;
           if (!person) return null;
@@ -123,9 +125,13 @@ export default function SpecialistLeaders({ onOpen }: SpecialistLeadersProps) {
               key={slot.key}
               type="button"
               onClick={() => onOpen(person.id)}
-              className="smk-lux smk-rays smk-press flex items-center gap-3 px-3 py-2.5 text-left"
+              className={compact
+                ? 'smk-lux smk-rays smk-press flex items-center gap-2 px-2.5 py-1.5 text-left'
+                : 'smk-lux smk-rays smk-press flex items-center gap-3 px-3 py-2.5 text-left'}
             >
-              <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-xl bg-slate-100 dark:bg-zinc-800">
+              <div className={compact
+                  ? 'relative h-8 w-8 shrink-0 overflow-hidden rounded-lg bg-slate-100 dark:bg-zinc-800'
+                  : 'relative h-11 w-11 shrink-0 overflow-hidden rounded-xl bg-slate-100 dark:bg-zinc-800'}>
                 <Image
                   src={cacheBustAvatarUrl(person.avatarUrl)}
                   alt={name}

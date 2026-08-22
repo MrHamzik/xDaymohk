@@ -24,6 +24,11 @@ export interface InteractiveMapProps {
   onSelect?: (position: MapPosition, explicitAddress?: string) => void;
   onClearSelection?: () => void;
   markers?: MapMarker[];
+  /**
+   * Маршрут А→Б поверх слоёв (такси, задания): пунктирная линия и две
+   * цветные точки. Карта подгоняет масштаб под обе точки.
+   */
+  route?: { from: MapPosition; to: MapPosition } | null;
   className?: string;
   locateOnLoad?: boolean;
   showControls?: boolean;
@@ -74,6 +79,7 @@ export function LeafletMap({
   onSelect,
   onClearSelection,
   markers = [],
+  route = null,
   className = 'h-64 sm:h-80',
   locateOnLoad = true,
   showControls = true,
@@ -601,6 +607,35 @@ export function LeafletMap({
     isFarZoom,
     viewportTick,
   ]);
+
+  // ===== Маршрут А→Б (такси/задания) =====
+  // Отдельный слой поверх кластеров: линия + зелёная точка «откуда» и
+  // красная «куда». Не участвует в кластеризации и кликах по слоям.
+  const routeLayerRef = useRef<Leaflet.LayerGroup | null>(null);
+  useEffect(() => {
+    const map = mapRef.current;
+    const leaflet = leafletRef.current;
+    if (!map || !leaflet || !isReady) return;
+    routeLayerRef.current?.remove();
+    routeLayerRef.current = null;
+    if (!route) return;
+    const group = leaflet.layerGroup();
+    leaflet.polyline(
+      [[route.from.lat, route.from.lng], [route.to.lat, route.to.lng]],
+      { color: '#059669', weight: 4, dashArray: '8 6' },
+    ).addTo(group);
+    leaflet.circleMarker([route.from.lat, route.from.lng], {
+      radius: 9, color: '#059669', fillColor: '#059669', fillOpacity: 0.9,
+    }).addTo(group);
+    leaflet.circleMarker([route.to.lat, route.to.lng], {
+      radius: 9, color: '#dc2626', fillColor: '#dc2626', fillOpacity: 0.9,
+    }).addTo(group);
+    group.addTo(map);
+    map.fitBounds(leaflet.latLngBounds(
+      [[route.from.lat, route.from.lng], [route.to.lat, route.to.lng]],
+    ).pad(0.25));
+    routeLayerRef.current = group;
+  }, [route?.from.lat, route?.from.lng, route?.to.lat, route?.to.lng, isReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Маркер выбранной точки.
   //

@@ -15,4 +15,4 @@
  *
  * Метку меняем при каждом дальнем коммите, чтобы проверка была честной.
  */
-export const BUILD_MARK = 'daymohk-2026-08-22-15';
+export const BUILD_MARK = 'daymohk-2026-08-22-16';

@@ -388,6 +388,7 @@ export const PROFESSION_CATEGORIES = [
   { id: 'mechanic', label: 'Авто', labelCe: 'Авто', icon: 'Wrench' },
   { id: 'service', label: 'Бытовые услуги', labelCe: 'ХIусаман гIуллакхаш', icon: 'Scissors' },
   { id: 'trade', label: 'Торговля', labelCe: 'Йохк-эцар', icon: 'ShoppingBag' },
+  { id: 'business', label: 'Бизнес и заведения', labelCe: 'Бизнес а, заведениш а', icon: 'Store' },
   { id: 'agriculture', label: 'Сельское хозяйство', labelCe: 'Юьртбахам', icon: 'Sprout' },
   { id: 'other', label: 'Другое', labelCe: 'Кхидерш', icon: 'Briefcase' },
 ];
