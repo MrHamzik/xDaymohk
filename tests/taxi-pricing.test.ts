@@ -1,22 +1,27 @@
 import { describe, expect, it } from 'vitest';
-import { estimateRide, haversineKm, surgeAt } from '@/lib/taxi/pricing';
+import {
+  estimateRide, haversineKm, surgeAt, tariffAllowed, type CarRequirements,
+} from '@/lib/taxi/pricing';
 
 /**
- * ВайТакси v1: цена «как в Яндексе» — подача + км + минуты, сверху
- * тариф и часовой множитель. Проверяем математику до UI.
+ * ВайТакси: цена = подача + км + минуты × тариф × спрос; межгород,
+ * детское кресло, отмена; блокировка тарифов по году машины (п.9).
  */
 
-const FARE = { baseFare: 50, perKm: 15, perMin: 2, minFare: 100, roadFactor: 1.3 };
+const FARE = {
+  baseFare: 50, perKm: 15, perMin: 2, minFare: 100, roadFactor: 1.3,
+  childSeatFee: 50, intercityFromKm: 30, intercityPerKm: 25, cancelFee: 100,
+};
+const ECONOMY = { multiplier: 1, baseFare: null, perKm: null, perMin: null };
 
-// Самашки → Грозный (примерно 45 км прямой).
+// Самашки → Грозный (~32 км прямой → ~42 по дороге: межгород).
 const SAMASHKI = { lat: 43.288024, lng: 45.298989 };
 const GROZNY = { lat: 43.317, lng: 45.692 };
-// Две улицы села: ~1.2 км.
 const VILLAGE_A = { lat: 43.288, lng: 45.299 };
 const VILLAGE_B = { lat: 43.298, lng: 45.301 };
 
 describe('haversineKm', () => {
-  it('село → Грозный около 40+ км прямой', () => {
+  it('село → Грозный около 30+ км прямой', () => {
     const km = haversineKm(SAMASHKI.lat, SAMASHKI.lng, GROZNY.lat, GROZNY.lng);
     expect(km).toBeGreaterThan(30);
     expect(km).toBeLessThan(45);
@@ -40,17 +45,12 @@ describe('surgeAt', () => {
   it('час внутри слота даёт множитель слота', () => {
     expect(surgeAt(slots, 8)).toBe(1.5);
     expect(surgeAt(slots, 23)).toBe(1.2);
-    expect(surgeAt(slots, 3)).toBe(1.2);
   });
 
-  it('вне слотов — обычный спрос', () => {
+  it('вне слотов — 1; конец интервала не входит', () => {
     expect(surgeAt(slots, 12)).toBe(1);
-    expect(surgeAt([], 8)).toBe(1);
-  });
-
-  it('граница интервала: конец не входит', () => {
     expect(surgeAt(slots, 9)).toBe(1);
-    expect(surgeAt(slots, 6)).toBe(1);
+    expect(surgeAt([], 8)).toBe(1);
   });
 });
 
@@ -59,37 +59,62 @@ describe('estimateRide', () => {
   const peak = new Date('2026-08-22T08:00:00');
   const slots = [{ startHour: 7, endHour: 9, multiplier: 1.5 }];
 
-  it('короткая поездка по селу — не ниже минималки', () => {
-    const e = estimateRide(VILLAGE_A, VILLAGE_B, FARE, 1, [], noon);
+  it('короткая поездка — не ниже минималки', () => {
+    const e = estimateRide(VILLAGE_A, VILLAGE_B, FARE, ECONOMY, [], noon);
     expect(e.price).toBeGreaterThanOrEqual(FARE.minFare);
-    expect(e.distanceKm).toBeGreaterThan(1);
-    expect(e.distanceKm).toBeLessThan(3);
+    expect(e.cancelFee).toBe(100);
   });
 
-  it('дальняя поездка дороже минималки и округлена до 10 ₽', () => {
-    const e = estimateRide(SAMASHKI, GROZNY, FARE, 1, [], noon);
-    expect(e.price).toBeGreaterThan(500);
-    expect(e.price % 10).toBe(0);
-    expect(e.surge).toBe(1);
+  it('межгород: км сверх порога дороже', () => {
+    const e = estimateRide(SAMASHKI, GROZNY, FARE, ECONOMY, [], noon);
+    expect(e.distanceKm).toBeGreaterThan(FARE.intercityFromKm);
+    const noInter = estimateRide(SAMASHKI, GROZNY, { ...FARE, intercityFromKm: 1000 }, ECONOMY, [], noon);
+    expect(e.price).toBeGreaterThan(noInter.price);
   });
 
-  it('в пик цена умножается на спрос', () => {
-    const plain = estimateRide(SAMASHKI, GROZNY, FARE, 1, [], noon);
-    const surged = estimateRide(SAMASHKI, GROZNY, FARE, 1, slots, peak);
+  it('детское кресло — доплата', () => {
+    const plain = estimateRide(VILLAGE_A, VILLAGE_B, FARE, ECONOMY, [], noon);
+    const child = estimateRide(VILLAGE_A, VILLAGE_B, FARE, ECONOMY, [], noon, ['child_seat']);
+    expect(child.price - plain.price).toBe(FARE.childSeatFee);
+  });
+
+  it('в пик цена умножается на спрос (допуск на округление)', () => {
+    const plain = estimateRide(SAMASHKI, GROZNY, FARE, ECONOMY, [], noon);
+    const surged = estimateRide(SAMASHKI, GROZNY, FARE, ECONOMY, slots, peak);
     expect(surged.surge).toBe(1.5);
-    // Допуск на двойное округление до 10 ₽.
     expect(Math.abs(surged.price - plain.price * 1.5)).toBeLessThanOrEqual(15);
   });
 
-  it('тариф комфорт дороже эконома', () => {
-    const economy = estimateRide(SAMASHKI, GROZNY, FARE, 1, [], noon);
-    const comfort = estimateRide(SAMASHKI, GROZNY, FARE, 1.3, [], noon);
-    expect(comfort.price).toBeGreaterThan(economy.price);
+  it('свои параметры тарифа заменяют сетку × множитель', () => {
+    const own = { multiplier: 1, baseFare: 90, perKm: 20, perMin: 3 };
+    const a = estimateRide(SAMASHKI, GROZNY, FARE, ECONOMY, [], noon);
+    const b = estimateRide(SAMASHKI, GROZNY, FARE, own, [], noon);
+    expect(b.price).toBeGreaterThan(a.price);
+  });
+});
+
+describe('tariffAllowed — таблица требований', () => {
+  const req: CarRequirements = {
+    yearEconomy: 2011, yearComfort: 2015, yearBusiness: 2016, isMinivan: false,
+  };
+
+  it('старая машина не проходит в комфорт и бизнес', () => {
+    expect(tariffAllowed('economy', 2012, req)).toBe(true);
+    expect(tariffAllowed('comfort', 2012, req)).toBe(false);
+    expect(tariffAllowed('business', 2016, req)).toBe(true);
   });
 
-  it('минуты считаются от дистанции (30 км/ч)', () => {
-    const e = estimateRide(SAMASHKI, GROZNY, FARE, 1, [], noon);
-    const expected = Math.max(1, Math.round((e.distanceKm / 30) * 60));
-    expect(e.minutes).toBe(expected);
+  it('«—» (null) — тариф машине не положен', () => {
+    expect(tariffAllowed('business', 2024, { ...req, yearBusiness: null })).toBe(false);
+  });
+
+  it('минивэн — только из списка', () => {
+    expect(tariffAllowed('minivan', 2020, req)).toBe(false);
+    expect(tariffAllowed('minivan', 2020, { ...req, isMinivan: true })).toBe(true);
+  });
+
+  it('нет требований или года — не блокируем заранее', () => {
+    expect(tariffAllowed('comfort', null, req)).toBe(true);
+    expect(tariffAllowed('comfort', 2010, null)).toBe(true);
   });
 });

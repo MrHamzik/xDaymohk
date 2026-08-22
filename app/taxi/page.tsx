@@ -212,8 +212,8 @@ export default function TaxiPage() {
     if (!summary?.fare || !fromPoint || !toPoint) return null;
     const tariff = summary.tariffs.find((x) => x.id === tariffId);
     if (!tariff) return null;
-    return estimateRide(fromPoint, toPoint, summary.fare, Number(tariff.multiplier), summary.slots ?? [], new Date());
-  }, [summary, fromPoint, toPoint, tariffId]);
+    return estimateRide(fromPoint, toPoint, summary.fare, tariff, summary.slots ?? [], new Date(), rideOptions);
+  }, [summary, fromPoint, toPoint, tariffId, rideOptions]);
 
   // Анкеты для слоя «Анкеты» (п.2: слой обязан показывать анкеты).
   const profileMarkers: MapMarker[] = useMemo(
@@ -411,6 +411,7 @@ export default function TaxiPage() {
                       language={language}
                       busy={busy}
                       onAction={(action) => void rideAction(activeDriverRide.id, action)}
+                      cancelFee={summary?.fare?.cancelFee ?? 0}
                     />
                   )}
 
@@ -606,6 +607,7 @@ export default function TaxiPage() {
                         busy={busy}
                         onAction={(action) => void rideAction(activeRide.id, action)}
                         onRated={(to, stars) => void rateRide(activeRide.id, to, stars)}
+                        cancelFee={summary?.fare?.cancelFee ?? 0}
                       />
                     </div>
                   )}
@@ -632,7 +634,7 @@ export default function TaxiPage() {
 
 /** Карточка поездки: статус, события, действия, оценка. */
 function RideCard({
-  ride, isRiderView, language, busy, onAction, onRated,
+  ride, isRiderView, language, busy, onAction, onRated, cancelFee = 0,
 }: {
   ride: RideRow;
   isRiderView: boolean;
@@ -640,6 +642,7 @@ function RideCard({
   busy: boolean;
   onAction: (action: string) => void;
   onRated?: (to: 'driver' | 'rider', stars: number) => void;
+  cancelFee?: number;
 }) {
   const L = (ru: string, ce: string) => (language === 'ce' ? ce : ru);
   const status = STATUS_LABELS[ride.status] ?? { ru: ride.status, ce: ride.status };
@@ -692,15 +695,22 @@ function RideCard({
           </button>
         )}
         {(ride.status === 'searching' || ride.status === 'assigned' || ride.status === 'to_pickup') && (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => onAction('cancel')}
-            className="inline-flex items-center gap-1 rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 transition hover:bg-slate-50 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
-          >
-            <X className="h-3.5 w-3.5" />
-            {L('Отменить', 'ДӀаяккха')}
-          </button>
+          <span className="flex flex-col">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => onAction('cancel')}
+              className="inline-flex items-center gap-1 rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 transition hover:bg-slate-50 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800"
+            >
+              <X className="h-3.5 w-3.5" />
+              {L('Отменить', 'ДӀаяккха')}
+            </button>
+            {cancelFee > 0 && ride.status !== 'searching' && (
+              <span className="mt-1 smk-text-label text-slate-400 dark:text-zinc-500">
+                {L(`отмена после принятия — ${cancelFee} ₽ водителю`, `тIеэцначул тIаьхьа дIаяккхар — ${cancelFee} ₽`)}
+              </span>
+            )}
+          </span>
         )}
         {ride.from_lat != null && ride.to_lat != null && (
           <a

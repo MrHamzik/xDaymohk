@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
 import { useLockBody } from '@/lib/hooks/useLockBody';
 import CarModelInput from '@/components/taxi/CarModelInput';
+import { tariffAllowed, type CarRequirements } from '@/lib/taxi/pricing';
 
 /**
  * Анкета таксиста (п.5 замечаний 23.08): заполняется в профиле, никуда
@@ -34,6 +35,7 @@ export default function TaxiDriverModal({ isOpen, onClose }: { isOpen: boolean; 
   const [availableTariffs, setAvailableTariffs] = useState<Array<{ id: string; labelRu: string; labelCe: string }>>([]);
   const [showGender, setShowGender] = useState(false);
   const [showAge, setShowAge] = useState(false);
+  const [req, setReq] = useState<CarRequirements | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -60,6 +62,18 @@ export default function TaxiDriverModal({ isOpen, onClose }: { isOpen: boolean; 
       setLoaded(true);
     })();
   }, [isOpen]);
+
+  // Требования к машине по тарифам (таблица Яндекса, п.9):
+  // год ниже порога или «—» — тариф гаснет в анкете.
+  useEffect(() => {
+    if (!isOpen || carNotInList || !carModel.trim()) { setReq(null); return; }
+    const controller = new AbortController();
+    void fetch(`/api/taxi/requirements?model=${encodeURIComponent(carModel.trim())}`, { signal: controller.signal })
+      .then((r) => (r.ok ? r.json() : { requirement: null }))
+      .then((d) => setReq(d?.requirement ?? null))
+      .catch(() => setReq(null));
+    return () => controller.abort();
+  }, [carModel, carNotInList, isOpen]);
 
   const save = async () => {
     if (!supabase || !account) return;
@@ -154,22 +168,30 @@ export default function TaxiDriverModal({ isOpen, onClose }: { isOpen: boolean; 
                 {L('Тарифы, которые вожу', 'Леладеш долу тарифаш')}
               </span>
               <div className="flex flex-wrap gap-1.5">
-                {availableTariffs.map((tariff) => (
-                  <button
-                    key={tariff.id}
-                    type="button"
-                    onClick={() => setTariffs((current) => current.includes(tariff.id)
-                      ? current.filter((x) => x !== tariff.id)
-                      : [...current, tariff.id])}
-                    className={`rounded-xl px-2.5 py-1.5 text-xs font-bold transition ${
-                      tariffs.includes(tariff.id)
-                        ? 'bg-emerald-600 text-white shadow-sm'
-                        : 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400'
-                    }`}
-                  >
-                    {language === 'ce' && tariff.labelCe ? tariff.labelCe : tariff.labelRu}
-                  </button>
-                ))}
+                {availableTariffs.map((tariff) => {
+                  const allowed = tariffAllowed(tariff.id, carYear ? Number(carYear) : null, req);
+                  const label = language === 'ce' && tariff.labelCe ? tariff.labelCe : tariff.labelRu;
+                  return (
+                    <button
+                      key={tariff.id}
+                      type="button"
+                      disabled={!allowed}
+                      title={allowed ? undefined : L('Машина не подходит по году или классу', 'Машина шераца я классца ца йогIу')}
+                      onClick={() => setTariffs((current) => current.includes(tariff.id)
+                        ? current.filter((x) => x !== tariff.id)
+                        : [...current, tariff.id])}
+                      className={`rounded-xl px-2.5 py-1.5 text-xs font-bold transition ${
+                        !allowed
+                          ? 'cursor-not-allowed bg-slate-100 text-slate-300 line-through dark:bg-zinc-800 dark:text-zinc-600'
+                          : tariffs.includes(tariff.id)
+                            ? 'bg-emerald-600 text-white shadow-sm'
+                            : 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
             <label className="flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-zinc-400">

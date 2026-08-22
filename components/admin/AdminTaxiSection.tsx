@@ -180,14 +180,13 @@ export default function AdminTaxiSection() {
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
               {L('Множители тарифов', 'Тарифийн множители')}
             </h3>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="space-y-2">
               {tariffs.map((tar: any) => (
-                <TariffMultiplier
+                <TariffEditor
                   key={tar.id}
-                  label={tar.labelRu}
-                  value={String(tar.multiplier)}
+                  tariff={tar}
                   disabled={busy}
-                  onSave={(multiplier) => void put({ type: 'tariff', tariffId: tar.id, multiplier })}
+                  onSave={(payload) => void put({ type: 'tariff', tariffId: tar.id, ...payload })}
                 />
               ))}
             </div>
@@ -350,6 +349,11 @@ export default function AdminTaxiSection() {
             <p className="smk-text-label text-slate-500 dark:text-zinc-500">
               {L(`В базе марок: ${brands.length}`, `Базехь маркаш: ${brands.length}`)}
             </p>
+            <RequirementEditor
+              brands={brands.map((b: any) => b.name)}
+              disabled={busy}
+              onSave={(payload) => void put({ type: 'requirement', ...payload })}
+            />
           </div>
         </div>
       )}
@@ -357,29 +361,138 @@ export default function AdminTaxiSection() {
   );
 }
 
-function TariffMultiplier({
-  label, value, disabled, onSave,
+function TariffEditor({
+  tariff, disabled, onSave,
 }: {
-  label: string; value: string; disabled: boolean; onSave: (multiplier: number) => void;
+  tariff: { id: string; labelRu: string; multiplier: number; baseFare?: number | null; perKm?: number | null; perMin?: number | null };
+  disabled: boolean;
+  onSave: (payload: { multiplier: number; baseFare: number | ''; perKm: number | ''; perMin: number | '' }) => void;
 }) {
-  const [current, setCurrent] = useState(value);
-  useEffect(() => setCurrent(value), [value]);
+  const [multiplier, setMultiplier] = useState(String(tariff.multiplier));
+  const [baseFare, setBaseFare] = useState(tariff.baseFare != null ? String(tariff.baseFare) : '');
+  const [perKm, setPerKm] = useState(tariff.perKm != null ? String(tariff.perKm) : '');
+  const [perMin, setPerMin] = useState(tariff.perMin != null ? String(tariff.perMin) : '');
+  useEffect(() => {
+    setMultiplier(String(tariff.multiplier));
+    setBaseFare(tariff.baseFare != null ? String(tariff.baseFare) : '');
+    setPerKm(tariff.perKm != null ? String(tariff.perKm) : '');
+    setPerMin(tariff.perMin != null ? String(tariff.perMin) : '');
+  }, [tariff]);
+  const cell = 'smk-field w-full px-2 py-1.5 text-xs text-slate-900 dark:text-white';
   return (
-    <div className="flex items-center gap-1.5">
-      <span className="min-w-0 flex-1 truncate text-xs font-semibold text-slate-600 dark:text-zinc-400">{label}</span>
-      <input
-        type="number" step="0.1" min="0.5" max="5"
-        value={current}
-        onChange={(e) => setCurrent(e.target.value)}
-        className="smk-field w-16 px-2 py-1.5 text-xs text-slate-900 dark:text-white"
-      />
+    <div className="rounded-xl border border-slate-200 p-2 dark:border-zinc-800">
+      <p className="mb-1.5 text-xs font-bold text-slate-800 dark:text-zinc-200">{tariff.labelRu}</p>
+      <div className="grid grid-cols-4 gap-1.5">
+        <label className="block">
+          <span className="smk-text-label text-slate-500">×спрос</span>
+          <input type="number" step="0.1" min="0.5" max="5" value={multiplier} onChange={(e) => setMultiplier(e.target.value)} className={cell} />
+        </label>
+        <label className="block">
+          <span className="smk-text-label text-slate-500">Подача</span>
+          <input type="number" value={baseFare} onChange={(e) => setBaseFare(e.target.value)} placeholder="—" className={cell} />
+        </label>
+        <label className="block">
+          <span className="smk-text-label text-slate-500">₽/км</span>
+          <input type="number" value={perKm} onChange={(e) => setPerKm(e.target.value)} placeholder="—" className={cell} />
+        </label>
+        <label className="block">
+          <span className="smk-text-label text-slate-500">₽/мин</span>
+          <input type="number" value={perMin} onChange={(e) => setPerMin(e.target.value)} placeholder="—" className={cell} />
+        </label>
+      </div>
       <button
         type="button"
         disabled={disabled}
-        onClick={() => onSave(Number(current))}
-        className="rounded-lg bg-emerald-600 px-2 py-1.5 text-xs font-bold text-white disabled:opacity-50"
+        onClick={() => onSave({
+          multiplier: Number(multiplier),
+          baseFare: baseFare === '' ? '' : Number(baseFare),
+          perKm: perKm === '' ? '' : Number(perKm),
+          perMin: perMin === '' ? '' : Number(perMin),
+        })}
+        className="mt-1.5 rounded-lg bg-emerald-600 px-2 py-1.5 text-xs font-bold text-white disabled:opacity-50"
       >
         OK
+      </button>
+    </div>
+  );
+}
+
+/** Требования к машине по тарифам (таблица Яндекса): модель → годы. */
+function RequirementEditor({
+  brands, disabled, onSave,
+}: {
+  brands: string[];
+  disabled: boolean;
+  onSave: (payload: { model: string; yearEconomy: number | ''; yearComfort: number | ''; yearBusiness: number | ''; isMinivan: boolean }) => void;
+}) {
+  const { language } = useI18n();
+  const L = (ru: string, ce: string) => (language === 'ce' ? ce : ru);
+  const [model, setModel] = useState('');
+  const [yearEconomy, setYearEconomy] = useState('2011');
+  const [yearComfort, setYearComfort] = useState('2015');
+  const [yearBusiness, setYearBusiness] = useState('');
+  const [isMinivan, setIsMinivan] = useState(false);
+  const [open, setOpen] = useState(false);
+  const sugs = model.trim()
+    ? brands.filter((b) => b.toLowerCase().includes(model.trim().toLowerCase())).slice(0, 8)
+    : [];
+  const cell = 'smk-field w-full px-2 py-1.5 text-xs text-slate-900 dark:text-white';
+  return (
+    <div className="rounded-xl border border-slate-200 p-2 dark:border-zinc-800">
+      <p className="mb-1.5 text-xs font-bold text-slate-800 dark:text-zinc-200">
+        {L('Требования к машине (годы по тарифам)', 'Машинеха требованеш (тарифашца шераш)')}
+      </p>
+      <div className="relative">
+        <input
+          value={model}
+          onChange={(e) => { setModel(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          onBlur={() => window.setTimeout(() => setOpen(false), 150)}
+          placeholder={L('Модель из базы', 'Базера модель')}
+          className={cell}
+        />
+        {open && sugs.length > 0 && (
+          <div className="absolute inset-x-0 top-full z-40 mt-1 max-h-36 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-950">
+            {sugs.map((name) => (
+              <button key={name} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { setModel(name); setOpen(false); }}
+                className="block w-full px-2.5 py-1.5 text-left text-xs font-semibold text-slate-700 hover:bg-emerald-50 dark:text-zinc-300 dark:hover:bg-emerald-950/40">
+                {name}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="mt-1.5 grid grid-cols-3 gap-1.5">
+        <label className="block">
+          <span className="smk-text-label text-slate-500">{L('Эконом от', 'Эконом')}</span>
+          <input type="number" value={yearEconomy} onChange={(e) => setYearEconomy(e.target.value)} className={cell} />
+        </label>
+        <label className="block">
+          <span className="smk-text-label text-slate-500">{L('Комфорт от', 'Комфорт')}</span>
+          <input type="number" value={yearComfort} onChange={(e) => setYearComfort(e.target.value)} className={cell} />
+        </label>
+        <label className="block">
+          <span className="smk-text-label text-slate-500">{L('Бизнес от (пусто — «—»)', 'Бизнес (— )')}</span>
+          <input type="number" value={yearBusiness} onChange={(e) => setYearBusiness(e.target.value)} placeholder="—" className={cell} />
+        </label>
+      </div>
+      <label className="mt-1.5 flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-zinc-400">
+        <input type="checkbox" checked={isMinivan} onChange={(e) => setIsMinivan(e.target.checked)} className="h-3.5 w-3.5 accent-emerald-600" />
+        {L('Минивэн (тариф «Минивэн»)', 'Минивэн')}
+      </label>
+      <button
+        type="button"
+        disabled={disabled || !model.trim()}
+        onClick={() => onSave({
+          model: model.trim(),
+          yearEconomy: yearEconomy === '' ? '' : Number(yearEconomy),
+          yearComfort: yearComfort === '' ? '' : Number(yearComfort),
+          yearBusiness: yearBusiness === '' ? '' : Number(yearBusiness),
+          isMinivan,
+        })}
+        className="mt-1.5 rounded-lg bg-emerald-600 px-2 py-1.5 text-xs font-bold text-white disabled:opacity-50"
+      >
+        {L('Сохранить требования', 'Требованеш дӀаязъе')}
       </button>
     </div>
   );

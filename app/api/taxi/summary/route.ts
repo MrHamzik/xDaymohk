@@ -27,7 +27,7 @@ export async function GET(request: Request) {
   const [drivers, tariffs, slots, fare] = await Promise.all([
     admin.from('taxi_drivers').select('user_id, is_online, rating, ride_count, is_verified')
       .eq('is_online', true),
-    admin.from('taxi_tariffs').select('id, label_ru, label_ce, multiplier, sort_order, is_active')
+    admin.from('taxi_tariffs').select('id, label_ru, label_ce, multiplier, sort_order, is_active, base_fare, per_km, per_min')
       .order('sort_order', { ascending: true }),
     admin.from('taxi_multiplier_schedule').select('start_hour, end_hour, multiplier'),
     admin.from('taxi_fare').select('*').eq('id', 1).maybeSingle(),
@@ -56,13 +56,27 @@ export async function GET(request: Request) {
       endHour: Number(s.end_hour),
       multiplier: Number(s.multiplier),
     })),
-    tariffs: (tariffs.data ?? []).filter((t) => t.is_active),
+    tariffs: (tariffs.data ?? []).filter((t) => t.is_active).map((t) => ({
+      id: t.id,
+      labelRu: t.label_ru,
+      labelCe: t.label_ce,
+      multiplier: Number(t.multiplier),
+      sortOrder: Number(t.sort_order),
+      isActive: t.is_active === true,
+      baseFare: t.base_fare != null ? Number(t.base_fare) : null,
+      perKm: t.per_km != null ? Number(t.per_km) : null,
+      perMin: t.per_min != null ? Number(t.per_min) : null,
+    })),
     fare: fare.data ? {
       baseFare: Number(fare.data.base_fare),
       perKm: Number(fare.data.per_km),
       perMin: Number(fare.data.per_min),
       minFare: Number(fare.data.min_fare),
       roadFactor: Number(fare.data.road_factor),
+      childSeatFee: Number(fare.data.child_seat_fee ?? 50),
+      intercityFromKm: Number(fare.data.intercity_from_km ?? 30),
+      intercityPerKm: Number(fare.data.intercity_per_km ?? 25),
+      cancelFee: Number(fare.data.cancel_fee ?? 100),
     } : null,
   }), { ...limit, limit: 60 });
 }

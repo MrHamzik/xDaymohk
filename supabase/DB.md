@@ -1797,5 +1797,89 @@
     "data_type": "text",
     "is_nullable": "NO",
     "column_default": "''::text"
+  },
+  {
+    "table_name": "taxi_tariffs",
+    "column_name": "base_fare",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "column_default": null
+  },
+  {
+    "table_name": "taxi_tariffs",
+    "column_name": "per_km",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "column_default": null
+  },
+  {
+    "table_name": "taxi_tariffs",
+    "column_name": "per_min",
+    "data_type": "numeric",
+    "is_nullable": "YES",
+    "column_default": null
+  },
+  {
+    "table_name": "taxi_fare",
+    "column_name": "child_seat_fee",
+    "data_type": "numeric",
+    "is_nullable": "NO",
+    "column_default": "50"
+  },
+  {
+    "table_name": "taxi_fare",
+    "column_name": "intercity_from_km",
+    "data_type": "numeric",
+    "is_nullable": "NO",
+    "column_default": "30"
+  },
+  {
+    "table_name": "taxi_fare",
+    "column_name": "intercity_per_km",
+    "data_type": "numeric",
+    "is_nullable": "NO",
+    "column_default": "25"
+  },
+  {
+    "table_name": "taxi_fare",
+    "column_name": "cancel_fee",
+    "data_type": "numeric",
+    "is_nullable": "NO",
+    "column_default": "100"
+  },
+  {
+    "table_name": "car_requirements",
+    "column_name": "model",
+    "data_type": "text",
+    "is_nullable": "NO",
+    "column_default": null
+  },
+  {
+    "table_name": "car_requirements",
+    "column_name": "year_economy",
+    "data_type": "integer",
+    "is_nullable": "YES",
+    "column_default": null
+  },
+  {
+    "table_name": "car_requirements",
+    "column_name": "year_comfort",
+    "data_type": "integer",
+    "is_nullable": "YES",
+    "column_default": null
+  },
+  {
+    "table_name": "car_requirements",
+    "column_name": "year_business",
+    "data_type": "integer",
+    "is_nullable": "YES",
+    "column_default": null
+  },
+  {
+    "table_name": "car_requirements",
+    "column_name": "is_minivan",
+    "data_type": "boolean",
+    "is_nullable": "NO",
+    "column_default": "false"
   }
 ]

@@ -125,12 +125,22 @@ export async function POST(request: Request) {
       perMin: Number(fareRow.data.per_min),
       minFare: Number(fareRow.data.min_fare),
       roadFactor: Number(fareRow.data.road_factor),
+      childSeatFee: Number(fareRow.data.child_seat_fee ?? 50),
+      intercityFromKm: Number(fareRow.data.intercity_from_km ?? 30),
+      intercityPerKm: Number(fareRow.data.intercity_per_km ?? 25),
+      cancelFee: Number(fareRow.data.cancel_fee ?? 100),
     },
-    Number(tariffRow.data.multiplier),
+    {
+      multiplier: Number(tariffRow.data.multiplier),
+      baseFare: tariffRow.data.base_fare != null ? Number(tariffRow.data.base_fare) : null,
+      perKm: tariffRow.data.per_km != null ? Number(tariffRow.data.per_km) : null,
+      perMin: tariffRow.data.per_min != null ? Number(tariffRow.data.per_min) : null,
+    },
     (slots.data ?? []).map((s) => ({
       startHour: Number(s.start_hour), endHour: Number(s.end_hour), multiplier: Number(s.multiplier),
     })),
     new Date(),
+    options,
   );
 
   const { data: ride, error } = await admin.from('taxi_rides').insert({

@@ -86,9 +86,34 @@ export async function PUT(request: Request) {
       if (!Number.isFinite(multiplier) || multiplier < 0.5 || multiplier > 5) {
         return NextResponse.json({ error: 'Множитель — от 0.5 до 5' }, { status: 400 });
       }
+      const patch: Record<string, unknown> = { multiplier };
+      for (const key of ['baseFare', 'perKm', 'perMin'] as const) {
+        if (key in body) {
+          const col = key === 'baseFare' ? 'base_fare' : key === 'perKm' ? 'per_km' : 'per_min';
+          const value = Number(body[key]);
+          patch[col] = body[key] === null || body[key] === '' || !Number.isFinite(value) ? null : Math.max(0, value);
+        }
+      }
       const { error } = await admin.from('taxi_tariffs')
-        .update({ multiplier }).eq('id', String(body.tariffId ?? ''));
+        .update(patch).eq('id', String(body.tariffId ?? ''));
       if (error) return NextResponse.json({ error: 'Не удалось обновить' }, { status: 500 });
+      break;
+    }
+    case 'requirement': {
+      const model = String(body.model ?? '').trim();
+      if (!model) return NextResponse.json({ error: 'Не указана модель' }, { status: 400 });
+      const year = (v: unknown) => {
+        const n = Number(v);
+        return v === null || v === '' || !Number.isFinite(n) ? null : Math.min(2035, Math.max(1980, Math.trunc(n)));
+      };
+      const { error } = await admin.from('car_requirements').upsert({
+        model,
+        year_economy: year(body.yearEconomy),
+        year_comfort: year(body.yearComfort),
+        year_business: year(body.yearBusiness),
+        is_minivan: body.isMinivan === true,
+      }, { onConflict: 'model' });
+      if (error) return NextResponse.json({ error: 'Не удалось сохранить требования' }, { status: 500 });
       break;
     }
     case 'brand_add': {
