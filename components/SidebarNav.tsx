@@ -368,7 +368,18 @@ export default function SidebarNav({ onClose, isAdmin = false, rail = false }: S
     ) : null;
 
     return (
-      <div key={item.id} className={editing && isHidden ? 'opacity-45' : undefined}>
+      <div
+        key={item.id}
+        className={editing && isHidden ? 'opacity-45' : undefined}
+        // п.8 замечаний 23.08: в режиме редактирования пункт меню
+        // перетаскивается в слот быстрого виджета.
+        draggable={editing}
+        onDragStart={(event) => {
+          if (!editing) return;
+          event.dataTransfer.setData('text/plain', `smk-widget:${item.id}`);
+          event.dataTransfer.effectAllowed = 'copy';
+        }}
+      >
         <div className="flex items-center gap-1">
         {inner}
         {editing && (

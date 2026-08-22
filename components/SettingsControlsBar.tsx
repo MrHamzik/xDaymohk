@@ -4,9 +4,9 @@ import { useState, useRef, useEffect, useCallback, type ReactNode } from 'react'
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import {
-  Bell, BookMarked, BookOpen, Bot, CarFront, Clock, Coffee, Compass, Crown, Globe2,
-  HandHeart, Home, Landmark, LifeBuoy, MapPin, Moon, PowerOff, ScrollText,
-  Settings as SettingsIcon, ShieldAlert, ShieldBan, Sparkles, Sun,
+  Bell, BookMarked, BookOpen, Bot, CalendarDays, CarFront, Clock, Coffee, Compass, Crown, Globe2,
+  HandHeart, Home, Info, Landmark, LifeBuoy, MapPin, Moon, PowerOff, ScrollText,
+  Settings as SettingsIcon, ShieldAlert, ShieldBan, ShieldCheck, Sparkles, Sun,
   UserRound, Users, Wrench,
 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
@@ -16,7 +16,7 @@ import { useNotifications } from '@/components/NotificationsProvider';
 import ThemePickerButton from '@/components/settings/ThemePickerButton';
 import QiblaModal from '@/components/QiblaModal';
 import { useSettings } from '@/components/SettingsProvider';
-import { widgetLabel } from '@/lib/settings/widgets';
+import { widgetLabel, QUICK_WIDGET_ID_SET } from '@/lib/settings/widgets';
 import { supabase } from '@/lib/supabase';
 import { WORK_STATUS_BG, WORK_STATUS_IDS, workStatusHint, workStatusText } from '@/lib/settings/work-status';
 import { UserMasterStatus } from '@/lib/types';
@@ -291,6 +291,24 @@ export default function SettingsControlsBar() {
         return navTile('/goncholla', t.goTitle, <HandHeart className="h-5 w-5" />);
       case 'vaynakh':
         return navTile('/vaynakh', t.vaynakhTitle, <Landmark className="h-5 w-5" />);
+      case 'hijri':
+        return navTile('/hijri', t.navHijri, <CalendarDays className="h-5 w-5" />);
+      case 'guide':
+        return navTile('/guide', t.navGuide, <BookOpen className="h-5 w-5" />);
+      case 'help':
+        return navTile('/help', t.navHelp, <LifeBuoy className="h-5 w-5" />);
+      case 'legal':
+        return navTile('/legal', t.navLegal, <ScrollText className="h-5 w-5" />);
+      case 'pro':
+        return navTile('/pro', t.proTitle, <Crown className="h-5 w-5" />);
+      case 'admin':
+        return navTile('/admin', t.admin, <ShieldCheck className="h-5 w-5" />);
+      case 'about':
+        return navTile('/about', t.about, <Info className="h-5 w-5" />);
+      case 'invite':
+        return navTile('/catalog', t.inviteNeighbor, <Users className="h-5 w-5" />);
+      case 'blacklist':
+        return navTile('/catalog', t.blacklist, <ShieldBan className="h-5 w-5" />);
       case 'taxi':
         return navTile('/taxi', t.taxiTitle, <CarFront className="h-5 w-5" />);
       case 'taxiline':
@@ -309,7 +327,24 @@ export default function SettingsControlsBar() {
   return (
     <div data-tour="widgets" className="smk-panel smk-widgets flex w-full items-center justify-between gap-2 p-2">
       {slots.map((id, index) => (
-        <div key={`${id}-${index}`} className="flex flex-1 justify-center">
+        <div
+          key={`${id}-${index}`}
+          // п.8 замечаний 23.08: в режиме редактирования слоты
+          // принимают перетаскивание пунктов меню.
+          onDragOver={(event) => { if (settings.lightMode) event.preventDefault(); }}
+          onDrop={(event) => {
+            if (!settings.lightMode) return;
+            event.preventDefault();
+            const raw = event.dataTransfer.getData('text/plain');
+            const id = raw.startsWith('smk-widget:') ? raw.slice(11) : raw;
+            if ((QUICK_WIDGET_ID_SET as Set<string>).has(id)) {
+              const next = [...settings.quickWidgets];
+              next[index] = id;
+              update({ quickWidgets: next });
+            }
+          }}
+          className="flex flex-1 justify-center"
+        >
           {renderWidget(id)}
         </div>
       ))}
