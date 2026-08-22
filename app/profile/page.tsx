@@ -10,6 +10,7 @@ import PhoneField from '@/components/PhoneField';
 import PhoneVerifyPanel from '@/components/PhoneVerifyPanel';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import EditProfileModal from '@/components/EditProfileModal';
+import TaxiDriverModal from '@/components/taxi/TaxiDriverModal';
 import CreateActionModal from '@/components/CreateActionModal';
 import MobileMenuDrawer from '@/components/MobileMenuDrawer';
 import { useAuth } from '@/components/AuthProvider';
@@ -47,6 +48,7 @@ export default function ProfilePage() {
   // п.3 замечаний 23.08: «новая анкета» спрашивает тип.
   const [anketaTypeOpen, setAnketaTypeOpen] = useState(false);
   const [newAnketaCategory, setNewAnketaCategory] = useState<string | undefined>(undefined);
+  const [taxiDriverOpen, setTaxiDriverOpen] = useState(false);
   const [isMenuDrawerOpen, setIsMenuDrawerOpen] = useState(false);
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
   const [isSignOutAllOpen, setIsSignOutAllOpen] = useState(false);
@@ -472,6 +474,9 @@ export default function ProfilePage() {
         onSave={handleSaveProfile}
       />
 
+      {/* Анкета таксиста: одна, заполняется в профиле. */}
+      <TaxiDriverModal isOpen={taxiDriverOpen} onClose={() => setTaxiDriverOpen(false)} />
+
       {/* п.3 замечаний 23.08: выбор типа новой анкеты. */}
       {anketaTypeOpen && (
         <div className="fixed inset-0 z-[95] flex items-center justify-center bg-zinc-950/60 p-4 backdrop-blur-sm" role="dialog" aria-modal="true">
@@ -489,8 +494,9 @@ export default function ProfilePage() {
                 type="button"
                 onClick={() => {
                   setAnketaTypeOpen(false);
+                  // п.5: анкета таксиста заполняется здесь же, одна.
                   if (id === 'taxi') {
-                    window.location.href = '/taxi?tab=driver';
+                    setTaxiDriverOpen(true);
                     return;
                   }
                   setNewAnketaCategory(id === 'business' ? 'business' : undefined);

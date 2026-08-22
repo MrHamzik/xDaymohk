@@ -1776,5 +1776,26 @@
     "data_type": "timestamp with time zone",
     "is_nullable": "NO",
     "column_default": "now()"
+  },
+  {
+    "table_name": "taxi_drivers",
+    "column_name": "car_year",
+    "data_type": "integer",
+    "is_nullable": "YES",
+    "column_default": null
+  },
+  {
+    "table_name": "taxi_rides",
+    "column_name": "passenger_name",
+    "data_type": "text",
+    "is_nullable": "NO",
+    "column_default": "''::text"
+  },
+  {
+    "table_name": "taxi_rides",
+    "column_name": "passenger_phone",
+    "data_type": "text",
+    "is_nullable": "NO",
+    "column_default": "''::text"
   }
 ]

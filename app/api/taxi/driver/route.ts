@@ -83,6 +83,12 @@ export async function PUT(request: Request) {
   // Приватность (п.17): пол/возраст пассажир видит только с разрешения.
   if ('showGender' in body) patch.show_gender = body.showGender === true;
   if ('showAge' in body) patch.show_age = body.showAge === true;
+  if ('carYear' in body) {
+    const year = Number(body.carYear);
+    patch.car_year = body.carYear === null || body.carYear === '' || !Number.isFinite(year)
+      ? null
+      : Math.min(2035, Math.max(1980, Math.trunc(year)));
+  }
 
   const wantOnline = typeof body.isOnline === 'boolean' ? body.isOnline : null;
 
@@ -145,6 +151,7 @@ function mapDriver(row: any) {
     rideCount: Number(row.ride_count ?? 0),
     showGender: row.show_gender === true,
     showAge: row.show_age === true,
+    carYear: row.car_year != null ? Number(row.car_year) : null,
   };
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */

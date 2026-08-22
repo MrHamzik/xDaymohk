@@ -93,6 +93,9 @@ export async function POST(request: Request) {
   const options = Array.isArray(body.options)
     ? body.options.filter((o: unknown): o is string => typeof o === 'string' && RIDE_OPTIONS.includes(o))
     : [];
+  // «Заказать для другого» (п.7): фактический пассажир.
+  const passengerName = typeof body.passengerName === 'string' ? body.passengerName.slice(0, 80) : '';
+  const passengerPhone = typeof body.passengerPhone === 'string' ? body.passengerPhone.slice(0, 30) : '';
 
   if (!fromLabel || !toLabel) {
     return NextResponse.json({ error: 'Укажите, откуда и куда ехать' }, { status: 400 });
@@ -146,6 +149,8 @@ export async function POST(request: Request) {
     pref_gender: prefGender,
     pref_min_age: prefMinAge,
     options,
+    passenger_name: passengerName,
+    passenger_phone: passengerPhone,
   }).select('*').single();
 
   if (error) {

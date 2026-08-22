@@ -25,10 +25,11 @@ export interface InteractiveMapProps {
   onClearSelection?: () => void;
   markers?: MapMarker[];
   /**
-   * Маршрут А→Б поверх слоёв (такси, задания): пунктирная линия и две
-   * цветные точки. Карта подгоняет масштаб под обе точки.
+   * Маршрут А→Б поверх слоёв (такси, задания): линия и две цветные
+   * точки. Если передан path — линия идёт по улицам (OSRM), иначе
+   * прямая. Карта подгоняет масштаб под обе точки.
    */
-  route?: { from: MapPosition; to: MapPosition } | null;
+  route?: { from: MapPosition; to: MapPosition; path?: Array<[number, number]> } | null;
   className?: string;
   locateOnLoad?: boolean;
   showControls?: boolean;
@@ -620,10 +621,11 @@ export function LeafletMap({
     routeLayerRef.current = null;
     if (!route) return;
     const group = leaflet.layerGroup();
-    leaflet.polyline(
-      [[route.from.lat, route.from.lng], [route.to.lat, route.to.lng]],
-      { color: '#059669', weight: 4, dashArray: '8 6' },
-    ).addTo(group);
+    // п.4 замечаний 23.08: линия по улицам, а не напрямую.
+    const line: Array<[number, number]> = route.path && route.path.length > 1
+      ? route.path
+      : [[route.from.lat, route.from.lng], [route.to.lat, route.to.lng]];
+    leaflet.polyline(line, { color: '#059669', weight: 4 }).addTo(group);
     leaflet.circleMarker([route.from.lat, route.from.lng], {
       radius: 9, color: '#059669', fillColor: '#059669', fillOpacity: 0.9,
     }).addTo(group);
